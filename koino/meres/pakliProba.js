@@ -17,7 +17,8 @@ import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import { esemenyMentese } from '../js/tar/esemenyTar.js';
 import {
   pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja,
-  entitasReszletei, entitasKuszobei, hianyzoFelmenok, MAX_DARAB, RENDEZESEK, kuszobokBefele
+  entitasReszletei, entitasKuszobei, hianyzoFelmenok, MAX_DARAB, RENDEZESEK, kuszobokBefele,
+  pakliHierarchia, TESTVER_KORLAT
 } from '../js/allapot/pakli.js';
 
 import { ALAP_KUSZOBOK } from '../js/allapot/javaslatSzamitas.js';
@@ -713,6 +714,101 @@ proba('⛔⛔ KÖR a szülő-láncban a felmenő-felmérést sem akasztja meg', 
 
   const f = await hianyzoFelmenok(tar, KOINO, c.azonosito, { szerzo: anna.szerzo });
   return f.data.hianyzoDb === 0;      // mindegyiken van pontom, és nem fagyott le
+});
+
+// ===================================
+// ⭐⭐ A HÁZ (D100): A HIERARCHIKUS PAKLI — felmenők, bogár, testvérek, és ami hiányzik
+// ===================================
+
+/** Egy kis fa: A (erős gyökér) → A1 (erős) → A11; A → A2 (gyenge); B (gyenge gyökér). */
+async function kisFa() {
+  const { tar, anna } = await ujKoino();
+  const A = await gondolat(tar, anna, 'A', 50);
+  const A1 = await gondolat(tar, anna, 'A1', 30, A);
+  const A2 = await gondolat(tar, anna, 'A2', 5, A);
+  const A11 = await gondolat(tar, anna, 'A11', 10, A1);
+  const B = await gondolat(tar, anna, 'B', 20);
+  return { tar, anna, A, A1, A2, A11, B };
+}
+
+proba('⭐⭐ A HIERARCHIKUS PAKLI: a legerősebb gyökértől a bogár lefelé, a testvérek oldalt — és mindent tartva semmi nem hiányzik', async () => {
+  const f = await kisFa();
+  const h = await pakliHierarchia(f.tar, KOINO, { szerzo: f.anna.szerzo });
+  const k = await pakliHierarchia(f.tar, KOINO, { entitas: f.A1, szerzo: f.anna.szerzo });
+  const az = (l) => l.map((x) => x.azonosito).join(',');
+  return h.kivalasztott === f.A && az(h.pakli) === [f.A, f.A1, f.A11].join(',') && az(h.testverek) === f.B
+    && h.pakli.map((x) => x.melysegiSzint).join(',') === '1,2,3' && h.hianyzik.length === 0
+    && k.kivalasztott === f.A1 && az(k.pakli) === [f.A, f.A1, f.A11].join(',') && az(k.testverek) === f.A2
+    && k.testverek[0].melysegiSzint === 2 && h.pakli.every((x) => x.tartom && x.osszPontForras === 'szamolt')
+    && h.pakli[0].agazatiPont === 50 + 30 + 5 + 10;
+});
+
+proba('⭐⭐ A SZIGORÚ (b) ALATT: amit nem tartok, annak a gyerekeit és a gyökér szintjét KÉRENDŐNEK mondja, és a kártyán jelöli', async () => {
+  const f = await kisFa();
+  const csakA = new Set([f.A]);
+  const h = await pakliHierarchia(f.tar, KOINO, { entitas: f.A, tartott: (x) => csakA.has(x), gyokerTeljes: false });
+  const kerendo = (fajta, kulcs) => h.hianyzik.some((x) => x.fajta === fajta && x.kulcs === kulcs);
+  // ⭐ a bogárnál csak az ELSŐ bizonytalan szint kérendő, mélyen (a kérelem a legjobb ágat d szintig hozza)
+  const a1 = h.hianyzik.find((x) => x.fajta === 'fejlecek' && x.kulcs === f.A1);
+  return kerendo('fejlecek', '') && a1?.d === 4 && !kerendo('fejlecek', f.A11) && !kerendo('fejlecek', f.A)
+    && h.pakli[0].tartom === true && h.pakli[1].tartom === false;
+});
+
+proba('⭐ AZ ÖSSZ-PONT FORRÁSA a kártyán (H2): ellenőrizve · bemondás · ismeretlen · részleges', async () => {
+  const { tar, anna } = await ujKoino();
+  // A-t tartom (pontom van rajta); a gyerekeinek és B-nek CSAK A SZÜLETÉSE van meg (a szigorú (b) alatt így jön el)
+  const A = await gondolat(tar, anna, 'A', 50);
+  const masik = await ujEember(KOINO);
+  const szuletes = async (cim, szulo = null) => {
+    const e = await masik.tesz('GondolatLetrehozas', { cim, meret: 10, szulo });
+    await esemenyMentese(tar, e);
+    return e.azonosito;
+  };
+  const A1 = await szuletes('A1', A), A2 = await szuletes('A2', A), A3 = await szuletes('A3', A), B = await szuletes('B');
+  const nezet = ujPakliNezet({ tartott: async () => new Set([A]) });
+  const bemondasok = new Map([[A1, { osszPont: 77, ellenorzott: true }], [A2, { osszPont: 9, ellenorzott: false }]]);
+  const h = await pakliHierarchia(tar, KOINO, { entitas: A1, nezet, bemondasok });
+  const kartyak = new Map([...h.pakli, ...h.testverek].map((x) => [x.azonosito, x]));
+  const b = await pakliHierarchia(tar, KOINO, { entitas: B, nezet, bemondasok });
+  const ki = {
+    ellenorzott: kartyak.get(A1)?.osszPontForras === 'ellenorzott' && kartyak.get(A1)?.agazatiPont === 77,
+    bemondas: kartyak.get(A2)?.osszPontForras === 'bemondas',
+    ismeretlenTestver: kartyak.get(A3)?.osszPontForras === 'ismeretlen',
+    ismeretlenGyoker: b.pakli.find((x) => x.azonosito === B)?.osszPontForras === 'ismeretlen',
+    reszleges: kartyak.get(A)?.osszPontForras === 'reszleges' && kartyak.get(A)?.tartom === true
+      && kartyak.get(A)?.agazatiPont === 50 + 77 + 9
+  };
+  if (!Object.values(ki).every(Boolean)) console.log('    (forrás — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ')');
+  return Object.values(ki).every(Boolean);
+});
+
+proba('⭐ A HIÁNYZÓ FELMENŐ és a kért, de nem ismert entitás: kérendő szelet — a lánc ott csonka, nem hibás', async () => {
+  const { tar, anna } = await ujKoino();
+  const ismeretlenSzulo = 'Z'.repeat(43);
+  const G = await gondolat(tar, anna, 'árva', 10, ismeretlenSzulo);
+  const h = await pakliHierarchia(tar, KOINO, { entitas: G });
+  const n = await pakliHierarchia(tar, KOINO, { entitas: 'Q'.repeat(43) });
+  return h.kivalasztott === G && h.pakli.length === 1 && h.hianyzik.some((x) => x.fajta === 'szelet' && x.kulcs === ismeretlenSzulo)
+    && n.hianyzik.some((x) => x.fajta === 'szelet' && x.kulcs === 'Q'.repeat(43));
+});
+
+proba('⛔ A TESTVÉREK KORLÁTOSAK (9. szabály) — 60 gyökérből legfeljebb ' + TESTVER_KORLAT + ' testvér, a legerősebbek', async () => {
+  const { tar, anna } = await ujKoino();
+  for (let i = 0; i < 61; i++) await gondolat(tar, anna, 'G' + i, 1 + i);
+  const h = await pakliHierarchia(tar, KOINO, {});
+  const pontok = h.testverek.map((x) => x.agazatiPont);
+  return h.testverek.length === TESTVER_KORLAT && h.pakli[0].agazatiPont === 61
+    && pontok.every((p, i) => i === 0 || p <= pontok[i - 1]) && pontok[pontok.length - 1] === 61 - TESTVER_KORLAT;
+});
+
+proba('⭐ A MEGNYITOTT KÁRTYA SZÖVEGE: ha a darab hiányzik, kérendő törzs (a vállalótól)', async () => {
+  const { tar, anna } = await ujKoino();
+  const e = await anna.tesz('GondolatLetrehozas', { cim: 'Szöveges', meret: 10, szulo: null,
+    szoveg: { lenyomat: 'L'.repeat(43), bajt: 12 } });
+  await esemenyMentese(tar, e);
+  await esemenyMentese(tar, await anna.tesz('TudatpontRendezes', { entitas: e.azonosito, pont: 5 }));
+  const h = await pakliHierarchia(tar, KOINO, { entitas: e.azonosito, darabOlvas: async () => null });
+  return h.hianyzik.some((x) => x.fajta === 'torzs' && x.kulcs === e.azonosito);
 });
 
 proba('⛔ Ismeretlen entitás részletei/küszöbei: null, nem hiba', async () => {

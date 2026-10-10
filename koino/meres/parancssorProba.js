@@ -2068,6 +2068,81 @@ async function feluletet(hely, port) {
   return { folyamat, hiv };
 }
 
+// ===================================
+// ⭐⭐ A HÁZ (D100): A LAP HIERARCHIKUS PAKLIJA ELKÉRI, AMI HIÁNYZIK — és az őrjárat elhozza (2026-10-10)
+// ===================================
+//
+// A egy gondolatot ír; B („alap” mód — a szigorú (b)) a cserén csak a születését kapja. ⭐ Viselkedést mérünk: B lapja a
+// gondolatot „ismeretlen” össz-ponttal mutatja, a hiányzó részeket (a gyökér szintje, a gondolat gyerekei) függő
+// kérelemként beírja (B lemezén: `kerelmek.json`), és „betöltés”-t jelez; B őrjárata a kérelmeket A-tól elhozza, és utána a
+// lap az össz-pontot ISMERTEN mutatja (A 100 pontja — a kérelem az aláírt pont-mintákat is hozza), betöltés nélkül. Rontás: a lap nem kér el semmit → a kérelmek
+// nincsenek meg, az össz-pont ismeretlen marad.
+proba('⭐⭐ D100: a lap hierarchikus paklija elkéri, ami hiányzik — az őrjárat elhozza, és a lap ismert össz-pontot mutat', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const alap = { KOINO_KISZOLGALAS: 'alap' };
+  const futok = [];
+  const feluletAlap = async (port) => {
+    const folyamat = spawn(process.execPath, [KOINO_JS, 'felulet', String(port)], {
+      env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...alap }, stdio: ['ignore', 'pipe', 'pipe']
+    });
+    futok.push(folyamat);
+    let kimenet = '';
+    const kulcs = await new Promise((teljesul, elakad) => {
+      const ido = setTimeout(() => elakad(new Error('a felület nem indult el: ' + kimenet)), 15000);
+      folyamat.stdout.on('data', (d) => {
+        kimenet += d;
+        const talalat = kimenet.match(/kulcs=([A-Za-z0-9_-]+)/);
+        if (talalat) { clearTimeout(ido); teljesul(talalat[1]); }
+      });
+    });
+    const valasz = await fetch('http://127.0.0.1:' + port + '/api/pakli/hierarchikus', { headers: { 'X-Koino-Kulcs': kulcs } });
+    const adat = await valasz.json();
+    folyamat.kill();
+    await varj(500);
+    return adat;
+  };
+  try {
+    await fut(a, 'koino', 'Ház', 'próba', 'nyilt');
+    const g = azonosito(await fut(a, 'gondolat', 'A háztető'), 'Létrejött:');
+    await fut(b, 'tars', '127.0.0.1', '7968', 'A');
+    await csereKor(a, b, 7968, alap);
+    const elotte = await feluletAlap(7970);
+    const kerelmek = JSON.parse(await readFile(join(b, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '{}'));
+    // A figyel, B őrjárata (6 mp-es körrel) elhozza a függő kérelmeket.
+    const figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', '7968'], { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: 'ignore' });
+    futok.push(figyelo);
+    await varj(1500);
+    const orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', '7969'], { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
+    futok.push(orjarat);
+    await varj(25000);
+    orjarat.kill();
+    figyelo.kill();
+    await varj(1000);
+    const utana = await feluletAlap(7971);
+    const elsoKartya = (x) => (x?.pakli ?? []).find((k) => k.azonosito.startsWith(g));
+    const ki = {
+      latja: !!elsoKartya(elotte) && elsoKartya(elotte).tartom === false && elsoKartya(elotte).osszPontForras === 'ismeretlen',
+      kerte: elotte.betoltes === true && (kerelmek.fuggo ?? []).some((x) => x.fajta === 'fejlecek'),
+      // ⭐ a kérelem a fejlécet és az aláírt pont-mintákat is elhozza — így az össz-pont ismert (számolt), vagy ha csak a
+      // bemondás jött, ellenőrzött
+      elhozta: ['szamolt', 'ellenorzott'].includes(elsoKartya(utana)?.osszPontForras) && elsoKartya(utana)?.agazatiPont === 100,
+      kesz: utana.betoltes === false
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  ház — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+        + ' · előtte: ' + JSON.stringify({ betoltes: elotte.betoltes, hianyzik: elotte.hianyzik, k: elsoKartya(elotte) ? { f: elsoKartya(elotte).osszPontForras, t: elsoKartya(elotte).tartom } : null })
+        + ' · utána: ' + JSON.stringify({ betoltes: utana.betoltes, hianyzik: utana.hianyzik, k: elsoKartya(utana) ? { f: elsoKartya(utana).osszPontForras, p: elsoKartya(utana).agazatiPont } : null }) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const p of futok) p.kill();
+    await varj(1000);
+    await rm(a, { recursive: true, force: true });
+    await rm(b, { recursive: true, force: true });
+  }
+});
+
 proba('⭐⭐⭐ A FELÜLET KOINÓT VÁLT: a tér egy MÁSIK koino pakliját hozza', async () => {
   const hely = await ujKeszulek();
   let kiszolgalo = null;

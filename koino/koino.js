@@ -222,7 +222,9 @@ import { kapuNyitasa, ALAP_PORT as FELULET_PORT } from './js/felulet/kapu.js';
 import {
   pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja, entitasReszletei, entitasKuszobei,
   kuszobokBefele,
-  hianyzoFelmenok
+  hianyzoFelmenok,
+  // ⭐ A ház (D100): a hierarchikus pakli.
+  pakliHierarchia
 } from './js/allapot/pakli.js';
 // ⭐ A RANDEVÚ (2026-09-14): a csere ÉS a fájlok is átmennek az átfúrt résen.
 // ⭐ És a szelet-kérés is a résen (D69/2): a `hozd` 2026-09-26 óta ezen megy.
@@ -1454,6 +1456,96 @@ async function eszlelesEsBejelentes(azonositok) {
 // szerzőiéről) kérdezünk (`lancEllenorzes.js`), és ha a válaszból bizonyíték lesz (elágazás, negatív levél), bejelentjük
 // a vádolt azonosság-szeletébe — ugyanazon az úton, mint az észlelő leleteit. A hallgatás nem vád: függőben marad.
 
+/**
+ * ⭐ A ház (D100): a tartott (vállalt) szeleteim — vagy null, ha „mindent” módban minden szeletet tartok. A lap ezzel
+ * számolja a D14-et és a hierarchikus pakli forrás-jelöléseit (`pakli.js`).
+ */
+async function tartottSzeleteim() {
+  try {
+    if ((await kiszolgalasBeallitas()).mindent) return null;
+    return (await ketFokAllapota()).vallalas.szeletek;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * ⭐⭐ D92/1: EGY FÜGGŐ KÉRELEM FELVÉTELE — a `kerelem` parancs (cím nélkül) és a felület (D100, H1) közös útja: a célok a
+ * G tartói (a raj, készülék-azonosítóval; ha `dht`, a DHT hirdetői is) és az induló címek; a kopogtató témák (a készüléké, a
+ * szeleté vagy a gyökér darabjaié). ⛔ Önmagunkat nem kérdezzük. ⭐ A felület `dht: false`-szal hívja: a DHT-n keresni és
+ * jelentkezni az őrjárat címjegyzék-köre úgyis megteszi (új függőnél azonnal) — egy lapletöltés ne kerüljön KB-okba.
+ * @param {{fajta: string, kulcs: string, n?: number, d?: number}} k
+ * @param {{cimek?: Array<Object>, dht?: boolean}} [b]
+ * @returns {Promise<{r: Object, kopogtatok: Array<Object>, kp: number}>}
+ */
+async function fuggoKerelemFelvetele(k, { cimek = null, dht = false } = {}) {
+  const celok = [...(cimek ?? tarsakSorrendje(await tarsakTarolo().olvas()).map((c) => ({ hoszt: c.hoszt, port: Number(c.port) })))];
+  const kopogtatok = [];
+  if (k.kulcs !== GYOKER_KULCS) {
+    for (const c of szeletCimei(await szeletJegyzekTarolo().olvas(), k.kulcs)) {
+      celok.push({ hoszt: c.hoszt, port: Number(c.port), ...(c.alairo ? { alairo: c.alairo } : {}) });
+      if (c.alairo) kopogtatok.push({ fajta: 'keszulek', kulcs: c.alairo });
+    }
+    kopogtatok.push({ fajta: 'szelet', kulcs: k.kulcs });
+    if (dht) {
+      try {
+        for (const t of await cimjegyzekKeresese(cimjegyzekTema(KOINO, 'szelet', k.kulcs))) celok.push({ hoszt: t.cim, port: t.port });
+      } catch { /* a DHT segédeszköz */ }
+    }
+  } else {
+    // A gyökér: a darab a saját tudásomból (egy friss készüléknél 0), és a szomszédos mélységek (D91/3).
+    const m = (await gyokerMelysegem()).melyseg;
+    const darabok = [[m, 0], ...(m > 0 ? [[m - 1, 0]] : []), [m + 1, 0], [m + 1, 1]];
+    for (const [mm, dd] of darabok) {
+      kopogtatok.push({ fajta: 'gyoker', kulcs: mm + ':' + dd });
+      if (dht) {
+        try {
+          for (const t of await cimjegyzekKeresese(gyokerDarabTemaja(KOINO, mm, dd))) celok.push({ hoszt: t.cim, port: t.port });
+        } catch { /* a DHT segédeszköz */ }
+      }
+    }
+  }
+  // ⛔ ÖNMAGUNKAT NEM KÉRDEZZÜK: a saját gyökér-darabunkat mi is hirdetjük, a DHT a mi címünket is visszaadja
+  // (a gép címe + a futó kapu portja — a 42. mérés tanulsága: a készülék önmagát hívogatta).
+  const sajatGep = await sajatOsszesCim();
+  const kp = await kapuPortja();
+  const idegenCelok = celok.filter((c) => !(sajatCimE(c.hoszt, sajatGep) && Number(c.port) === kp));
+  const r = kerelemFelvetele(await kerelmekOlvasasa(), { fajta: k.fajta, kulcs: k.kulcs, n: k.n ?? 20, d: k.d ?? 0,
+    celok: idegenCelok, kopogtatok }, Date.now(), randomUUID());
+  await kerelmekIrasa(r.nyilvantartas);
+  return { r, kopogtatok, kp };
+}
+
+/**
+ * ⭐⭐ A HÁZ (D100, H1): a lap hiányzó részeinek elkérése — legfeljebb `LAP_KERES_KORLAT` függő kérelem egy lekéréskor (a
+ * függők jegyzéke korlátos — 16 —, egy lap ne töltse meg), az őrjárat hozza. Visszaadja, hány függ még ezekből (a lap
+ * addig „betöltés…”-t mutat, és újrakérdez).
+ * @param {Array<{fajta: string, kulcs: string, d?: number}>} hianyzik - a `pakliHierarchia` listája
+ */
+const LAP_KERES_KORLAT = 4;
+// ⭐ Amit a kérelem nemrég elhozott, azt ennyi ideig nem kérjük újra (a nem tartott ág gyerekeit a lekérdezés soha nem
+// tekinti BIZTOSNAK — e nélkül a lap minden lekérésnél újra kérne, és örökké „betöltés”-t mutatna; próba mérte).
+const LAP_FRISSESSEG = 10 * 60 * 1000;
+async function lapHianyzoinakElkerese(hianyzik) {
+  const kertek = [];
+  const eddig = await kerelmekOlvasasa();
+  const nemregKesz = (fajta, kulcs) => (eddig?.kesz ?? []).some((x) => x.fajta === fajta && x.kulcs === kulcs
+    && String(x.eredmeny).startsWith('megjött') && Date.now() - (x.ido ?? 0) < LAP_FRISSESSEG);
+  for (const h of (Array.isArray(hianyzik) ? hianyzik : []).slice(0, LAP_KERES_KORLAT)) {
+    const kulcs = h.kulcs === '' ? GYOKER_KULCS : h.kulcs;
+    if (nemregKesz(h.fajta, kulcs)) continue;
+    const k = { fajta: h.fajta, kulcs, n: 50, d: Number.isInteger(h.d) ? h.d : 0 };
+    try { await fuggoKerelemFelvetele(k, { dht: false }); kertek.push(h); }
+    catch (hiba) { console.warn('a lap kérelme nem vehető fel', { ok: hiba.message }); }
+  }
+  const ny = await kerelmekOlvasasa();
+  const fuggok = (ny?.fuggo ?? []).filter((x) => kertek.some((h) => x.fajta === h.fajta && x.kulcs === (h.kulcs === '' ? GYOKER_KULCS : h.kulcs)));
+  // ⭐ Van-e kitől kérni (egy ismert tartó vagy induló cím)? Ha nincs, a kérelem csak kopogtat (a G témáin) — a lap ezt
+  // kimondja, nem ígér „betöltést”, ami egy társ nélküli készüléken soha nem érkezne meg.
+  const celos = fuggok.filter((x) => (x.celok ?? []).length > 0).length;
+  return { kert: kertek.length, fuggo: fuggok.length, celos };
+}
+
 let lancKiszolgaloPeldany = null;
 /** A lánc-kör kiszolgálója (folyamatonként egy — a részfa-gyorsítótára így megmarad). */
 function lancKiszolgaloja() {
@@ -1633,7 +1725,9 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
   if (fk.fajta === 'szelet') { siker = (r.kapott ?? 0) > 0; vege.uj = r.uj ?? 0; osszegzes = (r.kapott ?? 0) + ' esemény'; }
   else if (fk.fajta === 'fejlecek' && r.kiszolgalta) {
     const f = await fejlecValaszFeldolgozasa(r);
-    siker = f.jok > 0; vege.uj = f.bevett; osszegzes = f.jok + ' fejléc';
+    // ⭐ A ház (D100): az ÜRES, de kiszolgált válasz is válasz — az entitásnak nincs (ismert) gyereke. ⛔ Ha jöttek tételek,
+    // de egy sem állta ki az ellenőrzést, az nem siker (a következő tartó próbálkozik).
+    siker = f.jok > 0 || f.tetelek.length === 0; vege.uj = f.bevett; osszegzes = f.jok + ' fejléc';
   } else if (fk.fajta === 'torzs' && r.kiszolgalta) {
     const megjott = r.fajlok.filter((x) => x.kesz).length;
     siker = megjott > 0; osszegzes = megjott + ' fájl';
@@ -1737,7 +1831,11 @@ function kerelemKiszolgaloja() {
       const { allapot } = await kepetKeszit();
       const { valasz, fak } = await fejlecekValasza({ allapot, kulcs: k.kulcs, n: k.n, d: k.d,
         karbantarto: kerelemKarbantarto, esemenyOlvas: esemenyKetTarbol, bemondasok: await bemondasok() });
-      return { valasz, mintak: (kert, megvan) => mintakValasza({ fak, kert, megvan, esemenyOlvas: esemenyKetTarbol }) };
+      // ⭐ A ház (D100): tartom-e az entitást (akkor a gyerekeit teljesen ismerem — az üres lista is válasz). A gyökeret
+      // csak „mindent” módban tartom egészében.
+      const tartottak = await tartottSzeleteim();
+      const tartja = k.kulcs === GYOKER_KULCS ? !tartottak : (tartottak ? tartottak.has(k.kulcs) : allapot.entitasok.has(k.kulcs));
+      return { valasz, tartja, mintak: (kert, megvan) => mintakValasza({ fak, kert, megvan, esemenyOlvas: esemenyKetTarbol }) };
     },
     /** ⭐ D92/1 (c): átveszem-e továbbadásra? (nem kaptam már meg, a számláló enged, van hely) */
     async atvesz(k, honnan) {
@@ -4185,36 +4283,7 @@ try {
         // A célok: a raj (a tartók készülék-azonosítóval — a kopogtató témájuk ebből számítható), a DHT hirdetői (csak
         // cím — nekik a hirdetett téma párján jelentkezünk), és az induló címek. ⚠️ A port a futó kapué (`kapu.json`,
         // különben az alapport): a kopogásra az őrjárat felel — és a saját körében újra be is jelenti magát.
-        const celok = [...cimek];
-        const kopogtatok = [];
-        if (k.kulcs !== GYOKER_KULCS) {
-          for (const c of szeletCimei(await szeletJegyzekTarolo().olvas(), k.kulcs)) {
-            celok.push({ hoszt: c.hoszt, port: Number(c.port), ...(c.alairo ? { alairo: c.alairo } : {}) });
-            if (c.alairo) kopogtatok.push({ fajta: 'keszulek', kulcs: c.alairo });
-          }
-          kopogtatok.push({ fajta: 'szelet', kulcs: k.kulcs });
-          try {
-            for (const t of await cimjegyzekKeresese(cimjegyzekTema(KOINO, 'szelet', k.kulcs))) celok.push({ hoszt: t.cim, port: t.port });
-          } catch { /* a DHT segédeszköz */ }
-        } else {
-          // A gyökér: a darab a saját tudásomból (egy friss készüléknél 0), és a szomszédos mélységek (D91/3).
-          const m = (await gyokerMelysegem()).melyseg;
-          const darabok = [[m, 0], ...(m > 0 ? [[m - 1, 0]] : []), [m + 1, 0], [m + 1, 1]];
-          for (const [mm, dd] of darabok) {
-            kopogtatok.push({ fajta: 'gyoker', kulcs: mm + ':' + dd });
-            try {
-              for (const t of await cimjegyzekKeresese(gyokerDarabTemaja(KOINO, mm, dd))) celok.push({ hoszt: t.cim, port: t.port });
-            } catch { /* a DHT segédeszköz */ }
-          }
-        }
-        // ⛔ ÖNMAGUNKAT NEM KÉRDEZZÜK: a saját gyökér-darabunkat mi is hirdetjük, a DHT a mi címünket is visszaadja
-        // (a gép címe + a futó kapu portja — a 42. mérés tanulsága: a készülék önmagát hívogatta).
-        const sajatGep = await sajatOsszesCim();
-        const kp = await kapuPortja();
-        const idegenCelok = celok.filter((c) => !(sajatCimE(c.hoszt, sajatGep) && Number(c.port) === kp));
-        const r = kerelemFelvetele(await kerelmekOlvasasa(), { fajta: k.fajta, kulcs: k.kulcs, n: k.n, d: k.d,
-          celok: idegenCelok, kopogtatok }, Date.now(), randomUUID());
-        await kerelmekIrasa(r.nyilvantartas);
+        const { r, kopogtatok, kp } = await fuggoKerelemFelvetele(k, { cimek, dht: true });
         // A kopogtató témákon most is bejelentkezünk (az őrjárat ~20 percenként megismétli).
         let bejelentve = 0;
         try {
@@ -5630,7 +5699,8 @@ try {
             tar: t,
             kornyezet: { koino: aktivKoino, kulcspar, szerzo, tar: t, darabTar: fajlBlobTarolo(aktivKoino), lancTarolo: lancTarolo(aktivKoino) },
             // ⭐ D95/1: a lap is az ellenőrzött lezárási összegzésekből dönt (az indításkori koinóé — azé van tárolója).
-            pakliNezet: ujPakliNezet(aktivKoino === KOINO ? { osszegzesek: ellenorzottOsszegzesek } : {})
+            // ⭐ A ház (D100): a szigorú (b) alatt a lap is csak a tartott szeletre alkalmazza a D14-et (72. mérés).
+            pakliNezet: ujPakliNezet(aktivKoino === KOINO ? { osszegzesek: ellenorzottOsszegzesek, tartott: tartottSzeleteim } : {})
           });
         }
         return nyitottKoinok.get(aktivKoino);
@@ -6039,6 +6109,27 @@ try {
 
         // ⛔⛔ A PAKLI — EGY OLDAL, SOHA NEM AZ EGÉSZ (9. szabály).
         // A `darab` felülről korlátos, a lapozás kurzoros, a szövegek nincsenek benne.
+        // ===================================
+        // ⭐⭐ A HÁZ (D100): A HIERARCHIKUS PAKLI — „láncos-testvéres”, és a hiányzó részek elkérése (H1)
+        // ===================================
+        //
+        // A kiválasztott köré a felmenők, a bogár és a testvérek, a helyi tudásból (`pakli.js` `pakliHierarchia`); amit nem
+        // tudunk (a nem tartott ágak gyerekei, a gyökér szintje, egy ismeretlen felmenő, a megnyitott kártya szövege), azt
+        // függő kérelemként beírjuk — az őrjárat hozza —, és a válasz `betoltes` jele mondja meg a lapnak, hogy érdemes
+        // újrakérdeznie. ⚠️ A hálózathoz a felület nem nyúl (H1/A): egy kapu van, az őrjáraté.
+        if (utvonal === '/api/pakli/hierarchikus') {
+          const h = await pakliHierarchia(olvasoTar, aktivKoino, {
+            entitas: kereses.get('entitas') || null,
+            szerzo,
+            nezet: pakliNezet,
+            bemondasok: aktivKoino === KOINO ? await bemondasok() : new Map(),
+            darabOlvas: (lenyomat) => fajlBlobTarolo(aktivKoino).olvas(lenyomat)
+          });
+          const keres = aktivKoino === KOINO && h.hianyzik.length ? await lapHianyzoinakElkerese(h.hianyzik)
+            : { kert: 0, fuggo: 0, celos: 0 };
+          return { adat: { ...h, betoltes: keres.fuggo > 0, kitolKerni: keres.celos, kertKerelmek: keres.kert } };
+        }
+
         if (utvonal === '/api/pakli') {
           const darab = parseInt(kereses.get('darab'), 10);
           try {

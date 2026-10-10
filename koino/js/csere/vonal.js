@@ -491,8 +491,10 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
         kiszolgalva = 'szelet';
       }
     } else if (k?.fajta === 'fejlecek' && kiszolgalo?.fejlecek) {
-      const { valasz, mintak } = await kiszolgalo.fejlecek(k);
-      if (!valasz.lista.length && await atvesz()) { /* átvettük */ } else {
+      const { valasz, mintak, tartja } = await kiszolgalo.fejlecek(k);
+      // ⭐ A ház (D100): az üres lista csak akkor „nem tudom” (továbbadás), ha az entitást NEM tartom — aki tartja, annak az
+      // üres lista a válasz (nincs gyereke). Különben a gyerektelen gondolat fejléc-kérése soha nem zárulna le.
+      if (!valasz.lista.length && !tartja && await atvesz()) { /* átvettük */ } else {
         kuld({ uzenet: 'FEJLECEK', valasz });
         // ⭐ A gyökerek bemondása UTÁN a kérdező mondja meg, hol kér mintát (különben a tartó válogatna).
         const u = await sor.kovetkezo();

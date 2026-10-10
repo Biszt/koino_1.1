@@ -5074,6 +5074,38 @@ nőtt (`csereKihagyhato` — `fajlTar.js` `valtozottSzeletek(n, 0)`), és kiírj
 következő cserével átment. Parancssor-próba (két valódi őrjárattal, rontással). ⚠️ Az ütközést magát helyben (késleltetés
 nélkül) nem sikerült előidézni — a D99 a második cserét veszi el, ami ütközhetett volna.
 
+### D100. A HÁZ: A PAKLI-NÉZET A FELÜLETEN, A KÉRELEMBŐL (2026-10-10, Csaba: „elfogadom a javaslataidat”)
+
+**Amiből jött:** a ház átvizsgálása ([`haz_pakli_atvizsgalas.md`](haz_pakli_atvizsgalas.md)): a felület pakli-nézete
+ideiglenes lista, a szigorú (b) alatt semmit nem kér el, ami hiányzik; a prototípus „láncos-testvéres” nézetéhez (felmenők,
+bogárlogika, testvérek) a D92 fejléc-kérdése adja az adatot.
+
+#### A DÖNTÉS
+
+1. ⭐ **H1 (A) — az őrjárat kérdez, függő kérelemként:** a lap kiszolgálója csak beírja a függő kérelmet, az őrjárat a
+   következő körében elhozza (a G-ből tudja, kitől; kopogtatással a NAT mögül is), és a lap újrakérdez („betöltés…”).
+   Egy kapu van, az őrjáraté.
+2. ⭐ **H2 (A) — a nem tartott ágak össz-pontja jelölve:** „ellenőrizve” · „bemondás” · „pontjai ismeretlenek” (és ha a
+   részfa egy része ismeretlen: „részleges”); a rendezés a legjobb ismert szám szerint.
+3. ⭐ **H3 (A) — az örökölt `Pakli.js`** (a `TestverJelzo`-val és a `testverRendezes`-sel) jön át, és a lap fordít (a
+   `kartyaAdat.js` mintájára — a program a saját szótárát beszéli). A mai ideiglenes lista eltűnik.
+
+#### ✅ MEGÉPÜLT — a hierarchikus lekérdezés és a hiányzók elkérése (2026-10-10)
+
+`pakli.js` `pakliHierarchia`: a kiválasztott (vagy a legerősebb gyökér) köré a felmenők (a szülő-láncon, körbiztosan,
+legfeljebb 64), a bogár (a legerősebb ismert gyerek lefelé, legfeljebb 50), a testvérek (a legerősebbek, legfeljebb 50 — a
+kérelem fejléc-korlátja) — kártyánként `melysegiSzint`, `tartom` és `osszPontForras` (H2); és a `hianyzik` lista: a gyökér
+szintje (ha nem „mindent” mód), a bogár ELSŐ bizonytalan pontja (egyetlen mély fejléc-kérés, `d` = 4 — a kérelem a legjobb
+ágat hozza), a testvérek szülője, egy ismeretlen felmenő vagy a kért entitás (`szelet`), a megnyitott kártya hiányzó
+szövege (`torzs`). ⭐ A pakli képe is csak a tartott szeletre alkalmazza a D14-et (a nézet `tartott`-ja — a 72. mérés
+leletének párja a lapon). `koino.js`: a `/api/pakli/hierarchikus` végpont, a `fuggoKerelemFelvetele` (a `kerelem` parancs
+és a lap közös útja; a lap a DHT-t nem hívja — az őrjárat címjegyzék-köre úgyis megteszi), a `lapHianyzoinakElkerese`
+(lekérésenként legfeljebb 4 kérelem; amit 10 percen belül elhozott, nem kéri újra). ⚠️ Két kérelem-hiba javítva útközben
+(elágazás 97–98): az üres fejléc-lista csak akkor továbbadás, ha a tartó nem tartja az entitást, és a kiszolgált üres válasz
+is lezárja a kérelmet — különben a gyerektelen gondolat fejléc-kérése soha nem zárult le. Próbák: 6 modul-próba
+(`pakliProba.js`), és a bekötés parancssor-próbája (két készülék, „alap” mód: a lap elkéri, az őrjárat elhozza, a lap ismert
+össz-pontot mutat — rontással).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

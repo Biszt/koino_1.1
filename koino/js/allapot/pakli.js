@@ -49,7 +49,7 @@ import { TUDATPONT_KERET } from './szabalyok.js';
 import { javaslatokSzamitasa, ALAP_KUSZOBOK } from './javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from './szerkesztesiVegrehajtas.js';
 import { szovegFeloldasa, szovegHivatkozasE } from '../esemeny/szovegDarab.js';
-import { osszPontokSzamitasa } from './osszPont.js';
+import { osszPontokSzamitasa, gyerekJegyzek } from './osszPont.js';
 
 /**
  * ⭐ D72 (2026-09-26): a javaslatok változásaiban a SZÖVEG-HIVATKOZÁS feloldása — a felület
@@ -95,9 +95,11 @@ export const MAX_DARAB = 100;
  * részek döntése az összegző tartónál ebből jön, ugyanúgy, mint a parancssorban (`koino.js` `kepetKeszit`).
  * @param {Object} [beallitas]
  * @param {Function|null} [beallitas.osszegzesek] - async () → Map('javaslat|entitás' → { osszegzes, allas })
+ * @param {Function|null} [beallitas.tartott] - async () → Set (a vállalt szeleteim) vagy null („mindent”) — a szigorú (b)
+ *   alatt a D14 csak a tartott szeletre ítél (72. mérés: a csak születéséből ismert gondolat különben eltűnne a lapról is)
  */
-export function ujPakliNezet({ osszegzesek = null } = {}) {
-  return { horgony: null, kep: null, szamitasok: 0, osszegzesek };
+export function ujPakliNezet({ osszegzesek = null, tartott = null } = {}) {
+  return { horgony: null, kep: null, szamitasok: 0, osszegzesek, tartott };
 }
 
 // ===================================
@@ -532,6 +534,162 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
  * @param {number} [beallitas.most] - a lap pillanata (`pakliOldal` válaszából)
  * @param {Object} [beallitas.nezet] - `ujPakliNezet()`, a kép megtartásához
  */
+// ===================================
+// ⭐⭐ A HÁZ (D100, 2026-10-10): A HIERARCHIKUS PAKLI — „láncos-testvéres”, a helyi tudásból
+// ===================================
+//
+// A prototípus pakli-nézete (`pakliService.js`) egy KIVÁLASZTOTT entitás köré épül: fölötte a FELMENŐI a gyökérig, alatta
+// a „BOGÁRLOGIKA” (mindig a legerősebb gyerek, lefelé), oldalra a TESTVÉREI. Itt ugyanez a helyi tudásból — a két tár
+// állapotából és a bemondott össz-pontokból (D92/5). ⭐ A szigorú (b) alatt a tudás hiányos: ami nem tartott, annak a
+// gyerekeit nem ismerjük (a kérelem — `fejlecek` — hozza), a megnyitott kártya szövege hiányozhat (`torzs`). Ezt a
+// lekérdezés nem hallgatja el: a `hianyzik` lista megmondja, mit kellene elkérni (H1: az őrjárat függő kérelemként hozza),
+// és minden kártya megmondja, honnan tudjuk, amit mutat (H2).
+//
+// ⛔ 9. szabály: a testvérek korlátosak (`TESTVER_KORLAT` — a kérelem fejléc-korlátja), a bogár is (`BOGAR_KORLAT`), a
+// felmenők is (`FELMENO_KORLAT`); a lista nem hordoz szöveget (az a `/api/pakli/szoveg`-en jön).
+
+export const TESTVER_KORLAT = 50;
+export const BOGAR_KORLAT = 50;
+export const FELMENO_KORLAT = 64;
+/** A bogár elkérésének mélysége (a kérelem `d`-je — a kérelem korlátja 4). */
+export const BOGAR_MELYSEG = 4;
+
+/**
+ * Egy kártya forrás-jelölése (H2): a szeletet tartom-e, és az össz-pont honnan jön.
+ * @returns {{tartom: boolean, osszPontForras: 'szamolt'|'reszleges'|'ellenorzott'|'bemondas'|'ismeretlen'}}
+ */
+function forrasJelolese(e, o, bemondasok, tartott) {
+  const tartom = !!tartott(e.azonosito) && !e.pontokIsmeretlenek;
+  let osszPontForras = 'szamolt';
+  if (o?.forras === 'bemondott') osszPontForras = bemondasok.get(e.azonosito)?.ellenorzott ? 'ellenorzott' : 'bemondas';
+  else if (o?.forras === 'osszegzett') osszPontForras = 'ellenorzott';
+  else if (o?.forras === 'ismeretlen' && !(o?.osszPont > 0)) osszPontForras = 'ismeretlen';
+  else if ((o?.bizonytalan ?? 0) > 0) osszPontForras = 'reszleges';
+  return { tartom, osszPontForras };
+}
+
+/**
+ * ⭐⭐ A HIERARCHIKUS PAKLI egy kiválasztott entitás köré: felmenők + a kiválasztott + a bogár (a `pakli` lista, a
+ * gyökértől lefelé, `melysegiSzint`-tel), és a kiválasztott testvérei — a prototípus alakjában, koinós kártyákkal.
+ *
+ * @param {Object} tar - a két tár nézete (a felületé: `ketTarNezet`)
+ * @param {string} koino
+ * @param {Object} [beallitas]
+ * @param {string|null} [beallitas.entitas] - a kiválasztott (ha nincs, vagy nem ismert: a legerősebb gyökér)
+ * @param {string} [beallitas.szerzo] - a néző (a saját pontjához)
+ * @param {Map} [beallitas.bemondasok] - a bemondott össz-pontok (D92/5)
+ * @param {Function} [beallitas.tartott] - az → tartom-e a szeletét (a vállalás; „mindent” módban mindig igaz)
+ * @param {boolean} [beallitas.gyokerTeljes] - a gyökér összes gyerekét ismerem-e („mindent” mód) — ha nem, a gyökér
+ *   szintje is kérendő
+ * @param {Function} [beallitas.darabOlvas] - a szöveg-darab olvasása (a hiányzó törzs felismeréséhez)
+ * @returns {Promise<{kivalasztott: string|null, pakli: Array<Object>, testverek: Array<Object>,
+ *   hianyzik: Array<{fajta: string, kulcs: string, ok: string}>, horgony: number, most: number}>}
+ */
+export async function pakliHierarchia(tar, koino, beallitas = {}) {
+  console.log('pakli.pakliHierarchia - KEZDÉS', { entitas: beallitas.entitas ?? null });
+  const nezet = beallitas.nezet ?? ujPakliNezet();
+  const bemondasok = beallitas.bemondasok ?? new Map();
+  // ⭐ A tartott szeletek: a hívóé, vagy a nézeté (ugyanaz, amivel a kép a D14-et számolja) — „mindent” módban minden.
+  const tartottak = typeof nezet.tartott === 'function' ? await nezet.tartott() : null;
+  const tartott = typeof beallitas.tartott === 'function' ? beallitas.tartott
+    : (tartottak ? (az) => tartottak.has(az) : () => true);
+  const gyokerTeljes = typeof beallitas.gyokerTeljes === 'boolean' ? beallitas.gyokerTeljes : !tartottak;
+
+  const esemenyek = await koinoEsemenyei(tar, koino);
+  const most = beallitas.most ?? Date.now();
+  const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek, tar.csakAtmeneti?.() ?? null);
+  const entitasok = kep.entitasok;
+  const osszPontok = osszPontokSzamitasa(entitasok, bemondasok);
+  const pontja = (az) => osszPontok.get(az)?.osszPont ?? 0;
+  const gyerekek = gyerekJegyzek(entitasok);
+  // ⭐ Az erősebb előbb, holtversenyben az azonosító (mint a kérelem fejléceinél — egy sorrend).
+  const erosseg = (a, b) => (pontja(b) - pontja(a)) || (a < b ? -1 : a > b ? 1 : 0);
+  const gyokerek = [...entitasok.values()].filter((e) => !e.szulo).map((e) => e.azonosito).sort(erosseg);
+  const hianyzik = [];
+  const kerendo = (fajta, kulcs, ok, extra = {}) => {
+    if (!hianyzik.some((h) => h.fajta === fajta && h.kulcs === kulcs)) hianyzik.push({ fajta, kulcs, ok, ...extra });
+  };
+  // A nem tartott entitás gyerekeit nem ismerjük biztosan (a kérelem hozza); a gyökérét csak „mindent” módban.
+  const gyerekeiKerendok = (az) => (az === null ? !gyokerTeljes : !tartott(az));
+
+  // ----- A KIVÁLASZTOTT -----
+  const kert = beallitas.entitas ?? null;
+  const kivalasztott = kert && entitasok.has(kert) ? kert : (gyokerek[0] ?? null);
+  if (kert && !entitasok.has(kert)) kerendo('szelet', kert, 'a kért entitást nem ismerem');
+  if (gyerekeiKerendok(null)) kerendo('fejlecek', '', 'a gyökér szintjét csak részben ismerem');
+  if (!kivalasztott) {
+    console.log('pakli.pakliHierarchia - VÉGE (üres)', { hianyzik: hianyzik.length });
+    return { kivalasztott: null, pakli: [], testverek: [], hianyzik, horgony: esemenyek.length, most };
+  }
+
+  // ----- A FELMENŐK (a szülő-láncon, körbiztosan, korlátosan) -----
+  const felmenok = [];
+  {
+    const latott = new Set([kivalasztott]);
+    let sz = entitasok.get(kivalasztott).szulo;
+    while (sz && felmenok.length < FELMENO_KORLAT) {
+      if (latott.has(sz)) break;
+      if (!entitasok.has(sz)) { kerendo('szelet', sz, 'egy felmenőt nem ismerek'); break; }
+      latott.add(sz);
+      felmenok.unshift(sz);
+      sz = entitasok.get(sz).szulo;
+    }
+  }
+
+  // ----- A BOGÁR: lefelé mindig a legerősebb ismert gyerek -----
+  const bogar = [];
+  {
+    const latott = new Set([...felmenok, kivalasztott]);
+    let az = kivalasztott;
+    let kerve = false;
+    while (bogar.length < BOGAR_KORLAT) {
+      // ⭐ Az ELSŐ bizonytalan pontnál egy mély fejléc-kérés (a kérelem a legjobb ágat `d` szintig hozza — D92/6): a
+      // bogár többi szintjét ugyanaz a válasz fedi, nem kérünk szintenként.
+      if (!kerve && gyerekeiKerendok(az)) {
+        kerendo('fejlecek', az, 'a gyerekeit nem ismerem biztosan', { d: BOGAR_MELYSEG });
+        kerve = true;
+      }
+      const legjobb = (gyerekek.get(az) ?? []).filter((g) => !latott.has(g)).sort(erosseg)[0];
+      if (!legjobb) break;
+      latott.add(legjobb);
+      bogar.push(legjobb);
+      az = legjobb;
+    }
+  }
+
+  // ----- A TESTVÉREK (a kiválasztott szülőjének többi gyereke; a gyökérnél a többi gyökér) -----
+  const szulo = entitasok.get(kivalasztott).szulo ?? null;
+  if (szulo && gyerekeiKerendok(szulo)) kerendo('fejlecek', szulo, 'a testvéreit nem ismerem biztosan');
+  const testverAz = (szulo ? (gyerekek.get(szulo) ?? []) : gyokerek).filter((x) => x !== kivalasztott).sort(erosseg)
+    .slice(0, TESTVER_KORLAT);
+
+  // ----- A KÁRTYÁK -----
+  const kartyaja = (az, melysegiSzint) => {
+    const e = entitasok.get(az);
+    const k = kartya(e, pontja(az), beallitas.szerzo, entitasok, entitasDontese(e, kep.javaslatok));
+    return { ...k, melysegiSzint, ...forrasJelolese(e, osszPontok.get(az), bemondasok, tartott) };
+  };
+  const lanc = [...felmenok, kivalasztott, ...bogar];
+  const pakli = lanc.map((az, i) => kartyaja(az, i + 1));
+  const testverek = testverAz.map((az) => kartyaja(az, felmenok.length + 1));
+  // ⭐ D72: a javaslat-kártyák változásaiban a szöveg-hivatkozás szöveggé (mint a lapozó paklinál).
+  for (const k of [...pakli, ...testverek]) {
+    if (!k.javaslat) continue;
+    k.javaslat.valtozas = await valtozasFeloldasa(k.javaslat.valtozas, beallitas.darabOlvas);
+    for (const r of k.javaslat.erintettek) r.valtozas = await valtozasFeloldasa(r.valtozas, beallitas.darabOlvas);
+  }
+
+  // ----- A MEGNYITOTT KÁRTYA SZÖVEGE: ha hiányzik, kérendő (a vállalótól — D84/1) -----
+  const kivEntitas = entitasok.get(kivalasztott);
+  if (szovegHivatkozasE(kivEntitas.szoveg) && typeof beallitas.darabOlvas === 'function') {
+    const f = await szovegFeloldasa(kivEntitas.szoveg, beallitas.darabOlvas);
+    if (f.hianyzik) kerendo('torzs', kivalasztott, 'a szövege még nincs meg');
+  }
+
+  console.log('pakli.pakliHierarchia - VÉGE', { pakli: pakli.length, testverek: testverek.length, hianyzik: hianyzik.length });
+  return { kivalasztott, pakli, testverek, hianyzik, horgony: esemenyek.length, most };
+}
+
 async function lapKepe(tar, koino, beallitas) {
   const nezet = beallitas.nezet ?? ujPakliNezet();
   const esemenyek = await koinoEsemenyei(tar, koino);
@@ -829,14 +987,18 @@ export async function entitasKuszobei(tar, koino, azonosito, beallitas = {}) {
  * kártya-végpont születik, **azt is oda kösd**, ne ide közvetlenül.
  */
 async function kepetKerni(nezet, koino, horgony, most, esemenyek, csakAtmeneti = null) {
-  const kulcs = koino + '|' + horgony + '|' + most + '|' + (csakAtmeneti?.size ?? 0);
+  // ⭐ A szigorú (b) alatt: amit nem tartok, annak a pontjai ismeretlenek — a D14 nem tüntetheti el (`koino.js`
+  // `kepetKeszit` párja; 72. mérés).
+  const tartottak = typeof nezet.tartott === 'function' ? await nezet.tartott() : null;
+  const kulcs = koino + '|' + horgony + '|' + most + '|' + (csakAtmeneti?.size ?? 0) + '|' + (tartottak ? tartottak.size : 'm');
   if (nezet.horgony === kulcs && nezet.kep) return nezet.kep;
 
   // ⭐ „Az első N esemény" — és ez azért stabil halmaz, mert a tár HOZZÁFŰZHETŐ: ami egyszer
   // beírt, az ott marad, azon a helyen.
   const bemenet = horgony >= esemenyek.length ? esemenyek : esemenyek.slice(0, horgony);
   // ⭐ B/2: ha a tár a két tár nézete (`atmenetiTar.js`), a D14 kivételéhez megmondja, mi van csak az átmenetiben.
-  const kep = allapotSzamitasa(bemenet, { csakAtmeneti });
+  const kep = allapotSzamitasa(bemenet, { csakAtmeneti,
+    ...(tartottak ? { nemTartott: (az) => !tartottak.has(az) } : {}) });
 
   // ⭐⭐ ÉS A HÁROM FÁZIS HARMADIKA: az elfogadott szerkesztési egyezmények rávezetése.
   // ⚠️ Enélkül a pakli **elfogadott egyezmény után is a régi címet mutatná** — pontosan az

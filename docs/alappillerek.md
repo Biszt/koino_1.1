@@ -728,3 +728,15 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     terepen (72. mérés) a telefon egy rég eltűnt kötést percenként keresett a mobilneten (minden keresés néhány KB DHT); a
     friss leszakadásnál a gyors visszatalálás marad (43. mérés) · a terepi mérés után, Claude · `kotesek.js`
     (`tablanKeresendok`).
+96. **2026-10-10 · a bogár elkérése (D100)** → **egyetlen mély fejléc-kérés a bogár ELSŐ bizonytalan pontján (`d` = 4), nem
+    szintenként** · mert a kérelem a legjobb ágat `d` szintig hozza (D92/6), és a függők jegyzéke korlátos (16) — egy lap
+    ne töltse meg · a megépítéskor, Claude · `pakli.js` (`BOGAR_MELYSEG`).
+97. **2026-10-10 · az üres fejléc-lista a kérelemben (D92/1 (c): „ha nem tudja kiszolgálni, de vállalja, ÁTVESZEM”)** →
+    **az üres lista csak akkor továbbadás, ha a tartó NEM tartja az entitást; aki tartja, üres listával felel** · mert a
+    gyerektelen gondolat fejléc-kérését a tartója továbbadásra vette át, és a kérelem soha nem zárult le (a ház
+    parancssor-próbája mérte) · a megépítéskor, Claude · `vonal.js`, `koino.js` (`kerelemKiszolgaloja` — `tartja`).
+98. **2026-10-10 · a fejléc-kérelem sikere** → **a kiszolgált ÜRES válasz is siker („megjött: 0 fejléc”); ha jöttek tételek,
+    de egy sem ellenőrizhető, nem** · ugyanaz a próba mérte · a megépítéskor, Claude · `koino.js` (`fuggoKerelemMunkaja`).
+99. **2026-10-10 · a lap frissessége (D100, H1)** → **amit a kérelem 10 percen belül elhozott, azt a lap nem kéri újra** ·
+    mert a nem tartott ág gyerekeit a lekérdezés soha nem tekinti biztosnak — e nélkül a lap minden lekéréskor kérne, és
+    örökké „betöltés”-t mutatna · a megépítéskor, Claude · `koino.js` (`lapHianyzoinakElkerese`, `LAP_FRISSESSEG`).
