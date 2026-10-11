@@ -51,14 +51,22 @@ az elágazások (1–104) az [alappillérek](docs/alappillerek.md) 5. szakaszáb
 #### ⏭️⏭️ A KÖVETKEZŐ SESSION — Csaba választ (a sorrend az övé)
 
 1. ⭐ **A maradék modálok (5.8)** — a kártyák menüjében ma NYOLC helyőrző áll: Rendezés, Struktúra nézet, Síkidom
-   nézet, Keresés, Tudatpontok, Kategória (szerkesztés), Értesítések, Értesítési beállítások
+   nézet, Keresés, Tudatpontok, Kategória (alkategória létrehozása), Értesítések, Értesítési beállítások
    (`felulet/js/components/modals/` — a `helyorzoModal` alakúak; ⚠️ a *Részvételi* beállítások NEM helyőrző, az
-   5.5 óta valódi). **Claude javaslata: előbb átvizsgálás**, mert a szigorú (b) alatt nem mind egyforma: a Struktúra és a
-   Síkidom az egész részfát látná — a háznál megépült kérelem-úton, korlátosan kell táplálni; a **Keresés** a
-   kereső-rétegre épül (Szakasz 6, [`skalazas_terv.md`](docs/skalazas_terv.md) — „elhagyható, csak a MEGTALÁLÁS
-   kívánhat hálózatot”), ami még egyáltalán nincs meg (helyi alja van: a `/api/kereses` a helyben tartott entitások
-   címében keres — a hivatkozás-mező ezt használja); az Értesítések rétege sincs. Ezt jó tudni, mielőtt bármelyikhez
-   nyúlunk.
+   5.5 óta valódi). 🔍 **ÁTVIZSGÁLVA (Csaba: „az 1-est választom”, 2026-10-11)** —
+   [`modalok_atvizsgalas.md`](docs/modalok_atvizsgalas.md): három csoport — (I) a saját láncból / meglévő rétegből
+   (Tudatpontok, a besorolások létrehozása a kapun, Rendezés) · (II) a fa bejárása a kérelemre (Struktúra, Síkidom) ·
+   (III) új réteg kell alá (Keresés: a helyi alja megvan, a hálózati a kereső-réteg; Értesítések: helyben számolva). ⭐
+   **A lelet:** az össz-pont lefelé nem nő, tehát az „ágazati pont szerint csökkenő” sor legjobb-először bejárással
+   korlátosan kiszámolható — EGY bejáró hordozza a lapos ágazati rendezést (ma csak a helyben ismert részen fut), a
+   Struktúrát és a Síkidomot; hozzá a fejléc-kérdés FOLYTATÁSA hiányzik (ma az 51. gyerek nem kérhető). Ami nem monoton
+   (időrend, saját pont, növekvő), az csak a helyben ismert részből megy; az idő-összegző a szerző órája miatt nem jó.
+   Mellék-leletek: a felületen nincs fő menü (`foOldal.js`); a Struktúra letöltése nyers `fetch` (Bearer — a kapu nem
+   fogadja); a prototípus Síkidomja NEM felfüggesztett (2026-08-03 óta újraépült, működik). ⏸️ **Csabánál: M1** (a közös
+   bejáró + a folytatás — javaslat: igen, előtte mérés) · **M2** (a nem monoton rendezések: a helyben ismert részből,
+   véglegesen) · **M3** (az értesítés a részvételi szeletekből — a tudatpont a figyelés eszköze; helyi postafiók) · **M4**
+   (a Keresés most a helyi aljára, a kereső-réteg utána külön pillér) · **M5** (bájtra változatlan átvétel, mint a ház) ·
+   **M6** (a fő menü a modálokkal együtt).
 2. **A terep 🅱️ (két mobilnetes telefon)** — amikor meglesznek; előtte a telefon frissítése (lent).
 3. **Az „UTÁNA” lista** (lent).
 

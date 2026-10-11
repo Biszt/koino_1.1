@@ -347,10 +347,12 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 `koinoPakli.js`-ben (a hiányzót az őrjárat hozza, a lap csendben újrakérdez; az össz-pont forrásának jele; a lapos
 nézet lapozása). A részletek: [`haz_pakli_atvizsgalas.md`](haz_pakli_atvizsgalas.md), a fázis-2 terv D100-a.
 ⏭️ **Ami a felületből hátravan: a maradék modálok (5.8)** — a kártya-menük nyolc helyőrzője (Rendezés, Struktúra,
-Síkidom, Keresés, Tudatpontok, Kategória-szerkesztés, Értesítések, Értesítési beállítások; ⚠️ a Részvételi
-beállítások az 5.5 óta valódi); a szigorú (b) alatt előbb átvizsgálandó, melyik mire épül. *(A Keresésnek van helyi
-alja — a `/api/kereses` a helyben tartott entitások címében keres, a hivatkozás-mező ezt használja —, a hálózati
-MEGTALÁLÁS, a kereső-réteg, még nincs.)*
+Síkidom, Keresés, Tudatpontok, Kategória — az alkategória létrehozása —, Értesítések, Értesítési beállítások; ⚠️ a
+Részvételi beállítások az 5.5 óta valódi). 🔍 **Átvizsgálva (2026-10-11):**
+[`modalok_atvizsgalas.md`](modalok_atvizsgalas.md) — három csoport (a saját láncból · a fa bejárása a kérelemre · új
+réteg alá), egy közös alap (a legjobb-először bejáró az össz-pont szerint, a fejléc folytatásával), és hat kérdés
+Csabánál (M1–M6). *(A Keresésnek van helyi alja — a `/api/kereses` a helyben tartott entitások címében keres, a
+hivatkozás-mező ezt használja —, a hálózati MEGTALÁLÁS, a kereső-réteg, még nincs.)*
 
 ### (RÉGEBBI) ITT TARTUNK (2026-09-13)
 
@@ -402,7 +404,8 @@ későbbi session, hogy megmértük és megbukott.**
 3. **A maradék modálok** (5.8): `KategoriaModal`, `TudatpontokModal`, `KeresesModal`,
    `RendezesModal`, `StrukturaModal`. ⛔ Az `ErtesitesekModal` és az `ErtesitesiBeallitasModal`
    mögött **nincs réteg** — azok nem modál-munkák. ⏸️ A `SikidomModal` a prototípusban is
-   felfüggesztve.
+   felfüggesztve. *(⛔ 2026-10-11, az átvizsgálás javítása: ez elavult volt már akkor is — a 2026-07-20-i
+   felfüggesztés után a síkidom 2026-08-03-án újraépült és működik, `fejlesztesi_terv.md` 14. pont.)*
 4. **A hívás ötlete** (Csaba, 2026-09-13) — a [`jegyzetek.md`](jegyzetek.md)-ben.
 
 ---
