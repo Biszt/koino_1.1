@@ -5020,3 +5020,43 @@ működik: a táblán át találnak egymásra (a változó címek ellenére), a 
 már vállalás előtt átjön, a vállalás után a szelet a változott szelet útján (a társankénti emlékezettel) mozdul, a
 lánc-ellenőrzés lefut, és a „nincs újdonság” forgalom a D99-cel percenként egy csere (~2,4 KB). ⏸️ A két mobilnetes
 telefon közötti rés (két cél-függő NAT) még méretlen — Csaba a közeljövőben intéz hozzá telefonokat.
+
+## 74. ⭐⭐ A LEGJOBB-ELŐSZÖR BEJÁRÓ ÁRA a szigorú (b) alatt — szimuláció (D101, M1: „előtte mérés”, 2026-10-11)
+
+*`node koino/meres/bejaroMeres.js [N ...]` — magvas véletlen, 3 ismétlés átlaga. A kérdés: a D101 közös bejárója (az
+„ágazati pont szerint csökkenő” sor a fejléc-kérdéssel — a lapos ágazati rendezés, a Struktúra, a Síkidom alapja) hány
+kérelmet és hány percet kér egy FRISS készüléken (a koinóból semmit nem tart), egy 20 kártyás oldalhoz és egy B = 200 /
+500 / 2000 csomópontos Struktúrához? A modell a program mai menete: az őrjárat T percenként köröz, egy körben minden célhoz
+egy munka, egy munka EGY függő kérelmet visz (`tarshozIllo`), a függők legfeljebb 16-an; a tartó 30% eséllyel közvetlenül
+elérhető, különben a kopogtató témáján (≤ 20 perc) látja a kérelmet; körönként 70% eséllyel él; egy entitás tartói 1 +
+Poisson(2) készülék, egy gyerek tartója 50% eséllyel a szülőé is. A fa: előnyben részesítő kapcsolódás, Pareto-pontok —
+a csomópontok 67%-a levél.*
+
+Egy oldal (k = 20) és egy 200 csomópontos Struktúra, N = 2000 / 20 000 / 200 000 entitásnál, 1 perces körrel (5 perces
+körrel a „ma” és a G nagyjából másfélszeres, a H ötszörös — a körök száma ugyanaz):
+
+- **A — ma:** oldal 80–114 perc (~55–64 kérelem), Struktúra-200 390–460 perc. A B = 2000 a korláton belül nem ér véget.
+- **B — több kérelem egy kapcsolaton:** ugyanaz, mint az A — ⭐ **a kapcsolatonkénti kérelemszám NEM a szűk
+  keresztmetszet**: a kérelmek úgyis más-más tartóhoz mennek.
+- **C — B + a fejléc bemondja a gyerekszámot:** a levélre nem kell kérni — a kérelmek 10–60%-a elmarad, az idő alig
+  változik.
+- **D — C + bővebb függő-korlát (64):** a Struktúra ideje kb. a felére esik (167–245 perc), több előre kért kérelemmel.
+- **E — D + a tartó „mélyen” felel (4 szintig, amit tart):** kevés javulás (a véletlen tartók ritkán tartják a gyereket is).
+- **⭐ G — D + a tartó MAGA jár be legjobb-először, amit tud** (X alatt a legjobb 50 a saját tudásából — egy csomópont
+  gyerekeit akkor ismeri, ha a szeletét tartja): oldal **29–34 perc, 44–54 kérelem** (az A harmada), Struktúra-200 94–116
+  perc.
+- **F — egy „mindent” tartó (D83/2) a kötések között** (a kis, családi koinó): oldal 6–8 perc — a késés 1 kör, de a
+  sorrend szintjei így is egymás után jönnek.
+- **⭐ H — F + G:** oldal **1 kör** (1 / 5 perc), Struktúra-200 1–3 kör, Struktúra-2000 19–29 perc.
+
+**A folytatás (`utan`) hiánya:** a lapos oldalból és a 200–500-as Struktúrából semmi nem marad ki; a 2000-esből 55 (N =
+2000) és 107 (N = 20 000), 200 000-nél 0 — ahol egy szülőnek 50-nél több gyereke van.
+
+⭐ **A lelet:** a bejáró idejét a KÉRÉSENKÉNTI KÉSÉS (a NAT mögötti tartó kopogtatása) szorozva a sorrend SZINTJEIVEL
+dönti el — nem a kapcsolatonkénti kérelemszám. Két dolog segít igazán: (1) ha egy kérelemre több szint jön — a tartó maga
+jár be, amit tud (G: az idő és a kérelemszám harmada); (2) ha a közelben van egy jól ellátott („mindent”) tartó — akkor egy
+oldal egyetlen körben megjön (H). ⭐ Egy oldal ideje és kérelemszáma NEM függ a koinó méretétől (N = 2000-től 200 000-ig
+ugyanaz) — a 9. szabály rendben. ⚠️ Egy friss készülék nagy koinóban, jól ellátott tartó nélkül, G-vel is fél óra alatt
+kap meg egy oldalt, egy 200-as Struktúrát másfél óra alatt — a lap tehát fokozatosan tölt (a ház csendes újrakérdezése),
+és a „mindent” tartók (D83/2, önkéntesek) értéke a felületen ezzel lesz mérhető. ⚠️ Az ára: egy oldal ~0,7–1,4 MB (a G-vel —
+a válaszonkénti 50 fejléc és a minták); egy kisebb `n` a bejárónál ezt csökkentené.

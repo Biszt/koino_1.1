@@ -213,3 +213,49 @@ A függőségek szerint:
 
 ⚠️ Minden lépés a próba módszere szerint: a bekötést parancssor-próba méri (két készülék, „alap” mód: a lap kártyái a
 másik készülékről jönnek), a hosszan futót hosszan futó felülettel (D100, elágazás 101).
+
+## 6. ② A bejáró — a 74. mérés és a kérdések (2026-10-11)
+
+*A D101/M1 szerint a bejáró előtt mérés: `koino/meres/bejaroMeres.js`, a 74. mérés az `eredmenyek.md`-ben.*
+
+**Amit a mérés mondott.** Egy friss készüléken (a koinóból semmit nem tart) a mai menettel egy 20 kártyás oldal 80–114
+percig, egy 200 csomópontos Struktúra 6–8 óráig tart — és ez nem a koinó méretétől függ (N = 2000-től 200 000-ig
+ugyanaz), hanem a KÉRÉSENKÉNTI KÉSÉSTŐL (a NAT mögötti tartó a kopogtató témáját ~20 percenként nézi) szorozva a sorrend
+SZINTJEIVEL (egy csomópont gyerekei csak a kibontása után kérhetők). ⭐ A kapcsolatonkénti több kérelem NEM segít (a
+kérelmek úgyis más-más tartóhoz mennek). Ami segít: ha egy kérelemre több szint jön — a tartó maga jár be legjobb-először,
+amit tud (az idő és a kérelemszám harmada: egy oldal ~30 perc, ~50 kérelem) —, és ha a közelben egy jól ellátott
+(„mindent”, D83/2) tartó van: akkor egy oldal egyetlen körben megjön. A gyerekszám a fejlécben a kérelmek 10–60%-át
+spórolja meg (a csomópontok kétharmada levél), a bővebb függő-korlát (64) a Struktúra idejét felezi. A folytatás hiánya
+csak a nagy Struktúrát érinti (a 2000-esből 55–107 kimaradna).
+
+**J1. Mennyit adjon egy fejléc-kérdés?**
+
+- **(A) ⭐ A tartó maga jár be legjobb-először, amit tud — ezt javaslom:** a `fejlecek(X, n)` X alatt a legjobb n
+  csomópontot adja a SAJÁT tudásából (egy csomópont gyerekeit akkor ismeri, ha a szeletét tartja — a születések oda vannak
+  bejelentve), mindegyiket a szülőjével, hogy a kérő a fába illessze. A mai `d` (a legjobb ág d szintig) ennek egy szűkebb
+  esete — ezt váltja fel. Protokoll-bővítés (tiszta törés — a telefon úgyis frissül). 🔍 *Egymilliárdnál?* A válasz
+  felülről korlátos (n ≤ 50), a tartó terhe a saját tudásával arányos.
+- **(B) Marad egy szint + a legjobb ág** — egyszerűbb, de egy oldal ~1,5–2 óra egy friss készüléken.
+
+**J2. A gyerekszám a fejlécben, és a bejáró függő-korlátja.**
+
+- **(A) ⭐ Igen mindkettő — ezt javaslom:** a fejléc bemondja a csomópont gyerekeinek számát (a tartó a szülő szeletéből
+  tudja; bemondás, nem ellenőrzött — ha hamis, legfeljebb egy kérés marad el vagy egy fölösleges megy, a döntést nem
+  érinti), így a levélre nem kell kérni; és a bejáró függő-korlátja 64 (helyi paraméter, ma 16 — korlátos marad).
+- **(B) Nem** — a levelekre is kérünk, 16-os korláttal.
+
+**J3. Több kérelem egy kapcsolaton?**
+
+- **(A) ⭐ Nem kell — ezt javaslom:** a mérés szerint nem ez a szűk keresztmetszet; a protokoll egyszerűbb marad.
+- **(B) Mégis** (egy kis koinóban, ahol kevés tartó van, segíthetne) — a mérés ezt nem igazolta.
+
+**J4. Kitől kérjen a bejáró?**
+
+- **(A) ⭐ Az ismert tartók közül előre azt, amelyik X ágából a legtöbbet tartja — ezt javaslom:** a raj-jegyzék (D91)
+  szeletenként ismeri a tartókat; aki X ágának több szeletét tartja (egy „mindent” tartó a legtöbbet), annak a G-válasza (J1)
+  a legtöbb szintet hozza. Olcsó: helyi döntés a meglévő jegyzékből.
+- **(B) Véletlenszerűen a tartók közül** (a mai `fuggoKerelmek` célsorrendje).
+
+**A javasolt sorrend (a döntések után):** a fejléc-kérdés új alakja (J1 + a gyerekszám + a folytatás — egy protokoll-
+bővítés) → a bejáró a `pakli.js`-ben (a kérő oldal: a sor, az előre kérés a 64-es korlátig, a célválasztás — J4) → rá a
+lapos ágazati rendezés (az egész koinóban és ág-szűrve) → ③ Struktúra.
