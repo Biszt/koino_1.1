@@ -62,11 +62,12 @@ az elágazások (1–104) az [alappillérek](docs/alappillerek.md) 5. szakaszáb
    Struktúrát és a Síkidomot; hozzá a fejléc-kérdés FOLYTATÁSA hiányzik (ma az 51. gyerek nem kérhető). Ami nem monoton
    (időrend, saját pont, növekvő), az csak a helyben ismert részből megy; az idő-összegző a szerző órája miatt nem jó.
    Mellék-leletek: a felületen nincs fő menü (`foOldal.js`); a Struktúra letöltése nyers `fetch` (Bearer — a kapu nem
-   fogadja); a prototípus Síkidomja NEM felfüggesztett (2026-08-03 óta újraépült, működik). ⏸️ **Csabánál: M1** (a közös
-   bejáró + a folytatás — javaslat: igen, előtte mérés) · **M2** (a nem monoton rendezések: a helyben ismert részből,
-   véglegesen) · **M3** (az értesítés a részvételi szeletekből — a tudatpont a figyelés eszköze; helyi postafiók) · **M4**
-   (a Keresés most a helyi aljára, a kereső-réteg utána külön pillér) · **M5** (bájtra változatlan átvétel, mint a ház) ·
-   **M6** (a fő menü a modálokkal együtt).
+   fogadja); a prototípus Síkidomja NEM felfüggesztett (2026-08-03 óta újraépült, működik). ✅ **D101 (Csaba: „minden
+   javaslatodat elfogadom”) — M1–M6 mind (A):** M1 a közös bejáró + a fejléc folytatása (előtte mérés) · M2 a nem monoton
+   rendezések a helyben ismert részből, véglegesen · M3 az értesítés a részvételi szeletekből (a tudatpont a figyelés
+   eszköze; helyi postafiók) · M4 a Keresés most a helyi aljára, a kereső-réteg utána külön pillér · M5 bájtra változatlan
+   átvétel · M6 a fő menü a modálokkal együtt. 🚧 **Az építés sorrendje:** ① az I. csoport → ② a bejáró → ③ Struktúra →
+   ④ Síkidom → ⑤ Keresés → ⑥ az értesítés-réteg → ⑦ a kereső-réteg.
 2. **A terep 🅱️ (két mobilnetes telefon)** — amikor meglesznek; előtte a telefon frissítése (lent).
 3. **Az „UTÁNA” lista** (lent).
 
@@ -174,7 +175,7 @@ D100 parancssor-próbája méri, egy végig futó felülettel) · a lap a még m
   mi hiányzik (függőségi sorrendben), és miről ágaztunk le, miért. **Új elágazásnál ide is írj.**
 - **Induláskor, ha a nagy kép kell:** [`docs/utiterv.md`](docs/utiterv.md) (mit építünk, milyen
   sorrendben, és miért) → [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
-  („HOL TARTUNK" + a D1–D100 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
+  („HOL TARTUNK" + a D1–D101 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
   `szakasz5_terv.md`). A gépezet ábrákon: [`docs/gepezet.md`](docs/gepezet.md).
 - ⚠️ **Új session-váltáskor** a fenti „SESSION-VÁLTÁS" blokkot **cseréld le**, ne fölé írj
   újat — a régit (ha kell) a napló tetejére tedd. *Így maradt 233 KB-os ez a fájl.*
@@ -197,7 +198,7 @@ D100 parancssor-próbája méri, egy végig futó felülettel) · a lap a még m
 
 ⚠️ **Zsákutcák, amiket ne javasolj újra** (mind megmérve): a Duniter-féle távolság-szabály (globális szám) · az „ingyenes elismerés" (D48) · **a gazdaság önmagában nem véd** · a horgony-kör (880 hamis horgony) · ⛔ a *„kevés kapcsolata van, tehát gyanús"* jelzés (31/41/45% téves) · ⛔ **és a `k` tanúsítás + keret vonala** (D44, D51–D53) — **tárgytalan**, a meghívás váltotta ki.
 
-A tervezési döntések (**D1–D100**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
+A tervezési döntések (**D1–D101**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 

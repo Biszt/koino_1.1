@@ -5131,6 +5131,46 @@ be (a `valtozat` jel-fájl mondja meg, kell-e végignézni), és a két tár né
 node alatt), az átmeneti tár két folyamatból, a csatlakozó készülék cseréje, és a D100 bekötés-próbája most EGYETLEN, végig
 futó felülettel (a gyereket csak a kérelem után látja) — mind rontással.
 
+### D101. A MARADÉK MODÁLOK (5.8): HÁROM CSOPORT, EGY KÖZÖS BEJÁRÓ (2026-10-11, Csaba: „minden javaslatodat elfogadom”)
+
+**Amiből jött:** a maradék modálok átvizsgálása ([`modalok_atvizsgalas.md`](modalok_atvizsgalas.md)): a kártya-menük nyolc
+helyőrzője három csoportba esik — (I) a saját láncból / meglévő rétegből (Tudatpontok, a besorolások létrehozása, Rendezés),
+(II) a fa bejárása a kérelemre (Struktúra, Síkidom), (III) új réteg kell alá (Keresés, Értesítések). ⭐ A lelet: az
+össz-pont lefelé nem nő (a gyerek össz-pontja sosem nagyobb a szülőjénél), tehát az „ágazati pont szerint csökkenő” sor
+legjobb-először bejárással korlátosan kiszámolható — egy bejáró hordozza a lapos ágazati rendezést, a Struktúrát és a
+Síkidomot.
+
+#### A DÖNTÉS
+
+1. ⭐ **M1 (A) — egy közös, keretes legjobb-először bejáró a fejléc-kérdésre, a fejléc FOLYTATÁSÁVAL** (`utan`: az utolsó
+   össz-pont és azonosító — a prototípus síkidom-kurzora is ez). A ház útján kér (függő kérelem, az őrjárat hozza, a lap
+   csendben újrakérdez); a keretet a nézet adja (egy oldal, egy csomópont-szám, egy küszöb). ⛔ Előtte mérés: hány kérelem
+   és hány kör egy oldal, és egy 200 / 500 / 2000 csomópontos Struktúra.
+2. ⭐ **M2 (A) — ami nem monoton (az időrend, a saját pont, a növekvő irány — ág-szűrve és az egész koinóban), az a helyben
+   ismert részből megy, kimondva, VÉGLEGES alakként;** a Struktúra a darabszám helyén „ismert N (keret: B)” feliratot mutat.
+   Idő-összegző nincs (az `ido` a szerző órája — egy jövőbe állított óra a „legfrissebb” élére tűzné az ágát); a
+   darabszám-összegző ráér, mert semmi nem dönt rajta.
+3. ⭐ **M3 (A) — az értesítés a részvételi szeletekből jön** (ahol tudatpontod van — a prototípus „passzív figyelője” épp
+   ez), és a tartott entitások közvetlen gyerekeinek születéséből; a beállítás a TARTOTT ágon öröklődik lefelé, és a
+   felület kimondja a határt. A postafiók helyi feljegyzés, a tár végéből számolva (egy állás-jel óta hozzáfűzött
+   események), korlátos; az olvasott jel helyi; a határidőt és a döntés kimenetelét az óra szerint számolja.
+4. ⭐ **M4 (A) — a Keresés most a helyi aljára** (cím-részlet a két tárban + ág-szűrés), kimondva, hogy a hálózati kereső
+   még nincs; **a kereső-réteg UTÁNA, külön alappillérként**, saját átvizsgálással és méréssel (S8–S10; az SK7 és az SK10
+   vele dől el) — mert három dolog épül rá: a Keresés, a besorolás-lenyílók és az entitás-hivatkozás.
+5. ⭐ **M5 (A) — a prototípus modáljai bájtra változatlanul jönnek át** (a ház H3/A-ja szerint), a lap fordít
+   (`kartyaAdat.js`, `apiHelper.js`), a koinós többlet alosztályba kerül; a kapu a Struktúra nyers `fetch`-ének
+   `Authorization: Bearer` alakját is elfogadja (ugyanaz a jelszó).
+6. ⭐ **M6 (A) — a prototípus fő menüje a modálokkal együtt átjön;** ami a P2P-ben más út (a Meghívóim: kód helyett esemény;
+   az e-ember beállításai: a Profil és a kulcs mentése), az a prototípus „fejlesztésre vár” jelzését kapja a saját
+   átvizsgálásáig; a Kijelentkezés kimarad (D15).
+
+#### A SORREND (a függőségek szerint)
+
+① az I. csoport (a Tudatpontok és az „X ága alatt van-e?” egy helyen, a besorolások létrehozása a kapun, a Rendezés modál
+az ág-szűrt helyi módokkal, a fő menü) → ② a bejáró (mérés, a fejléc folytatása, a legjobb-először bejáró; rá a lapos
+ágazati rendezés) → ③ a Struktúra → ④ a Síkidom → ⑤ a Keresés → ⑥ az értesítés-réteg és a két modálja → ⑦ a kereső-réteg
+(külön pillér, saját átvizsgálással).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a
