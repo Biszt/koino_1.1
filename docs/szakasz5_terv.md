@@ -339,7 +339,18 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 
 ⚠️ *Az 5.2 nem halasztható az 5.3 mögé: a kártya alakja attól függ, mit tud kérni a lap.*
 
-### ⏭️ ITT TARTUNK (2026-09-13)
+### ⏭️ ITT TARTUNK (2026-10-11)
+
+✅ **A PAKLI A PROTOTÍPUSÉ (D100, „a ház”, 2026-10-10):** az örökölt `Pakli.js` (a láncos-testvéres nézet a
+`TestverJelzo`-val és a `testverRendezes`-sel) bájtra változatlanul a felületen; a régi ideiglenes lista
+(`pakliNezet.js`) eltűnt. A lap fordít (`kartyaAdat.js` `prototipusUtvonala`, `apiHelper.js`), a koinós többlet a
+`koinoPakli.js`-ben (a hiányzót az őrjárat hozza, a lap csendben újrakérdez; az össz-pont forrásának jele; a lapos
+nézet lapozása). A részletek: [`haz_pakli_atvizsgalas.md`](haz_pakli_atvizsgalas.md), a fázis-2 terv D100-a.
+⏭️ **Ami a felületből hátravan: a maradék modálok (5.8)** — a kártya-menük helyőrzői (Rendezés, Struktúra, Síkidom,
+Keresés, Értesítések, Tudatpontok, Részvételi beállítások…); a szigorú (b) alatt előbb átvizsgálandó, melyik mire
+épül (a Keresés a kereső-rétegre, ami még nincs).
+
+### (RÉGEBBI) ITT TARTUNK (2026-09-13)
 
 ✅ **A SZAKASZ 5 GERINCE KÉSZ.** 5.1–5.7 megvan: a helyi kapu, a kérdezhető pakli, a
 kártyák, a hiányzó műveletek, a modálok magja, a **belépő tér**, a **szövegszerkesztő**,

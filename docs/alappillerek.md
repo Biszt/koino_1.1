@@ -233,9 +233,9 @@ néztem meg).
 
 ### Ami ezekre épül (nem pillér, hanem ház)
 
-A pakli-nézet a felületen (a prototípus láncos-testvéres nézete — ma egyszerűsített lista), később a
-síkidom- és a térkép-nézet kérelmezése, és a terep (a telefon frissítése — ⛔ a tiszta törés óta
-enélkül nem cserél).
+A pakli-nézet a felületen (a prototípus láncos-testvéres nézete — ✅ **kész, D100, 2026-10-10**: a kérelemből
+tölt, az örökölt `Pakli.js`-szel), később a síkidom- és a térkép-nézet kérelmezése (a maradék modálok, 5.8), és a
+terep (✅ PC–mobil két külön címen, 72–73. mérés; ⏸️ két mobil — a 🅱️).
 
 ## 4. A sorrend — a függőségekből (✅ Csaba megerősítette, 2026-09-27 este)
 
@@ -358,7 +358,9 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    elágazás- és negatív levél bizonyíték; parancssor-próba: a két ágú szerző eseményei egy harmadik készüléken különböző
    sorszámon találkoznak, és a lánc-kör bizonyítja az elágazást. ⭐ **A ⑧ KÉSZ — A VÉGLEGES SOR VÉGE.**
 
-*Utána a ház:* a pakli-nézet a felületen, a terep (két mobil, a 🅱️ változat).
+*Utána a ház:* a pakli-nézet a felületen, a terep (két mobil, a 🅱️ változat). ✅ **A terep PC–mobil között
+(72–73. mérés, D99) és a ház (D100, 2026-10-10) KÉSZ** — a részletek a fázis-2 terv D100-ában és az 5. szakasz
+96–104. bejegyzésében. ⏭️ A következő Csabáé (a CLAUDE.md „SESSION-VÁLTÁS (2026-10-11)” blokkja).
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 

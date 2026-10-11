@@ -1,10 +1,148 @@
-# A CLAUDE.md naplója (2026-09-06 – 2026-09-25)
+# A CLAUDE.md naplója (2026-09-06 – 2026-10-11)
 
 Ez a fájl a [`CLAUDE.md`](../CLAUDE.md) korábbi „HOL TARTUNK” szakaszainak **szó szerinti**
 archívuma. A 2026-09-25-i karcsúsításkor került ide, mert a CLAUDE.md minden session
 indulásakor betöltődik, és 233 KB-ra nőtt. A friss állapot, a szabályok és a tartós
 elvek a CLAUDE.md-ben maradtak; itt a **történet** és a döntések **indoklása** áll.
 Újabb bejegyzés a fájl **tetejére** kerül.
+
+---
+
+### ▶️ SESSION-VÁLTÁS (2026-10-01 → 10-11) — ahogy a CLAUDE.md-ben állt, a ház (D100) után
+
+**Az állapot:** **1056 önpróba zöld** (48 próba-fájl) · 256 fájl / 4662,1 KB (⚠️ CR nélkül mérve — lásd
+a 6. szabályt) · 0 npm-csomag · a munkakönyvtár tiszta. ⏸️ **A telefon régi kódon fut** — a frissítése a terepi
+teszteléskor jön (Csaba, 2026-10-09; a parancs lent).
+
+⛔⛔ **SESSION-NYITÁSKOR („nézd át a koino_1.1 mappát") NE FUTTASS PRÓBÁT** (Csaba, 2026-10-01) — az
+átnézés OLVASÁS: a munkakönyvtár, az utolsó commitok, a dokumentáció, a kód. Lásd *A munka módja*.
+
+**Ami ebben a sessionben (2026-09-27 este → 10-01) megépült** (a részletek: a [fázis-2 terv](docs/fejlesztesi_terv_fazis2.md)
+D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredmények](koino/meres/eredmenyek.md) 52–53.):
+- ✅ **Átnézés → D77:** a kapu csak azonosító alakú `entitas`-t és születés-`szulo`-t enged be (egy
+  kimondhatatlan szelet-kulcs a társsal folytatott minden cserét megakasztotta — mérve).
+- ✅ **Az A pillér (az összegző Merkle-fa) helyben elérhető része:** **D78** (napló-fa + állapot-fa, egy
+  csomópont; a horgony: aláírással csak a szerző, minden más számított; SK14 lezárva) · **D79** (a teljes
+  kiosztás-lista szúrópróbával, 5%) · **D80** (az ellentmondás bizonyítéka esemény a vádolt
+  azonosság-szeletébe; a kapu ellenőrzi, a szabály a vádponttól kihagyja a pontjait) · **D81** (a
+  bizonyíték az eseménnyel utazik: a `lancGyoker` maga a két gyökér, a pont-esemény hozza a
+  bizonyítékát — a hazug bemondás hézagos láncnál is bizonyítottan elbukik) · **D82** (a kettős lánc nem
+  büntet; a bizonyíték a két ágat egy helyre hozza) · **az észlelő** (a csere és a `behoz` után magától;
+  `ellenoriz`). ⛔⛔ A garancia: becsületes láncra nem állítható össze vád (próba; két lyukat betömtünk).
+- ✅ **D83 (Csaba, 2026-10-01):** a kiszolgálás (alapból csak a tudatpontos + a saját események;
+  készülékenként „mindent"; a kérő először a tudatpont-tartóktól) és a szigorú (b) időzítése — ⛔ ez
+  utóbbit a **D84** még aznap visszavonta (lent).
+
+#### ⏭️⏭️ A KÖVETKEZŐ SESSION
+
+1. ✅ **KÉSZ (2026-10-01): a próbák témakörök szerinti CSOPORTJAI a `mind.js`-ben** — hét csoport,
+   pontos szűrővel és besorolás-őrrel (lásd *Futtatás → Önpróbák*). ⚠️ A tervezett listától a
+   tartalom szerint négy helyen tér el: a `kapu` kimaradt belőle (→ új *felulet* csoport a paklival és
+   a térrel) · a `fajlcsere` az események kézi útja (→ *csere*) · az `iro` a tár rétege (→ *alap*) · a
+   `vizsga` nem parancssor-próba (→ *csere*). Az `egyeztetes` neve `tartomany` lett (a fájlé).
+2. ⭐ **A B PILLÉR** (a két tár és az érdeklődés szabálya) — a terv: [`alappillerek.md`](docs/alappillerek.md)
+   B (D75, D83, **D84**). ⛔⛔ **D84 (Csaba, 2026-10-01): NINCS KÖZTES ÁLLAPOT** — a D83/4 visszavonva
+   („csak bezavarna"); minden darab a végleges alakjában épül, és ha kell, a sorrendet felrúgjuk: az
+   jön előbb, ami alapja annak, amivel haladnánk. ⭐ A kiszolgálás korlátja („csak a tudatpontosat")
+   **csak a törzsre** vonatkozik; az eseményeket kiszolgálja, akinél megvannak. ⭐⭐ **Új pillér: G — a
+   címjegyzék** („mi kinél van" — több helyen, és a hálózat tudja, ki tudhatja).
+3. ⭐ **AZ ADATKEZELÉS ÁTBESZÉLÉSE (2026-10-02, fejlesztés nélkül) → D85–D89:** **D85** — a javaslat a
+   saját szeletében, mindenestül; a döntés bemenete bejelentésként minden érintettnél; szavazati jog: pont
+   a gondolaton ÉS a javaslaton; az egyezmény = ugyanaz az entitás, új fázisban; a töredékek számított
+   entitások, a saját érintettjük gyerekei · **D86** — a tartós tár: a tudatpontos szeletek + a saját
+   azonosság-szeletem · **D87** — a törzs a kérelem útján, a továbbító nem tartja meg; a közvetítő nem
+   tudja, ki kérdez · **D88** — a Profil: sózott lenyomat + törölhető darab · **D89** — a csere
+   titkosított; a koinó a létrehozásakor zárt vagy nyílt (a betartatás az E-vel). A rajzos áttekintés:
+   Claude-artifact „Koino adatkezelés” (privát; a lényege a fenti döntésekben és az alappillérekben).
+4. ⭐⭐ **A VÉGLEGES SOR (2026-10-02 — Claude döntése, Csaba kérésére; részletek és indoklás:
+   [`alappillerek.md`](docs/alappillerek.md) 4., „A VÉGLEGES SOR"):** ① **D85 — az entitás-modell**
+   (egyezmény- és töredék-entitások → szavazati jog → szelet-kulcsok és bejelentés több szülővel → az
+   ÉS-szabály nevezője) → ② **D89/1 — a csere titkosítása** + a zárt/nyílt paraméter (ugyanabba a
+   protokoll-törésbe, mint a D85 — a telefon egyszer frissül) → ③ **B/1 + B/2** (a vállalás, a két tár;
+   itt dől el a gyökér tartása) → ④ **G** (előbb mérés) → ⑤ **D** → ⑥ **E** (+ a zárt koinó betartatása, a
+   Profil) → ⑦ **B/3 — a szigorú (b)** → ⑧ **F** + az A hátralévői. ✅ **Az ① KÉSZ (2026-10-03):** D85
+   (a)–(d), a T1–T3 döntésekkel; a T3 (B) szerint a döntési csomag a töredék szeletébe megy (Csaba:
+   „legyen a (B)”), és a javaslat is hozza a jogának bizonyítékát (56. mérés). ⚠️ A döntés ISMERETE és a
+   töredék-részvétel a B/1-be / B/3-ba került (mérve: csomag nélkül a csak-G1-nézet ELFOGADVA-t számol ott,
+   ahol a teljes tudás ELVETVE-t — az alappillérek VÉGLEGES SORA 3. és 7. pont). ✅ **A ② KÉSZ (2026-10-03):** a csere
+   titkosított (egyszeri kulcs + a tábla-kulcs aláírása a kézfogásra; az ára az 57. mérésben), a helyi felfedezés
+   rejtett jelet kiált, a koinó zárt vagy nyílt (alapból zárt; a betartatás az E-vel). ✅ **A ③ KÉSZ (2026-10-03):** a döntés ismerete (tartalmi jel, a D17 áll), a gyökér a G-be (D90), a
+   vállalás (B/1), az átmeneti tár, a megnézett, a D14 csak a tartósra, az előléptetés (B/2). ✅ **A ④ KÉSZ (2026-10-03):** a G — a fa és a
+   raj a fő út (D91; a raj-jegyzék, a csere viszi), a DHT-n a saját gyökér-darab hirdetése és a közvetlen keresés
+   (D91/3, vakított téma; szeletet csak készülékenkénti beállítással); az 58–59. mérés. ✅ **Az ⑤ KÉSZ (2026-10-03):** a D —
+   az átvizsgálás és a 60. mérés után a D92 (Csaba: „minden javaslatodat elfogadom”): a kopogtatás a fő út, a
+   továbbadás kiegészítő; az össz-pont felfelé összegződik és szúrópróbával ellenőrizhető (62. mérés); nézet-független
+   alapkérdések (fejlécek, szelet, törzs) a vonalon (`KERELEM`); a függő kérelmek; a továbbadás (`ATVESZEM`, `VALASZ`,
+   csak memóriában). 🚧 **A ⑥ (E) FOLYIK:** az átvizsgálás és a 63. mérés után a D93 (Csaba: „minden javaslatodat
+   elfogadom”); ✅ megépült (2026-10-04) a tagság tiszta számítása, a tagsági csomag (E2), a Profil (E5), és ⭐ az E1: a
+   döntésben csak a tag számít (a nem tagé függőben, nem vád); és az E3: a zárt koinó a kézfogásban (a nem tag csak a
+   születést és az azonosság-szeleteket kapja; 64. mérés). ✅ **Az E4 (D94, Csaba: „Az (A)-t választom.”):** a 65.
+   mérés szerint a 2. lépcső TELJES bizonyítéka közel lineáris (~290 MB egymillió 2. lépcsősnél), ezért a keret fölött
+   SZÚRÓPRÓBA (8 véletlen út, ~0,9–2,2 MB, logaritmikus), csak aláírt bemondásokat követve (`LepcsoBemondas`). ✅ **Az E6:** az
+   identitás-állítás a szerző azonosság-szeletébe is bejelentődik, a jelzés a szeletekből számol (`jelzes` parancs). ⭐ **AZ
+   E PILLÉR KÉSZ.** 🔍 **A ⑦ (B/3 — a szigorú (b)) átvizsgálása** ([`b3_szigoru_atvizsgalas.md`](docs/b3_szigoru_atvizsgalas.md), 66.
+   mérés): a teljes vállalás terhe ~√N szerint nő (a népszerű entitás és a szerzők tagsága), a két fokú vállalás konstans. ✅ **D95**
+   (Csaba: „igen, elfogadom a javaslataidat”): B1 két fokú vállalás · B2 a tagsági csomag a cserében · B3 csak küldő részvétel ·
+   B4 a gyökér darabjai. ✅ **A B1 KÉSZ (2026-10-05, 67. mérés):** a nagy szeletet (1000 esemény fölött) az összegző tartó a
+   teljes tartótól kapott, mintákkal ellenőrzött gyökérrel és lezárási összegzésekkel tartja, a döntést az összegzésből
+   számolja, a saját eseményei a csak küldő úton mennek; a teljes tartó az önkéntes (`kiszolgalas mindent`). ✅ **A B2 KÉSZ
+   (2026-10-05):** a csere végén a tagsági kör — akinek a tagságát nem tudom, annak a csomagját (vagy láncát) kérem; a
+   függők jegyzéke és a nyitás jele; a `kivisz <entitás>` a kísérőket is viszi. ✅ **A B3 KÉSZ (2026-10-05):** a csak küldő út
+   minden nem halmazként egyeztetett szeletre (a meghívás, a tanúsítás, a visszavont pont…), a kézbesítés nyilvántartásával
+   (`kezbesites.json`); a zárt koinó nem tagjának a megengedett szeletekben. ✅ **D96** (a B5, Csaba: „rendben, elfogadom a
+   javaslatodat”): a koinó születését mindenki az eseményként tartja, a szeletét csak az alapító azonosságát vállalók. ✅ **A B4
+   KÉSZ (2026-10-06):** a gyökér darabonként (a NYITÁS tömör `gyd` jelével; +76–100 B egy „nincs újdonság” cserén). ⭐ **A
+   KÖVETKEZŐ LÉPÉS: a bekapcsolás** — 🔍 **átvizsgálva** ([`bekapcsolas_atvizsgalas.md`](docs/bekapcsolas_atvizsgalas.md),
+   68. mérés): ha a részvétel a saját vállalásból jön, a „nincs újdonság” csere 6–300 KB a 702 B helyett (a nyitó lenyomat
+   soha nem egyezik), és az őrjárat a raj tartóival nem cserél. ⏸️ **Csabánál: K1** (a közös halmaz — javaslat: ujjlenyomat-
+   lista + változás-napló) **és K2** (a raj a kör céljai közt). ✅ **D97** (Csaba: „elfogadom a javaslataidat”): K1/A, K2/A.
+   ✅ **A közös halmaz KÉSZ (2026-10-08):** `kozosHalmaz.js` + a vonal (`pv`, `kz`, HALMAZ, KOZOS) — az első találkozás 2,9–28,3 KB,
+   utána a „nincs újdonság” 1,3 KB. ✅ **A RÉSZVÉTEL A VÁLLALÁSBÓL KÉSZ (2026-10-08) — a szigorú (b) él:** az „alap”
+   készülék csak a vállalt szeletekben vesz részt (D96: a koinó születése eseményként mindenkihez — egy virtuális kulcs a
+   vonalon; a zárt kapu korlátozott útja a vállalástól függetlenül; a friss tag a saját láncát is kéri); a „mindent”
+   beállítás a mai módban. ⚠️ A parancssor-próbák alapból „mindent” módban (`KOINO_KISZOLGALAS`). ✅ **A RAJ A KÖRBEN KÉSZ
+   (2026-10-09, 69. mérés):** körönként 2 raj-társ — a változott szeleteim tartói sorban, aztán a forgatás (az átfedés
+   szerinti választást a mérés elvetette: a tartók gráfja szétesett). ✅ **A törzs korlátja, a kérelem az átmenetiből (+
+   kísérők), a visszavett vállalás és a tár tömörítése KÉSZ (2026-10-09)** — ⭐ **A ⑦ (B/3 — a szigorú (b)) KÉSZ. A KÖVETKEZŐ
+   LÉPÉS: a ⑧** — F (a társankénti emlékezet) és az A hátralévői (a D79 szúrópróba, a napló-alapú kettős-lánc észlelés, a
+   logaritmikus napló-bizonyíték). 🔍 **Átvizsgálva** ([`f_a_atvizsgalas.md`](docs/f_a_atvizsgalas.md), 70. mérés): a változott
+   közös szeleteknél az első szint a nyílt forgalom 25–62%-a (változásonként ~1–2 KB); az A-nál a szigorú (b) alatt a szerző
+   teljes láncát csak ő tartja, de a pont-szerzők a raj tagjai. ✅ **D98** (Csaba: „elfogadom a javaslataidat”): F1/A, A1/A,
+   A2/A. ✅ **Az F KÉSZ (2026-10-09):** a társankénti emlékezet — a változott közös szelet az első szint nélkül jön, a
+   hazug lista után a rendes első szint fut. ✅ **Az A hátralévői KÉSZ (2026-10-09, 71. mérés):** a lánc-kör a cserében
+   (`lancEllenorzes.js`) — a napló-fa következetessége (RFC 9162) és részfa-gyorsítótára, a kérdező és a szerző oldala, a
+   válaszból a meglévő elágazás- és negatív levél bizonyíték; a két ágú szerző eseményei egy harmadik készüléken különböző
+   sorszámon találkozva is lelepleződnek. ⭐⭐ **A ⑧ KÉSZ — A VÉGLEGES SOR (①–⑧) VÉGE: minden alappillér áll.** ⭐ **A
+   KÖVETKEZŐ LÉPÉS Csabáé:** a ház (a pakli-nézet a felületen a kérelemből) és a terep (a telefon frissítése, két mobil —
+   a 🅱️ változat), vagy az „UTÁNA” lista. 🚧 **A TEREP FOLYIK (Csaba: „jöhet a mérés”, 2026-10-09 — laptop otthon,
+   telefon a szomszéd wifijén; 72. mérés):** a régi kötés az új, zárt koinóban is a táblán át talált, a zárt kapu terepen
+   működik (a meghívás után tag), a „nincs újdonság” 1,8–2,8 KB, percenként kettő. Két lelet javítva: a hosszan futó vendég
+   10 percig nem vette észre a megkapott születést; a D14 a nem tartott szeletre is ítélt (a szigorú (b) alatt az új
+   gondolatot nem lehetett felvenni — elágazás 94). Nyitva: a két irány ütközése (20:49:59), a néma kötés percenkénti
+   keresése a telefonon. ✅ **A második fél (a telefon frissítve, `61f783e`):** a csak születéséből ismert gondolat
+   vállalása terepen végigment (a változott szelet útján, a lánc-körrel), a szöveg (a törzs) már a vállalás ELŐTT átjött (a
+   vállaló kiadja a látott gondolat szövegét), és a hazaút két perc kieséssel, beavatkozás nélkül. ⏭️ **A következő: a két
+   irány ütközése** (a terepen háromszor; ha a két gép köre egy másodpercre jár egymástól, az egyidejű csere 10 mp-re
+   elakad) — helyben reprodukálni, utána a (iii) kérdése (egy csere ablakonként). ✅ **D99** (Csaba: „legyen az (A)”): ha
+   egy társsal a fél körön belül már cseréltünk, és azóta nincs újdonságom, a saját körömben nem hívom — körönként egy csere
+   a kettő helyett (a „nincs újdonság” forgalom felére), az ütköző második csere elmarad. ✅ A néma kötés táblán keresése
+   visszalépő ütemben (elágazás 95). ✅ **A 73. mérés (terepen a D99-cel):** percenként egy csere (a kettő helyett), három óra
+   alatt egyetlen ütközés sincs; a fordított irány is (a telefon gondolata a laptopra, a szöveg vállalás előtt, a vállalás
+   után a szelet a változott szelet útján). ⭐ **Csaba: „ha működik pc-mobil között, külön címen, akkor az nekem már elég
+   ahhoz, hogy folytassuk a fejlesztést”** — a két mobilnetes telefon mérése a közeljövőben.
+   ⭐ **A HÁZ (Csaba: „legyen a ház”, 2026-10-10): a pakli-nézet a felületen, a kérelemből.** 🔍 **Átvizsgálva**
+   ([`haz_pakli_atvizsgalas.md`](docs/haz_pakli_atvizsgalas.md)): a prototípus „láncos-testvéres” nézetéhez (felmenők,
+   bogárlogika, testvérek) a D92 fejléc-kérdése adja az adatot; ma a felület semmit nem kér el, ami hiányzik. ⏸️ **Csabánál:
+   H1** (ki kérdez — javaslat: az őrjárat, függő kérelemként), **H2** (a nem tartott ágak össz-pontja — javaslat: jelölve,
+   honnan jön), **H3** (javaslat: az örökölt `Pakli.js` változatlanul jön át). ✅ **D100** (Csaba: „elfogadom a javaslataidat”):
+   H1/A, H2/A, H3/A. ✅ **Az ① és a ② KÉSZ (2026-10-10):** a hierarchikus lekérdezés (`pakli.js` `pakliHierarchia` — felmenők,
+   bogár, testvérek, forrás-jelölés, `hianyzik`) és a hiányzók elkérése (`/api/pakli/hierarchikus`, `lapHianyzoinakElkerese`;
+   két kérelem-hiba javítva — elágazás 96–99). ✅ **A ③ és a ④ KÉSZ (2026-10-10) — ⭐ A HÁZ KÉSZ:** az örökölt `Pakli.js`
+   (a `TestverJelzo`-val, a `testverRendezes`-sel) bájtra változatlanul a felületen, a lap fordít (`kartyaAdat.js`
+   `prototipusUtvonala`, `apiHelper.js`), a koinós többlet a `koinoPakli.js`-ben (a csendes újrakérdezés, a forrás jele, a lapos
+   nézet lapozása); a bekötésből két hiba javítva (elágazás 100–101: a bekopogó csak kopogtatás után kap kérelmet; az átmeneti
+   tár látja, amit más folyamat írt bele). ⏭️ **A következő lépés: Csabáé** (lent: *UTÁNA*; a ház után a terv szerint a
+   felület többi része — a maradék modálok, 5.8 — vagy a terep). ⏸️ Nyitva: egy egyszeri téves „0 új esemény” kiírás a telefonon (helyben nem jön elő), és a D71 őrjárat-próba egyszeri bukása a teljes sor terhelése alatt (magában 3/3 zöld, a következő teljes soron is). ⚠️ A D85 T3 csomag-próba időzítése szoros volt (a döntés 1–2 mp, B négy parancsa ~2 mp) — 6–8 mp-re bővítve.
 
 ---
 

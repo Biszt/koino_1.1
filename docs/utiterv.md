@@ -10,7 +10,19 @@
 
 ---
 
-> ## ▶️ HOL TARTUNK (2026-09-27) — A SZELETELÉS (D72): AZ A ÉS A B KÉSZ, A C KÖVETKEZIK
+> ## ▶️ HOL TARTUNK (2026-10-11) — MINDEN ALAPPILLÉR ÁLL, ÉS A HÁZ IS KÉSZ
+>
+> ✅ **A végleges sor (①–⑧, D84–D98)** — az [`alappillerek.md`](alappillerek.md) 4. szakasza szerint: az
+> entitás-modell, a titkosított csere, a két tár, a címjegyzék, a kérelem, az identitás a szeletelt világban, a
+> szigorú (b) és a társankénti emlékezet a lánc-körrel. ✅ **A terep** (72–73. mérés, D99): PC és mobil két külön
+> címen. ✅ **A ház (D100)**: a felület paklija a prototípus láncos-testvéres nézete, a kérelemből töltve.
+> **1056 önpróba.** ⏭️ **A következő Csabáé:** a maradék modálok (5.8 — javaslat: előbb átvizsgálás; a Keresés a
+> kereső-rétegre épül, ami még nincs), a terep két mobillal (a 🅱️), vagy az „UTÁNA” lista. A részletek a
+> [`CLAUDE.md`](../CLAUDE.md) „SESSION-VÁLTÁS (2026-10-11)" blokkjában.
+>
+> ---
+>
+> ## ▶️ KORÁBBAN (2026-09-27) — A SZELETELÉS (D72): AZ A ÉS A B KÉSZ, A C KÖVETKEZIK
 >
 > ✅ **D71** — a kopogás-kör a társat keresi, nem a címét (44–46. mérés). ⭐ **Csaba elve:**
 > *„végtelenig lehessen skálázni"* — egy készülék terhe ne a koino méretétől függjön (a 9.
