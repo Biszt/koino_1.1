@@ -50,12 +50,14 @@ az elágazások (1–104) az [alappillérek](docs/alappillerek.md) 5. szakaszáb
 
 #### ⏭️⏭️ A KÖVETKEZŐ SESSION — Csaba választ (a sorrend az övé)
 
-1. ⭐ **A maradék modálok (5.8)** — a kártyák menüjében ma helyőrző áll: Rendezés, Struktúra nézet, Síkidom nézet,
-   Keresés, Értesítések, Tudatpontok, Részvételi beállítások… (`felulet/js/components/modals/` — a `helyorzoModal`
-   alakúak). **Claude javaslata: előbb átvizsgálás**, mert a szigorú (b) alatt nem mind egyforma: a Struktúra és a
+1. ⭐ **A maradék modálok (5.8)** — a kártyák menüjében ma NYOLC helyőrző áll: Rendezés, Struktúra nézet, Síkidom
+   nézet, Keresés, Tudatpontok, Kategória (szerkesztés), Értesítések, Értesítési beállítások
+   (`felulet/js/components/modals/` — a `helyorzoModal` alakúak; ⚠️ a *Részvételi* beállítások NEM helyőrző, az
+   5.5 óta valódi). **Claude javaslata: előbb átvizsgálás**, mert a szigorú (b) alatt nem mind egyforma: a Struktúra és a
    Síkidom az egész részfát látná — a háznál megépült kérelem-úton, korlátosan kell táplálni; a **Keresés** a
    kereső-rétegre épül (Szakasz 6, [`skalazas_terv.md`](docs/skalazas_terv.md) — „elhagyható, csak a MEGTALÁLÁS
-   kívánhat hálózatot”), ami még egyáltalán nincs meg; az Értesítések rétege sincs. Ezt jó tudni, mielőtt bármelyikhez
+   kívánhat hálózatot”), ami még egyáltalán nincs meg (helyi alja van: a `/api/kereses` a helyben tartott entitások
+   címében keres — a hivatkozás-mező ezt használja); az Értesítések rétege sincs. Ezt jó tudni, mielőtt bármelyikhez
    nyúlunk.
 2. **A terep 🅱️ (két mobilnetes telefon)** — amikor meglesznek; előtte a telefon frissítése (lent).
 3. **Az „UTÁNA” lista** (lent).

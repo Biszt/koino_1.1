@@ -346,9 +346,11 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 (`pakliNezet.js`) eltűnt. A lap fordít (`kartyaAdat.js` `prototipusUtvonala`, `apiHelper.js`), a koinós többlet a
 `koinoPakli.js`-ben (a hiányzót az őrjárat hozza, a lap csendben újrakérdez; az össz-pont forrásának jele; a lapos
 nézet lapozása). A részletek: [`haz_pakli_atvizsgalas.md`](haz_pakli_atvizsgalas.md), a fázis-2 terv D100-a.
-⏭️ **Ami a felületből hátravan: a maradék modálok (5.8)** — a kártya-menük helyőrzői (Rendezés, Struktúra, Síkidom,
-Keresés, Értesítések, Tudatpontok, Részvételi beállítások…); a szigorú (b) alatt előbb átvizsgálandó, melyik mire
-épül (a Keresés a kereső-rétegre, ami még nincs).
+⏭️ **Ami a felületből hátravan: a maradék modálok (5.8)** — a kártya-menük nyolc helyőrzője (Rendezés, Struktúra,
+Síkidom, Keresés, Tudatpontok, Kategória-szerkesztés, Értesítések, Értesítési beállítások; ⚠️ a Részvételi
+beállítások az 5.5 óta valódi); a szigorú (b) alatt előbb átvizsgálandó, melyik mire épül. *(A Keresésnek van helyi
+alja — a `/api/kereses` a helyben tartott entitások címében keres, a hivatkozás-mező ezt használja —, a hálózati
+MEGTALÁLÁS, a kereső-réteg, még nincs.)*
 
 ### (RÉGEBBI) ITT TARTUNK (2026-09-13)
 
