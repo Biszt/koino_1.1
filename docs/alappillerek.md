@@ -235,7 +235,12 @@ néztem meg).
 
 A pakli-nézet a felületen (a prototípus láncos-testvéres nézete — ✅ **kész, D100, 2026-10-10**: a kérelemből
 tölt, az örökölt `Pakli.js`-szel), később a síkidom- és a térkép-nézet kérelmezése (a maradék modálok, 5.8), és a
-terep (✅ PC–mobil két külön címen, 72–73. mérés; ⏸️ két mobil — a 🅱️).
+terep (✅ PC–mobil két külön címen, 72–73. mérés; ⏸️ két mobil — a 🅱️). 🚧 **A maradék modálok (D101, 2026-10-11):**
+átvizsgálva ([`modalok_atvizsgalas.md`](modalok_atvizsgalas.md)); ✅ az I. csoport kész (Tudatpontok, a besorolások
+létrehozása, Rendezés, a fő menü); ⏭️ a közös alap, a legjobb-először bejáró (a fejléc folytatásával) → Struktúra →
+Síkidom → Keresés → az értesítés-réteg. ⭐ **És egy új pillér a láthatáron: a KERESŐ-RÉTEG** (skálázási terv II.,
+S8–S10) — három dolog épül rá (a Keresés, a besorolás-lenyílók, az entitás-hivatkozás); a D101 szerint a modálok után,
+saját átvizsgálással.
 
 ## 4. A sorrend — a függőségekből (✅ Csaba megerősítette, 2026-09-27 este)
 
@@ -360,7 +365,7 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 
 *Utána a ház:* a pakli-nézet a felületen, a terep (két mobil, a 🅱️ változat). ✅ **A terep PC–mobil között
 (72–73. mérés, D99) és a ház (D100, 2026-10-10) KÉSZ** — a részletek a fázis-2 terv D100-ában és az 5. szakasz
-96–104. bejegyzésében. ⏭️ A következő Csabáé (a CLAUDE.md „SESSION-VÁLTÁS (2026-10-11)” blokkja).
+96–104. bejegyzésében. ⏭️ Csaba a maradék modálokat választotta (D101, 2026-10-11) — az I. csoport kész (105–111.).
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 
@@ -763,3 +768,43 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 104. **2026-10-10 · a „0” a nem látott pontoknál (H2 kiterjesztése)** → **ha a kártya pontjait sem láttuk (csak a születését),
     a saját pont és a hozzájárulók száma is „?”, nem 0** · mert a 0 állítás, a „?” a tudás határa (D19) — a H2 csak az
     össz-pontot nevezte meg · a böngészős próbán, Claude · `pakli.js` (`pontokIsmeretlenek`), `koinoPakli.js`.
+105. **2026-10-11 · hol a modálok koinós többlete (D101, M5)** → **a prototípus-osztály egy meglévő metódusa KÖRÉ
+    (`koinoModalok.js` `koruleIr`: az eredeti lefut, utána a koinós rész), nem alosztályban** · mert ezeket a modálokat az
+    ÖRÖKÖLT kártyák példányosítják (`Kartya.js`), alosztályt nem tehetnénk a helyükbe a kártyához nyúlás nélkül (a pakli
+    alosztálya azért lehetett, mert azt a lap példányosítja); a tudás határát a PROGRAM mondja ki (`koinoMegjegyzes`), az
+    `apiHelper.js` eseménnyel adja tovább, a lap a lista alá írja · az I. csoport építésekor, Claude · `koinoModalok.js`,
+    `apiHelper.js`.
+106. **2026-10-11 · „X ága alatt van-e?” (D101)** → **egy helyen (`pakli.js` `agHelyzete`): a felmenő-láncon, legfeljebb 64
+    lépés; az entitás maga is az ágához tartozik; ha egy felmenő hiányzik, „nem eldönthető” (null) és a hiányzó megnevezve
+    (a hívó a ház útján elkéri); a kör nem szül fát (nem alatta); ha a hiányzó felmenő MAGA az ág, eldönthető** · mert a
+    Tudatpontok, a Keresés, a Rendezés helyi módjai és az értesítések mind ezt kérdezik, és a hiány nem tény (D19) · az I.
+    csoport építésekor, Claude · `pakli.js`, `pakliProba.js`.
+107. **2026-10-11 · a Tudatpontok lista forrása és sorrendje (D101)** → **a kép kiosztási főkönyve (amiből a szabad pont is
+    jön), a legutóbb rendezett elöl — a SAJÁT láncom sorszáma szerint, nem az óra szerint; felülről korlátos (100, a
+    prototípusé), és megmondja, hány van összesen** · mert a lista a saját tevékenységemmel nő (≤ a keret), és ugyanaz a
+    szám kell, amit a szabály-réteg számol (a még nem igazolt tag pontja itt sincs benne, mint a szabad pontnál) · az I.
+    csoport építésekor, Claude · `pakli.js` (`sajatHozzarendelesek`), `koino.js`.
+108. **2026-10-11 · a `FormData` a kapun (D101)** → **a lap fordítja JSON-ra (`apiHelper.js` `formDataJsonna`): a fájl-mező a
+    meglévő feltöltésen át a fájl lenyomat-címe lesz, a többi szöveg marad; a számokat a kapu olvassa ki** · mert a kapu
+    harmadik őre (csak `application/json` — 5.5) egy multipart küldést nem enged, és nem is szabad megkerülni; az ikon így
+    fájl-igény a többi készüléken is (`fajlIgeny.js`) · a besorolások bekötésekor, Claude · `apiHelper.js`, `koino.js`.
+109. **2026-10-11 · a küszöb KÉT alakja (régi hiba, mérve)** → **egy tábla két oszloppal (`pakli.js` `KUSZOB_NEVEK_KINT`): a
+    MEDIÁN (`aktualMinimumDontesiIdo`) és egy e-ember JAVASLATA (`minimumDontesiIdo` — amit a modálok küldenek és
+    visszaolvasnak); az `/api/ertekJavaslat` a fordítón át ír, a hiányos négyest elutasítja; a már kiírt események olvasata
+    NEM változik** · mert egy táblával, a medián nevein, a lapról jött küszöb 2026-09-06/12 óta nem fordult le (a gondolat
+    létrehozásakor némán elveszett, az érték javaslatban az elfogadási és a részvételi küszöb elveszett — a döntés az
+    alapértéken maradt, nem romlott el); a régi „oda-vissza” próba önmagával volt következetes, a valódi hívóval nem (vak
+    próba), és négy további próba a HIBÁS alakra épült (a saját javaslatot a medián nevével várta, három lap-próba a medián
+    nevével küldte a küszöböt — amit a valódi modál soha nem küld); mind a valódi hívó alakjára igazítva; egy tárolt esemény más olvasata két készülék állapotát hasítaná szét (D66) — aki így adta be, újra beadhatja ·
+    a Kategória-modál bekötésekor, Claude · `pakli.js`, `koino.js`, `pakliProba.js`, `parancssorProba.js`.
+110. **2026-10-11 · a kártya menüjének Rendezése (D101, M2)** → **a lapos pakli `agazat`-ja: csak az ág (`agHelyzete`), a
+    lapozás is az ágon marad; a hiányzó felmenőt elkéri (mint a Tudatpontok), és a szigorú (b) alatt a lista határát
+    kimondja („a készülékeden ismert entitásokból”)** · mert ami nem monoton, az csak helyből rendezhető (M2 — végleges
+    alak), és ezt a lapnak tudnia kell; az ágazati pont csökkenő sorát a bejáró (②) teszi teljessé · az I. csoport
+    építésekor, Claude · `pakli.js` (`pakliOldal`), `koino.js`, `kartyaAdat.js`, `koinoPakli.js`.
+111. **2026-10-11 · a fő menü (D101, M6)** → **a prototípus `foOldal.js`-ének MENÜJE jön át (a pontok, a rend, a csoportok, a
+    modál-hívások — `foMenu.js`), nem az egész főoldal; a fejléc elején ül (a prototípusban az alsó sávban); a Meghívóim és
+    az eember beállítások a prototípus „fejlesztésre vár” jelzését kapják, a Kijelentkezés kimarad** · mert a főoldal többi
+    része a koinóban nem létezik (a bejelentkezés — D15) vagy nem lehet (az alsó sáv platform-szintű számai: hány e-ember,
+    hány gondolat — 9. szabály), a meghívás és a profil pedig P2P-ben más út (saját átvizsgálás) · az I. csoport
+    építésekor, Claude · `foMenu.js`, `index.html`.

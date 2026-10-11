@@ -19,6 +19,10 @@
   ⏸️ Ami még hiányzik: a modálok (5.5) — helyükön helyőrző áll, ami megmondja, hogy még
   nem készültek el —, a belépő tér (5.6) és a szövegszerkesztő (5.7).
 
+  ⭐ D101 (2026-10-11): a maradék modálok — a Tudatpontok, a Kategória, a Gondolattípus, a Rendezés már a prototípuséi,
+  és a FŐ MENÜ is (`js/foMenu.js`); a koinós többlet a `js/koinoModalok.js`-ben. Helyőrző még: Struktúra, Síkidom,
+  Keresés, Értesítések, Értesítési beállítások.
+
   ⭐⭐ A HÁZ (D100, 2026-10-10): a pakli is a prototípusé — a `Pakli.js` (láncos-testvéres
   nézet, kacsacsőrök, húzás, lapos rendezés) bájtra változatlanul jött át; a koinós többlet
   (a betöltés, a forrás jele, a lapos nézet lapozása) a `js/koinoPakli.js`-ben van.
@@ -27,6 +31,8 @@
 <body>
 
 <header class="koino-fejlec">
+  <!-- ⭐ D101 (M6): A FŐ MENÜ — a prototípus menüje (a `foMenu.js` tölti; a konténer neve is a prototípusé). -->
+  <div id="hamburger-menu-kontener"></div>
   <h1>koino</h1>
   <span class="azonossag" id="azonossag"></span>
   <!-- ⭐ A TÉR/PAKLI VÁLTÓ (5.6): a tér a koinók FÖLÖTT áll, a pakli egy koinón BELÜL. -->
@@ -93,6 +99,9 @@ import { KoinoPakli } from './js/koinoPakli.js';
 import { TerNezet } from './js/terNezet.js';
 import GondolatModal from './js/components/modals/GondolatModal.js';
 import { aktivEntitasLekerese } from './js/utils/authHelper.js';
+// ⭐ D101: a maradék modálok koinós többlete (a tudás határa a modálok alján) — a betöltéskor csomagol.
+import './js/koinoModalok.js';
+import { FoMenu } from './js/foMenu.js';
 
 // ⭐ A HÁZ (D100): az örökölt `Pakli.js` a `#pakli` konténerbe rajzol, a modálok közös konténerébe nyit.
 const pakli = new KoinoPakli('pakli', 'modal-kontener', {
@@ -113,6 +122,17 @@ const rendezesAlkalmazasa = () => {
 };
 document.getElementById('rendezes').addEventListener('change', rendezesAlkalmazasa);
 document.getElementById('irany').addEventListener('change', rendezesAlkalmazasa);
+// ⭐ D101: a rendezést a menük is állíthatják (a fő menü és a kártyák Rendezés-modálja) — a választó igazodjon hozzá.
+document.addEventListener('koino:rendezesValtozas', (e) => {
+  const { mod, irany } = e.detail ?? {};
+  if (mod) document.getElementById('rendezes').value = mod;
+  if (irany) document.getElementById('irany').value = irany;
+  document.getElementById('irany').disabled = (mod === 'hierarchikus');
+});
+
+// ⭐ D101 (M6): A FŐ MENÜ — a prototípus menüje, a lap paklijával.
+const foMenu = new FoMenu('hamburger-menu-kontener', pakli);
+await foMenu.init();
 
 // ===================================
 // ⭐ A BELÉPŐ TÉR (5.6) — és a váltás a pakli és a tér között

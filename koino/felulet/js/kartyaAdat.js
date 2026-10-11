@@ -256,21 +256,23 @@ export function prototipusUtvonala(utvonal) {
     };
   }
 
-  // ----- A lapos nézet: `pakli/rendezett?mod=…&irany=…` → a program első oldala -----
-  // ⏸️ Az `agazatId` (a kártya menüjének „ág-szűrt rendezése”) a programban még nincs: a `RendezesModal` helyőrző
-  // (5.8), tehát ma nem is érkezik. Ha egyszer jön, a `pakliOldal`-nak kell részfa-szűrő — itt nem találunk ki listát.
+  // ----- A lapos nézet: `pakli/rendezett?mod=…&irany=…[&agazatId=…]` → a program első oldala -----
+  // ⭐ D101: az `agazatId` (a kártya menüjének „ág-szűrt rendezése” — a `RendezesModal`) a program `agazat`-ja: a
+  // `pakliOldal` csak az ág alattiakat adja (a felmenő-láncon), és kimondja, amit nem tud eldönteni (`koinoMegjegyzes`).
   if (ut === 'pakli/rendezett') {
     const q = new URLSearchParams({
       rendezes: k.get('mod') || 'ido',
       irany: k.get('irany') || 'csokkeno',
       darab: String(LAPOS_OLDAL)
     });
+    if (k.get('agazatId')) q.set('agazat', k.get('agazatId'));
     return {
       utvonal: 'pakli?' + q.toString(),
       fordit: rendezettAdatta,
       jel: (v) => ({ fajta: 'lapos', kovetkezoKurzor: v?.kovetkezoKurzor ?? null, osszes: v?.osszes ?? 0,
         darab: (v?.kartyak ?? []).length, rendezes: v?.rendezes, irany: v?.irany,
-        ujdonsag: v?.ujdonsag === true, ujEsemenyek: v?.ujEsemenyek ?? 0 }),
+        ujdonsag: v?.ujdonsag === true, ujEsemenyek: v?.ujEsemenyek ?? 0,
+        agazat: v?.agazat ?? null, nemEldontheto: v?.nemEldontheto ?? 0, koinoMegjegyzes: v?.koinoMegjegyzes ?? null }),
       horgonyt: true
     };
   }

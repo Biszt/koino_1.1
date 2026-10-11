@@ -1,0 +1,109 @@
+<!-- frontend/html/components/modals/gondolatTipusModal.html -->
+
+<!-- A GondolatTipusModal.js tölti be ezt a template-et fetch()-csel.
+     A Modal alap struktúrája (overlay, panel, fejléc) a modal.html-ben van –
+     ez csak a modal törzsének gondolatát, a formot adja meg. -->
+
+<form class="tt-modal-form" id="gondolatTipus-modal-form" novalidate>
+
+  <!-- ── NÉV ── -->
+  <!-- Kötelező mező – GondolatTipusModal.validalas() ellenőrzi -->
+  <div class="tt-modal-mezo">
+    <input
+      type="text"
+      id="gondolatTipus-nev"
+      name="nev"
+      class="tt-modal-input"
+      placeholder="Gondolat típus neve *"
+      maxlength="100"
+      autocomplete="off"
+      aria-label="Gondolat típus neve – kötelező"
+    />
+  </div>
+
+  <!-- ── LEÍRÁS (blokk-alapú szövegszerkesztő) ── -->
+  <!-- A GondolatTipusModal._szovegSzerkesztoLetrehozasa() ide példányosítja a
+       SzovegSzerkeszto komponenst (mint a GondolatModal-ban). A korábbi sima
+       <textarea> holt kód volt (a JS a szerkesztő-konténert kereste, ami hiányzott),
+       ezért a leírás nem mentődött — most a valódi szerkesztő kerül ide. -->
+  <div class="tt-modal-mezo">
+    <div id="leiras-szerkeszto-kontener"></div>
+  </div>
+
+  <!-- ── IKON FELTÖLTÉS ── -->
+  <!-- Kötelező fájl mező – GondolatTipusModal.validalas() ellenőrzi -->
+  <!-- accept: csak képfájlokat enged, a Multer is csak ezeket fogadja el -->
+  <div class="tt-modal-mezo">
+
+    <!-- Fájlválasztó input – vizuálisan elrejtve, a gomb aktiválja -->
+    <input
+      type="file"
+      id="gondolatTipus-ikon-input"
+      name="ikon"
+      class="tt-modal-fajl-input"
+      accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp"
+      aria-label="Ikon képfájl feltöltése – kötelező"
+    />
+
+    <!-- Egyedi stílusú fájlválasztó gomb – rákattintva megnyitja az input-ot -->
+    <button
+      type="button"
+      class="tt-modal-fajl-gomb"
+      id="gondolatTipus-ikon-gomb"
+      aria-label="Ikon fájl kiválasztása"
+    >
+      🌿 Ikon kiválasztása
+    </button>
+
+    <!-- Kiválasztott fájl neve – JS írja ki ide, alapból üres -->
+    <span
+      class="tt-modal-fajl-nev"
+      id="gondolatTipus-ikon-nev"
+      aria-live="polite"
+    >Nincs kiválasztott fájl</span>
+
+  </div>
+
+  <!-- ── IKON ELŐNÉZET ── -->
+  <!-- Alapból rejtett – JS mutatja meg fájlválasztás után -->
+  <div class="tt-modal-mezo tt-modal-elonezet-kontener" id="gondolatTipus-ikon-elonezet" hidden>
+    <img
+      id="gondolatTipus-ikon-elonezet-kep"
+      class="tt-modal-elokezet-kep"
+      src=""
+      alt="Ikon előnézet"
+      width="64"
+      height="64"
+    />
+  </div>
+
+  <!-- ── KÜSZÖBÉRTÉKEK (döntéshozatal) ── -->
+  <!-- Alapból rejtett – GondolatTipusModal.init() mutatja meg, ha mód = 'letrehozas'.
+       A négy mezőt a kuszobErtekMezok.js segédmodul injektálja alapértékekkel. -->
+  <div class="tt-modal-mezo t-modal-kuszob-szakasz" id="gondolatTipus-kuszob-szakasz" hidden>
+    <p class="t-modal-kuszob-cim">Küszöbértékek (a döntéshozatalhoz)</p>
+    <p class="t-modal-kuszob-magyarazat">
+      Ezek a Te javaslataid – a tényleges küszöb az összes érték javaslat mediánja.
+    </p>
+    <div id="gondolatTipus-kuszob-mezok-kontener"></div>
+  </div>
+
+  <!-- ── KEZDŐ TUDATPONT ── -->
+  <!-- Alapból rejtett – GondolatTipusModal.init() mutatja meg, ha mód = 'letrehozas' -->
+  <div class="tt-modal-mezo" id="gondolatTipus-kezdo-tudatpont-mezo" hidden>
+    <label class="kuszob-mezo__cimke" for="gondolatTipus-kezdo-tudatpont">
+      Kezdő tudatpont (min. 1) *
+    </label>
+    <input
+      type="number"
+      id="gondolatTipus-kezdo-tudatpont"
+      name="kezdoTudatpont"
+      class="tt-modal-input"
+      min="1"
+      value="1"
+      placeholder="Kezdő tudatpont (min. 1) *"
+      aria-label="Kezdő tudatpont – kötelező"
+    />
+  </div>
+
+</form>

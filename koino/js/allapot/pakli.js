@@ -386,7 +386,8 @@ function kurzorDekodolas(kurzor) {
  * @param {string} [beallitas.kurzor] - egy korábbi válasz `kovetkezoKurzor`-a
  * @param {number} [beallitas.darab]
  * @param {Object} [beallitas.nezet] - `ujPakliNezet()`, a kép megtartásához
- * @returns {Promise<Object>} { kartyak, kovetkezoKurzor, horgony, ujdonsag, osszes }
+ * @param {string} [beallitas.agazat] - ⭐ D101: csak ennek az ágnak az entitásai (a kártya menüjének Rendezése)
+ * @returns {Promise<Object>} { kartyak, kovetkezoKurzor, horgony, ujdonsag, osszes, agazat, nemEldontheto, hianyzik }
  */
 export async function pakliOldal(tar, koino, beallitas = {}) {
   const rendezes = beallitas.rendezes ?? 'sajatPont';
@@ -436,8 +437,25 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
     return utak.get(e.azonosito) ?? e.azonosito;      // hierarchikus
   };
 
+  // ⭐ D101 (a Rendezés modál): ÁG-SZŰRVE csak az ág alattiak (a közös `agHelyzete` — a felmenő-láncon). ⚠️ Ami nem
+  // eldönthető (egy felmenője nincs meg), az kimarad, megszámoljuk, és a hiányzó felmenőt kérendőnek mondjuk (D19). A
+  // lista a helyben ismert entitásokból áll (D101/M2 — végleges alak: ami nem monoton, az csak helyből rendezhető).
+  const agazat = typeof beallitas.agazat === 'string' && beallitas.agazat ? beallitas.agazat : null;
+  let nemEldontheto = 0;
+  const hianyzik = [];
   const mind = [];
   for (const e of kep.entitasok.values()) {
+    if (agazat) {
+      const h = agHelyzete(kep.entitasok, e.azonosito, agazat);
+      if (h.alatta === null) {
+        nemEldontheto++;
+        if (h.hianyzo && hianyzik.length < MAX_DARAB && !hianyzik.some((x) => x.kulcs === h.hianyzo)) {
+          hianyzik.push({ fajta: 'szelet', kulcs: h.hianyzo, ok: 'egy felmenőt nem ismerek (az ág-szűréshez)' });
+        }
+        continue;
+      }
+      if (!h.alatta) continue;
+    }
     mind.push({ azonosito: e.azonosito, ertek: ertekhez(e), entitas: e });
   }
 
@@ -487,7 +505,11 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
     ujEsemenyek: teljes - horgony,
     osszes: mind.length,
     rendezes,
-    irany
+    irany,
+    // ⭐ D101: az ág-szűrés (null: az egész koinó), és ami benne nem volt eldönthető
+    agazat,
+    nemEldontheto,
+    hianyzik
   };
 
   console.log('pakli.pakliOldal - VÉGE',
@@ -798,22 +820,36 @@ export async function entitasTudatpontja(tar, koino, azonosito, beallitas = {}) 
 // (`elfogadasiKuszob`, `reszveteliKuszob`, `minimumDontesiIdo`, `maximumDontesiIdo`), a
 // prototípus kártyái és modáljai viszont a régieket olvassák. ⭐ A fordítás ITT történik,
 // egy helyen — nem a lapon szétszórva, és nem úgy, hogy a koino átveszi az idegen neveket.
-const KUSZOB_KIFELE = {
-  elfogadasiKuszob: 'javaslatElfogadasiKuszob',
-  reszveteliKuszob: 'reszveteliAranyKuszob',
-  minimumDontesiIdo: 'aktualMinimumDontesiIdo',
-  maximumDontesiIdo: 'aktualMaximumDontesiIdo'
+//
+// ⛔⛔ D101 (2026-10-11, a Kategória-modál bekötésekor mérve): A PROTOTÍPUSBAN A KÜSZÖBNEK KÉT ALAKJA VAN, és eddig
+// csak az egyiket ismertük. A MEDIÁN (az aktuális küszöb, `aktualisErtekek`) az időket `aktualMinimumDontesiIdo` néven
+// mondja; egy e-ember SAJÁT javaslata viszont — amit a modálok KÜLDENEK (`kuszobMezokOsszegyujtese`: a `GondolatModal`,
+// a `KategoriaModal`, az `ErtekJavaslatModal`), és amit a saját javaslatként VISSZAOLVASNAK (`eemberJavaslat`) —
+// `minimumDontesiIdo` néven (a prototípus `ertekJavaslatController`-e is így fogadta és adta). Egy táblával, a medián
+// nevein, a lapról jött küszöb soha nem fordult le: a gondolat létrehozásakor némán elveszett, a saját javaslat
+// idő-mezői üresen jöttek vissza (az `/api/ertekJavaslat` pedig fordítás nélkül írt — lásd ott). ⭐ Ezért egy tábla,
+// KÉT oszloppal: a két alak itt áll egymás mellett, és a kettő különbsége látszik.
+const KUSZOB_NEVEK_KINT = {
+  //                   a medián (aktuális)          egy e-ember javaslata (be és ki)
+  elfogadasiKuszob:  { median: 'javaslatElfogadasiKuszob', javaslat: 'javaslatElfogadasiKuszob' },
+  reszveteliKuszob:  { median: 'reszveteliAranyKuszob',    javaslat: 'reszveteliAranyKuszob' },
+  minimumDontesiIdo: { median: 'aktualMinimumDontesiIdo',  javaslat: 'minimumDontesiIdo' },
+  maximumDontesiIdo: { median: 'aktualMaximumDontesiIdo',  javaslat: 'maximumDontesiIdo' }
 };
 
-/** Küszöb-négyes a prototípus neveivel. */
-function kuszobokKifele(kuszobok) {
+/**
+ * Küszöb-négyes a prototípus neveivel.
+ * @param {Object} kuszobok - a koino nevein
+ * @param {'median'|'javaslat'} [alak] - a medián (aktuális) vagy egy e-ember javaslata
+ */
+function kuszobokKifele(kuszobok, alak = 'median') {
   const ki = {};
-  for (const [belso, kulso] of Object.entries(KUSZOB_KIFELE)) ki[kulso] = kuszobok?.[belso];
+  for (const [belso, nevek] of Object.entries(KUSZOB_NEVEK_KINT)) ki[nevek[alak]] = kuszobok?.[belso];
   return ki;
 }
 
 /**
- * ⭐ A MÁSIK IRÁNY (5.7): a prototípus nevei → a koino nevei.
+ * ⭐ A MÁSIK IRÁNY (5.7): a prototípus nevei → a koino nevei — egy e-ember JAVASLATÁNAK alakjában, mert a lap azt küldi.
  *
  * ⛔ SZÁNDÉKOSAN UGYANABBÓL AZ EGY TÁBLÁZATBÓL vezetjük le, nem külön listából. Két
  * egymás mellé írt fordítás előbb-utóbb szétcsúszik — és pont az a fajta néma hiba lenne
@@ -825,8 +861,8 @@ function kuszobokKifele(kuszobok) {
  */
 export function kuszobokBefele(kulso) {
   const be = {};
-  for (const [belso, kulsoNev] of Object.entries(KUSZOB_KIFELE)) {
-    const ertek = kulso?.[kulsoNev];
+  for (const [belso, nevek] of Object.entries(KUSZOB_NEVEK_KINT)) {
+    const ertek = kulso?.[nevek.javaslat];
     // ⚠️ CSAK EGÉSZ SZÁM. A kanonikus alak nem tűr törtet (`kanonikusAlak.js`), és egy
     // fél százalék úgysem jelent semmit — ha bármelyik hiányzik, nem adunk be javaslatot.
     if (!Number.isInteger(ertek)) return null;
@@ -941,6 +977,125 @@ export async function hianyzoFelmenok(tar, koino, azonosito, beallitas = {}) {
   };
 }
 
+// ===================================
+// ⭐ D101: „X ÁGA ALATT VAN-E?” — EGY HELYEN
+// ===================================
+//
+// A Tudatpontok, a Keresés, a Rendezés helyi módjai és az értesítések részfa-szűrése mind ezt kérdezi (D101). A
+// felmenő-láncon dől el — a szülő-mutatókon, körbiztosan, legfeljebb `FELMENO_KORLAT` lépés (mint a ház felmenői); az
+// entitás maga is az ágához tartozik (a prototípus ág-szűrése is így számolt).
+//
+// ⚠️ A HIÁNY NEM TÉNY (D19): ha a lánc egy ismeretlen felmenőnél megszakad, a válasz „nem eldönthető” (`null`), és a
+// hiányzó felmenő megnevezve — a hívó elkérheti (a ház útján, `szelet`). Ha a lánc a korlát után is folytatódna,
+// ugyanígy nem eldönthető (a 64 mélységet a tagsági lánc is korlátnak veszi — D59).
+
+/**
+ * Az `az` entitás az `ag` ága alatt van-e.
+ * @param {Map} entitasok - a kép entitásai
+ * @param {string} az - a vizsgált entitás
+ * @param {string} ag - az ág gyökere
+ * @returns {{alatta: boolean|null, hianyzo: string|null}} `alatta`: igen · nem · null = nem eldönthető
+ */
+export function agHelyzete(entitasok, az, ag) {
+  const latott = new Set();
+  let x = az;
+  for (let lepes = 0; lepes <= FELMENO_KORLAT; lepes++) {
+    if (!x) return { alatta: false, hianyzo: null };               // a gyökérig értünk, az ág nem jött
+    if (x === ag) return { alatta: true, hianyzo: null };
+    // ⚠️ Kör a szülő-láncon: minden felmenő a körön van, és az ág nem volt köztük — tehát nem alatta.
+    if (latott.has(x)) return { alatta: false, hianyzo: null };
+    latott.add(x);
+    const e = entitasok.get(x);
+    if (!e) return { alatta: null, hianyzo: x };
+    x = e.szulo ?? null;
+  }
+  return { alatta: null, hianyzo: null };
+}
+
+// ===================================
+// ⭐ D101 (az I. csoport): A SAJÁT AKTÍV PONT-HOZZÁRENDELÉSEIM — a Tudatpontok modál listája
+// ===================================
+
+/** Egy lista legfeljebb ennyi tételt ad (a prototípus `LISTA_LIMIT`-je és a vezérlője is 100-at enged). */
+export const HOZZARENDELES_KORLAT = 100;
+
+/**
+ * A saját aktív pont-hozzárendeléseim — a prototípus `GET /api/tudatpont/aktiv-hozzarendelesek` alakjában
+ * (`{ entitasId, entitasTipus, entitasCim, tudatPontok }`, a `szerep` többletként).
+ *
+ * ⭐ A FORRÁS A SAJÁT LÁNCOM: a kép kiosztási főkönyve (ugyanaz, amiből a szabad pont jön — `szetosztottPontok`), nem az
+ * élő entitások. A pont akkor is az enyém, ha az entitást nem látom (a cím helyén ilyenkor null, a típus „ismeretlen” —
+ * D19); a szigorú (b) alatt amúgy minden pozitív pontú szeletemet tartom (B/1). 🔍 *Egymilliárdnál?* A lista a saját
+ * tevékenységemmel nő (legfeljebb a keret), nem a koinóval.
+ *
+ * A sorrend a prototípusé (a legutóbb rendezett elöl) — de a SAJÁT láncom sorszáma szerint, nem az óra szerint. Ág-szűrve
+ * (`ag`): csak ami az ág alatt van (`agHelyzete`); ami nem eldönthető, azt kihagyjuk, megszámoljuk (`nemEldontheto`), és
+ * a hiányzó felmenőt kérendőnek mondjuk (`hianyzik` — a ház útja hozza el).
+ *
+ * @param {Object} tar
+ * @param {string} koino
+ * @param {Object} [beallitas] - { szerzo, ag, limit, nezet, horgony, most }
+ * @returns {Promise<{data: Array<Object>, count: number, osszes: number, nemEldontheto: number, szabad: number,
+ *   hianyzik: Array<{fajta: string, kulcs: string, ok: string}>}>}
+ */
+export async function sajatHozzarendelesek(tar, koino, beallitas = {}) {
+  console.log('pakli.sajatHozzarendelesek - KEZDÉS', { ag: beallitas.ag ?? null });
+  const en = beallitas.szerzo ?? null;
+  const ag = typeof beallitas.ag === 'string' && beallitas.ag ? beallitas.ag : null;
+  const kertLimit = Number.isInteger(beallitas.limit) ? beallitas.limit : HOZZARENDELES_KORLAT;
+  const limit = Math.max(1, Math.min(kertLimit, HOZZARENDELES_KORLAT));
+
+  const esemenyek = await koinoEsemenyei(tar, koino);
+  const kep = await lapKepe(tar, koino, beallitas);
+  if (!en) return { data: [], count: 0, osszes: 0, nemEldontheto: 0, szabad: TUDATPONT_KERET, hianyzik: [] };
+
+  // A nyertes pont-esemény sorszáma (a saját láncomban) — ez a „legutóbb rendezett” mércéje.
+  const sajatSorszam = new Map();
+  for (const e of esemenyek) if (e.szerzo === en) sajatSorszam.set(e.azonosito, e.sorszam);
+
+  const tetelek = [];
+  let nemEldontheto = 0;
+  const hianyzik = [];
+  for (const [kulcs, pont] of kep.kiosztasok ?? []) {
+    const hatar = kulcs.lastIndexOf('|');
+    if (kulcs.slice(0, hatar) !== en || !(pont > 0)) continue;
+    const az = kulcs.slice(hatar + 1);
+    if (ag) {
+      const h = agHelyzete(kep.entitasok, az, ag);
+      if (h.alatta === null) {
+        nemEldontheto++;
+        if (h.hianyzo && !hianyzik.some((x) => x.kulcs === h.hianyzo)) {
+          hianyzik.push({ fajta: 'szelet', kulcs: h.hianyzo, ok: 'egy felmenőt nem ismerek (az ág-szűréshez)' });
+        }
+        continue;
+      }
+      if (!h.alatta) continue;
+    }
+    const e = kep.entitasok.get(az);
+    const dontes = e ? entitasDontese(e, kep.javaslatok) : null;
+    tetelek.push({
+      entitasId: az,
+      entitasTipus: e ? kartyaTipusa(e, dontes) : 'ismeretlen',
+      entitasCim: e?.cim ?? null,
+      tudatPontok: pont,
+      szerep: e?.hozzajarulok.get(en)?.szerep ?? null,
+      sorszam: sajatSorszam.get(kep.pontEsemenyek?.get(kulcs)) ?? -1
+    });
+  }
+  tetelek.sort((a, b) => (b.sorszam - a.sorszam) || (a.entitasId < b.entitasId ? -1 : a.entitasId > b.entitasId ? 1 : 0));
+  const data = tetelek.slice(0, limit).map(({ sorszam, ...t }) => t);
+
+  console.log('pakli.sajatHozzarendelesek - VÉGE', { darab: data.length, osszes: tetelek.length, nemEldontheto });
+  return {
+    data,
+    count: data.length,               // a prototípusé: a visszaadott tételek száma
+    osszes: tetelek.length,           // ⭐ és hány van összesen (a lista felülről korlátos)
+    nemEldontheto,
+    szabad: TUDATPONT_KERET - szetosztottPontok(kep, en),
+    hianyzik: hianyzik.slice(0, HOZZARENDELES_KORLAT)
+  };
+}
+
 /**
  * Egy entitás küszöbei — az `ErtekJavaslatModal` és a `ReszletekModal` kéri.
  *
@@ -969,7 +1124,8 @@ export async function entitasKuszobei(tar, koino, azonosito, beallitas = {}) {
   console.log('pakli.entitasKuszobei - VÉGE', { vanSajat: sajat !== null });
   return {
     aktualisErtekek: kuszobokKifele(e.kuszobok ?? ALAP_KUSZOBOK),
-    eemberJavaslat: sajat ? kuszobokKifele(sajat) : null
+    // ⭐ D101: a saját javaslat a JAVASLAT alakjában (az `ErtekJavaslatModal` ezekkel a nevekkel tölti ki a mezőit).
+    eemberJavaslat: sajat ? kuszobokKifele(sajat, 'javaslat') : null
   };
 }
 

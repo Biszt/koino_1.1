@@ -149,3 +149,20 @@
 .allapot.betoltes {
   font-style: italic;
 }
+
+/* ===== ⭐ D101 (M6): A FŐ MENÜ A FEJLÉCBEN =====
+   A prototípusban az alsó sávban ült; itt a fejléc elején — a gomb a fejléc közepére igazodik (a fejléc a feliratokat
+   alapvonalra rendezi, a 44 px-es gombnak ez nem jó). */
+.koino-fejlec #hamburger-menu-kontener {
+  align-self: center;
+}
+
+/* ===== ⭐ D101: A TUDÁS HATÁRA A MODÁLOK ALJÁN =====
+   A program mondja ki (`koinoMegjegyzes`), a `koinoModalok.js` írja a modál listája alá.
+   ⚠️ Mint a forrás jele: halvány és dőlt, nem piros — a hiány nem vád (D19). */
+.koino-megjegyzes {
+  margin: .75rem 0 0;
+  font-size: .85rem;
+  font-style: italic;
+  color: var(--color-text-faint);
+}

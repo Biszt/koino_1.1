@@ -334,7 +334,7 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 | **5.5** | 🚧 **A modálok** — ✅ tudatpont, érték javaslat, részletek, részvétel, **szavazás** (2026-09-06); ⏸️ a JavaslatModal és a létrehozó modálok (az 5.7-re várnak) | a teljes pakli |
 | **5.6** | ✅ **A belépő tér** — koino-kártyák létrehozási idő szerint, **19 önpróba** (2026-09-12) | a D25 nézete |
 | **5.7** | ✅ **A szövegszerkesztő + az „Új gondolat” + a FÁJL-RÉTEG helyi fele**, **20 önpróba** (2026-09-12) | a szövegszerkesztő teljes átemelése |
-| **5.8** | 🚧 ✅ **A `JavaslatModal`** (66 KB) — a lapról már **javasolni is** lehet, **3 önpróba** (2026-09-13); ⏸️ `KategoriaModal`, `TudatpontokModal`… | a pakli teljes működése |
+| **5.8** | 🚧 ✅ **A `JavaslatModal`** (66 KB) — a lapról már **javasolni is** lehet, **3 önpróba** (2026-09-13); ✅ (D101, 2026-10-11) `TudatpontokModal`, `KategoriaModal`, `GondolatTipusModal`, `RendezesModal`, a fő menü; ⏸️ Struktúra, Síkidom, Keresés, Értesítések | a pakli teljes működése |
 | **✅** | **A fájlok SZÁLLÍTÁSA** — felderítés · kérelem a bulin · átvitel · randevú az átfúrt résen, **43 önpróba** (2026-09-13) | a kép két készülék között is átjön |
 
 ⚠️ *Az 5.2 nem halasztható az 5.3 mögé: a kártya alakja attól függ, mit tud kérni a lap.*
@@ -350,9 +350,13 @@ nézet lapozása). A részletek: [`haz_pakli_atvizsgalas.md`](haz_pakli_atvizsga
 Síkidom, Keresés, Tudatpontok, Kategória — az alkategória létrehozása —, Értesítések, Értesítési beállítások; ⚠️ a
 Részvételi beállítások az 5.5 óta valódi). 🔍 **Átvizsgálva (2026-10-11):**
 [`modalok_atvizsgalas.md`](modalok_atvizsgalas.md) — három csoport (a saját láncból · a fa bejárása a kérelemre · új
-réteg alá), egy közös alap (a legjobb-először bejáró az össz-pont szerint, a fejléc folytatásával), és hat kérdés
-Csabánál (M1–M6). *(A Keresésnek van helyi alja — a `/api/kereses` a helyben tartott entitások címében keres, a
-hivatkozás-mező ezt használja —, a hálózati MEGTALÁLÁS, a kereső-réteg, még nincs.)*
+réteg alá), egy közös alap (a legjobb-először bejáró az össz-pont szerint, a fejléc folytatásával), és hat kérdés —
+✅ **D101** (Csaba: „minden javaslatodat elfogadom”). *(A Keresésnek van helyi alja — a `/api/kereses` a helyben tartott
+entitások címében keres, a hivatkozás-mező ezt használja —, a hálózati MEGTALÁLÁS, a kereső-réteg, még nincs.)*
+✅ **Az I. csoport kész (2026-10-11):** a Tudatpontok, a kategória és a gondolattípus létrehozása a lapról, a Rendezés
+(a kártya menüjéből ág-szűrve), és a fő menü (`foMenu.js`) — a részletek a fázis-2 terv D101-ében. ⏭️ A következő: a
+legjobb-először bejáró (előbb mérés) → Struktúra → Síkidom → Keresés → az értesítés-réteg. A helyőrzők közül ma öt áll:
+Struktúra, Síkidom, Keresés, Értesítések, Értesítési beállítások.
 
 ### (RÉGEBBI) ITT TARTUNK (2026-09-13)
 

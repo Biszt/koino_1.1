@@ -21,7 +21,8 @@
 // pontosan ezt csinálja azoknál a menüpontoknál, amik a tervben szerepelnek, de még nem
 // készültek el. Itt ugyanaz a fogás, csak modal-osztály alakban.
 //
-// Használják: a `modals/` mappa 13 név-fájlja (`GondolatModal.js`, `TudatpontModal.js`, …).
+// Használják: a `modals/` mappa név-fájljai, amíg át nem jönnek — 2026-09-06-án 13 volt; D101 (2026-10-11) óta öt
+// maradt: `StrukturaModal`, `SikidomModal`, `KeresesModal`, `ErtesitesekModal`, `ErtesitesiBeallitasModal`.
 
 import Modal from './Modal.js';
 

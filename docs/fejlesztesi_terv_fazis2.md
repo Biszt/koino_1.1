@@ -5171,6 +5171,38 @@ az ág-szűrt helyi módokkal, a fő menü) → ② a bejáró (mérés, a fejl�
 ágazati rendezés) → ③ a Struktúra → ④ a Síkidom → ⑤ a Keresés → ⑥ az értesítés-réteg és a két modálja → ⑦ a kereső-réteg
 (külön pillér, saját átvizsgálással).
 
+#### ✅ MEGÉPÜLT — ① az I. csoport (2026-10-11)
+
+⭐ **„X ága alatt van-e?” egy helyen** (`pakli.js` `agHelyzete`): a felmenő-láncon, legfeljebb 64 lépés, az ág maga is
+alatta; ha egy felmenő hiányzik, „nem eldönthető” és a hiányzó megnevezve (a hívó a ház útján elkéri) — elágazás 106.
+⭐ **A Tudatpontok** (`sajatHozzarendelesek` + a kapun `/api/tudatpont/aktiv-hozzarendelesek`, `/api/eember/sajat-adatok`):
+a saját láncomból (a kiosztási főkönyv), a legutóbb rendezett elöl a SAJÁT sorszámom szerint, ág-szűrve; a nem
+eldönthetőt kimondja, a hiányzó felmenőt elkéri (107.). ⭐ **A besorolások létrehozása a lapról** (`/api/kategoria`,
+`/api/gondolatTipus` — három aláírt esemény, mint a gondolatnál; alkategória a szülő kártyája alatt); a prototípus
+`FormData`-ját a lap JSON-ra fordítja, az ikon a feltöltés lenyomat-címe (108.). ⭐ **A Rendezés** (a kártya menüjéből
+ág-szűrve: `pakliOldal` `agazat`; a lapozás is az ágon marad; a szigorú (b) alatt a lista határa kimondva — M2) (110.).
+⭐ **A fő menü** (`foMenu.js`: a prototípus `foOldal.js`-ének menüje — a nyolc modál ág nélküli változata, az „Új
+kategória / gondolattípus”; a Meghívóim és az eember beállítások „fejlesztésre vár”, a Kijelentkezés kimarad) (111.). A
+modálok (`TudatpontokModal`, `KategoriaModal`, `GondolatTipusModal`, `RendezesModal` + sablonjaik, CSS-ük) bájtra a
+prototípuséi; a koinós többlet (a tudás határa a modál alján) a prototípus-metódus KÖRÉ kerül (`koinoModalok.js` —
+105.).
+
+⛔⛔ **Egy régi hiba, amit a bekötés mért (109.):** a prototípusban a küszöbnek KÉT alakja van — a medián az időket
+`aktualMinimumDontesiIdo` néven mondja, egy e-ember javaslata (amit a modálok küldenek és visszaolvasnak)
+`minimumDontesiIdo` néven. A koinó egyetlen táblával, a medián nevein fordított, ezért 2026-09-06/12 óta a lapról jött
+küszöb nem fordult le: a gondolat létrehozásakor némán elveszett, az érték javaslatban (fordítás nélkül írva) az
+elfogadási és a részvételi küszöb elveszett (a döntés az alapértéken maradt — nem romlott el, `kuszobokItt`). A régi
+„oda-vissza” próba önmagával volt következetes, a valódi hívóval nem — és négy további próba a hibás alakra épült (a
+saját javaslatot a medián nevével várta; három lap-próba a medián nevével küldte a küszöböt, amit a valódi modál soha nem
+küld): a teljes sor ezeket fogta meg, mind a valódi hívó alakjára igazítva. Javítva: egy tábla két oszloppal, az
+`/api/ertekJavaslat` a fordítón át ír, a hiányos négyest elutasítja; a már kiírt események olvasata nem változik (D66).
+
+Próbák: hét modul-próba (`pakliProba.js`: az ág-helyzet, a saját lista, az ág-szűrés, a korlát, a lapos ág-szűrés, a
+küszöb két alakja, a fordító) és három bekötés-próba (`parancssorProba.js`: a Tudatpontok és az ág-szűrt Rendezés két
+készülékkel, „alap” módban — a hiányzó felmenőt B lemezén kéri; a besorolások a lapról; a lapról jött küszöb) — mind
+rontással. Böngészőben kipróbálva: a fő menü, a Tudatpontok, az új kategória (feltöltött ikonnal), a kártya-menü
+Rendezése és Tudatpontok-ja.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

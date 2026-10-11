@@ -224,7 +224,9 @@ import {
   kuszobokBefele,
   hianyzoFelmenok,
   // ⭐ A ház (D100): a hierarchikus pakli.
-  pakliHierarchia
+  pakliHierarchia,
+  // ⭐ D101: a Tudatpontok modál listája.
+  sajatHozzarendelesek
 } from './js/allapot/pakli.js';
 // ⭐ A RANDEVÚ (2026-09-14): a csere ÉS a fájlok is átmennek az átfúrt résen.
 // ⭐ És a szelet-kérés is a résen (D69/2): a `hozd` 2026-09-26 óta ezen megy.
@@ -1523,6 +1525,46 @@ async function fuggoKerelemFelvetele(k, { cimek = null, dht = false } = {}) {
  * @param {Array<{fajta: string, kulcs: string, d?: number}>} hianyzik - a `pakliHierarchia` listája
  */
 const LAP_KERES_KORLAT = 4;
+
+/**
+ * ⭐ D101: a lapos pakli megjegyzése — a lista határa (M2) és az ág-szűrés tudás-határa (D19); a lap az állapot-sorba írja.
+ * @param {{nemEldontheto: number}} oldal - a `pakliOldal` válasza
+ * @param {{fuggo: number, celos: number}} keres - a `lapHianyzoinakElkerese` válasza
+ * @param {boolean} szigoru - a szigorú (b) alatt („alap” kiszolgálás) — a lista ilyenkor a koinó töredéke
+ * @returns {string|null}
+ */
+function laposMegjegyzes(oldal, keres, szigoru) {
+  const reszek = [];
+  // ⭐ D101/M2: a lapos rendezés (az időrend, a saját pont, a növekvő irány — és amíg a bejáró nincs meg, az ágazati is)
+  // a HELYBEN ismert entitásokból áll. A szigorú (b) alatt ez a koinó töredéke — kimondjuk, végleges alakként.
+  if (szigoru) reszek.push('A lista a készülékeden ismert entitásokból áll — ami nincs ezen a készüléken, abban nem.');
+  if (oldal.nemEldontheto > 0) {
+    reszek.push(oldal.nemEldontheto + ' entitásról nem tudom eldönteni, ebben az ágban van-e: egy felmenője nincs meg '
+      + 'ezen a készüléken' + (keres.fuggo > 0 ? (keres.celos > 0 ? ' — elkértem, az őrjárat hozza'
+        : ' — elkértem, a tartóit keresem') : '') + '.');
+  }
+  return reszek.length ? reszek.join(' ') : null;
+}
+
+/**
+ * ⭐ D101: a Tudatpontok modál megjegyzése — a tudás határa (D19), a lap a lista alá írja (`koinoModalok.js`).
+ * @param {{data: Array, osszes: number, nemEldontheto: number}} lista - a `sajatHozzarendelesek` válasza
+ * @param {{fuggo: number, celos: number}} keres - a `lapHianyzoinakElkerese` válasza
+ * @returns {string|null} null, ha nincs mit mondani
+ */
+function hozzarendelesMegjegyzes(lista, keres) {
+  const reszek = [];
+  if (lista.nemEldontheto > 0) {
+    reszek.push(lista.nemEldontheto + ' hozzárendelésedről még nem tudom eldönteni, ebben az ágban van-e: egy '
+      + 'felmenője nincs meg ezen a készüléken'
+      + (keres.fuggo > 0 ? (keres.celos > 0 ? ' — elkértem, az őrjárat hozza (nyisd meg újra később)'
+        : ' — elkértem, a tartóit keresem') : '') + '.');
+  }
+  if (lista.osszes > lista.data.length) {
+    reszek.push('A legutóbb rendezett ' + lista.data.length + ' látszik, összesen ' + lista.osszes + ' van.');
+  }
+  return reszek.length ? reszek.join(' ') : null;
+}
 // ⭐ Amit a kérelem nemrég elhozott, azt ennyi ideig nem kérjük újra (a nem tartott ág gyerekeit a lekérdezés soha nem
 // tekinti BIZTOSNAK — e nélkül a lap minden lekérésnél újra kérne, és örökké „betöltés”-t mutatna; próba mérte).
 const LAP_FRISSESSEG = 10 * 60 * 1000;
@@ -5851,6 +5893,62 @@ try {
           }
 
           // ===================================
+          // ⭐ D101 (az I. csoport): KATEGÓRIA ÉS GONDOLATTÍPUS LÉTREHOZÁSA A LAPRÓL
+          // ===================================
+          //
+          // ⛔ EDDIG EZ CSAK A PARANCSSORBÓL MENT (`kategoria`, `gondolattipus`) — a művelet kész volt
+          // (`besorolasLetrehozasa`: szülővel, a leírás szöveg-darabként, ikonnal), a kapun nem volt írási útja.
+          // ⭐ Ugyanaz a három aláírt esemény, mint a gondolatnál: a létrehozás, a kezdő tudatpont (D14), és ha a lap
+          // küldte, a küszöbök. A rakomány a prototípus modáljaié (`KategoriaModal`, `GondolatTipusModal` — bájtra
+          // változatlanul): a `FormData`-t a lap JSON-ra fordította (`apiHelper.js` `formDataJsonna`), az ikon a
+          // feltöltésen át a fájl lenyomat-címe lett; minden mező szöveg, a számokat itt olvassuk ki.
+          if (utvonal === '/api/kategoria' || utvonal === '/api/gondolatTipus') {
+            const kategoriaE = utvonal === '/api/kategoria';
+            const { nev, leiras, ikon, kezdoTudatpont, szuloId } = test ?? {};
+            if (typeof nev !== 'string' || !nev.trim()) {
+              return { allapot: 400, adat: { hiba: 'Mi legyen a neve?' } };
+            }
+            // A leírás a szerkesztő BLOKK-tömbje, szövegként (a FormData csak szöveget visz).
+            let blokkok = null;
+            if (typeof leiras === 'string' && leiras.trim()) {
+              try { blokkok = JSON.parse(leiras); } catch { blokkok = null; }
+            } else if (Array.isArray(leiras)) blokkok = leiras;
+            if (!Array.isArray(blokkok) || !blokkok.length) blokkok = null;
+
+            let esemeny;
+            try {
+              esemeny = await (kategoriaE ? kategoriaLetrehozasa : gondolatTipusLetrehozasa)(kornyezet, {
+                nev: nev.trim(),
+                leiras: blokkok,
+                ikon: typeof ikon === 'string' && ikon.trim() ? ikon.trim() : null,
+                // ⭐ Alkategória: a szülő a kategória-kártyáé. A gondolattípusnak nincs szülője (a prototípusban sem).
+                szulo: kategoriaE && typeof szuloId === 'string' && szuloId ? szuloId : null
+              });
+            } catch (hiba) {
+              return { allapot: 400, adat: { hiba: hiba.message } };
+            }
+
+            // ⛔ A KEZDŐ TUDATPONT — enélkül a koino el is felejtené (D14).
+            const kert = parseInt(kezdoTudatpont, 10);
+            const pont = Number.isInteger(kert) && kert > 0 ? kert : KEZDO_PONT;
+            const { allapot } = await kepetKeszit(0, tar, KOINO);
+            await tudatpontRendezese(kornyezet, esemeny.azonosito, pont, 'aktiv', szetosztottPontok(allapot, szerzo));
+
+            // A KÜSZÖBÖK — a FormData szövegként hozta őket; a kanonikus alak csak egész számot tűr.
+            const egeszek = { ...test };
+            for (const n of ['javaslatElfogadasiKuszob', 'reszveteliAranyKuszob', 'minimumDontesiIdo', 'maximumDontesiIdo']) {
+              if (typeof egeszek[n] === 'string' && /^\d+$/.test(egeszek[n].trim())) egeszek[n] = parseInt(egeszek[n], 10);
+            }
+            const ertekek = kuszobokBefele(egeszek);
+            if (ertekek) await ertekJavaslat(kornyezet, esemeny.azonosito, ertekek);
+
+            pakliNezet.horgony = null;      // a kép elavult
+            // A prototípus válaszának alakja (a modál az `onSiker`-nek adja tovább).
+            const letrejott = { _id: esemeny.azonosito, id: esemeny.azonosito, nev: nev.trim(), ikon: esemeny.adat?.ikon ?? null };
+            return { adat: { success: true, ...(kategoriaE ? { kategoria: letrejott } : { gondolatTipus: letrejott }) } };
+          }
+
+          // ===================================
           // ⭐⭐⭐ SZERKESZTÉSI JAVASLAT A LAPRÓL (5.8) — a `JavaslatModal` végpontja
           // ===================================
           //
@@ -6017,7 +6115,18 @@ try {
             // ⚠️ A prototípus `entitasTipus`-t is küld; a koinóban az azonosító elég.
             delete ertekek.entitasTipus;
 
-            await ertekJavaslat(kornyezet, entitasId, ertekek);
+            // ⛔⛔ D101 (2026-10-11, mérve): eddig a lap mezői FORDÍTÁS NÉLKÜL kerültek az eseménybe — a prototípus nevei
+            // (`javaslatElfogadasiKuszob`, `reszveteliAranyKuszob`) a számításnak ismeretlenek, így a lapon beállított
+            // elfogadási és részvételi küszöb némán elveszett (csak a két idő ment át, mert annak a neve egyezik).
+            // ⭐ Most a közös fordítón át, és a hiányos négyes nem lesz esemény (egy félkész javaslat rosszabb a semminél).
+            // ⚠️ A már kiírt régi események ugyanígy olvasódnak tovább (egy tárolt esemény más olvasata két készülék
+            // állapotát hasítaná szét — D66); aki így adta be, az újra beadhatja.
+            const belso = kuszobokBefele(ertekek);
+            if (!belso) {
+              return { allapot: 400, adat: { hiba: 'A négy küszöb (elfogadási, részvételi, minimum és maximum döntési idő) '
+                + 'mind kell, egész számként.' } };
+            }
+            await ertekJavaslat(kornyezet, entitasId, belso);
             pakliNezet.horgony = null;
             return { adat: { data: { entitasId } } };
           }
@@ -6137,20 +6246,27 @@ try {
         if (utvonal === '/api/pakli') {
           const darab = parseInt(kereses.get('darab'), 10);
           try {
-            return {
-              adat: await pakliOldal(olvasoTar, KOINO, {
-                rendezes: kereses.get('rendezes') ?? undefined,
-                irany: kereses.get('irany') ?? undefined,
-                kurzor: kereses.get('kurzor') ?? undefined,
-                darab: Number.isInteger(darab) ? darab : undefined,
-                szerzo,          // ⭐ hogy a kártya a SAJÁT tudatpontodat is mutathassa
-                nezet: pakliNezet,
-                // ⭐ D72: a javaslat-kártyák szöveg-hivatkozása innen oldódik fel
-                darabOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
-                // ⭐ D92/5: a nem tartott entitások bemondott össz-pontja (a kérelmek válaszaiból)
-                bemondasok: await bemondasok()
-              })
-            };
+            const oldal = await pakliOldal(olvasoTar, KOINO, {
+              rendezes: kereses.get('rendezes') ?? undefined,
+              irany: kereses.get('irany') ?? undefined,
+              kurzor: kereses.get('kurzor') ?? undefined,
+              darab: Number.isInteger(darab) ? darab : undefined,
+              szerzo,          // ⭐ hogy a kártya a SAJÁT tudatpontodat is mutathassa
+              nezet: pakliNezet,
+              // ⭐ D72: a javaslat-kártyák szöveg-hivatkozása innen oldódik fel
+              darabOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
+              // ⭐ D92/5: a nem tartott entitások bemondott össz-pontja (a kérelmek válaszaiból)
+              bemondasok: await bemondasok(),
+              // ⭐ D101: a kártya menüjének Rendezése — csak az ág
+              agazat: kereses.get('agazat') || undefined
+            });
+            // ⭐ D101: az ág-szűréshez hiányzó felmenőket a ház útján elkérjük; és kimondjuk a lista határát (M2).
+            const keres = sajatKoino && oldal.hianyzik.length ? await lapHianyzoinakElkerese(oldal.hianyzik)
+              : { kert: 0, fuggo: 0, celos: 0 };
+            let szigoru = false;
+            try { szigoru = sajatKoino && !(await kiszolgalasBeallitas()).mindent; } catch { szigoru = false; }
+            return { adat: { ...oldal, betoltes: keres.fuggo > 0, kitolKerni: keres.celos,
+              koinoMegjegyzes: laposMegjegyzes(oldal, keres, szigoru) } };
           } catch (hiba) {
             // ⚠️ A rossz KÉRÉS nem a program hibája — 400, és mondjuk meg, mi a baj.
             return { allapot: 400, adat: { hiba: hiba.message } };
@@ -6308,6 +6424,36 @@ try {
             { ...lapHorgonya, szerzo, nezet: pakliNezet });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
           return { adat: talalat };
+        }
+
+        // ===================================
+        // ⭐ D101 (az I. csoport): A TUDATPONTOK MODÁL — a saját aktív hozzárendeléseim, és a saját adataim
+        // ===================================
+        //
+        // ⭐ A prototípus útvonalai és alakja (`TudatpontokModal`, M5/A): a lista a SAJÁT láncomból (`pakli.js`
+        // `sajatHozzarendelesek`), ág-szűrve a felmenő-láncon (`agHelyzete`). Ha egy felmenő nincs meg, a tétel „nem
+        // eldönthető” — a hiányzó felmenőt a ház útján elkérjük (függő kérelem, az őrjárat hozza).
+        if (utvonal === '/api/tudatpont/aktiv-hozzarendelesek') {
+          const limit = parseInt(kereses.get('limit'), 10);
+          const lista = await sajatHozzarendelesek(olvasoTar, KOINO, {
+            ...lapHorgonya, szerzo, nezet: pakliNezet,
+            ag: kereses.get('agEntitasId') || null,
+            limit: Number.isInteger(limit) ? limit : undefined
+          });
+          const keres = sajatKoino && lista.hianyzik.length ? await lapHianyzoinakElkerese(lista.hianyzik)
+            : { kert: 0, fuggo: 0, celos: 0 };
+          return { adat: { success: true, ...lista, betoltes: keres.fuggo > 0, kitolKerni: keres.celos,
+            koinoMegjegyzes: hozzarendelesMegjegyzes(lista, keres) } };
+        }
+
+        // ⭐ A prototípus `eember/sajat-adatok`-ja: a Tudatpontok fejléce a szabad pontot olvassa belőle. ⚠️ Ami a
+        // prototípusban fiók-adat volt (e-mail, valódi név, lokáció), az itt nincs (D15: nincs fiók) — null, nem kitalált.
+        if (utvonal === '/api/eember/sajat-adatok') {
+          const lista = await sajatHozzarendelesek(olvasoTar, KOINO, { ...lapHorgonya, szerzo, nezet: pakliNezet, limit: 1 });
+          return { adat: {
+            success: true, eemberNev: rovidAzonosito(szerzo), nev: null, email: null, emailMegerositve: false,
+            lokacio: null, tudatpontok: lista.szabad
+          } };
         }
 
         // ----- EGY ENTITÁS RÉSZLETEI (5.5) — a ReszletekModal kéri -----

@@ -2039,10 +2039,10 @@ proba('⭐ A tér HÁROM SZÁMOT mutat, nem egyet — a létszám súlya látszi
 // ⚠️ Modul-próba ezt nem tudja megfogni: a végpontok a `koino.js` egy záródásában élnek,
 // nem exportált függvényben. Ezért indul itt valódi kiszolgáló, és megy rá valódi kérés.
 
-/** Elindít egy `felulet` kiszolgálót, és visszaadja a címét + a jelszavát. */
-async function feluletet(hely, port) {
+/** Elindít egy `felulet` kiszolgálót, és visszaadja a címét + a jelszavát. (`kornyezet`: pl. `KOINO_KISZOLGALAS`.) */
+async function feluletet(hely, port, kornyezet = {}) {
   const folyamat = spawn(process.execPath, [KOINO_JS, 'felulet', String(port)], {
-    env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '' },
+    env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...kornyezet },
     stdio: ['ignore', 'pipe', 'pipe']
   });
 
@@ -2263,6 +2263,180 @@ proba('⛔ NEM LÉTEZŐ koinóra nem lehet váltani — és az állapot nem mozd
 });
 
 // ===================================
+// ⭐ D101 (a maradék modálok, az I. csoport): A TUDATPONTOK MODÁL A LAPON — a saját láncomból, ág-szűrve
+// ===================================
+//
+// A egy háromszintű ágat ír (R → P → C); B a kézi úton CSAK a C szeletét kapja (a szülőjét, P-t nem — a szigorú (b)
+// alatt így jön), és pontot tesz C-re. ⭐ Viselkedést mérünk: B lapjának Tudatpontok-listája a saját pontját mutatja
+// (A-ét nem), a szabad pontja ennyivel kevesebb; ág-szűrve P alatt eldönthető (a hiányzó szülő maga az ág), R alatt NEM —
+// ott a lap „nem eldönthető”-t mond, és a hiányzó felmenőt függő kérelemként beírja (B lemezén: `kerelmek.json`). A
+// Rendezés modál ág-szűrt lapos paklija (`/api/pakli?agazat=`) ugyanígy dönt, és a szigorú (b) alatt kimondja, hogy a
+// lista a készüléken ismert entitásokból áll (D101/M2). Rontás: a végpont nem szűr ágra → R alatt is látszik; a lap nem
+// kér el semmit → a kérelem nincs meg.
+proba('⭐ D101: a Tudatpontok és az ág-szűrt Rendezés a lapon — a saját láncomból; ág-szűrve a hiányzó felmenőt elkéri, és kimondja, amit nem tud', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  let kiszolgalo = null;
+  const vitel = async (honnan, hova, ...hatokor) => {
+    const f = join(honnan, 'vitel-' + Math.random().toString(36).slice(2) + '.jsonl');
+    await fut(honnan, 'kivisz', f, ...hatokor);
+    await fut(hova, 'behoz', f);
+  };
+  try {
+    await fut(a, 'koino', 'Tudatpontok', 'próba', 'nyilt');
+    await vitel(a, b);
+    await taggaTesziKeszulek(a, b, 'b');
+    // Az ág A-n, a lapról (a parancssor nem ad szülőt)
+    kiszolgalo = await feluletet(a, 7491);
+    const uj = async (cim, szuloId = null) => {
+      const v = await kiszolgalo.hiv('/api/gondolat', { method: 'POST',
+        body: JSON.stringify({ cim, ...(szuloId ? { szuloId } : {}), kezdoTudatpont: 10 }) });
+      return v.adat?.data?._id ?? null;
+    };
+    const R = await uj('R gyökér');
+    const P = await uj('P közép', R);
+    const C = await uj('C levél', P);
+    kiszolgalo.folyamat.kill();
+    kiszolgalo = null;
+    await varj(500);
+    if (!R || !P || !C) return false;
+    await vitel(a, b, C);                                   // ⭐ CSAK a C szelete
+    await fut(b, 'pont', C, '5');
+
+    // ⭐ B felülete a szigorú (b) alatt fut („alap”) — ahogy egy valódi készülék
+    kiszolgalo = await feluletet(b, 7492, { KOINO_KISZOLGALAS: 'alap' });
+    const { hiv } = kiszolgalo;
+    const mind = await hiv('/api/tudatpont/aktiv-hozzarendelesek?limit=100');
+    // ⭐ A Rendezés modál ág-szűrt lapos paklija ugyanazon a felmenő-láncon dönt
+    const laposR = await hiv('/api/pakli?rendezes=ido&agazat=' + R);
+    const laposP = await hiv('/api/pakli?rendezes=ido&agazat=' + P);
+    const sajat = await hiv('/api/eember/sajat-adatok');
+    const agP = await hiv('/api/tudatpont/aktiv-hozzarendelesek?limit=100&agEntitasId=' + P);
+    const agR = await hiv('/api/tudatpont/aktiv-hozzarendelesek?limit=100&agEntitasId=' + R);
+    const kerelmek = JSON.parse(await readFile(join(b, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '{}'));
+    const ki = {
+      sajatja: mind.adat.data?.length === 1 && mind.adat.data[0].entitasId === C && mind.adat.data[0].tudatPontok === 5
+        && mind.adat.data[0].entitasCim === 'C levél',
+      szabad: sajat.adat.tudatpontok === 10000 - 5,
+      agP: agP.adat.data?.length === 1 && agP.adat.nemEldontheto === 0 && agP.adat.koinoMegjegyzes === null,
+      agR: agR.adat.data?.length === 0 && agR.adat.nemEldontheto === 1
+        && /nem tudom eldönteni/.test(agR.adat.koinoMegjegyzes ?? ''),
+      kerte: (kerelmek.fuggo ?? []).some((x) => x.fajta === 'szelet' && x.kulcs === P),
+      laposR: !(laposR.adat.kartyak ?? []).some((k) => k.azonosito === C) && laposR.adat.nemEldontheto >= 1
+        && /készülékeden ismert/.test(laposR.adat.koinoMegjegyzes ?? '') && /nem tudom eldönteni/.test(laposR.adat.koinoMegjegyzes ?? ''),
+      laposP: (laposP.adat.kartyak ?? []).some((k) => k.azonosito === C) && laposP.adat.agazat === P
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  tudatpontok — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+        + ' · ' + JSON.stringify({ mind: mind.adat, agR: agR.adat, fuggo: kerelmek.fuggo }).slice(0, 600) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
+    await rm(a, { recursive: true, force: true });
+    await rm(b, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐ D101 (az I. csoport): KATEGÓRIA, ALKATEGÓRIA ÉS GONDOLATTÍPUS A LAPRÓL
+// ===================================
+//
+// A lap a prototípus modáljának rakományát küldi — ahogy a `FormData`-ból JSON-ra fordult (`formDataJsonna`): minden mező
+// szöveg, a leírás a blokkok JSON-ja, az ikon a feltöltés lenyomat-címe. ⭐ Viselkedést mérünk: a pakliban megjelenik a
+// kategória (típusa, ikonja, a kezdő pontja), az alkategória a SZÜLŐJE alatt, a gondolattípus; és a küszöbök a saját érték
+// javaslatomként állnak. Rontás: a szülő elmarad → az alkategória gyökér lesz; a küszöb-számok szövegként mennek → nincs
+// érték javaslat.
+proba('⭐ D101: kategória, alkategória és gondolattípus a lapról — a prototípus rakományával (szövegként), három aláírt eseménnyel', async () => {
+  const hely = await ujKeszulek();
+  let kiszolgalo = null;
+  try {
+    await fut(hely, 'koino', 'Besorolás');
+    kiszolgalo = await feluletet(hely, 7493);
+    const { hiv } = kiszolgalo;
+    const leiras = JSON.stringify([{ id: 'b1', tipus: 'szoveg', tartalom: 'Az erdő és a mező',
+      formatas: { felkover: false, dolt: false, meret: 'kozepes' } }]);
+    const kuszob = { javaslatElfogadasiKuszob: '60', reszveteliAranyKuszob: '25',
+      minimumDontesiIdo: '86400', maximumDontesiIdo: '604800' };
+    const kat = await hiv('/api/kategoria', { method: 'POST', body: JSON.stringify({
+      nev: 'Természet', leiras, ikon: '🌲', kezdoTudatpont: '7', ...kuszob }) });
+    const katId = kat.adat?.kategoria?._id;
+    const al = await hiv('/api/kategoria', { method: 'POST', body: JSON.stringify({
+      nev: 'Erdő', ikon: '🌳', kezdoTudatpont: '3', szuloId: katId, szuloTipus: 'Kategoria', ...kuszob }) });
+    const tip = await hiv('/api/gondolatTipus', { method: 'POST', body: JSON.stringify({
+      nev: 'Kérdés', ikon: '❓', kezdoTudatpont: '2', ...kuszob }) });
+    const ures = await hiv('/api/kategoria', { method: 'POST', body: JSON.stringify({ nev: '  ' }) });
+    const pakli = await hiv('/api/pakli?darab=50');
+    const kartya = (cim) => (pakli.adat.kartyak ?? []).find((k) => k.cim === cim);
+    const kuszobok = await hiv('/api/ertekJavaslat/aktualis/Kategoria/' + katId);
+    const sajat = kuszobok.adat?.eemberJavaslat ?? kuszobok.adat?.data?.eemberJavaslat ?? null;
+    const ki = {
+      kategoria: kat.allapot === 200 && kartya('Természet')?.tipus === 'Kategoria' && kartya('Természet')?.ikon === '🌲'
+        && kartya('Természet')?.sajatPont === 7,
+      alkategoria: kartya('Erdő')?.szulo === katId && kartya('Erdő')?.sajatPont === 3,
+      gondolatTipus: kartya('Kérdés')?.tipus === 'GondolatTipus' && !!tip.adat?.gondolatTipus?._id,
+      kuszob: sajat?.javaslatElfogadasiKuszob === 60 && sajat?.reszveteliAranyKuszob === 25,
+      nevNelkul: ures.allapot === 400
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  besorolás — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+        + ' · ' + JSON.stringify({ kat: kat.adat, al: al.adat, kuszobok: kuszobok.adat,
+          kartyak: (pakli.adat.kartyak ?? []).map((k) => [k.cim, k.tipus, k.ikon, k.sajatPont, k.szulo]) }).slice(0, 700) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⛔⛔ D101 (mérve, 2026-10-11): A LAPRÓL JÖTT KÜSZÖB — a gondolat létrehozásakor és az érték javaslatban
+// ===================================
+//
+// A prototípusban a küszöbnek két alakja van: a medián az időket `aktualMinimumDontesiIdo` néven mondja, egy e-ember
+// javaslata (amit a modálok KÜLDENEK — `kuszobMezokOsszegyujtese`) `minimumDontesiIdo` néven. A kapu eddig a medián neveit
+// várta: a `GondolatModal` küszöbei némán elvesztek, az `ErtekJavaslatModal` pedig fordítás nélkül írta az eseményt (az
+// elfogadási és a részvételi küszöb elveszett). ⭐ Viselkedést mérünk: a modálok VALÓDI rakományával a saját javaslatom
+// mind a négy számot hordozza, és a medián is ezeket mondja; a hiányos négyes nem lesz esemény.
+proba('⛔⛔ D101: a lapról jött küszöb a gondolat létrehozásakor és az érték javaslatban — mind a négy szám megérkezik', async () => {
+  const hely = await ujKeszulek();
+  let kiszolgalo = null;
+  try {
+    await fut(hely, 'koino', 'Küszöb');
+    kiszolgalo = await feluletet(hely, 7494);
+    const { hiv } = kiszolgalo;
+    // a modálok rakománya: SZÁMOK, a javaslat nevein
+    const rakomany = { javaslatElfogadasiKuszob: 60, reszveteliAranyKuszob: 25, minimumDontesiIdo: 7200, maximumDontesiIdo: 172800 };
+    const g = await hiv('/api/gondolat', { method: 'POST', body: JSON.stringify({ cim: 'Küszöbös', kezdoTudatpont: 10, ...rakomany }) });
+    const id = g.adat?.data?._id;
+    const letrehozaskor = await hiv('/api/ertekJavaslat/aktualis/Gondolat/' + id);
+    const masik = { javaslatElfogadasiKuszob: 70, reszveteliAranyKuszob: 30, minimumDontesiIdo: 3600, maximumDontesiIdo: 86400 };
+    const ej = await hiv('/api/ertekJavaslat', { method: 'POST', body: JSON.stringify({ entitasId: id, entitasTipus: 'Gondolat', ...masik }) });
+    const utana = await hiv('/api/ertekJavaslat/aktualis/Gondolat/' + id);
+    const hianyos = await hiv('/api/ertekJavaslat', { method: 'POST',
+      body: JSON.stringify({ entitasId: id, javaslatElfogadasiKuszob: 80 }) });
+    const sajat1 = letrehozaskor.adat?.eemberJavaslat;
+    const sajat2 = utana.adat?.eemberJavaslat;
+    const ki = {
+      letrehozaskor: sajat1?.javaslatElfogadasiKuszob === 60 && sajat1?.minimumDontesiIdo === 7200
+        && letrehozaskor.adat?.aktualisErtekek?.reszveteliAranyKuszob === 25,
+      ertekJavaslat: ej.allapot === 200 && sajat2?.javaslatElfogadasiKuszob === 70 && sajat2?.reszveteliAranyKuszob === 30
+        && utana.adat?.aktualisErtekek?.javaslatElfogadasiKuszob === 70 && utana.adat?.aktualisErtekek?.aktualMaximumDontesiIdo === 86400,
+      hianyos: hianyos.allapot === 400
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  küszöb — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+        + ' · ' + JSON.stringify({ letrehozaskor: letrehozaskor.adat, utana: utana.adat, hianyos: hianyos.allapot }).slice(0, 600) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+// ===================================
 // ⭐⭐ GONDOLAT LÉTREHOZÁSA A LAPRÓL (5.7)
 // ===================================
 //
@@ -2329,12 +2503,14 @@ proba('⭐⭐⭐ A SAJÁT SZERKESZTÉSEM AZONNAL HATÁLYBA LÉP — egyetlen tul
       const { hiv } = kiszolgalo;
 
       // ⚠️ NULLA döntési idővel, hogy tényleg AZONNAL dőljön el — a koino alapértéke 1 nap.
+      // ⛔ D101 (elágazás 109): a modálok küszöb-rakományának neveivel (`minimumDontesiIdo`) — itt és a két következő
+      // próbában korábban a medián neve (`aktualMinimumDontesiIdo`) állt, amit a valódi modál soha nem küld.
       const uj = await hiv('/api/gondolat', {
         method: 'POST',
         body: JSON.stringify({
           cim: 'EREDETI CÍM',
           javaslatElfogadasiKuszob: 51, reszveteliAranyKuszob: 0,
-          aktualMinimumDontesiIdo: 0, aktualMaximumDontesiIdo: 0
+          minimumDontesiIdo: 0, maximumDontesiIdo: 0
         })
       });
       const id = uj.adat.data._id;
@@ -2404,7 +2580,7 @@ proba('⭐⭐⭐ MÓDOSÍTÁSI JAVASLAT A LAPRÓL: a cím ÉS a blokkos szöveg 
         body: JSON.stringify({
           cim: 'EREDETI CÍM',
           javaslatElfogadasiKuszob: 51, reszveteliAranyKuszob: 0,
-          aktualMinimumDontesiIdo: 0, aktualMaximumDontesiIdo: 0
+          minimumDontesiIdo: 0, maximumDontesiIdo: 0
         })
       });
       const id = uj.adat.data._id;
@@ -2446,7 +2622,7 @@ proba('⭐ ÁTHELYEZÉSI javaslat a lapról — és a gyökérre helyezés is (`
 
     const gyors = {
       javaslatElfogadasiKuszob: 51, reszveteliAranyKuszob: 0,
-      aktualMinimumDontesiIdo: 0, aktualMaximumDontesiIdo: 0
+      minimumDontesiIdo: 0, maximumDontesiIdo: 0
     };
     const szulo = await hiv('/api/gondolat',
       { method: 'POST', body: JSON.stringify({ cim: 'A SZÜLŐ', ...gyors }) });

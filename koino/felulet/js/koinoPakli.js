@@ -186,13 +186,16 @@ export class KoinoPakli extends Pakli {
     try {
       const kereses = new URLSearchParams({ rendezes: this.rendezesMod, irany: this.rendezesIrany,
         darab: String(LAPOS_OLDAL), kurzor });
+      // ⭐ D101: az ág-szűrt rendezés (a kártya menüjéből) a további oldalakon is az ágon marad.
+      if (this.rendezesAgazatId) kereses.set('agazat', this.rendezesAgazatId);
       oldal = await apiGet('pakli?' + kereses.toString());
     } catch (hiba) {
       this._allapot('Nem sikerült lekérni a további kártyákat: ' + hiba.message, 'nem');
       return;
     }
     this.utolsoLapos = { ...this.utolsoLapos, kovetkezoKurzor: oldal.kovetkezoKurzor ?? null,
-      osszes: oldal.osszes ?? this.utolsoLapos.osszes, ujdonsag: oldal.ujdonsag === true, ujEsemenyek: oldal.ujEsemenyek ?? 0 };
+      osszes: oldal.osszes ?? this.utolsoLapos.osszes, ujdonsag: oldal.ujdonsag === true, ujEsemenyek: oldal.ujEsemenyek ?? 0,
+      koinoMegjegyzes: oldal.koinoMegjegyzes ?? this.utolsoLapos.koinoMegjegyzes ?? null };
 
     const csomagolo = document.getElementById('pakli-wrapper');
     for (const entitas of oldalAdatta(oldal.kartyak)) {
@@ -402,6 +405,8 @@ export class KoinoPakli extends Pakli {
       let szoveg = this.lapositottLista.length + ' / ' + this.utolsoLapos.osszes + ' kártya';
       // ⭐ Amit a lapozás kezdete óta kaptunk, azt megmondjuk — nem keverjük bele némán.
       if (this.utolsoLapos.ujdonsag) szoveg += ' · ⚠️ ' + this.utolsoLapos.ujEsemenyek + ' új esemény érkezett a lapozás kezdete óta';
+      // ⭐ D101: a lista határa (M2) és az ág-szűrés tudás-határa — a program mondja ki, a lap csak kiírja.
+      if (this.utolsoLapos.koinoMegjegyzes) szoveg += ' · ' + this.utolsoLapos.koinoMegjegyzes;
       this._allapot(szoveg);
       return;
     }

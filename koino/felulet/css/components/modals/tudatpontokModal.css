@@ -1,0 +1,79 @@
+/* frontend/css/components/modals/tudatpontokModal.css */
+
+/* A Tudatpontok modal a standard modal-vázra épül (Modal.js).
+   A saját aktív tudatpont-hozzárendeléseket listázza (fejlécben a szabad pont). */
+
+/* ===== FEJLÉC: SZABAD TUDATPONT ===== */
+.tudatpontok-modal__szabad {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* ===== LISTA ===== */
+.tudatpontok-modal__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+/* ===== ÜRES ÁLLAPOT ===== */
+.tudatpontok-modal__ures {
+  margin: var(--space-4) 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ===== EGY HOZZÁRENDELÉS-SOR ===== */
+.tudatpontok-modal__elem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.tudatpontok-modal__elem:hover {
+  background: var(--color-surface-offset);
+}
+
+.tudatpontok-modal__tipus {
+  flex: 0 0 auto;
+}
+
+/* Az entitás címe — hosszú címnél csonkolva */
+.tudatpontok-modal__cim {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tudatpontok-modal__pont {
+  flex: 0 0 auto;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Módosítás gomb a sor jobb szélén */
+.tudatpontok-modal__modosit {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm, 6px);
+}
+
+.tudatpontok-modal__modosit:hover {
+  background: var(--color-surface, rgba(127, 127, 127, 0.15));
+}
