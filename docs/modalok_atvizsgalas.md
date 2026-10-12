@@ -271,3 +271,5 @@ ott valóban nem számít. De ha EGYETLEN jól ellátott tartó kapja a kérelme
   `KERELEM`-et küld (a társhoz illő függőket, legfeljebb 16-ot), a tartó egyenként kiszolgálja, a végén `KESZ`.
   Protokoll-bővítés (korlátos), a mai menet változatlan marad, ha csak egy kérelem van.
 - **(B) Marad 1 kérelem / kapcsolat** — egyszerűbb, de a családi koinóban a Struktúra percek helyett órák.
+
+✅ **Csaba: „elfogadom a javaslatodat, legyen az (A)”** — megépült (a fázis-2 terv D102-e, elágazás 119).

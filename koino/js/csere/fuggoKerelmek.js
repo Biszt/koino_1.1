@@ -141,6 +141,23 @@ export function tarshozIllo(ny, cim, port, kiveve = () => false) {
   return legjobb((c) => c.hoszt === cim && c.port === Number(port)) ?? legjobb((c) => c.hoszt === cim);
 }
 
+/**
+ * ⭐ D102 (J3): a társhoz illő kérelmek SOROZATA — a rang szerint (ahol ő áll a legelöl a céllistán), holtversenyben a
+ * régebbi előbb; legfeljebb `korlat` (a pontos cím előbb, és ha azon nincs, az azonos IP).
+ * @returns {Array<Object>}
+ */
+export function tarshozIllok(ny, cim, port, kiveve = () => false, korlat = 16) {
+  const alap = nyilvantartasAlakja(ny);
+  const rangos = (illik) => alap.fuggo
+    .filter((x) => !kiveve(x))
+    .map((x, sorrend) => ({ x, rang: x.celok.findIndex(illik), sorrend }))
+    .filter((y) => y.rang >= 0)
+    .sort((a, b) => a.rang - b.rang || a.sorrend - b.sorrend)
+    .map((y) => y.x);
+  const pontos = rangos((c) => c.hoszt === cim && c.port === Number(port));
+  return (pontos.length ? pontos : rangos((c) => c.hoszt === cim)).slice(0, korlat);
+}
+
 /** Egy függő kérelem lezárása (megjött, vagy feladtuk) — a kész naplóba, rövid összegzéssel. */
 export function kerelemLezarasa(ny, az, eredmeny, most) {
   const alap = nyilvantartasAlakja(ny);

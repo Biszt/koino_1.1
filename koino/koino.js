@@ -140,7 +140,7 @@ import {
 } from './js/csere/cimjegyzek.js';
 // ⭐⭐ D92/1: a függő kérelmek (a cím nélküli kérés — a kopogtatás).
 import {
-  ujNyilvantartas, nyilvantartasAlakja, kerelemFelvetele, lejartakKivetele, tarshozIllo, kerelemLezarasa, probalkozas,
+  ujNyilvantartas, nyilvantartasAlakja, kerelemFelvetele, lejartakKivetele, tarshozIllo, tarshozIllok, kerelemLezarasa, probalkozas,
   fuggoCelok, fuggoKopogtatok
 } from './js/csere/fuggoKerelmek.js';
 import { atmenetiTarNyitasa, ketTarBemenete, ketTarNezet } from './js/tar/atmenetiTar.js';
@@ -230,10 +230,13 @@ import {
 } from './js/allapot/pakli.js';
 // ⭐ A RANDEVÚ (2026-09-14): a csere ÉS a fájlok is átmennek az átfúrt résen.
 // ⭐ És a szelet-kérés is a résen (D69/2): a `hozd` 2026-09-26 óta ezen megy.
-import { csereUdpResen, fajlRandevu, szeletUdpResen, kezfogasUdpResen, kerelemUdpResen, valaszUdpResen } from './js/csere/udpVonal.js';
+import {
+  csereUdpResen, fajlRandevu, szeletUdpResen, kezfogasUdpResen, kerelemUdpResen, kerelemSorozatUdpResen, valaszUdpResen
+} from './js/csere/udpVonal.js';
 // ⭐⭐ D92: a kérelem (az alapkérdések) és az össz-pont.
 import {
-  fejlecekValasza, mintakValasza, mintaKeres, fejlecekEllenorzese, torzsLenyomatai, kerelemAlakja, tovabbiUgras, UGRAS_MAX
+  fejlecekValasza, mintakValasza, mintaKeres, fejlecekEllenorzese, torzsLenyomatai, kerelemAlakja, tovabbiUgras, UGRAS_MAX,
+  SOROZAT_KORLAT
 } from './js/csere/kerelem.js';
 import { reszfaKarbantarto } from './js/allapot/osszPont.js';
 import { GYOKER_KULCS } from './js/csere/szeletEgyeztetes.js';
@@ -1573,10 +1576,13 @@ const LAP_KERES_KORLAT = 16;
 function laposMegjegyzes(oldal, keres, szigoru) {
   const reszek = [];
   // ⭐ D102: az ágazati pont szerint csökkenő sor biztos előtagja — utána még hiányozhat, amit nem ismerek.
+  const elkertem = keres.fuggo > 0 ? (keres.celos > 0 ? ' — elkértem, az őrjárat hozza.' : ' — elkértem, a tartóit keresem.') : '.';
   if (Number.isInteger(oldal.biztos) && oldal.biztos < oldal.osszes) {
     reszek.push((oldal.biztos > 0 ? 'Az első ' + oldal.biztos + ' biztos sorrendben; utána még hiányozhat, amit nem ismerek'
-      : 'A sorrend még nem biztos: bármelyik elé kerülhet, amit még nem ismerek')
-      + (keres.fuggo > 0 ? (keres.celos > 0 ? ' — elkértem, az őrjárat hozza.' : ' — elkértem, a tartóit keresem.') : '.'));
+      : 'A sorrend még nem biztos: bármelyik elé kerülhet, amit még nem ismerek') + elkertem);
+  } else if (Number.isInteger(oldal.biztos) && oldal.hianyzik?.some((h) => h.fajta === 'fejlecek')) {
+    // ⭐ Amit látok, az biztos sorrendben áll — de a sor folytatódhat azzal, amit még nem ismerek (a bejáró elkérte).
+    reszek.push('Amit látsz, az biztos sorrendben áll, de a sor folytatódhat azzal, amit még nem ismerek' + elkertem);
   }
   // ⭐ D101/M2: a lapos rendezés (az időrend, a saját pont, a növekvő irány — és amíg a bejáró nincs meg, az ágazati is)
   // a HELYBEN ismert entitásokból áll. A szigorú (b) alatt ez a koinó töredéke — kimondjuk, végleges alakként.
@@ -1783,8 +1789,11 @@ async function fejlecValaszFeldolgozasa(r) {
     const m = await esemenyMentese(atmeneti, t.letrehozo);
     if (m.mentve && !m.marMegvolt) bevett++;
     ujBemondasok.set(t.az, { osszPont: t.osszPont, ido: Date.now(), ellenorzott: ered.mintazott ? ered.minta.ellenorzott : 0 });
-    // ⭐ J2: a gyerekszám (csak ha a válaszoló tartja), és vele a levágás.
-    if (Number.isSafeInteger(ered.gy)) ujTudas.set(t.az, { gy: ered.gy, ...(levag ? { levag } : {}), ido: Date.now() });
+    // ⭐ J2: a gyerekszám (csak ha a válaszoló tartja), és vele a levágás — ⚠️ a levágás a tétel gyerekeire CSAK mély
+    // válaszban igaz (ott a válaszoló a tartott tételek gyerekeit is bejárta); egy szinten csak a kérdezettre.
+    if (Number.isSafeInteger(ered.gy)) {
+      ujTudas.set(t.az, { gy: ered.gy, ...(levag && r.valasz?.m === true ? { levag } : {}), ido: Date.now() });
+    }
   }
   // A kérdezett maga: a gyerekszáma (ha a válaszoló tartja) és a levágás — a folytatás innen tudja, hol tart.
   const kulcs = r.valasz?.kulcs;
@@ -1853,24 +1862,33 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
     await kerelmekIrasa(probalkozas(await kerelmekOlvasasa(), fk.az));
     return vege;
   }
-  let siker = false, osszegzes = '';
-  if (fk.fajta === 'szelet') { siker = (r.kapott ?? 0) > 0; vege.uj = r.uj ?? 0; osszegzes = (r.kapott ?? 0) + ' esemény'; }
+  vege.uj = await fuggoEredmenyFeldolgozasa(fk, r, tars);
+  vege.bajt = (r.bajtKuldott ?? 0) + (r.bajtKapott ?? 0);
+  return vege;
+}
+
+/**
+ * Egy függő kérelem eredménye — a lezárás vagy a próbálkozás, és a kiírás (az egyes és a sorozatos munka közös útja).
+ * @returns {Promise<number>} hány új esemény jött
+ */
+async function fuggoEredmenyFeldolgozasa(fk, r, tars) {
+  let siker = false, osszegzes = '', uj = 0;
+  if (fk.fajta === 'szelet') { siker = (r.kapott ?? 0) > 0; uj = r.uj ?? 0; osszegzes = (r.kapott ?? 0) + ' esemény'; }
   else if (fk.fajta === 'fejlecek' && r.kiszolgalta) {
     const f = await fejlecValaszFeldolgozasa(r);
     // ⭐ A ház (D100): az ÜRES, de kiszolgált válasz is válasz — az entitásnak nincs (ismert) gyereke. ⛔ Ha jöttek tételek,
     // de egy sem állta ki az ellenőrzést, az nem siker (a következő tartó próbálkozik).
-    siker = f.jok > 0 || f.tetelek.length === 0; vege.uj = f.bevett; osszegzes = f.jok + ' fejléc';
+    siker = f.jok > 0 || f.tetelek.length === 0; uj = f.bevett; osszegzes = f.jok + ' fejléc';
   } else if (fk.fajta === 'torzs' && r.kiszolgalta) {
     const megjott = r.fajlok.filter((x) => x.kesz).length;
     siker = megjott > 0; osszegzes = megjott + ' fájl';
   }
-  vege.bajt = (r.bajtKuldott ?? 0) + (r.bajtKapott ?? 0);
   if (!siker && r.atvette) {
     // ⭐ A társ nem tartja, de továbbadja — a válasz később, `VALASZ`-ként jön (D87: lépésenként).
     kiir(SZIN.halvany + '  ↪ ' + ora() + ' függő kérelem (' + fk.fajta + ' ' + fk.kulcs.slice(0, 8) + '…) ' + tars.cim + ':'
       + tars.port + ' — nem tartja, de továbbadja; a válasz később jön' + SZIN.vege);
     await kerelmekIrasa(probalkozas(await kerelmekOlvasasa(), fk.az));
-    return vege;
+    return uj;
   }
   const ny = await kerelmekOlvasasa();
   await kerelmekIrasa(siker ? kerelemLezarasa(ny, fk.az, 'megjött: ' + osszegzes + ' (' + tars.cim + ':' + tars.port + ')', Date.now())
@@ -1878,6 +1896,42 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
   kiir((siker ? SZIN.jo + '  ✓ ' : SZIN.halvany + '  · ') + ora() + ' függő kérelem (' + fk.fajta + ' '
     + fk.kulcs.slice(0, 8) + '…) ' + tars.cim + ':' + tars.port + ' — ' + (siker ? 'megjött: ' + osszegzes : 'nem szolgálta ki')
     + SZIN.vege);
+  return uj;
+}
+
+/**
+ * ⭐⭐ D102 (J3): A FÜGGŐ KÉRELMEK SOROZATA egy társnál — a fejléc- és törzs-kérelmek, amelyek hozzá szólnak (rang
+ * szerint, legfeljebb `SOROZAT_KORLAT`), EGY védett résen, egy kapcsolaton, egymás után. A 74. mérés pótlása: egy jól
+ * ellátott tartónál (a kis, családi koinó) a kapcsolatonkénti egy kérelem mindent sorba állított.
+ */
+async function fuggoKerelemSorozatMunkaja(allapot, halo, tars, fks) {
+  for (const fk of fks) allapot.kerelemProbaltak.add(fk.az + '|' + tars.cim + ':' + tars.port);
+  const kerelmek = fks.map((fk) => ({ fajta: fk.fajta, kulcs: fk.kulcs, n: fk.n, m: fk.m === true,
+    ...(fk.utan ? { utan: fk.utan } : {}), az: fk.az, htl: UGRAS_MAX }));
+  const vege = { uj: 0, kuldott: 0, korok: 1, bajt: 0, alairo: null, kerelem: 'sorozat:' + fks.length };
+  let eredmenyek;
+  try {
+    eredmenyek = await kerelemSorozatUdpResen(halo, tars.cim, tars.port, KOINO, kerelmek, {
+      ...await azonossagBeallitasa(),
+      mintaValaszto: (valasz) => mintaKeres(valasz),
+      megvan: (await kepetKeszit()).esemenyek.map((e) => e.azonosito).slice(-5000),
+      blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT });
+  } catch (hiba) {
+    kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' — a kérelem-sorozat (' + fks.length + ') nem ment át: '
+      + hiba.message + SZIN.vege);
+    let ny = await kerelmekOlvasasa();
+    for (const fk of fks) ny = probalkozas(ny, fk.az);
+    await kerelmekIrasa(ny);
+    return vege;
+  }
+  for (let i = 0; i < fks.length; i++) {
+    const r = eredmenyek[i];
+    // A meg sem kérdezett (a sorozat egy tiltásnál megállt): próbálkozás, a következő tartónál újra.
+    if (!r) { await kerelmekIrasa(probalkozas(await kerelmekOlvasasa(), fks[i].az)); continue; }
+    vege.uj += await fuggoEredmenyFeldolgozasa(fks[i], r, tars);
+  }
+  const utolso = eredmenyek.at(-1);
+  vege.bajt = (utolso?.bajtKuldott ?? 0) + (utolso?.bajtKapott ?? 0);
   return vege;
 }
 
@@ -2527,6 +2581,11 @@ function resMunka(allapot, halo, tars) {
       const nemProbalt = (x) => !allapot.kerelemProbaltak.has(x.az + '|' + tars.cim + ':' + tars.port);
       // ⭐ D102 (J4): a társ azt viszi, amelyiknek a céllistáján ő áll a legelöl (a már próbáltakat kihagyva).
       let fk = tarshozIllo(ny, tars.cim, tars.port, (x) => !nemProbalt(x));
+      // ⭐ D102 (J3): ha több fejléc- vagy törzs-kérelem is hozzá szól, egy SOROZATBAN megy (egy kapcsolaton).
+      if (fk && fk.fajta !== 'szelet') {
+        const sorozat = tarshozIllok(ny, tars.cim, tars.port, (x) => !nemProbalt(x) || x.fajta === 'szelet', SOROZAT_KORLAT);
+        if (sorozat.length > 1) return await fuggoKerelemSorozatMunkaja(allapot, halo, tars, sorozat);
+      }
       // ⭐ A ház (D100): a „miközben kopogtatunk” pontosan — a kérelem egy kopogtató témáján TÉNYLEG jelentkeztünk (az
       // őrjárat címjegyzék-köre: `bejelentettKopogtatok`). A lap magától ír be kérelmet; e nélkül minden új bekopogó (egy
       // csatlakozó készülék kézi cseréje is) a csere helyett egy kérelmet kapna, amit nem tud kiszolgálni (mérve).
@@ -6367,7 +6426,7 @@ try {
             let szigoru = false;
             try { szigoru = sajatKoino && !(await kiszolgalasBeallitas()).mindent; } catch { szigoru = false; }
             return { adat: { ...oldal, betoltes: keres.fuggo > 0, kitolKerni: keres.celos,
-              koinoMegjegyzes: laposMegjegyzes(oldal, keres, szigoru && !(Number.isInteger(oldal.biztos) && oldal.biztos >= oldal.osszes)) } };
+              koinoMegjegyzes: laposMegjegyzes(oldal, keres, szigoru && !Number.isInteger(oldal.biztos)) } };
           } catch (hiba) {
             // ⚠️ A rossz KÉRÉS nem a program hibája — 400, és mondjuk meg, mi a baj.
             return { allapot: 400, adat: { hiba: hiba.message } };

@@ -47,6 +47,8 @@ export const KERELEM_FAJTAK = ['szelet', 'fejlecek', 'torzs'];
 
 /** Egy fejléc-listában legfeljebb ennyi kártya. */
 export const FEJLEC_KORLAT = 50;
+/** ⭐ D102 (J3): egy kapcsolaton legfeljebb ennyi kérelem (a sorozat — a lap egy lekérdezése is legfeljebb ennyit kér). */
+export const SOROZAT_KORLAT = 16;
 /** ⭐ D102: a válaszoló legfeljebb ennyi lépést tesz egy mély bejárásban (a folytatás elejéig is) — a terhe korlátos. */
 export const BEJARAS_LEPES_KORLAT = 5000;
 /** Egy minta-kérésben legfeljebb ennyi fejléc. */

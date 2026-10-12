@@ -5216,9 +5216,11 @@ szintjei; nem a koinó méretétől függ.
    listában, mindegyiket a szülőjével. A mai `d` (a legjobb ág d szintig) ennek szűkebb esete — ezt váltja fel.
 2. ⭐ **J2 (A) — a gyerekszám a fejlécben** (a tartó bemondja, ha tartja a csomópontot — a levélre nem kell kérni), és a
    függő-korlát 64 (helyi paraméter).
-3. **J3 (A) — nincs több kérelem egy kapcsolaton.** ⚠️ **ÚJRA NYITVA** (a 74. mérés pótlása, még aznap): véletlen tartókkal
-   valóban nem számít, de ha EGYETLEN jól ellátott tartó kapja a kérelmeket (a kis, családi koinó), a kapcsolatonkénti 1
-   kérelem mindent sorba állít (egy 200-as Struktúra 2–3 perc helyett 46–85 perc). Csabánál.
+3. ⭐ **J3 — a KÉRELEM-SOROZAT egy kapcsolaton** (Csaba, a második döntés: „elfogadom a javaslatodat, legyen az (A)”). Az
+   első döntés (A — nincs több kérelem egy kapcsolaton) a 74. mérés hiányos változatán állt: véletlen tartókkal valóban nem
+   számít, de ha EGYETLEN jól ellátott tartó kapja a kérelmeket (a kis, családi koinó), a kapcsolatonkénti 1 kérelem
+   mindent sorba állít (egy 200-as Struktúra 2–3 perc helyett 46–85 perc). Ezért: a kérő ugyanazon a védett résen egymás
+   után több `KERELEM`-et küld (legfeljebb 16), a tartó egyenként kiszolgálja, a végén `VEGE`.
 4. ⭐ **J4 (A) — a célválasztás:** X ismert tartói közül előre az, amelyik X ágából a legtöbbet tartja (a raj-jegyzékből).
 5. (M1-ből) **A folytatás** (`utan`: az utolsó össz-pont és azonosító) — a sorrend következő n eleme.
 
@@ -5242,6 +5244,19 @@ a kérelmet viszi, amelyiknek a céllistáján ő áll a legelöl (`tarshozIllo`
 (`kerelemProba.js` — a mély bejárás, a folytatás, a gyerekszám, a hamis sorrend / szülő / gyerekszám, a J4, a folytatás a
 nyilvántartásban), a bejáró (`pakliProba.js`), és a bekötés (`parancssorProba.js`: két készülék, „alap”, egy mély válasz
 hozza az ágat, és utána a sor biztos — P-re külön kérés nélkül) — mind rontással.
+
+#### ✅ MEGÉPÜLT — J3: a kérelem-sorozat (2026-10-11)
+
+`vonal.js`: az első `KERELEM` `sorozat` jele után a tartó a további kérelmekre is vár (legfeljebb `SOROZAT_KORLAT` = 16,
+`kerelem.js`), egyenként kiszolgálja (a kiszolgálás egy belső függvény — `egyKerelem`), a `VEGE` (vagy bármi más) zárja;
+a zárt kapu ítélete egyszer születik (a sorozat ugyanattól a társtól jön); a kérő oldala `kerelemSorozatKapcsolaton` (egy
+üzenet-sor a sorozatra; ha egyet tiltanak, ott megáll). `udpVonal.js` `kerelemSorozatUdpResen`. `koino.js`: ha egy társhoz
+több fejléc- vagy törzs-kérelem illik (`fuggoKerelmek.js` `tarshozIllok` — rang szerint, legfeljebb 16), a munka egy
+sorozatban viszi (`fuggoKerelemSorozatMunkaja`; az eredményeket ugyanaz dolgozza fel, mint az egyes útét —
+`fuggoEredmenyFeldolgozasa`). A szelet-kérés külön út marad. Elágazás 119–121. Próbák: a sorozat a védett résen (három
+fejléc-kérelem egy kapcsolaton), a társhoz illő sorozat, és a bekötés: két ág, a gyökér és a két ág kérése EGY munkában
+(35 ms-on belül) — rontással (a tartó nem szolgál ki sorozatot → a modul-próba a tétlenségi órán, a bekötés a „megjött /
+biztos / egy sorozat” pontokon bukik).
 
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 

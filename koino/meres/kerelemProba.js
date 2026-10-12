@@ -21,12 +21,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createSocket } from 'node:dgram';
 import { parbeszed } from '../js/csere/vonal.js';
-import { kezfogasUdpResen, udpKapcsolat, kerelemUdpResen, szeletUdpResen, valaszUdpResen } from '../js/csere/udpVonal.js';
+import { kezfogasUdpResen, udpKapcsolat, kerelemUdpResen, kerelemSorozatUdpResen, szeletUdpResen, valaszUdpResen } from '../js/csere/udpVonal.js';
 import { esemenyTarNyitasa, fajlBlobTarolo, memoriaBlobTarolo } from '../js/tar/fajlTar.js';
 import { esemenyMentese } from '../js/tar/esemenyTar.js';
 import { readdir } from 'node:fs/promises';
 import {
-  kerelemFelvetele, lejartakKivetele, tarshozIllo, kerelemLezarasa, probalkozas, fuggoCelok, fuggoKopogtatok,
+  kerelemFelvetele, lejartakKivetele, tarshozIllo, tarshozIllok, kerelemLezarasa, probalkozas, fuggoCelok, fuggoKopogtatok,
   nyilvantartasAlakja, ujNyilvantartas, FUGGO_KORLAT, FUGGO_ELEVULES, CEL_KORLAT
 } from '../js/csere/fuggoKerelmek.js';
 import {
@@ -339,6 +339,32 @@ proba('⭐⭐ a FEJLÉCEK a védett résen: a kérő a gyökerek UTÁN kér mint
   }
 });
 
+proba('⭐⭐ D102 (J3): a KÉRELEM-SOROZAT a védett résen — három fejléc-kérelem EGY kapcsolaton, mind kiszolgálva és ellenőrizve', async () => {
+  const v = await vilag();
+  const p = await udpPar();
+  const hely = await mkdtemp(join(tmpdir(), 'koino-kerelem-'));
+  try {
+    const tar = await esemenyTarNyitasa('proba', hely);
+    const kerelmek = [
+      { fajta: 'fejlecek', kulcs: GYOKER_KULCS, n: 10 },
+      { fajta: 'fejlecek', kulcs: v.nagy, n: 10, m: true },
+      { fajta: 'fejlecek', kulcs: v.g1, n: 10 }
+    ];
+    const [tarto, kapott] = await Promise.all([
+      tartoResen(p.egyik, p.masikPort, tar, { kerelemKiszolgalo: kiszolgaloVilagbol(v) }),
+      kerelemSorozatUdpResen(p.masik, '127.0.0.1', p.egyikPort, 'proba', kerelmek, { mintaValaszto: (valasz) => mintaKeres(valasz) })
+    ]);
+    const ellenorzesek = await Promise.all(kapott.map((r) => fejlecekEllenorzese({ valasz: r.valasz, kert: r.kert,
+      mintak: r.mintak, esemenyek: r.esemenyek })));
+    return kapott.length === 3 && kapott.every((r) => r.kiszolgalta) && tarto.kerelmekKiszolgalva?.length === 3
+      && kapott[0].valasz.kulcs === GYOKER_KULCS && kapott[1].valasz.kulcs === v.nagy && kapott[1].valasz.m === true
+      && kapott[2].valasz.lista[0]?.az === v.unoka && ellenorzesek.every((e) => e.hibas === 0);
+  } finally {
+    p.bezar();
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
 /** Egy gondolat szöveg-darabbal: a darab a tartó fájl-tárában. */
 async function szovegesVilag(hely) {
   const anna = await ujEember('proba');
@@ -457,6 +483,20 @@ proba('⭐ D102 (J4): egy társ azt a kérelmet viszi, amelyiknek a céllistáj�
   const kihagyva = tarshozIllo(ny, T.hoszt, T.port, (x) => x.az === 'ujabb-kerelem');
   const masik = tarshozIllo(ny, M.hoszt, M.port);
   return elso?.az === 'ujabb-kerelem' && kihagyva?.az === 'regebbi-kerelem' && masik?.az === 'regebbi-kerelem';
+});
+
+proba('⭐ D102 (J3): a társhoz illő SOROZAT — rang szerint, korlátosan, a kihagyottak nélkül', () => {
+  const T = { hoszt: '10.0.0.7', port: 7000 };
+  const M = { hoszt: '10.0.0.8', port: 7000 };
+  let ny = ujNyilvantartas();
+  for (let i = 0; i < 20; i++) {
+    const kulcs = String.fromCharCode(65 + (i % 26)).repeat(42) + String.fromCharCode(97 + Math.floor(i / 26));
+    ny = kerelemFelvetele(ny, { fajta: 'fejlecek', kulcs, celok: i % 2 ? [M, T] : [T, M] }, 1000 + i, 'k' + String(i).padStart(2, '0')).nyilvantartas;
+  }
+  const s = tarshozIllok(ny, T.hoszt, T.port, (x) => x.az === 'k00', 16);
+  // előbb azok, ahol T az első cél (páros, a k00 kihagyva), aztán ahol a második — a régebbi előbb
+  return s.length === 16 && s[0].az === 'k02' && s.slice(0, 9).every((x) => Number(x.az.slice(1)) % 2 === 0)
+    && s[9].az === 'k01' && !s.some((x) => x.az === 'k00') && tarshozIllok(ny, '10.9.9.9', 1).length === 0;
 });
 
 proba('⭐ D102: a FOLYTATÁS külön kérelem (ugyanaz a kulcs, más `utan`) — és a mélység megmarad a nyilvántartásban', () => {

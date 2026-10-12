@@ -55,7 +55,9 @@
 //
 // Használják: koino.js (a pajzsfúrás után) és a csereProba.js.
 
-import { parbeszed, fajlHozatala, fajlKiszolgalas, szeletKapcsolaton, kerelemKapcsolaton, valaszKapcsolaton } from './vonal.js';
+import {
+  parbeszed, fajlHozatala, fajlKiszolgalas, szeletKapcsolaton, kerelemKapcsolaton, kerelemSorozatKapcsolaton, valaszKapcsolaton
+} from './vonal.js';
 import { KERELEM_KORLAT } from './fajlKerelem.js';
 // ⭐ D89/1: a csere titkosítása — a kézfogás és a csomagok kriptográfiája (hálózat nélkül).
 import {
@@ -1504,6 +1506,31 @@ export async function kerelemUdpResen(halo, tarsCim, tarsPort, koino, kerelem, b
     await kapcsolat.kiurites();
     console.log('kerelemUdpResen - VÉGE', { fajta: kerelem.fajta, kiszolgalta: eredmeny.kiszolgalta });
     return eredmeny;
+  } finally {
+    kapcsolat.end();
+    if (sajat) res.zar();
+  }
+}
+
+/**
+ * ⭐⭐ D102 (J3): EGY KÉRELEM-SOROZAT A RÉSEN — ugyanazon a védett résen, egy kapcsolaton, egymás után (a fejlécek és a
+ * törzsek; legfeljebb `SOROZAT_KORLAT`). ⛔ D89/1: csak védett résen. A szelet-kérés külön út (`szeletUdpResen`).
+ * @returns {Promise<Array<Object>>} kérelmenként a `kerelemKapcsolaton` eredménye
+ */
+export async function kerelemSorozatUdpResen(halo, tarsCim, tarsPort, koino, kerelmek, beallitas = {}) {
+  const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
+  console.log('kerelemSorozatUdpResen - KEZDÉS', { tarsCim, tarsPort, darab: kerelmek.length });
+  const { res, sajat } = await vedettResre(halo, tarsCim, tarsPort, beallitas);
+  const kapcsolat = udpKapcsolat(res, tarsCim, tarsPort, { torlodasJel: 'nincs' });
+  kapcsolat.setTimeout(varakozasiIdo, () => {
+    kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
+  });
+  try {
+    const eredmenyek = await kerelemSorozatKapcsolaton(kapcsolat, koino, kerelmek,
+      { ...beallitas, ki: kezfogasHitelesitese(res, beallitas, koino).ki });
+    await kapcsolat.kiurites();
+    console.log('kerelemSorozatUdpResen - VÉGE', { kiszolgalta: eredmenyek.filter((r) => r.kiszolgalta).length });
+    return eredmenyek;
   } finally {
     kapcsolat.end();
     if (sajat) res.zar();

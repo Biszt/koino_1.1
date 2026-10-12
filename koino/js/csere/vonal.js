@@ -74,7 +74,7 @@ import { ervenyesValtozat, halmazUzenet, halmazAlkalmazasa, kozosSzuro } from '.
 // mert a szelet-határokat ugyanúgy ő számolja.
 import { SZELET_MERET, szeletEllenorzes, ujMunkamegosztas } from './fajlAtvitel.js';
 // ⭐ D92/6: a kérelem alakja (a menet itt, a tartalom a `kerelem.js`-é — az nem importál hálózatot).
-import { kerelemAlakja, valaszAlakja } from './kerelem.js';
+import { kerelemAlakja, valaszAlakja, SOROZAT_KORLAT } from './kerelem.js';
 
 // Egy sor legfeljebb ekkora lehet. Egy esemény ~400 bájt, egy 10 000 fős ÁLLÁS ~1,6 MB —
 // a 8 MB tehát bőven elég, de egy végtelen sor már nem fér bele.
@@ -435,95 +435,122 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // csak a vállalótól). ⭐ A tartalmat a hívó adja (`beallitas.kerelemKiszolgalo`): a vonal semmit nem tud a
   // koinóról. ⚠️ A bizalom itt sem más: amit így kapnak, ugyanazon az `esemenyMentese` kapun megy be (3. szabály).
   if (elsoUzenet.uzenet === 'KERELEM') {
-    const k = kerelemAlakja(elsoUzenet);
     const kiszolgalo = beallitas.kerelemKiszolgalo ?? null;
     // ⛔⛔ D93/3: ZÁRT KOINÓBAN CSAK TAGNAK. A kérő a kérelemben hozza a személyes aláírását (a kézfogás átiratára) és a
     // horgonyát; ha nálunk nem ellenőrzött, egy körben elkérjük a tagsági csomagját (`KELL` → `TAGSAG`). A nem tag a
-    // megengedett szeleteket kérheti (a koinó születése, a saját és a mi azonosság-szeletünk) — mást nem.
+    // megengedett szeleteket kérheti (a koinó születése, a saját és a mi azonosság-szeletünk) — mást nem. ⭐ D102 (J3): az
+    // ítélet EGYSZER születik, az első kérelemnél — a sorozat ugyanattól a társtól, ugyanazon a védett résen jön.
+    let kapuV = { szabad: true };
     if (zartKapu) {
       const ki = bizonyitottSzemely(elsoUzenet.ki);
-      let v = await kapuItelete({ ki });
-      if (!v.szabad && v.kell && ki) {
+      kapuV = await kapuItelete({ ki });
+      if (!kapuV.szabad && kapuV.kell && ki) {
         kuld({ uzenet: 'KELL' });
         const be = await sor.kovetkezo();
         const csomag = be.uzenet === 'TAGSAG' && be.csomag && typeof be.csomag === 'object' ? be.csomag : null;
-        v = await kapuItelete({ ki, csomag });
+        kapuV = await kapuItelete({ ki, csomag });
       }
       if (ki) tarsAzonossaga = ki;
-      const megengedett = k?.fajta === 'szelet' && Array.isArray(v.szeletek) && v.szeletek.includes(k.kulcs);
-      if (!v.szabad && !megengedett) {
-        kuld({ uzenet: 'KESZ', tiltva: 'zart' });
-        console.log('parbeszed - VÉGE (kérelem: zárt koinó, nem tag)', { fajta: k?.fajta ?? null });
-        return { ...eredmeny(), tarsKorlatozva: true, kerelemKiszolgalva: null, szeletKiszolgalva: null, kerelemTiltva: true };
-      }
-      if (!v.szabad) tarsKorlatozva = true;
     }
-    let kiszolgalva = null;
-    // ⭐⭐ D92/1 (c): ha NEM tudjuk kiszolgálni, de a kérelem továbbadható (van még ugrás), és vállaljuk, ÁTVESSZÜK —
-    // a válasz később, lépésenként jön vissza (`VALASZ`). A kérdező címét nem kapjuk meg, csak azt, akitől jött (D87).
-    const atvesz = async () => {
-      if (!k?.az || !(k.htl > 0) || !kiszolgalo?.atvesz) return false;
-      if (!(await kiszolgalo.atvesz(k, { cim: kapcsolat.remoteAddress, port: kapcsolat.remotePort }))) return false;
-      kuld({ uzenet: 'ATVESZEM', az: k.az });
-      kiszolgalva = 'atvett';
-      return true;
-    };
-    if (k?.fajta === 'szelet') {
-      // ⭐ D85: UGYANAZ a halmaz, amit a csere egyeztet — a szelet saját eseményei + a hozzá bejelentettek. ⭐ D75/3 (a
-      // bekapcsolás): ha a hívó adja (`kerelemKiszolgalo.szelet`), az ÁTMENETI tárból is (amit csak láttam, azt is
-      // kiszolgálom — a törzs kivételével).
-      const kertek = kiszolgalo?.szelet ? await kiszolgalo.szelet(vonalKulcsa(k.kulcs))
-        : await egyeztetettEsemenyek(tar, koino, vonalKulcsa(k.kulcs));
-      if (!kertek.length && await atvesz()) { /* átvettük */ } else {
-        // Eseményenként külön üzenet — így egy nagy szelet sem ütközik a sorhossz-korlátba.
-        for (const esemeny of kertek) kuld({ uzenet: 'ESEMENY', esemeny });
-        // ⭐ D95/2: a döntési események szerzőinek tagsági kísérői is (a kérő a szerzők azonosság-szeletét nem tartja) —
-        // ⛔ a nem tagnak (zárt koinó) nem: az harmadik felek láncát mutatná meg.
-        const kiserok = kertek.length && !tarsKorlatozva && kiszolgalo?.kiserok ? (await kiszolgalo.kiserok(kertek)) ?? [] : [];
-        const vanMar = new Set(kertek.map((e) => e.azonosito));
-        let kiseroDb = 0;
-        for (const esemeny of kiserok) {
-          if (!esemeny || vanMar.has(esemeny.azonosito)) continue;
-          kuld({ uzenet: 'ESEMENY', esemeny });
-          kiseroDb++;
+
+    /** Egy kérelem kiszolgálása (az elsőé és a sorozat többié ugyanígy). @returns {{k, kiszolgalva, tiltva?}} */
+    const egyKerelem = async (uzenet) => {
+      const k = kerelemAlakja(uzenet);
+      if (zartKapu && !kapuV.szabad) {
+        const megengedett = k?.fajta === 'szelet' && Array.isArray(kapuV.szeletek) && kapuV.szeletek.includes(k.kulcs);
+        if (!megengedett) {
+          kuld({ uzenet: 'KESZ', tiltva: 'zart' });
+          return { k, kiszolgalva: null, tiltva: true };
         }
-        kuldott = kertek.length + kiseroDb;
-        kiszolgalva = 'szelet';
+        tarsKorlatozva = true;
       }
-    } else if (k?.fajta === 'fejlecek' && kiszolgalo?.fejlecek) {
-      const { valasz, mintak, tartja } = await kiszolgalo.fejlecek(k);
-      // ⭐ A ház (D100): az üres lista csak akkor „nem tudom” (továbbadás), ha az entitást NEM tartom — aki tartja, annak az
-      // üres lista a válasz (nincs gyereke). Különben a gyerektelen gondolat fejléc-kérése soha nem zárulna le.
-      if (!valasz.lista.length && !tartja && await atvesz()) { /* átvettük */ } else {
-        kuld({ uzenet: 'FEJLECEK', valasz });
-        // ⭐ A gyökerek bemondása UTÁN a kérdező mondja meg, hol kér mintát (különben a tartó válogatna).
-        const u = await sor.kovetkezo();
-        if (u.uzenet === 'MINTAKEREK') kuld({ uzenet: 'MINTAK', ...(await mintak(u.kert, u.megvan)) });
-        kiszolgalva = 'fejlecek';
+      let kiszolgalva = null;
+      // ⭐⭐ D92/1 (c): ha NEM tudjuk kiszolgálni, de a kérelem továbbadható (van még ugrás), és vállaljuk, ÁTVESSZÜK —
+      // a válasz később, lépésenként jön vissza (`VALASZ`). A kérdező címét nem kapjuk meg, csak azt, akitől jött (D87).
+      const atvesz = async () => {
+        if (!k?.az || !(k.htl > 0) || !kiszolgalo?.atvesz) return false;
+        if (!(await kiszolgalo.atvesz(k, { cim: kapcsolat.remoteAddress, port: kapcsolat.remotePort }))) return false;
+        kuld({ uzenet: 'ATVESZEM', az: k.az });
+        kiszolgalva = 'atvett';
+        return true;
+      };
+      if (k?.fajta === 'szelet') {
+        // ⭐ D85: UGYANAZ a halmaz, amit a csere egyeztet — a szelet saját eseményei + a hozzá bejelentettek. ⭐ D75/3 (a
+        // bekapcsolás): ha a hívó adja (`kerelemKiszolgalo.szelet`), az ÁTMENETI tárból is (amit csak láttam, azt is
+        // kiszolgálom — a törzs kivételével).
+        const kertek = kiszolgalo?.szelet ? await kiszolgalo.szelet(vonalKulcsa(k.kulcs))
+          : await egyeztetettEsemenyek(tar, koino, vonalKulcsa(k.kulcs));
+        if (!kertek.length && await atvesz()) { /* átvettük */ } else {
+          // Eseményenként külön üzenet — így egy nagy szelet sem ütközik a sorhossz-korlátba.
+          for (const esemeny of kertek) kuld({ uzenet: 'ESEMENY', esemeny });
+          // ⭐ D95/2: a döntési események szerzőinek tagsági kísérői is (a kérő a szerzők azonosság-szeletét nem tartja) —
+          // ⛔ a nem tagnak (zárt koinó) nem: az harmadik felek láncát mutatná meg.
+          const kiserok = kertek.length && !tarsKorlatozva && kiszolgalo?.kiserok ? (await kiszolgalo.kiserok(kertek)) ?? [] : [];
+          const vanMar = new Set(kertek.map((e) => e.azonosito));
+          let kiseroDb = 0;
+          for (const esemeny of kiserok) {
+            if (!esemeny || vanMar.has(esemeny.azonosito)) continue;
+            kuld({ uzenet: 'ESEMENY', esemeny });
+            kiseroDb++;
+          }
+          kuldott += kertek.length + kiseroDb;
+          kiszolgalva = 'szelet';
+        }
+      } else if (k?.fajta === 'fejlecek' && kiszolgalo?.fejlecek) {
+        const { valasz, mintak, tartja } = await kiszolgalo.fejlecek(k);
+        // ⭐ A ház (D100): az üres lista csak akkor „nem tudom” (továbbadás), ha az entitást NEM tartom — aki tartja, annak
+        // az üres lista a válasz (nincs gyereke). Különben a gyerektelen gondolat fejléc-kérése soha nem zárulna le.
+        if (!valasz.lista.length && !tartja && await atvesz()) { /* átvettük */ } else {
+          kuld({ uzenet: 'FEJLECEK', valasz });
+          // ⭐ A gyökerek bemondása UTÁN a kérdező mondja meg, hol kér mintát (különben a tartó válogatna).
+          const u = await sor.kovetkezo();
+          if (u.uzenet === 'MINTAKEREK') kuld({ uzenet: 'MINTAK', ...(await mintak(u.kert, u.megvan)) });
+          kiszolgalva = 'fejlecek';
+        }
+      } else if (k?.fajta === 'torzs' && kiszolgalo?.torzs) {
+        // ⛔ D84/1: a törzset csak a vállaló adja — a kiszolgáló üres listát mond, ha nem vállalja. ⚠️ És csak azt
+        // sorolja fel, ami TÉNYLEG megvan nála: a fájl-hurok az első hiányzónál kilép (a kérő a következőre várna).
+        const lenyomatok = await kiszolgalo.torzs(k);
+        if (!lenyomatok.length && await atvesz()) {
+          console.log('parbeszed - törzs átvéve továbbadásra', { az: k.az });
+          kuld({ uzenet: 'KESZ' });
+          return { k, kiszolgalva: 'atvett' };
+        }
+        kuld({ uzenet: 'TORZS', kulcs: k.kulcs, lenyomatok });
+        const kovetkezo = await sor.kovetkezo();
+        if (kovetkezo.uzenet === 'FAJLKEREK' && lenyomatok.length && beallitas.fajlOlvas) {
+          const szabad = new Set(lenyomatok);
+          await fajlSzeletekKiszolgalasa(sor, kuld,
+            async (l) => (szabad.has(l) ? beallitas.fajlOlvas(l) : null), kovetkezo);
+        }
+        kiszolgalva = 'torzs';
       }
-    } else if (k?.fajta === 'torzs' && kiszolgalo?.torzs) {
-      // ⛔ D84/1: a törzset csak a vállaló adja — a kiszolgáló üres listát mond, ha nem vállalja. ⚠️ És csak azt
-      // sorolja fel, ami TÉNYLEG megvan nála: a fájl-hurok az első hiányzónál kilép (a kérő a következőre várna).
-      const lenyomatok = await kiszolgalo.torzs(k);
-      if (!lenyomatok.length && await atvesz()) {
-        console.log('parbeszed - VÉGE (törzs átvéve továbbadásra)', { az: k.az });
-        kuld({ uzenet: 'KESZ' });
-        return { ...eredmeny(), kerelemKiszolgalva: { fajta: 'atvett', kulcs: k.kulcs }, szeletKiszolgalva: null };
-      }
-      kuld({ uzenet: 'TORZS', kulcs: k.kulcs, lenyomatok });
-      const kovetkezo = await sor.kovetkezo();
-      if (kovetkezo.uzenet === 'FAJLKEREK' && lenyomatok.length && beallitas.fajlOlvas) {
-        const szabad = new Set(lenyomatok);
-        await fajlSzeletekKiszolgalasa(sor, kuld,
-          async (l) => (szabad.has(l) ? beallitas.fajlOlvas(l) : null), kovetkezo);
-      }
-      kiszolgalva = 'torzs';
+      // ⚠️ Amit nem tudunk vagy nem akarunk kiszolgálni, arra is KESZ megy (a kérő ne várjon a tétlenségi óráig).
+      if (kiszolgalva !== 'torzs') kuld({ uzenet: 'KESZ' });
+      return { k, kiszolgalva };
+    };
+
+    const elso = await egyKerelem(elsoUzenet);
+    if (elso.tiltva) {
+      console.log('parbeszed - VÉGE (kérelem: zárt koinó, nem tag)', { fajta: elso.k?.fajta ?? null });
+      return { ...eredmeny(), tarsKorlatozva: true, kerelemKiszolgalva: null, szeletKiszolgalva: null, kerelemTiltva: true };
     }
-    // ⚠️ Amit nem tudunk vagy nem akarunk kiszolgálni, arra is KESZ megy (a kérő ne várjon a tétlenségi óráig).
-    if (kiszolgalva !== 'torzs') kuld({ uzenet: 'KESZ' });
-    console.log('parbeszed - VÉGE (kérelem kiszolgálva)', { fajta: k?.fajta ?? null, kulcs: k?.kulcs ?? null, kiszolgalva });
-    return { ...eredmeny(), kerelemKiszolgalva: kiszolgalva ? { fajta: kiszolgalva, kulcs: k.kulcs } : null,
-      szeletKiszolgalva: kiszolgalva === 'szelet' ? k.kulcs : null };
+    // ⭐⭐ D102 (J3): A KÉRELEM-SOROZAT — ha a kérő jelezte (`sorozat`), ugyanazon a kapcsolaton további kérelmek jönnek
+    // (legfeljebb `SOROZAT_KORLAT`), egyenként kiszolgálva; a `VEGE` (vagy bármi más) zárja. A 74. mérés pótlása: egy jól
+    // ellátott tartónál a kapcsolatonkénti egy kérelem mindent sorba állít.
+    const sorozat = [elso];
+    if (elsoUzenet.sorozat === true) {
+      while (sorozat.length < SOROZAT_KORLAT) {
+        const u = await sor.kovetkezo();
+        if (u.uzenet !== 'KERELEM') break;
+        sorozat.push(await egyKerelem(u));
+      }
+    }
+    const kiNyom = (x) => (x.kiszolgalva ? { fajta: x.kiszolgalva, kulcs: x.k.kulcs } : null);
+    console.log('parbeszed - VÉGE (kérelem kiszolgálva)', { fajta: elso.k?.fajta ?? null, kulcs: elso.k?.kulcs ?? null,
+      kiszolgalva: elso.kiszolgalva, sorozat: sorozat.length });
+    return { ...eredmeny(), kerelemKiszolgalva: kiNyom(elso), szeletKiszolgalva: elso.kiszolgalva === 'szelet' ? elso.k.kulcs : null,
+      ...(sorozat.length > 1 ? { kerelmekKiszolgalva: sorozat.map(kiNyom) } : {}) };
   }
 
   // ===== ⭐⭐ D92/1 (c): A VÁLASZ VISSZAÚTJA — egy továbbadott kérelem válasza, lépésenként (D87) =====
@@ -1526,11 +1553,12 @@ export async function szeletKapcsolaton(tar, koino, kapcsolat, entitas, tovabb =
  * @returns {Promise<Object>} fejléceknél { valasz, kert, mintak, esemenyek }; törzsnél { lenyomatok, fajlok }
  */
 export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = {}) {
-  const sor = uzenetSor(kapcsolat);
+  // ⭐ D102 (J3): a sorozatban ugyanaz a sor olvas tovább (a pufferben a következő üzenet már ott lehet).
+  const sor = beallitas.sor ?? uzenetSor(kapcsolat);
   const kuld = (u) => kapcsolat.write(JSON.stringify(u) + '\n');
   // ⭐ D102: a mélység (`m` — a válaszoló maga jár be) és a folytatás (`utan`) a `d` (a legjobb ág) helyett.
   kuld({ uzenet: 'KERELEM', koino, fajta: kerelem.fajta, kulcs: kerelem.kulcs, n: kerelem.n, m: kerelem.m === true,
-    ...(kerelem.utan ? { utan: kerelem.utan } : {}),
+    ...(kerelem.utan ? { utan: kerelem.utan } : {}), ...(beallitas.sorozat ? { sorozat: true } : {}),
     ...(kerelem.az ? { az: kerelem.az, htl: kerelem.htl } : {}),
     ...(beallitas.ki ? { ki: beallitas.ki } : {}) });
   // A NYITAS-t (és bármi mást) átlépjük, amíg a válasz meg nem jön. ⭐ D93/3: a KELL-re a tagsági csomagunk megy.
@@ -1573,6 +1601,27 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
   }
   try { kuld({ uzenet: 'KESZ' }); } catch { /* zárt */ }
   return { kiszolgalta: true, lenyomatok, fajlok, ...bajt() };
+}
+
+/**
+ * ⭐⭐ D102 (J3): EGY KÉRELEM-SOROZAT EGY KAPCSOLATON — a fejléc- és törzs-kérelmek egymás után (legfeljebb
+ * `SOROZAT_KORLAT`), a végén `VEGE`. Ha a tartó egyet tilt (zárt koinó, nem tag), a sorozat ott megáll (a többit úgysem
+ * adná ki). A tartó a `sorozat` jelből tudja, hogy az első után is várjon.
+ * @returns {Promise<Array<Object>>} kérelmenként a `kerelemKapcsolaton` eredménye (a meg sem kérdezettek nélkül)
+ */
+export async function kerelemSorozatKapcsolaton(kapcsolat, koino, kerelmek, beallitas = {}) {
+  const sor = uzenetSor(kapcsolat);
+  const lista = kerelmek.slice(0, SOROZAT_KORLAT);
+  const eredmenyek = [];
+  for (const k of lista) {
+    const r = await kerelemKapcsolaton(kapcsolat, koino, k, { ...beallitas, sor, sorozat: lista.length > 1 });
+    eredmenyek.push(r);
+    if (r.tiltva) break;
+  }
+  if (lista.length > 1 && !eredmenyek.at(-1)?.tiltva) {
+    try { kapcsolat.write(JSON.stringify({ uzenet: 'VEGE' }) + '\n'); } catch { /* zárt */ }
+  }
+  return eredmenyek;
 }
 
 /** ⭐ D93/3: a `KELL`-re adott válasz — a tagsági csomagunk (ha van; ha nincs, üresen — a társ így is dönt). */

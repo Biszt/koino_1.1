@@ -838,3 +838,16 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     újrakérdez (4 → 60 mp), és csak akkor rajzol újra, ha az első oldal vagy a biztos előtag változott** · mert eddig csak a
     fa-szelet kérdezett újra; a lapos „ágazati” lista különben a beérkezett választ soha nem mutatná · a bejáró építésekor,
     Claude · `koinoPakli.js`, `kartyaAdat.js`.
+119. **2026-10-11 · a kérelem-sorozat alakja (D102, J3)** → **az első `KERELEM` `sorozat` jele, utána további `KERELEM`-ek,
+    a végén `VEGE`; a tartó egyenként szolgál ki (legfeljebb 16), a zárt kapu ítélete egyszer születik; ha egyet tilt, a
+    kérő ott megáll; a szelet-kérés külön út marad** · mert így a mai menet (egy kérelem) változatlan, a sorozat csak a
+    jelből indul, és a tartó egyetlen kiszolgáló-függvényt használ (`egyKerelem`) — két másolat nem csúszhat szét · a J3
+    építésekor, Claude · `vonal.js`, `udpVonal.js`, `kerelem.js` (`SOROZAT_KORLAT`).
+120. **2026-10-11 · a mély válasz levágása egy szinten (D102)** → **a levágás a tételek gyerekeire CSAK mély válaszban
+    érvényes; egy szintű válasznál csak a kérdezett kulcsra** · mert egy szinten a tartó a tételek gyerekeit nem járta be —
+    a levágás határa ott semmit nem mond róluk (a bekötés-próba forgatókönyvének átírásakor derült ki) · Claude ·
+    `koino.js` (`fejlecValaszFeldolgozasa`).
+121. **2026-10-11 · a lapos lista megjegyzése (D102)** → **ha a látott rész biztos sorrendben áll, de a bejáró még kér, a lap
+    azt mondja: „a sor folytatódhat azzal, amit még nem ismerek — elkértem”** · mert a biztos előtag a LÁTOTT részről szól; a
+    sor vége (ami még nem jött meg) attól még hiányozhat, és ezt eddig semmi nem mondta ki · Claude · `koino.js`
+    (`laposMegjegyzes`).
