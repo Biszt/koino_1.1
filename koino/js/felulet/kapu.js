@@ -83,12 +83,16 @@ const TIPUSOK = {
  *
  * Kétféleképpen fogadjuk el, és ennek oka van: a **címsorból** (`?kulcs=…`) az első
  * megnyitásnál — mert a böngésző címsora az egyetlen, amit kézzel át tudsz adni —, és
- * **fejlécből** (`X-Koino-Kulcs`) utána, mert a lap `fetch`-jei azt küldik.
+ * **fejlécből** (`X-Koino-Kulcs`) utána, mert a lap `fetch`-jei azt küldik. ⭐ D101 (M5): a
+ * fejléc `Authorization: Bearer <jelszó>` alakban is jöhet — az örökölt `StrukturaModal` a
+ * letöltését nyers `fetch`-csel, így küldi (a prototípus JWT-jének helyén ugyanaz a jelszó).
  */
 function jelszoRendben(keres, kereses, jelszo) {
   const fejlecbol = keres.headers['x-koino-kulcs'];
+  const auth = keres.headers.authorization;
+  const bearer = typeof auth === 'string' && auth.startsWith('Bearer ') ? auth.slice(7) : null;
   const cimbol = kereses.get('kulcs');
-  const kapott = typeof fejlecbol === 'string' ? fejlecbol : cimbol;
+  const kapott = typeof fejlecbol === 'string' ? fejlecbol : (bearer ?? cimbol);
   if (typeof kapott !== 'string' || kapott.length !== jelszo.length) return false;
 
   // Karakterenként végigmegyünk MINDIG — nem lépünk ki az első eltérésnél. A hurok-címen

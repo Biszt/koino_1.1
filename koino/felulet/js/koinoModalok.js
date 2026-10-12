@@ -21,6 +21,7 @@
 // Használja: `index.html` (egyszer betölti — a becsomagolás a modulok betöltésekor történik).
 
 import TudatpontokModal from './components/modals/TudatpontokModal.js';
+import StrukturaModal from './components/modals/StrukturaModal.js';
 
 // ===================================
 // A PROGRAM MEGJEGYZÉSEI — útvonalanként a legutóbbi
@@ -64,12 +65,17 @@ export function megjegyzesKirajzolasa(elem, szoveg) {
 /**
  * Egy prototípus-osztály metódusa KÖRÉ ír: az eredeti lefut (ugyanazokkal az érvekkel, ugyanazzal a visszatérési
  * értékkel), utána a koinós rész. Kétszeri becsomagolás ellen őrzött (a modul kétszeri betöltése se duplázzon).
+ * ⚠️ Ha az eredeti aszinkron (ígéretet ad), a koinós rész az ígéret TELJESÜLÉSE után fut — különben a válasz előtt
+ * írna (D101 ③: a Struktúra darabszám-lekérése).
  */
 function koruleIr(Osztaly, metodus, utana) {
   const eredeti = Osztaly.prototype[metodus];
   if (typeof eredeti !== 'function' || eredeti.koinoKorulirva) return;
   const uj = function (...ervek) {
     const ertek = eredeti.apply(this, ervek);
+    if (ertek && typeof ertek.then === 'function') {
+      return ertek.then((x) => { utana.call(this, ...ervek); return x; });
+    }
     utana.call(this, ...ervek);
     return ertek;
   };
@@ -86,4 +92,17 @@ function koruleIr(Osztaly, metodus, utana) {
 // („Ebben az ágazatban nincs tudatpontod.”) a prototípusé — a megjegyzés alatta mondja meg, ha ez nem a teljes igazság.
 koruleIr(TudatpontokModal, '_listaRenderelese', function () {
   megjegyzesKirajzolasa(document.getElementById('tudatpontok-lista'), megjegyzes('tudatpont/aktiv-hozzarendelesek'));
+});
+
+// ===================================
+// ⭐ A STRUKTÚRA (D101 ③)
+// ===================================
+//
+// A prototípusban a fa a TELJES koinó volt; itt a készüléken ismert rész, a legerősebb ágaktól kifelé, egy keretig. A
+// program kimondja, mire épül a fa, meddig biztos a sorrend, és mit kért el (`koinoMegjegyzes`) — a lap a folyamatjelző
+// (építés közben) és a súgó-sor (a kész fán) alá írja.
+koruleIr(StrukturaModal, '_darabszamLekerese', function () {
+  const szoveg = megjegyzes('struktura/darabszam');
+  megjegyzesKirajzolasa(document.getElementById('struktura-folyamat'), szoveg);
+  megjegyzesKirajzolasa(document.querySelector('#struktura-nezet .struktura-modal__sugo'), szoveg);
 });

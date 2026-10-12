@@ -226,7 +226,9 @@ import {
   // ⭐ A ház (D100): a hierarchikus pakli.
   pakliHierarchia,
   // ⭐ D101: a Tudatpontok modál listája.
-  sajatHozzarendelesek
+  sajatHozzarendelesek,
+  // ⭐ D101 ③: a Struktúra nézet.
+  strukturaDarabszam, strukturaLap
 } from './js/allapot/pakli.js';
 // ⭐ A RANDEVÚ (2026-09-14): a csere ÉS a fájlok is átmennek az átfúrt résen.
 // ⭐ És a szelet-kérés is a résen (D69/2): a `hozd` 2026-09-26 óta ezen megy.
@@ -1573,6 +1575,27 @@ const LAP_KERES_KORLAT = 16;
  * @param {boolean} szigoru - a szigorú (b) alatt („alap” kiszolgálás) — a lista ilyenkor a koinó töredéke
  * @returns {string|null}
  */
+/**
+ * ⭐ D101 ③: a Struktúra megjegyzése — mire épül a fa (a készüléken ismert rész, a keret), meddig biztos a sorrend, és
+ * mit kértem el (D19, M2). A lap a folyamatjelző és a súgó alá írja (`koinoModalok.js`).
+ */
+function strukturaMegjegyzes(d, keres) {
+  const elkertem = keres.fuggo > 0 ? (keres.celos > 0 ? ' — elkértem, az őrjárat hozza (nyisd meg újra később).'
+    : ' — elkértem, a tartóit keresem.') : '.';
+  const reszek = ['A fa a készülékeden ismert részből épül: ' + d.ismert + ' entitás'
+    + (d.ismert > d.latszik ? ', ebből a legerősebb ' + d.latszik + ' látszik (keret: ' + d.keret + ')' : '') + '.'];
+  if (d.biztos < d.latszik) {
+    reszek.push((d.biztos > 0 ? 'Az első ' + d.biztos + ' biztos; utána hiányozhat egy-egy ág, amit még nem ismerek'
+      : 'Még hiányozhat egy-egy ág, amit nem ismerek') + elkertem);
+  } else if (d.hianyzik.some((h) => h.fajta === 'fejlecek')) {
+    reszek.push('A fa folytatódhat azzal, amit még nem ismerek' + elkertem);
+  }
+  if (d.nemEldontheto > 0) {
+    reszek.push(d.nemEldontheto + ' entitásról nem tudom eldönteni, ebben az ágban van-e (egy felmenője nincs meg).');
+  }
+  return reszek.join(' ');
+}
+
 function laposMegjegyzes(oldal, keres, szigoru) {
   const reszek = [];
   // ⭐ D102: az ágazati pont szerint csökkenő sor biztos előtagja — utána még hiányozhat, amit nem ismerek.
@@ -6388,6 +6411,39 @@ try {
         // tudunk (a nem tartott ágak gyerekei, a gyökér szintje, egy ismeretlen felmenő, a megnyitott kártya szövege), azt
         // függő kérelemként beírjuk — az őrjárat hozza —, és a válasz `betoltes` jele mondja meg a lapnak, hogy érdemes
         // újrakérdeznie. ⚠️ A hálózathoz a felület nem nyúl (H1/A): egy kapu van, az őrjáraté.
+        // ===================================
+        // ⭐⭐ D101 ③: A STRUKTÚRA NÉZET — a fa a legerősebb ágaktól kifelé, egy keretig (a bejáró sorrendjéből)
+        // ===================================
+        //
+        // A prototípus útvonalai és alakja (`StrukturaModal`, M5/A): a darabszám (`{ osszesDarab, agDarab }`) és a lapok
+        // (`{ sorok, kovetkezoKurzor }`). ⚠️ A modál a lapokat nyers `fetch`-csel kéri (`Authorization: Bearer` — a kapu
+        // elfogadja). A darabszámnál a hiányzót a ház útján elkérjük, és kimondjuk, mire épül a fa (D101/M2).
+        if (utvonal === '/api/struktura/darabszam') {
+          const d = await strukturaDarabszam(olvasoTar, KOINO, {
+            szerzo, nezet: pakliNezet, agazat: kereses.get('agEntitasId') || null,
+            bemondasok: sajatKoino ? await bemondasok() : new Map(),
+            fejlecTudas: sajatKoino ? await fejlecTudas() : new Map()
+          });
+          const keres = sajatKoino && d.hianyzik.length ? await lapHianyzoinakElkerese(d.hianyzik)
+            : { kert: 0, fuggo: 0, celos: 0 };
+          return { adat: { ...d, betoltes: keres.fuggo > 0, kitolKerni: keres.celos,
+            koinoMegjegyzes: strukturaMegjegyzes(d, keres) } };
+        }
+        if (utvonal === '/api/struktura') {
+          const lapMeret = parseInt(kereses.get('lapMeret'), 10);
+          try {
+            return { adat: await strukturaLap(olvasoTar, KOINO, {
+              szerzo, nezet: pakliNezet, agazat: kereses.get('agEntitasId') || null,
+              kurzor: kereses.get('kurzor') || undefined,
+              lapMeret: Number.isInteger(lapMeret) ? lapMeret : undefined,
+              bemondasok: sajatKoino ? await bemondasok() : new Map(),
+              fejlecTudas: sajatKoino ? await fejlecTudas() : new Map()
+            }) };
+          } catch (hiba) {
+            return { allapot: 400, adat: { hiba: hiba.message } };
+          }
+        }
+
         if (utvonal === '/api/pakli/hierarchikus') {
           const h = await pakliHierarchia(olvasoTar, aktivKoino, {
             entitas: kereses.get('entitas') || null,

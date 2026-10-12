@@ -19,7 +19,8 @@ import {
   pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja,
   entitasReszletei, entitasKuszobei, hianyzoFelmenok, MAX_DARAB, RENDEZESEK, kuszobokBefele,
   pakliHierarchia, TESTVER_KORLAT,
-  agHelyzete, sajatHozzarendelesek, HOZZARENDELES_KORLAT, biztosElotag, ELORE_KERES
+  agHelyzete, sajatHozzarendelesek, HOZZARENDELES_KORLAT, biztosElotag, ELORE_KERES,
+  strukturaDarabszam, strukturaLap, STRUKTURA_KERET
 } from '../js/allapot/pakli.js';
 import { GYOKER_KULCS } from '../js/csere/szeletEgyeztetes.js';
 
@@ -1447,6 +1448,57 @@ proba('⭐ D102: ág-szűrve az ág maga a kiindulás; a még nem ismert ágat k
   // X teljes (40 gyerek, mind ismert), a gyerekei nem tartottak és nem teljesek: az első blokkol, a többit előre kéri
   return b.biztos === 2 && b.kerendo.length === ELORE_KERES && b.kerendo[0].kulcs === 'Y00'
     && ismeretlen.biztos === 0 && ismeretlen.kerendo[0]?.kulcs === 'Q'.repeat(43);
+});
+
+// ===================================
+// ⭐⭐ D101 ③: A STRUKTÚRA — a fa a legerősebb ágaktól kifelé, egy keretig
+// ===================================
+
+proba('⭐⭐ D101 ③: a Struktúra sorai a bejáró sorrendjében — a szülő mindig a gyereke előtt, és a lapozás a horgonnyal hiánytalan', async () => {
+  const f = await kisFa();
+  const d = await strukturaDarabszam(f.tar, KOINO, {});
+  const egyben = await strukturaLap(f.tar, KOINO, {});
+  const lapok = [];
+  let kurzor;
+  do {
+    const l = await strukturaLap(f.tar, KOINO, { lapMeret: 2, kurzor });
+    lapok.push(...l.sorok);
+    kurzor = l.kovetkezoKurzor ?? undefined;
+  } while (kurzor && lapok.length < 20);
+  const azok = (l) => l.map((x) => x.entitasId);
+  const helye = new Map(azok(egyben.sorok).map((az, i) => [az, i]));
+  const szuloElotte = egyben.sorok.every((x) => !x.szuloId || helye.get(x.szuloId) < helye.get(x.entitasId));
+  const csokken = egyben.sorok.every((x, i) => i === 0 || egyben.sorok[i - 1].hierarchikusOsszesPont >= x.hierarchikusOsszesPont);
+  const a1 = egyben.sorok.find((x) => x.entitasId === f.A1);
+  return d.osszesDarab === 5 && d.agDarab === null && d.ismert === 5 && d.keret === STRUKTURA_KERET
+    && egyben.sorok.length === 5 && egyben.kovetkezoKurzor === null && szuloElotte && csokken
+    && azok(lapok).join() === azok(egyben.sorok).join()
+    && a1.szuloId === f.A && a1.entitasTipus === 'Gondolat' && a1.hierarchikusOsszesPont === 40
+    && Array.isArray(a1.kategoriaIkonok) && a1.tipusIkon === null && a1.javaslatTipus === null;
+});
+
+proba('⭐ D101 ③: ág-szűrve az ág részfája (agDarab), és a keret a legerősebbeket hagyja — a többit kimondja (`ismert`)', async () => {
+  const f = await kisFa();
+  const ag = await strukturaDarabszam(f.tar, KOINO, { agazat: f.A1 });
+  const agLap = await strukturaLap(f.tar, KOINO, { agazat: f.A1 });
+  const keretes = await strukturaDarabszam(f.tar, KOINO, { keret: 3 });
+  const keretesLap = await strukturaLap(f.tar, KOINO, { keret: 3 });
+  return ag.agDarab === 2 && agLap.sorok.map((x) => x.entitasId).join() === [f.A1, f.A11].join()
+    && keretes.ismert === 5 && keretes.latszik === 3 && keretesLap.sorok.length === 3
+    && keretesLap.sorok[0].entitasId === f.A;
+});
+
+proba('⭐ D101 ③: a program sorait a prototípus fa-elrendezője (`faElrendezes.js`) hiánytalanul elhelyezi — ágban is', async () => {
+  const { default: FaElrendezes } = await import('../felulet/js/utils/faElrendezes.js');
+  const f = await kisFa();
+  const helyez = (sorok, ag = null) => {
+    const e = new FaElrendezes(sorok, ag);
+    for (const _ of e.elhelyezesLepesekben(1000)) { /* végig */ }
+    return e.csomopontok.length;
+  };
+  const egesz = (await strukturaLap(f.tar, KOINO, {})).sorok;
+  const ag = (await strukturaLap(f.tar, KOINO, { agazat: f.A1 })).sorok;
+  return helyez(egesz) === 5 && helyez(ag, f.A1) === 2;
 });
 
 proba('⭐ D101: a lista felülről korlátos (a prototípus 100-a), és megmondja, hány van összesen', async () => {

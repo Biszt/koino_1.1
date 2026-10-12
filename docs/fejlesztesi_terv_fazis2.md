@@ -5203,6 +5203,24 @@ készülékkel, „alap” módban — a hiányzó felmenőt B lemezén kéri; a
 rontással. Böngészőben kipróbálva: a fő menü, a Tudatpontok, az új kategória (feltöltött ikonnal), a kártya-menü
 Rendezése és Tudatpontok-ja.
 
+#### ✅ MEGÉPÜLT — ③ a Struktúra (2026-10-11, a D102 bejáróján)
+
+⭐ **A fa a bejáró sorrendjéből** (`pakli.js` `strukturaDarabszam`, `strukturaLap`): a prototípus a TELJES fát töltötte
+le — itt a készüléken ismert rész, az ágazati pont szerint csökkenően (a legerősebb ágaktól kifelé), egy keretig
+(`STRUKTURA_KERET` = 5000; a lapok 2000 sorosak, mint a prototípusban). Mivel a szülő össz-pontja mindig nagyobb a
+gyerekénél (a saját pontja ≥ 1 — D14), a sorrend minden előtagja ZÁRT FA: a keret nem vág ki szülőt a gyereke alól. A
+kurzor a horgonyt is viszi — a lapok egy képből jönnek. A darabszám a prototípus alakjában (`osszesDarab`, `agDarab`), és
+mellette a koinós többlet: hány entitást ismerek, mennyi látszik, meddig biztos a sorrend (`biztosElotag`); a hiányzót
+(a bizonytalan ágakat, ág-szűrésnél a hiányzó felmenőt) a ház útján elkéri, és kimondja, mire épül a fa (`koino.js`
+`strukturaMegjegyzes` — D101/M2). ⭐ **A kapun** a prototípus két útvonala (`/api/struktura/darabszam`, `/api/struktura`);
+a modál a lapokat nyers `fetch`-csel kéri, ezért a kapu a jelszót az `Authorization: Bearer` fejlécből is elfogadja. ⭐
+**A lapon** a `StrukturaModal` és a `faElrendezes.js` (+ sablon, CSS) bájtra a prototípusé; a megjegyzés a
+`koinoModalok.js`-ből (a `koruleIr` ezért ígéret-tudó lett: a koinós rész a válasz UTÁN fut) — építés közben a
+folyamatjelző alatt, a kész fán a vászon tetején. Elágazás 122–126. Próbák: három modul-próba (`pakliProba.js`: a sorrend
+és a hiánytalan lapozás, az ág és a keret, és hogy a prototípus fa-elrendezője a program sorait hiánytalanul elhelyezi),
+egy kapu-próba (a Bearer), és a bekötés (`parancssorProba.js`: a darabszám, a lapok Bearer-rel, az ág részfája, a
+megjegyzés) — mind rontással. Böngészőben: a modál megnyílik, a fa felépül (5/5 elhelyezve), a megjegyzés megjelenik.
+
 ### D102. A BEJÁRÓ: A TARTÓ MAGA JÁR BE (2026-10-11, Csaba: „minden javaslatodat elfogadom, mehetünk tovább”)
 
 **Amiből jött:** a 74. mérés (`bejaroMeres.js`) és a [`modalok_atvizsgalas.md`](modalok_atvizsgalas.md) 6. szakasza: egy friss

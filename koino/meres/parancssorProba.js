@@ -2065,7 +2065,7 @@ async function feluletet(hely, port, kornyezet = {}) {
     return { allapot: valasz.status, adat: await valasz.json() };
   };
 
-  return { folyamat, hiv };
+  return { folyamat, hiv, kulcs, port };
 }
 
 // ===================================
@@ -2428,6 +2428,58 @@ proba('⛔⛔ D101: a lapról jött küszöb a gondolat létrehozásakor és az 
     if (!Object.values(ki).every(Boolean)) {
       process.stdout.write('  küszöb — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
         + ' · ' + JSON.stringify({ letrehozaskor: letrehozaskor.adat, utana: utana.adat, hianyos: hianyos.allapot }).slice(0, 600) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐⭐ D101 ③: A STRUKTÚRA A LAPON — a prototípus útvonalai, a modál nyers `fetch`-ével (Bearer)
+// ===================================
+//
+// Egy „alap” készülék (a szigorú (b)) egy ágat ír a lapról. ⭐ Viselkedést mérünk, úgy, ahogy az örökölt `StrukturaModal`
+// kérdez: a darabszám (`apiGet` — a kapu jelszavával), aztán a lapok NYERS `fetch`-csel, `Authorization: Bearer` fejléccel
+// (X-Koino-Kulcs NÉLKÜL). A sorok a bejáró sorrendjében jönnek (a szülő a gyereke előtt), ágban csak a részfa, és a
+// megjegyzés kimondja, mire épül a fa. Rontás: a kapu nem fogadja a Bearer-alakot → 401; a végpont nem szűr ágra → a
+// részfán kívüli is jön.
+proba('⭐ D101 ③: a Struktúra a lapon — darabszám, a lapok Bearer-rel, ágban a részfa, és a megjegyzés', async () => {
+  const hely = await ujKeszulek();
+  const alap = { KOINO_KISZOLGALAS: 'alap' };
+  let kiszolgalo = null;
+  try {
+    await fut(hely, 'koino', 'Struktúra', alap);
+    kiszolgalo = await feluletet(hely, 7489, alap);
+    const { hiv, kulcs, port } = kiszolgalo;
+    const uj = async (cim, szuloId = null, pont = 10) => {
+      const v = await hiv('/api/gondolat', { method: 'POST',
+        body: JSON.stringify({ cim, ...(szuloId ? { szuloId } : {}), kezdoTudatpont: pont }) });
+      return v.adat?.data?._id ?? null;
+    };
+    const R = await uj('R gyökér', null, 30);
+    const P = await uj('P közép', R, 20);
+    const C = await uj('C levél', P, 10);
+    const Q = await uj('Q másik', null, 5);
+    const darab = await hiv('/api/struktura/darabszam');
+    const nyers = async (ut) => {
+      const v = await fetch('http://127.0.0.1:' + port + ut, { headers: { Authorization: 'Bearer ' + kulcs } });
+      return { allapot: v.status, adat: await v.json() };
+    };
+    const lap = await nyers('/api/struktura?lapMeret=2000');
+    const ag = await nyers('/api/struktura?lapMeret=2000&agEntitasId=' + P);
+    const agDarab = await hiv('/api/struktura/darabszam?agEntitasId=' + P);
+    const azok = (x) => (x.adat?.sorok ?? []).map((s2) => s2.entitasId);
+    const ki = {
+      darab: darab.adat.osszesDarab === 4 && darab.adat.ismert === 4 && /készülékeden ismert/.test(darab.adat.koinoMegjegyzes ?? ''),
+      // a sorrend az ágazati pont szerint csökkenő: R (60), P (30), C (10), Q (5) — a szülő mindig a gyereke előtt
+      bearer: lap.allapot === 200 && azok(lap).join() === [R, P, C, Q].join(),
+      ag: ag.allapot === 200 && azok(ag).length === 2 && azok(ag)[0] === P && !azok(ag).includes(Q) && agDarab.adat.agDarab === 2
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  struktúra — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+        + ' · ' + JSON.stringify({ darab: darab.adat, lap: { a: lap.allapot, s: azok(lap) }, ag: { a: ag.allapot, s: azok(ag) } }).slice(0, 700) + '\n');
     }
     return Object.values(ki).every(Boolean);
   } finally {

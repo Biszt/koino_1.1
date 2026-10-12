@@ -334,7 +334,7 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 | **5.5** | 🚧 **A modálok** — ✅ tudatpont, érték javaslat, részletek, részvétel, **szavazás** (2026-09-06); ⏸️ a JavaslatModal és a létrehozó modálok (az 5.7-re várnak) | a teljes pakli |
 | **5.6** | ✅ **A belépő tér** — koino-kártyák létrehozási idő szerint, **19 önpróba** (2026-09-12) | a D25 nézete |
 | **5.7** | ✅ **A szövegszerkesztő + az „Új gondolat” + a FÁJL-RÉTEG helyi fele**, **20 önpróba** (2026-09-12) | a szövegszerkesztő teljes átemelése |
-| **5.8** | 🚧 ✅ **A `JavaslatModal`** (66 KB) — a lapról már **javasolni is** lehet, **3 önpróba** (2026-09-13); ✅ (D101, 2026-10-11) `TudatpontokModal`, `KategoriaModal`, `GondolatTipusModal`, `RendezesModal`, a fő menü; ⏸️ Struktúra, Síkidom, Keresés, Értesítések | a pakli teljes működése |
+| **5.8** | 🚧 ✅ **A `JavaslatModal`** (66 KB) — a lapról már **javasolni is** lehet, **3 önpróba** (2026-09-13); ✅ (D101, 2026-10-11) `TudatpontokModal`, `KategoriaModal`, `GondolatTipusModal`, `RendezesModal`, a fő menü; ✅ (D101 ③) `StrukturaModal`; ⏸️ Síkidom, Keresés, Értesítések | a pakli teljes működése |
 | **✅** | **A fájlok SZÁLLÍTÁSA** — felderítés · kérelem a bulin · átvitel · randevú az átfúrt résen, **43 önpróba** (2026-09-13) | a kép két készülék között is átjön |
 
 ⚠️ *Az 5.2 nem halasztható az 5.3 mögé: a kártya alakja attól függ, mit tud kérni a lap.*
@@ -354,9 +354,12 @@ réteg alá), egy közös alap (a legjobb-először bejáró az össz-pont szeri
 ✅ **D101** (Csaba: „minden javaslatodat elfogadom”). *(A Keresésnek van helyi alja — a `/api/kereses` a helyben tartott
 entitások címében keres, a hivatkozás-mező ezt használja —, a hálózati MEGTALÁLÁS, a kereső-réteg, még nincs.)*
 ✅ **Az I. csoport kész (2026-10-11):** a Tudatpontok, a kategória és a gondolattípus létrehozása a lapról, a Rendezés
-(a kártya menüjéből ág-szűrve), és a fő menü (`foMenu.js`) — a részletek a fázis-2 terv D101-ében. ⏭️ A következő: a
-legjobb-először bejáró (előbb mérés) → Struktúra → Síkidom → Keresés → az értesítés-réteg. A helyőrzők közül ma öt áll:
-Struktúra, Síkidom, Keresés, Értesítések, Értesítési beállítások.
+(a kártya menüjéből ág-szűrve), és a fő menü (`foMenu.js`) — a részletek a fázis-2 terv D101-ében. ✅ **A bejáró
+(D102, 74. mérés):** a tartó maga jár be legjobb-először, a fejléc folytatással és gyerekszámmal, a kérések egy
+kapcsolaton sorozatban; a lapos „ágazati” lista kimondja, meddig biztos. ✅ **A Struktúra (2026-10-11):** a
+`StrukturaModal` bájtra a prototípusé; a fa a bejáró sorrendjéből, egy keretig (5000), a megjegyzés kimondja, mire épül.
+⏭️ A következő: Síkidom → Keresés → az értesítés-réteg. A helyőrzők közül ma négy áll: Síkidom, Keresés, Értesítések,
+Értesítési beállítások.
 
 ### (RÉGEBBI) ITT TARTUNK (2026-09-13)
 

@@ -49,6 +49,7 @@
 @import './components/modals/kategoriaModal.css';
 @import './components/modals/gondolatTipusModal.css';
 @import './components/modals/rendezesModal.css';
+@import './components/modals/strukturaModal.css';
 
 /* ⚠️ A BELÉPŐ TÉR (5.6) — az EGYETLEN nem örökölt CSS: a prototípusban a „koino" mint
    fogalom nem létezett, tehát nincs mit átemelni. Csak a meglévő változókra épül. */

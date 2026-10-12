@@ -91,6 +91,14 @@ proba('⭐ A jelszó a CÍMSORBÓL is jó — ezt tudod kézzel átadni', () => 
   return v.allapot === 200 && v.test.includes('koino');
 }));
 
+proba('⭐ D101 (M5): a jelszó `Authorization: Bearer` alakban is jó (az örökölt Struktúra-modál így küldi) — a rossz nem', () => kapuval(async (kapu) => {
+  // ⚠️ Az `/api/`-n mérjük: a lap váza (`/`) szándékosan jelszó nélkül is betölt.
+  const jo = await keres(kapu.port, '/api/en', { fejlecek: { authorization: 'Bearer ' + JELSZO } });
+  const rossz = await keres(kapu.port, '/api/en', { fejlecek: { authorization: 'Bearer ' + 'x'.repeat(JELSZO.length) } });
+  const masAlak = await keres(kapu.port, '/api/en', { fejlecek: { authorization: 'Basic ' + JELSZO } });
+  return jo.allapot === 200 && jo.test.includes('rendben') && rossz.allapot === 401 && masAlak.allapot === 401;
+}, { kezelo: async () => ({ adat: { valasz: 'rendben' } }) }));
+
 proba('A kiírt cím önmagában működik (jelszó benne)', () => kapuval(async (kapu) => {
   const utvonal = kapu.cim.slice(kapu.cim.indexOf('/', 'http://'.length));
   const v = await keres(kapu.port, utvonal);

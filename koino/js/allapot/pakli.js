@@ -1086,6 +1086,125 @@ export function biztosElotag(lista, entitasok, agazati, { tartott, gyokerTeljes 
 }
 
 // ===================================
+// ⭐⭐ D101 ③: A STRUKTÚRA — a fa a legerősebb ágaktól kifelé, egy keretig
+// ===================================
+//
+// A prototípus Struktúra nézete a TELJES fát töltötte le (`/api/struktura`, 2000 soros lapokban) — a szigorú (b) és a
+// 9. szabály alatt a teljes fa sehol nincs meg, és nem is lehet. ⭐ Itt a fa a bejáró sorrendjéből jön (az ágazati pont
+// szerint csökkenően — a legerősebb ágaktól kifelé): mivel egy szülő mindig nagyobb a gyerekénél (a saját pontja
+// legalább 1 — D14), a sorrend minden előtagja ZÁRT FA (minden csomópont szülője előtte áll — ha ismerjük). A keret
+// (`STRUKTURA_KERET`) a megjelenítést korlátozza; a darabszám helyén „ismert N (keret: B)” áll (D101/M2), és a bejáró a
+// hiányzót elkéri (M1). Az örökölt `StrukturaModal` sorai (`sorok`) a prototípus alakjában jönnek (`faElrendezes.js`).
+
+/** ⭐ A Struktúra legfeljebb ennyi csomópontot mutat (a legerősebbeket) — a megjelenítés kerete. */
+export const STRUKTURA_KERET = 5000;
+/** Egy lap legfeljebb ennyi sor (a prototípus `MAX_LAP_MERET`-je). */
+export const STRUKTURA_LAP = 2000;
+
+/** A Struktúra sorrendje a horgonyhoz tartozó képből — az ág (ha van) szerint szűrve, a kerettel. */
+async function strukturaSorrend(tar, koino, beallitas = {}) {
+  const nezet = beallitas.nezet ?? ujPakliNezet();
+  const esemenyek = await koinoEsemenyei(tar, koino);
+  const horgony = Number.isInteger(beallitas.horgony) ? Math.min(beallitas.horgony, esemenyek.length) : esemenyek.length;
+  const most = Number.isInteger(beallitas.most) ? beallitas.most : Date.now();
+  const kep = await kepetKerni(nezet, koino, horgony, most, esemenyek, tar.csakAtmeneti?.() ?? null);
+  const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok);
+  const agazat = typeof beallitas.agazat === 'string' && beallitas.agazat ? beallitas.agazat : null;
+  let nemEldontheto = 0;
+  const hianyzik = [];
+  const lista = [];
+  for (const e of kep.entitasok.values()) {
+    if (agazat) {
+      const h = agHelyzete(kep.entitasok, e.azonosito, agazat);
+      if (h.alatta === null) {
+        nemEldontheto++;
+        if (h.hianyzo && hianyzik.length < MAX_DARAB && !hianyzik.some((x) => x.kulcs === h.hianyzo)) {
+          hianyzik.push({ fajta: 'szelet', kulcs: h.hianyzo, ok: 'egy felmenőt nem ismerek (az ág-szűréshez)' });
+        }
+        continue;
+      }
+      if (!h.alatta) continue;
+    }
+    lista.push(e.azonosito);
+  }
+  const ertek = (az) => agazati.get(az) ?? 0;
+  lista.sort((a, b) => ertek(b) - ertek(a) || (a < b ? -1 : a > b ? 1 : 0));
+  const tartottak = typeof nezet.tartott === 'function' ? await nezet.tartott() : null;
+  const b = biztosElotag(lista, kep.entitasok, agazati, {
+    tartott: tartottak ? (az) => tartottak.has(az) : () => true,
+    gyokerTeljes: !tartottak,
+    tudas: beallitas.fejlecTudas ?? new Map(),
+    agazat
+  });
+  for (const h of b.kerendo) if (hianyzik.length < MAX_DARAB && !hianyzik.some((x) => x.kulcs === h.kulcs)) hianyzik.push(h);
+  const keret = Math.max(1, Math.min(Number.isInteger(beallitas.keret) ? beallitas.keret : STRUKTURA_KERET, STRUKTURA_KERET));
+  return { kep, agazati, lista, latszik: lista.slice(0, keret), keret, biztos: b.biztos, hianyzik, nemEldontheto,
+    horgony, most, agazat };
+}
+
+/**
+ * ⭐ A Struktúra darabszáma — a prototípus alakjában (`{ osszesDarab, agDarab }`: a modál ennyit vár a folyamatjelzőhöz),
+ * és a koinós többlet: hány entitást ismerek az ágban (`ismert`), mennyi látszik (`keret`), meddig biztos a sorrend.
+ * @returns {Promise<Object>}
+ */
+export async function strukturaDarabszam(tar, koino, beallitas = {}) {
+  const s = await strukturaSorrend(tar, koino, beallitas);
+  return {
+    osszesDarab: s.agazat ? s.kep.entitasok.size : s.latszik.length,
+    agDarab: s.agazat ? s.latszik.length : null,
+    ismert: s.lista.length,
+    latszik: s.latszik.length,
+    keret: s.keret,
+    biztos: Math.min(s.biztos, s.latszik.length),
+    nemEldontheto: s.nemEldontheto,
+    hianyzik: s.hianyzik,
+    horgony: s.horgony,
+    most: s.most
+  };
+}
+
+/** Egy entitás Struktúra-sora (a prototípus `strukturaService` alakja — a `faElrendezes.js` ezt olvassa). */
+function strukturaSora(e, agazati, entitasok, javaslatok) {
+  const dontes = entitasDontese(e, javaslatok);
+  const ikonja = (b) => (b ? { nev: b.nev, ikon: b.ikon } : null);
+  // A Javaslat/Egyezmény művelet-típusa (a prototípus `javaslatTipus` enumja): több érintettnél „Csomag”.
+  const resz = e.toredek ? (dontes?.reszek?.[e.toredek.sorszam - 1] ?? null) : null;
+  const muvelet = resz?.muvelet ?? ((dontes?.erintettek?.length ?? 0) > 1 ? 'Csomag' : dontes?.muvelet ?? null);
+  return {
+    entitasId: e.azonosito,
+    entitasTipus: kartyaTipusa(e, dontes),
+    szuloId: e.szulo ?? null,
+    hierarchikusOsszesPont: agazati.get(e.azonosito) ?? 0,
+    letrehozva: e.letrehozva ?? null,
+    cim: e.cim ?? null,
+    kategoriaIkonok: (e.kategoriak ?? []).map((k) => ikonja(besorolas(entitasok, k))).filter(Boolean),
+    tipusIkon: ikonja(besorolas(entitasok, e.gondolatTipus)),
+    javaslatTipus: e.tipus === 'Javaslat' ? muvelet : null
+  };
+}
+
+/**
+ * ⭐ A Struktúra egy lapja — a prototípus alakjában (`{ sorok, kovetkezoKurzor }`), a sorrend szerint, a kereten belül. A
+ * kurzor a horgonyt is viszi: a lapok ugyanabból a képből jönnek (mint a paklinál).
+ * @param {Object} [beallitas] - { agazat, kurzor, lapMeret, nezet, bemondasok, fejlecTudas, keret }
+ * @returns {Promise<{sorok: Array<Object>, kovetkezoKurzor: string|null}>}
+ */
+export async function strukturaLap(tar, koino, beallitas = {}) {
+  const honnan = beallitas.kurzor ? kurzorDekodolas(beallitas.kurzor) : null;
+  const s = await strukturaSorrend(tar, koino, { ...beallitas,
+    ...(honnan ? { horgony: honnan.horgony, most: honnan.most } : {}) });
+  const tol = honnan && Number.isInteger(honnan.ertek) ? Math.max(0, honnan.ertek) : 0;
+  const meret = Math.max(1, Math.min(Number.isInteger(beallitas.lapMeret) ? beallitas.lapMeret : STRUKTURA_LAP, STRUKTURA_LAP));
+  const darab = s.latszik.slice(tol, tol + meret);
+  const sorok = darab.map((az) => strukturaSora(s.kep.entitasok.get(az), s.agazati, s.kep.entitasok, s.kep.javaslatok));
+  const kov = tol + darab.length;
+  return {
+    sorok,
+    kovetkezoKurzor: kov < s.latszik.length ? kurzorKodolas({ horgony: s.horgony, most: s.most, ertek: kov, azonosito: '' }) : null
+  };
+}
+
+// ===================================
 // ⭐ D101: „X ÁGA ALATT VAN-E?” — EGY HELYEN
 // ===================================
 //

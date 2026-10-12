@@ -237,8 +237,9 @@ A pakli-nézet a felületen (a prototípus láncos-testvéres nézete — ✅ **
 tölt, az örökölt `Pakli.js`-szel), később a síkidom- és a térkép-nézet kérelmezése (a maradék modálok, 5.8), és a
 terep (✅ PC–mobil két külön címen, 72–73. mérés; ⏸️ két mobil — a 🅱️). 🚧 **A maradék modálok (D101, 2026-10-11):**
 átvizsgálva ([`modalok_atvizsgalas.md`](modalok_atvizsgalas.md)); ✅ az I. csoport kész (Tudatpontok, a besorolások
-létrehozása, Rendezés, a fő menü); ⏭️ a közös alap, a legjobb-először bejáró (a fejléc folytatásával) → Struktúra →
-Síkidom → Keresés → az értesítés-réteg. ⭐ **És egy új pillér a láthatáron: a KERESŐ-RÉTEG** (skálázási terv II.,
+létrehozása, Rendezés, a fő menü); ✅ a közös alap, a legjobb-először bejáró (D102: a tartó maga jár be, a fejléc
+folytatásával, a kérelem-sorozattal); ✅ a Struktúra (a bejáró sorrendjéből, egy keretig); ⏭️ Síkidom → Keresés → az
+értesítés-réteg. ⭐ **És egy új pillér a láthatáron: a KERESŐ-RÉTEG** (skálázási terv II.,
 S8–S10) — három dolog épül rá (a Keresés, a besorolás-lenyílók, az entitás-hivatkozás); a D101 szerint a modálok után,
 saját átvizsgálással.
 
@@ -365,7 +366,8 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 
 *Utána a ház:* a pakli-nézet a felületen, a terep (két mobil, a 🅱️ változat). ✅ **A terep PC–mobil között
 (72–73. mérés, D99) és a ház (D100, 2026-10-10) KÉSZ** — a részletek a fázis-2 terv D100-ában és az 5. szakasz
-96–104. bejegyzésében. ⏭️ Csaba a maradék modálokat választotta (D101, 2026-10-11) — az I. csoport kész (105–111.).
+96–104. bejegyzésében. ⏭️ Csaba a maradék modálokat választotta (D101, 2026-10-11) — az I. csoport kész (105–111.), a
+bejáró (D102, 112–121.) és a Struktúra (122–126.) is.
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 
@@ -851,3 +853,24 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     azt mondja: „a sor folytatódhat azzal, amit még nem ismerek — elkértem”** · mert a biztos előtag a LÁTOTT részről szól; a
     sor vége (ami még nem jött meg) attól még hiányozhat, és ezt eddig semmi nem mondta ki · Claude · `koino.js`
     (`laposMegjegyzes`).
+122. **2026-10-11 · a Struktúra forrása (D101 ③)** → **a fa a bejáró sorrendjéből jön (az ágazati pont szerint csökkenően,
+    holtversenyben az azonosító), és egy keretig látszik (`STRUKTURA_KERET` = 5000, a legerősebbek); a darabszám helyén a
+    prototípus két száma (`osszesDarab`, `agDarab`), mellette a koinós többlet (ismert, látszik, keret, biztos)** · mert a
+    prototípus a TELJES fát töltötte le, ami a szigorú (b) alatt sehol nincs meg (9. szabály); és mivel a szülő össz-pontja
+    mindig nagyobb a gyerekénél (D14: a saját pontja ≥ 1), a sorrend minden előtagja ZÁRT FA — a keret nem vág ki szülőt a
+    gyereke alól (ha ismerjük) · a Struktúra építésekor, Claude · `pakli.js` (`strukturaDarabszam`, `strukturaLap`).
+123. **2026-10-11 · a Struktúra lapjai egy képből (D101 ③)** → **a kurzor a horgonyt és a pillanatot is viszi (a lapozás
+    `kurzorKodolas`-a, az `ertek` itt a sorbeli helyzet), tehát a 2000 soros lapok ugyanabból a képből jönnek** · mert
+    különben két lap között beérkezett esemény a sorrendet elcsúsztatná (egy sor kétszer, egy kimaradna) — ugyanaz az elv,
+    mint a pakli horgonya · Claude · `pakli.js` (`strukturaLap`).
+124. **2026-10-11 · a nyers `fetch` a kapun (D101 ③)** → **a kapu a jelszót az `Authorization: Bearer` fejlécből is
+    elfogadja** · mert az örökölt `StrukturaModal` a lapokat nem az `apiGet`-tel, hanem nyers `fetch`-csel kéri
+    (`tokenLekerese` → `Bearer`), és a modál bájtra a prototípusé (M5/A); a koinó lapján a „token” a kapu jelszava — a
+    négy őr ugyanaz marad · Claude · `kapu.js` (`jelszoRendben`), `kapuProba.js`.
+125. **2026-10-11 · a `koruleIr` ígéretre is (D101 ③)** → **ha a becsomagolt prototípus-metódus ígéretet ad, a koinós rész
+    a teljesülése UTÁN fut** · mert a Struktúra darabszám-lekérése aszinkron: a megjegyzés különben a válasz ELŐTT íródott
+    volna ki (az előző válaszé, vagy semmi) · Claude · `koinoModalok.js`.
+126. **2026-10-11 · a Struktúra megjegyzésének helye (D101 ③)** → **építés közben a folyamatjelző alatt, a kész fán a vászon
+    tetején (abszolút pozícióban, a súgó-sor mintájára)** · mert a kész nézet súgó-sora alul, abszolút pozícióban ül: a
+    normál folyamban a megjegyzés a vászon alá csúszott, és nem látszott (a böngészőben derült ki) · Claude ·
+    `koinoKartya.css`.

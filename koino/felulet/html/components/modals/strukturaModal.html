@@ -1,0 +1,45 @@
+<!-- frontend/html/components/modals/strukturaModal.html -->
+
+<!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel.
+     Két nézete van, egyszerre mindig csak egy látszik (a StrukturaModal.js váltja):
+       1. #struktura-epites — folyamatjelző (számláló) + Mégse; megnyitáskor EGYBŐL ez indul
+       2. #struktura-nezet  — a kész struktúra nézet: Canvas alapréteg + SVG fedőréteg -->
+<div class="struktura-modal">
+
+  <!-- ===== 1. ÉPÍTÉS NÉZET (folyamatjelző + Mégse) ===== -->
+  <!-- Megnyitáskor rögtön ez látszik: nincs előzetes kérdés, a Struktúra nézet egyből
+       nekiáll. A számláló mutatja a letöltés/elhelyezés állását, a Mégse leállít
+       és bezár. -->
+  <div class="struktura-modal__epites" id="struktura-epites">
+    <p class="struktura-modal__epites-szoveg" id="struktura-epites-szoveg">Előkészítés...</p>
+    <div class="struktura-modal__folyamat" role="progressbar"
+         aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="struktura-folyamat">
+      <div class="struktura-modal__folyamat-sav" id="struktura-folyamat-sav"></div>
+    </div>
+    <button id="struktura-megszakitas-gomb" class="modal-gomb modal-gomb--masodlagos" type="button">
+      Mégse
+    </button>
+  </div>
+
+  <!-- ===== 3. TÉRKÉP NÉZET (Canvas alap + SVG fedőréteg) ===== -->
+  <div class="struktura-modal__nezet" id="struktura-nezet" hidden>
+    <!-- Canvas alapréteg: a TELJES fa (élek + típus-színű pöttyök) -->
+    <canvas class="struktura-modal__canvas" id="struktura-canvas"></canvas>
+    <!-- SVG fedőréteg: csak a látható/közeli csomópontok, interaktívan
+         (ikon + cím, kattintás, tooltip) — a StrukturaModal.js tölti fel -->
+    <svg class="struktura-modal__svg" id="struktura-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <!-- Vezérlő gombok: nagyítás/kicsinyítés/teljes fa behúzása -->
+    <div class="struktura-modal__vezerlok">
+      <button id="struktura-zoom-be-gomb" class="struktura-modal__vezerlo-gomb" type="button"
+              aria-label="Nagyítás" title="Nagyítás">＋</button>
+      <button id="struktura-zoom-ki-gomb" class="struktura-modal__vezerlo-gomb" type="button"
+              aria-label="Kicsinyítés" title="Kicsinyítés">－</button>
+      <button id="struktura-illesztes-gomb" class="struktura-modal__vezerlo-gomb" type="button"
+              aria-label="Teljes fa mutatása" title="Teljes fa mutatása">⤢</button>
+    </div>
+    <p class="struktura-modal__sugo">
+      Húzás / kétujjas görgetés: mozgatás · ujjak széthúzása vagy ＋－: nagyítás (közelebb = több részlet) · koppintás a csomópontra: ugrás
+    </p>
+  </div>
+
+</div>
