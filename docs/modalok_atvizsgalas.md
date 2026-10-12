@@ -259,3 +259,15 @@ csak a nagy Struktúrát érinti (a 2000-esből 55–107 kimaradna).
 **A javasolt sorrend (a döntések után):** a fejléc-kérdés új alakja (J1 + a gyerekszám + a folytatás — egy protokoll-
 bővítés) → a bejáró a `pakli.js`-ben (a kérő oldal: a sor, az előre kérés a 64-es korlátig, a célválasztás — J4) → rá a
 lapos ágazati rendezés (az egész koinóban és ág-szűrve) → ③ Struktúra.
+
+**D102 (Csaba: „minden javaslatodat elfogadom”):** J1, J2, J4 (A) — megépült (a fázis-2 terv D102-e, elágazás 112–118).
+
+**⚠️ J3 ÚJRA (a 74. mérés pótlása, még aznap).** A „több kérelem egy kapcsolaton” változatot csak véletlen tartókkal mértem;
+ott valóban nem számít. De ha EGYETLEN jól ellátott tartó kapja a kérelmeket — a kis, családi koinó, ahol egy laptop
+„mindent” tart (D22: a kis családi közösségeknek is P2P-nek kell lenniük) —, a kapcsolatonkénti 1 kérelem mindent sorba
+állít: egy oldal 1 kör helyett 6, egy 200-as Struktúra 2–3 perc helyett 46–85 perc (1 perces körrel).
+
+- **(A) ⭐ Egy kapcsolaton egy kérelem-SOROZAT — ezt javaslom most:** a kérő ugyanazon a védett résen egymás után több
+  `KERELEM`-et küld (a társhoz illő függőket, legfeljebb 16-ot), a tartó egyenként kiszolgálja, a végén `KESZ`.
+  Protokoll-bővítés (korlátos), a mai menet változatlan marad, ha csak egy kérelem van.
+- **(B) Marad 1 kérelem / kapcsolat** — egyszerűbb, de a családi koinóban a Struktúra percek helyett órák.

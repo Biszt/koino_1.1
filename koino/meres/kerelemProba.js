@@ -2,8 +2,9 @@
 
 // Felelősség: A KÉRELEM (D92/4–6 — `js/csere/kerelem.js`, és a menete a vonalon) próbája.
 //
-// Amit mér: (1) a kérdés alakja: csak az ismert fajta, azonosító alakú kulcs (a gyökér csak fejlécre), korlátos n és
-// d; (2) ⭐ a FEJLÉCEK valódi aláírt eseményekkel: össz-pont szerint rendezve, a legjobb ág d szintig, a töredék is
+// Amit mér: (1) a kérdés alakja: csak az ismert fajta, azonosító alakú kulcs (a gyökér csak fejlécre), korlátos n, a
+// mélység (`m`) és a folytatás (`utan`); (2) ⭐ a FEJLÉCEK valódi aláírt eseményekkel: össz-pont szerint rendezve —
+// D102 óta MÉLYEN a tartó maga jár be legjobb-először (a gyerekszámmal, a folytatással) —, a töredék is
 // (a létrehozója a javaslat), és a kérdező a mintákkal ellenőrzi — a becsületes válasz átmegy; (3) ⛔ a hamisítások:
 // más szülőjű tétel, átírt létrehozó, a gyökér összege ≠ a bemondott össz-pont, felfújt részfa-fa — tételenként
 // kimondva; (4) a nem tartott entitás bemondott össz-ponttal, gyökér nélkül jön (`forras`); (5) a törzs
@@ -31,7 +32,7 @@ import {
 import {
   tovabbiUgras, UGRAS_MAX, valaszAlakja,
   kerelemAlakja, fejlecekValasza, mintaKeres, mintakValasza, fejlecekEllenorzese, torzsLenyomatai, FEJLEC_KORLAT,
-  MELYSEG_KORLAT
+  elobbJon
 } from '../js/csere/kerelem.js';
 
 const { proba, futtatas } = probaGyujtemeny('A kérelem: az alapkérdések (D92/4–6)');
@@ -42,9 +43,13 @@ const AZ = 'A'.repeat(43);
 // 1. A KÉRDÉS ALAKJA
 // ===================================
 
-proba('a kérdés alakja: ismert fajta, azonosító alakú kulcs; a gyökér csak fejlécre; n és d korlátos', () => {
-  const jo = kerelemAlakja({ fajta: 'fejlecek', kulcs: AZ, n: 9999, d: 99 });
-  return jo?.n === FEJLEC_KORLAT && jo.d === MELYSEG_KORLAT
+proba('a kérdés alakja: ismert fajta, azonosító alakú kulcs; a gyökér csak fejlécre; n korlátos; a mélység és a folytatás (D102)', () => {
+  const jo = kerelemAlakja({ fajta: 'fejlecek', kulcs: AZ, n: 9999, m: true, utan: { p: 7, az: AZ } });
+  return jo?.n === FEJLEC_KORLAT && jo.m === true && jo.utan?.p === 7 && jo.utan.az === AZ
+    && kerelemAlakja({ fajta: 'fejlecek', kulcs: AZ }).m === false && kerelemAlakja({ fajta: 'fejlecek', kulcs: AZ }).utan === undefined
+    // ⛔ a rossz alakú folytatás nem „az eleje” — a kérdés hibás
+    && kerelemAlakja({ fajta: 'fejlecek', kulcs: AZ, utan: { p: -1, az: AZ } }) === null
+    && kerelemAlakja({ fajta: 'fejlecek', kulcs: AZ, utan: { p: 3, az: 'x' } }) === null
     && kerelemAlakja({ fajta: 'fejlecek', kulcs: GYOKER_KULCS })?.n === 20
     && kerelemAlakja({ fajta: 'torzs', kulcs: GYOKER_KULCS }) === null
     && kerelemAlakja({ fajta: 'szelet', kulcs: 'x' }) === null
@@ -91,25 +96,94 @@ async function vilag() {
 
 const olvaso = (terkep) => async (az) => terkep.get(az) ?? null;
 
-proba('⭐⭐ a gyökér fejlécei össz-pont szerint, a legjobb ág d = 2 szintig — és a kérdező mintákkal ellenőrzi', async () => {
+proba('⭐ a gyökér fejlécei EGY SZINTEN (m nélkül): a legfelső szintűek össz-pont szerint — és a kérdező mintákkal ellenőrzi', async () => {
   const v = await vilag();
-  const { valasz, fak } = await fejlecekValasza({ allapot: v.allapot, kulcs: GYOKER_KULCS, n: 10, d: 2,
+  const { valasz, fak } = await fejlecekValasza({ allapot: v.allapot, kulcs: GYOKER_KULCS, n: 10,
     karbantarto: reszfaKarbantarto(), esemenyOlvas: olvaso(v.terkep) });
   const kert = mintaKeres(valasz);
   const { mintak, esemenyek } = await mintakValasza({ fak, kert, esemenyOlvas: olvaso(v.terkep) });
   const e = await fejlecekEllenorzese({ valasz, kert, mintak, esemenyek });
   const sorrend = valasz.lista.map((t) => t.az);
   // A NAGY ág: 15 + G1 (14 + unoka 7) + G2 (5 + a töredéke 1) + G3 (2 + a töredéke 1) = 45.
-  return sorrend[0] === v.nagy && sorrend[1] === v.kicsi && valasz.lista[0].osszPont === 45
-    && valasz.ag?.kulcs === v.nagy && valasz.ag.lista[0].az === v.g1 && valasz.ag.ag?.kulcs === v.g1
-    && valasz.ag.ag.lista[0].az === v.unoka
+  return sorrend.join() === [v.nagy, v.kicsi].join() && valasz.lista[0].osszPont === 45 && valasz.teljes === true
+    && valasz.lista.every((t) => t.sz === null) && valasz.lista[0].gy === 3
     && e.hibas === 0 && e.ellenorzott >= 2 && e.tetelek.get(v.nagy).mintazott === true;
+});
+
+proba('⭐⭐ D102 (J1): MÉLYEN a tartó maga jár be legjobb-először — egy lista össz-pont szerint, minden tétel a szülőjével', async () => {
+  const v = await vilag();
+  const { valasz, fak } = await fejlecekValasza({ allapot: v.allapot, kulcs: GYOKER_KULCS, n: 10, m: true,
+    karbantarto: reszfaKarbantarto(), esemenyOlvas: olvaso(v.terkep) });
+  const kert = mintaKeres(valasz);
+  const { mintak, esemenyek } = await mintakValasza({ fak, kert, esemenyOlvas: olvaso(v.terkep) });
+  const e = await fejlecekEllenorzese({ valasz, kert, mintak, esemenyek });
+  const l = valasz.lista;
+  const csokken = l.every((t, i) => i === 0 || elobbJon({ p: l[i - 1].osszPont, az: l[i - 1].az }, { p: t.osszPont, az: t.az }));
+  // NAGY 45 → G1 21 → UNOKA 7 → G2 6 → … (a sorrend maga a legjobb-először bejárás)
+  return l[0].az === v.nagy && l[1].az === v.g1 && l[1].sz === v.nagy && l[2].az === v.unoka && l[2].sz === v.g1
+    && l[3].az === v.g2 && csokken && valasz.m === true && valasz.teljes === true && l.length === 8
+    && e.hibas === 0 && e.tetelek.get(v.nagy).mintazott === true && Object.keys(kert)[0] === v.nagy;
+});
+
+proba('⭐⭐ D102: a FOLYTATÁS (`utan`) a sorrend következő elemeit adja — az első két oldal együtt az egész', async () => {
+  const v = await vilag();
+  const ker = (n, utan) => fejlecekValasza({ allapot: v.allapot, kulcs: GYOKER_KULCS, n, m: true, utan,
+    karbantarto: reszfaKarbantarto(), esemenyOlvas: olvaso(v.terkep) });
+  const egesz = (await ker(10)).valasz;
+  const elso = (await ker(3)).valasz;
+  const utolso = elso.lista.at(-1);
+  const masodik = (await ker(10, { p: utolso.osszPont, az: utolso.az })).valasz;
+  const azok = (v2) => v2.lista.map((t) => t.az);
+  // ⚠️ a folytatás szülője egy KORÁBBI oldalon áll — a kérő a saját tudásából illeszti (`ismert`); aki nem ismeri, annak
+  // ez nem ellenőrizhető hely (elbukik)
+  const korabbiSzulo = masodik.lista.filter((t) => t.sz !== null && !azok(masodik).includes(t.sz)).length;
+  const ismeri = await fejlecekEllenorzese({ valasz: masodik, kert: {}, mintak: {}, esemenyek: [],
+    ismert: (az) => azok(elso).includes(az) });
+  const nemIsmeri = await fejlecekEllenorzese({ valasz: masodik, kert: {}, mintak: {}, esemenyek: [] });
+  return elso.teljes === false && masodik.teljes === true
+    && [...azok(elso), ...azok(masodik)].join() === azok(egesz).join()
+    // (aki nem ismeri a korábbi szülőt, annál ezek — és láncban a gyerekeik — buknak; a legfelső szintű átmegy)
+    && korabbiSzulo > 0 && ismeri.hibas === 0 && nemIsmeri.hibas >= korabbiSzulo
+    && nemIsmeri.tetelek.get(v.kicsi)?.rendben === true && nemIsmeri.tetelek.get(v.g2)?.rendben === false;
+});
+
+proba('⭐ D102 (J2): a GYEREKSZÁM csak a tartott csomópontra jár — és mélyen csak a tartott csomópont gyerekei jönnek', async () => {
+  const v = await vilag();
+  const { valasz } = await fejlecekValasza({ allapot: v.allapot, kulcs: GYOKER_KULCS, n: 10, m: true,
+    tartott: (az) => az !== v.g1 && az !== GYOKER_KULCS,
+    karbantarto: reszfaKarbantarto(), esemenyOlvas: olvaso(v.terkep) });
+  const t = (az) => valasz.lista.find((x) => x.az === az);
+  return t(v.nagy)?.gy === 3 && t(v.g1) && t(v.g1).gy === undefined && !t(v.unoka) && valasz.gy === undefined;
+});
+
+proba('⛔ D102: a HAMIS sorrend, az idegen szülő és a hibás gyerekszám tételenként elbukik', async () => {
+  const v = await vilag();
+  const { valasz } = await fejlecekValasza({ allapot: v.allapot, kulcs: GYOKER_KULCS, n: 10, m: true,
+    karbantarto: reszfaKarbantarto(), esemenyOlvas: olvaso(v.terkep) });
+  const l = valasz.lista.map((t) => ({ ...t }));
+  // (1) a sorrend: a harmadik (UNOKA, 7) és a negyedik (G2, 6) felcserélve — az UNOKA a kisebb UTÁN jönne
+  const csere = [...l];
+  [csere[2], csere[3]] = [csere[3], csere[2]];
+  // (2) hibás gyerekszám a G2-n (az eredeti sorrendben)
+  const gyHiba = l.map((t) => (t.az === v.g2 ? { ...t, gy: -1 } : t));
+  // (3) a gyerek előbb, mint a szülője: a G1 a NAGY elé kerül (a G1 szülője ekkor még nem ismert)
+  const elore = [l[1], l[0], ...l.slice(2)];
+  const e = await fejlecekEllenorzese({ valasz: { ...valasz, lista: csere }, kert: {}, mintak: {}, esemenyek: [] });
+  const eGy = await fejlecekEllenorzese({ valasz: { ...valasz, lista: gyHiba }, kert: {}, mintak: {}, esemenyek: [] });
+  const e3 = await fejlecekEllenorzese({ valasz: { ...valasz, lista: elore }, kert: {}, mintak: {}, esemenyek: [] });
+  // (4) egy szinten (m nélkül) a mély tétel idegen: a szülője nem a kérdezett
+  const e2 = await fejlecekEllenorzese({ valasz: { ...valasz, m: false }, kert: {}, mintak: {}, esemenyek: [] });
+  const ok = (ee, az) => ee.tetelek.get(az)?.ok ?? '';
+  return /sorrend nem csökkenő/.test(ok(e, v.unoka)) && /hibás gyerekszám/.test(ok(eGy, v.g2)) && eGy.hibas >= 1
+    && e.tetelek.get(v.nagy)?.rendben === true && e.tetelek.get(v.g1)?.rendben === true
+    && /nem a kérdezett entitás gyereke/.test(ok(e3, v.g1))
+    && /nem a kérdezett entitás gyereke/.test(ok(e2, v.g1)) && e2.tetelek.get(v.nagy)?.rendben === true;
 });
 
 proba('⭐ a TÖREDÉK is fejléc (a létrehozója a javaslat, a szülője a saját érintettje) — és átmegy az ellenőrzésen', async () => {
   const v = await vilag();
   const toredek = [...v.allapot.entitasok.values()].find((e) => e.toredek && e.szulo === v.g2);
-  const { valasz } = await fejlecekValasza({ allapot: v.allapot, kulcs: v.g2, n: 10, d: 0,
+  const { valasz } = await fejlecekValasza({ allapot: v.allapot, kulcs: v.g2, n: 10,
     karbantarto: reszfaKarbantarto(), esemenyOlvas: olvaso(v.terkep) });
   const e = await fejlecekEllenorzese({ valasz, kert: {}, mintak: {}, esemenyek: [] });
   const t = valasz.lista.find((x) => x.az === toredek?.azonosito);
@@ -120,12 +194,12 @@ proba('⭐ a TÖREDÉK is fejléc (a létrehozója a javaslat, a szülője a saj
 
 proba('⛔ a HAMIS tételek tételenként elbuknak: más szülőjű, átírt létrehozó, a gyökér összege ≠ össz-pont', async () => {
   const v = await vilag();
-  const { valasz } = await fejlecekValasza({ allapot: v.allapot, kulcs: v.nagy, n: 10, d: 0,
+  const { valasz } = await fejlecekValasza({ allapot: v.allapot, kulcs: v.nagy, n: 10,
     karbantarto: reszfaKarbantarto(), esemenyOlvas: olvaso(v.terkep) });
   const lista = valasz.lista.map((t) => ({ ...t }));
   // (1) egy idegen tétel: a KICSI (a gyökér gyereke) a NAGY alá csempészve
   const kicsi = v.terkep.get(v.kicsi);
-  lista.push({ az: v.kicsi, letrehozo: kicsi, osszPont: 3, forras: 'szamolt', bizonytalan: 0, gyoker: null });
+  lista.push({ az: v.kicsi, sz: v.nagy, letrehozo: kicsi, osszPont: 3, forras: 'szamolt', bizonytalan: 0, gyoker: null });
   // (2) átírt létrehozó (más cím — az azonosító már nem a lenyomata)
   lista[0] = { ...lista[0], letrehozo: { ...lista[0].letrehozo, adat: { ...lista[0].letrehozo.adat, cim: 'ÁTÍRT' } } };
   // (3) a gyökér összege nem a bemondott össz-pont (felfújt szám)
@@ -140,7 +214,7 @@ proba('⛔ a HAMIS tételek tételenként elbuknak: más szülőjű, átírt lé
 proba('⛔ a FELFÚJT részfa-fa (a tartó hamis leveleket tesz bele) a mintákon lebukik', async () => {
   const v = await vilag();
   const karb = reszfaKarbantarto();
-  const { valasz, fak } = await fejlecekValasza({ allapot: v.allapot, kulcs: GYOKER_KULCS, n: 10, d: 0, karbantarto: karb,
+  const { valasz, fak } = await fejlecekValasza({ allapot: v.allapot, kulcs: GYOKER_KULCS, n: 10, karbantarto: karb,
     esemenyOlvas: olvaso(v.terkep) });
   // A csaló a NAGY fáját felfújja: a valódi levelek + egy hamis szerző (egy más entitásra szóló eseménnyel).
   const o = osszPontokSzamitasa(v.allapot.entitasok);
@@ -163,7 +237,7 @@ proba('a NEM TARTOTT entitás bemondott össz-ponttal, gyökér nélkül jön �
   const v = await vilag();
   // A KICSI szeletét „nem tartjuk": a pontjai ismeretlenek, a bemondása 99.
   v.allapot.entitasok.get(v.kicsi).pontokIsmeretlenek = true;
-  const { valasz } = await fejlecekValasza({ allapot: v.allapot, kulcs: GYOKER_KULCS, n: 10, d: 0,
+  const { valasz } = await fejlecekValasza({ allapot: v.allapot, kulcs: GYOKER_KULCS, n: 10,
     karbantarto: reszfaKarbantarto(), esemenyOlvas: olvaso(v.terkep), bemondasok: new Map([[v.kicsi, { osszPont: 99 }]]) });
   const t = valasz.lista.find((x) => x.az === v.kicsi);
   const e = await fejlecekEllenorzese({ valasz, kert: mintaKeres(valasz), mintak: {}, esemenyek: [] });
@@ -180,7 +254,7 @@ proba('a FELKERÜLT gyerek (a szülőjét a D14 elfelejtette) a nagyszülő fejl
     await anna.tesz('TudatpontRendezes', { entitas: c.azonosito, pont: 3 })];
   const allapot = await allapotSzamitasa(await tagokkal(es));
   const terkep = new Map(es.map((e) => [e.azonosito, e]));
-  const { valasz } = await fejlecekValasza({ allapot, kulcs: a.azonosito, n: 10, d: 0, karbantarto: reszfaKarbantarto(),
+  const { valasz } = await fejlecekValasza({ allapot, kulcs: a.azonosito, n: 10, karbantarto: reszfaKarbantarto(),
     esemenyOlvas: olvaso(terkep) });
   const e = await fejlecekEllenorzese({ valasz, kert: {}, mintak: {}, esemenyek: [] });
   const t = valasz.lista.find((x) => x.az === c.azonosito);
@@ -229,7 +303,7 @@ function kiszolgaloVilagbol(v, { vallalom = () => true, blob = null } = {}) {
   const karbantarto = reszfaKarbantarto();
   return {
     async fejlecek(k) {
-      const { valasz, fak } = await fejlecekValasza({ allapot: v.allapot, kulcs: k.kulcs, n: k.n, d: k.d, karbantarto,
+      const { valasz, fak } = await fejlecekValasza({ allapot: v.allapot, kulcs: k.kulcs, n: k.n, m: k.m, utan: k.utan, karbantarto,
         esemenyOlvas: olvaso(v.terkep) });
       return { valasz, mintak: (kert, megvan) => mintakValasza({ fak, kert, megvan, esemenyOlvas: olvaso(v.terkep) }) };
     },
@@ -251,12 +325,13 @@ proba('⭐⭐ a FEJLÉCEK a védett résen: a kérő a gyökerek UTÁN kér mint
     const tar = await esemenyTarNyitasa('proba', hely);
     const [, kapott] = await Promise.all([
       tartoResen(p.egyik, p.masikPort, tar, { kerelemKiszolgalo: kiszolgaloVilagbol(v) }),
-      kerelemUdpResen(p.masik, '127.0.0.1', p.egyikPort, 'proba', { fajta: 'fejlecek', kulcs: GYOKER_KULCS, n: 10, d: 1 },
+      kerelemUdpResen(p.masik, '127.0.0.1', p.egyikPort, 'proba', { fajta: 'fejlecek', kulcs: GYOKER_KULCS, n: 10, m: true },
         { mintaValaszto: (valasz) => mintaKeres(valasz) })
     ]);
     const e = await fejlecekEllenorzese({ valasz: kapott.valasz, kert: kapott.kert, mintak: kapott.mintak,
       esemenyek: kapott.esemenyek });
-    return kapott.kiszolgalta && kapott.valasz.lista[0].az === v.nagy && kapott.valasz.ag?.kulcs === v.nagy
+    return kapott.kiszolgalta && kapott.valasz.lista[0].az === v.nagy && kapott.valasz.lista[1]?.sz === v.nagy
+      && kapott.valasz.m === true
       && e.hibas === 0 && e.ellenorzott >= 1 && kapott.esemenyek.length >= 1;
   } finally {
     p.bezar();
@@ -369,6 +444,30 @@ proba('a lejárt függő kérelem a kész naplóba kerül (`lejart`), a friss ma
   ny = kerelemFelvetele(ny, { fajta: 'szelet', kulcs: K2 }, FUGGO_ELEVULES, 'friss').nyilvantartas;
   ny = lejartakKivetele(ny, FUGGO_ELEVULES + 1);
   return ny.fuggo.length === 1 && ny.fuggo[0].az === 'friss' && ny.kesz.some((k) => k.az === 'regi' && k.eredmeny === 'lejart');
+});
+
+proba('⭐ D102 (J4): egy társ azt a kérelmet viszi, amelyiknek a céllistáján ő áll a LEGELÖL; a már próbáltat kihagyja', () => {
+  const T = { hoszt: '10.0.0.7', port: 7000 };
+  const M = { hoszt: '10.0.0.8', port: 7000 };
+  let ny = ujNyilvantartas();
+  // a régebbi kérelemnél T csak a második cél, az újabbnál az első
+  ny = kerelemFelvetele(ny, { fajta: 'fejlecek', kulcs: 'R'.repeat(43), celok: [M, T] }, 1000, 'regebbi-kerelem').nyilvantartas;
+  ny = kerelemFelvetele(ny, { fajta: 'fejlecek', kulcs: 'S'.repeat(43), celok: [T, M] }, 2000, 'ujabb-kerelem').nyilvantartas;
+  const elso = tarshozIllo(ny, T.hoszt, T.port);
+  const kihagyva = tarshozIllo(ny, T.hoszt, T.port, (x) => x.az === 'ujabb-kerelem');
+  const masik = tarshozIllo(ny, M.hoszt, M.port);
+  return elso?.az === 'ujabb-kerelem' && kihagyva?.az === 'regebbi-kerelem' && masik?.az === 'regebbi-kerelem';
+});
+
+proba('⭐ D102: a FOLYTATÁS külön kérelem (ugyanaz a kulcs, más `utan`) — és a mélység megmarad a nyilvántartásban', () => {
+  const K = 'R'.repeat(43);
+  let ny = ujNyilvantartas();
+  ny = kerelemFelvetele(ny, { fajta: 'fejlecek', kulcs: K, m: true }, 1000, 'eleje-kerelem').nyilvantartas;
+  ny = kerelemFelvetele(ny, { fajta: 'fejlecek', kulcs: K, m: true, utan: { p: 5, az: 'Z'.repeat(43) } }, 2000, 'folyt-kerelem').nyilvantartas;
+  const ujra = kerelemFelvetele(ny, { fajta: 'fejlecek', kulcs: K, m: true }, 3000, 'harmadik');
+  const alak = nyilvantartasAlakja(JSON.parse(JSON.stringify(ny)));
+  return ny.fuggo.length === 2 && ujra.uj === false && alak.fuggo.every((x) => x.m === true)
+    && alak.fuggo.find((x) => x.az === 'folyt-kerelem')?.utan?.p === 5 && FUGGO_KORLAT === 64;
 });
 
 proba('melyik függő szól a társhoz: a pontos cím előbb, aztán az azonos IP (portváltás); idegen címre semmi', () => {

@@ -50,6 +50,9 @@ import { javaslatokSzamitasa, ALAP_KUSZOBOK } from './javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from './szerkesztesiVegrehajtas.js';
 import { szovegFeloldasa, szovegHivatkozasE } from '../esemeny/szovegDarab.js';
 import { osszPontokSzamitasa, gyerekJegyzek } from './osszPont.js';
+// ⭐ D102: a gyökér kulcsa a fejléc-tudásban (a kérelem válasza ez alatt jegyzi a gyökér gyerekszámát és levágását) — egy
+// forrásból, a csere rétegéből (csak az állandó; hálózatot nem hoz).
+import { GYOKER_KULCS as GYOKER_TUDAS_KULCS } from '../csere/szeletEgyeztetes.js';
 
 /**
  * ⭐ D72 (2026-09-26): a javaslatok változásaiban a SZÖVEG-HIVATKOZÁS feloldása — a felület
@@ -387,7 +390,8 @@ function kurzorDekodolas(kurzor) {
  * @param {number} [beallitas.darab]
  * @param {Object} [beallitas.nezet] - `ujPakliNezet()`, a kép megtartásához
  * @param {string} [beallitas.agazat] - ⭐ D101: csak ennek az ágnak az entitásai (a kártya menüjének Rendezése)
- * @returns {Promise<Object>} { kartyak, kovetkezoKurzor, horgony, ujdonsag, osszes, agazat, nemEldontheto, hianyzik }
+ * @param {Map} [beallitas.fejlecTudas] - ⭐ D102: a fejléc-tudás (a gyerekszám és a levágás határa — `koino.js`)
+ * @returns {Promise<Object>} { kartyak, kovetkezoKurzor, horgony, ujdonsag, osszes, agazat, nemEldontheto, hianyzik, biztos }
  */
 export async function pakliOldal(tar, koino, beallitas = {}) {
   const rendezes = beallitas.rendezes ?? 'sajatPont';
@@ -469,6 +473,23 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
   // amúgy is mellé teszi.*
   mind.sort((a, b) => sorrendben(a, b, irany));
 
+  // ⭐⭐ D102: A BEJÁRÓ — az „ágazati pont szerint csökkenő” sor BIZTOS ELŐTAGJA. Az össz-pont lefelé nem nő, tehát ez a
+  // sor a legjobb-először bejárás sorrendje: ameddig a következő elem nagyobb annál, amekkora egy még nem ismert csomópont
+  // legfeljebb lehet, a helyi rendezés a VÉGLEGES sorrend; utána hiányozhat valami — azt a bejáró elkéri (a tartó maga jár
+  // be — J1). A többi rendezés nem monoton: az a helyben ismert részből megy, kimondva (D101/M2).
+  let biztos = null;
+  if (rendezes === 'agazatiPont' && irany === 'csokkeno') {
+    const tartottak = typeof nezet.tartott === 'function' ? await nezet.tartott() : null;
+    const b = biztosElotag(mind.map((x) => x.azonosito), kep.entitasok, agazati, {
+      tartott: tartottak ? (az) => tartottak.has(az) : () => true,
+      gyokerTeljes: !tartottak,
+      tudas: beallitas.fejlecTudas ?? new Map(),
+      agazat
+    });
+    biztos = b.biztos;
+    for (const h of b.kerendo) if (hianyzik.length < MAX_DARAB && !hianyzik.some((x) => x.fajta === h.fajta && x.kulcs === h.kulcs)) hianyzik.push(h);
+  }
+
   // ----- A KURZOR UTÁNI RÉSZ -----
   //
   // ⭐ KULCS-ALAPÚ (nem sorszám-alapú) lapozás: „add azt, ami a legutóbbi elem UTÁN jön".
@@ -509,7 +530,9 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
     // ⭐ D101: az ág-szűrés (null: az egész koinó), és ami benne nem volt eldönthető
     agazat,
     nemEldontheto,
-    hianyzik
+    hianyzik,
+    // ⭐ D102: az ágazati pont szerint csökkenő sorban hány elem biztos (null: a többi rendezésnél nem értelmezett)
+    biztos
   };
 
   console.log('pakli.pakliOldal - VÉGE',
@@ -573,8 +596,9 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
 export const TESTVER_KORLAT = 50;
 export const BOGAR_KORLAT = 50;
 export const FELMENO_KORLAT = 64;
-/** A bogár elkérésének mélysége (a kérelem `d`-je — a kérelem korlátja 4). */
-export const BOGAR_MELYSEG = 4;
+/** ⭐ D102: a bejáró legfeljebb ennyi kérést javasol egy lekérdezésre (a lap kérés-korlátjával egyezik). */
+export const ELORE_KERES = 16;
+const GYOKER = '';                                     // a bejáró jelölése a gyökérre (a lap ''-ként kéri — `kerendo`)
 
 /**
  * Egy kártya forrás-jelölése (H2): a szeletet tartom-e, és az össz-pont honnan jön.
@@ -667,10 +691,10 @@ export async function pakliHierarchia(tar, koino, beallitas = {}) {
     let az = kivalasztott;
     let kerve = false;
     while (bogar.length < BOGAR_KORLAT) {
-      // ⭐ Az ELSŐ bizonytalan pontnál egy mély fejléc-kérés (a kérelem a legjobb ágat `d` szintig hozza — D92/6): a
-      // bogár többi szintjét ugyanaz a válasz fedi, nem kérünk szintenként.
+      // ⭐ Az ELSŐ bizonytalan pontnál egy MÉLY fejléc-kérés (D102: a tartó maga jár be legjobb-először — a bogár, a
+      // legerősebb gyerekek lánca, a válasz elején áll): a bogár többi szintjét ugyanaz a válasz fedi.
       if (!kerve && gyerekeiKerendok(az)) {
-        kerendo('fejlecek', az, 'a gyerekeit nem ismerem biztosan', { d: BOGAR_MELYSEG });
+        kerendo('fejlecek', az, 'a gyerekeit nem ismerem biztosan', { m: true });
         kerve = true;
       }
       const legjobb = (gyerekek.get(az) ?? []).filter((g) => !latott.has(g)).sort(erosseg)[0];
@@ -975,6 +999,90 @@ export async function hianyzoFelmenok(tar, koino, azonosito, beallitas = {}) {
       eemberEgyenleg: TUDATPONT_KERET - kiosztva
     }
   };
+}
+
+// ===================================
+// ⭐⭐ D102: A BEJÁRÓ — a biztos előtag és az előre kérés
+// ===================================
+//
+// A legjobb-először bejárás a KÉRŐ oldalán nem külön gépezet: a helyi tudás össz-pont szerint rendezett listája maga a
+// bejárás sorrendje — csak azt kell tudni, MEDDIG végleges. Egy csomópont gyerekeit akkor ismerem mind, ha tartom a
+// szeletét (a születések oda vannak bejelentve), vagy a fejléc-válasz bemondta a gyerekszámát (J2), és ennyit ismerek is.
+// Ha nem, egy még nem ismert gyereke legfeljebb ekkora lehet: az össz-pontja − a saját pontja (legalább 1 — D14) − az
+// ismert gyerekei össz-pontja; és ha egy válasz levágta, a levágás határánál sem nagyobb. A lista addig biztos, amíg a
+// következő elem e határok legnagyobbjánál NAGYOBB.
+//
+// ⭐ Az előre kérés: a blokkoló (kiadott, de nem teljes) csomópontok, aztán a biztos rész utáni következők — MÉLY
+// fejléc-kéréssel (a tartó maga jár be — J1), és ha egy korábbi válasz levágta, a FOLYTATÁSSAL (`utan`). ⛔ 9. szabály:
+// legfeljebb `ELORE_KERES` kérés egy lekérdezésre — a terhe az oldallal arányos, nem a koinóval.
+
+/**
+ * @param {Array<string>} lista - az azonosítók az ágazati pont szerint csökkenő sorrendben (az ág-szűrés után)
+ * @param {Map} entitasok
+ * @param {Map<string, number>} agazati - az ágazati (össz-)pontok
+ * @param {Object} b
+ * @param {Function} b.tartott - az → tartom-e a szeletét
+ * @param {boolean} [b.gyokerTeljes] - a gyökér minden gyerekét ismerem-e („mindent” mód)
+ * @param {Map} [b.tudas] - a fejléc-tudás: az (vagy `GYOKER_KULCS`) → { gy?, levag?: 'teljes' | { p, az } }
+ * @param {string|null} [b.agazat] - az ág gyökere (null: az egész koinó)
+ * @returns {{biztos: number, kerendo: Array<Object>}}
+ */
+export function biztosElotag(lista, entitasok, agazati, { tartott, gyokerTeljes = false, tudas = new Map(), agazat = null,
+  elore = ELORE_KERES } = {}) {
+  const gyerekek = gyerekJegyzek(entitasok);
+  const gyokerek = [...entitasok.values()].filter((e) => !e.szulo).map((e) => e.azonosito);
+  const ertek = (az) => agazati.get(az) ?? 0;
+  const ismertek = (az) => (az === GYOKER ? gyokerek : (gyerekek.get(az) ?? []));
+  const tudasa = (az) => tudas.get(az === GYOKER ? GYOKER_TUDAS_KULCS : az);
+  const teljes = (az) => {
+    if (az === GYOKER ? gyokerTeljes : tartott(az)) return true;
+    const t = tudasa(az);
+    return Number.isSafeInteger(t?.gy) && ismertek(az).length >= t.gy;
+  };
+  // Egy még nem ismert gyerek legfeljebb ekkora lehet.
+  const hatar = (az) => {
+    const t = tudasa(az);
+    let h = Infinity;
+    if (az !== GYOKER) {
+      const e = entitasok.get(az);
+      const sajat = e && !e.pontokIsmeretlenek ? Math.max(1, e.osszesPont) : 1;
+      if (ertek(az) > 0) h = Math.max(0, ertek(az) - sajat - ismertek(az).reduce((s, g) => s + ertek(g), 0));
+    } else if (t?.levag === 'teljes') {
+      h = 0;                                             // a gyökérnél a tartó teljes tudása a legjobb, amit tudhatunk (D19)
+    }
+    if (t?.levag && typeof t.levag === 'object' && Number.isSafeInteger(t.levag.p)) h = Math.min(h, t.levag.p);
+    return h;
+  };
+  const kerendo = [];
+  const kerj = (az, ok) => {
+    if (kerendo.length >= elore || kerendo.some((x) => x.kulcs === az)) return;
+    const lev = tudasa(az)?.levag;
+    kerendo.push({ fajta: 'fejlecek', kulcs: az, ok, m: true,
+      ...(lev && typeof lev === 'object' && ismertek(az).length > 0 ? { utan: { p: lev.p, az: lev.az } } : {}) });
+  };
+
+  // A kiindulás: az egész koinóban a gyökér (a még nem ismert legfelső szintűek), egy ágban maga az ág.
+  let korlat = 0;
+  if (!agazat) {
+    if (!teljes(GYOKER)) { korlat = hatar(GYOKER); kerj(GYOKER, 'a gyökér szintjét csak részben ismerem'); }
+  } else if (!entitasok.has(agazat)) {
+    korlat = Infinity;
+    kerj(agazat, 'az ágat még nem ismerem');
+  }
+  let biztos = 0;
+  for (const az of lista) {
+    if (!(ertek(az) > korlat)) break;
+    biztos++;
+    if (!teljes(az)) {
+      korlat = Math.max(korlat, hatar(az));
+      kerj(az, 'a gyerekeit nem ismerem mind (a sorrend innen bizonytalan)');
+    }
+  }
+  // Előre: a biztos rész utáni következők, amiknek a gyerekei hiányoznak (a sorban ők jönnek legközelebb).
+  for (let i = biztos; i < lista.length && kerendo.length < elore; i++) {
+    if (ertek(lista[i]) > 0 && !teljes(lista[i])) kerj(lista[i], 'előre: a sorban a következők közt');
+  }
+  return { biztos, kerendo };
 }
 
 // ===================================

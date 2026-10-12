@@ -7,8 +7,10 @@
 // ===== AZ ALAPKÉRDÉSEK (D92/6) =====
 //
 //   · SZELET    — X eseményei (a csere halmaza: a saját eseményei + a hozzá bejelentettek) — bárkitől (D84/1);
-//   · FEJLÉCEK  — X gyerekei össz-pont szerint, legfeljebb n, és (ha a válaszoló tartja) a legjobb ág d szintig;
-//                 a gyökér (`GYOKER_KULCS`) gyerekei a legfelső szintű entitások;
+//   · FEJLÉCEK  — X alatt a legjobb n csomópont össz-pont szerint — ⭐ D102 (J1): MÉLYEN (`m`) a válaszoló MAGA jár be
+//                 legjobb-először, amit tud (egy csomópont gyerekeit akkor ismeri, ha a szeletét tartja), egyébként csak
+//                 X gyerekei; a FOLYTATÁS (`utan`) a sorrend következő n eleme. A gyökér (`GYOKER_KULCS`) gyerekei a
+//                 legfelső szintű entitások;
 //   · TÖRZS     — X szöveg-darabja és fájljai — CSAK a vállalótól (D84/1).
 //
 // ⭐ A pakli első betöltése (D76/2) ezekből áll össze — a gyökér fejlécei, a legjobb ág, a kiválasztott törzse —, és a
@@ -20,6 +22,13 @@
 // válaszoló tartja a szeletet — ha nem, a bemondott össz-pontot mondja tovább, és ezt kimondja: `forras`). A kérdező
 // a gyökerek bemondása UTÁN kér mintákat (`mintaKeres`): a kiválasztott ágat k = 8-cal, a legfelső testvéreket k =
 // 4-gyel, a többi bemondás marad (62. mérés: egy 20 kártyás lap mind k = 8-cal ~100–400 KB volna).
+//
+// ⭐⭐ D102: A SORREND. Mivel az össz-pont lefelé nem nő (a gyerek sosem nagyobb a szülőjénél), a legjobb-először bejárás
+// sorrendje PONTOSAN az „össz-pont szerint csökkenő” sorrend (holtversenyben az azonosító szerint növekvő). A válasz ezért
+// egyetlen lista ebben a sorrendben; minden tétel megmondja a SZÜLŐJÉT (a válaszoló állapota szerint — a kérő ebből
+// illeszti a fába) és — ha a válaszoló tartja — a GYEREKSZÁMÁT (J2: a kérő ebből tudja, mikor ismeri egy csomópont összes
+// gyerekét). Ha a lista nem fogyott ki (`teljes: false`), a válaszoló tartott csomópontjainak a listából kimaradt gyerekei
+// mind az utolsó tétel UTÁN jönnének — a kérő ebből tud határt húzni (`pakli.js`, a bejáró).
 //
 // Használják: a `vonal.js` (a menet), a `koino.js` (a kiszolgálás és a kérés), a próbák.
 
@@ -38,8 +47,8 @@ export const KERELEM_FAJTAK = ['szelet', 'fejlecek', 'torzs'];
 
 /** Egy fejléc-listában legfeljebb ennyi kártya. */
 export const FEJLEC_KORLAT = 50;
-/** A legjobb ág legfeljebb ennyi szintig. */
-export const MELYSEG_KORLAT = 4;
+/** ⭐ D102: a válaszoló legfeljebb ennyi lépést tesz egy mély bejárásban (a folytatás elejéig is) — a terhe korlátos. */
+export const BEJARAS_LEPES_KORLAT = 5000;
 /** Egy minta-kérésben legfeljebb ennyi fejléc. */
 export const MINTAZOTT_FEJLEC_KORLAT = 8;
 /** Egy törzsben legfeljebb ennyi fájl-lenyomat. */
@@ -81,7 +90,23 @@ export function kerelemAlakja(u) {
   // címét SEMMI nem hordozza (D87/2).
   const tovabb = typeof u.az === 'string' && /^[A-Za-z0-9_-]{8,40}$/.test(u.az) && Number.isInteger(u.htl) && u.htl > 0
     ? { az: u.az, htl: Math.min(u.htl, UGRAS_MAX) } : {};
-  return { fajta: u.fajta, kulcs, n: egesz(u.n, 20, FEJLEC_KORLAT), d: egesz(u.d, 0, MELYSEG_KORLAT), ...tovabb };
+  // ⭐ D102: MÉLYEN (a válaszoló maga jár be) — és a FOLYTATÁS: a sorrend `utan` utáni elemei. ⛔ A rossz alakú folytatás
+  // nem „az eleje”: a kérdés hibás (különben a kérő ugyanazt az n-et kapná vissza újra és újra).
+  let utan;
+  if (u.utan !== undefined && u.utan !== null) {
+    if (typeof u.utan !== 'object' || !Number.isSafeInteger(u.utan.p) || u.utan.p < 0 || !azonositoAlaku(u.utan.az)) return null;
+    utan = { p: u.utan.p, az: u.utan.az };
+  }
+  return { fajta: u.fajta, kulcs, n: egesz(u.n, 20, FEJLEC_KORLAT), m: u.m === true || u.m === 1,
+    ...(utan ? { utan } : {}), ...tovabb };
+}
+
+/**
+ * ⭐ D102: a sorrend — „a előbb jön-e, mint b?” (össz-pont szerint csökkenő, holtversenyben az azonosító szerint növekvő).
+ * EGY helyen: a válaszoló bejárása, a kérdező ellenőrzése és a folytatás ugyanezt használja.
+ */
+export function elobbJon(a, b) {
+  return a.p > b.p || (a.p === b.p && a.az < b.az);
 }
 
 /** Az ugrás-számláló kiinduló (és legnagyobb) értéke — D76/4, D92/3. */
@@ -123,58 +148,107 @@ export const VALASZ_ESEMENY_KORLAT = 4000;
 // ===================================
 
 /**
- * ⭐ A FEJLÉCEK: X gyerekei össz-pont szerint (holtversenynél az azonosító), legfeljebb n — és a legjobb ág d
- * szintig (szintenként a legjobb kibontva, a testvérei fejlécként). A részfa-fák a mintákhoz megmaradnak (`fak`).
+ * Egy kis bináris kupac a sorrendhez (`elobbJon`) — a válaszoló bejárásához (egy válasz legfeljebb n tétel, de a
+ * határ — a gyerekek — nagy is lehet).
+ */
+function sorrendKupac() {
+  const a = [];
+  const elobb = (i, j) => elobbJon(a[i], a[j]);
+  return {
+    meret: () => a.length,
+    betesz(x) {
+      a.push(x);
+      let i = a.length - 1;
+      while (i > 0) { const p = (i - 1) >> 1; if (!elobb(i, p)) break; [a[i], a[p]] = [a[p], a[i]]; i = p; }
+    },
+    kivesz() {
+      const t = a[0], u = a.pop();
+      if (a.length) {
+        a[0] = u;
+        let i = 0;
+        for (;;) {
+          const l = 2 * i + 1, r = l + 1;
+          let m = i;
+          if (l < a.length && elobb(l, m)) m = l;
+          if (r < a.length && elobb(r, m)) m = r;
+          if (m === i) break;
+          [a[i], a[m]] = [a[m], a[i]]; i = m;
+        }
+      }
+      return t;
+    }
+  };
+}
+
+/**
+ * ⭐⭐ A FEJLÉCEK (D92/4, D102): X alatt a legjobb n csomópont a sorrendben (össz-pont szerint csökkenő) — MÉLYEN (`m`) a
+ * válaszoló maga jár be legjobb-először: egy csomópont gyerekeit akkor teszi a sorba, ha a szeletét TARTJA (a születések
+ * oda vannak bejelentve — különben nem ismeri mind); egyébként csak X gyerekei. A FOLYTATÁS (`utan`): a sorrend `utan`
+ * utáni elemei. Minden tétel: a szülője (`sz` — a válaszoló állapota szerint), a létrehozó esemény, az össz-pont, a
+ * részfa-fa gyökere (ha a válaszoló számolja), és ha tartja: a GYEREKSZÁMA (`gy`, J2). A részfa-fák a mintákhoz
+ * megmaradnak (`fak`).
+ *
+ * ⛔ 9. szabály: a lista legfeljebb n, a bejárás legfeljebb `BEJARAS_LEPES_KORLAT` lépés (ha eléri, a lista nem teljes —
+ * ahogy egy levágott lista).
  *
  * @param {Object} b
  * @param {Object} b.allapot - a válaszoló állapota (a két tárból)
  * @param {string} b.kulcs - X, vagy `GYOKER_KULCS`
  * @param {number} b.n
- * @param {number} b.d
+ * @param {boolean} [b.m] - mélyen (a válaszoló maga jár be)
+ * @param {{p: number, az: string}} [b.utan] - a folytatás
+ * @param {Function} [b.tartott] - az → tartom-e a szeletét (a `GYOKER_KULCS`-ra: az egész gyökeret tartom-e — „mindent”)
  * @param {Object} b.karbantarto - `reszfaKarbantarto()`
  * @param {Function} b.esemenyOlvas - async (azonosító) → esemény | null
  * @param {Map} [b.bemondasok] - a nem tartott entitások bemondott össz-pontja
  * @returns {Promise<{valasz: Object, fak: Map<string, Object>}>}
  */
-export async function fejlecekValasza({ allapot, kulcs, n, d, karbantarto, esemenyOlvas, bemondasok = new Map() }) {
+export async function fejlecekValasza({ allapot, kulcs, n, m = false, utan = null, tartott = () => true, karbantarto,
+  esemenyOlvas, bemondasok = new Map() }) {
   const osszPontok = osszPontokSzamitasa(allapot.entitasok, bemondasok);
   const gyerekek = gyerekJegyzek(allapot.entitasok);
   const fak = new Map();
+  const gyokerGyerekei = () => [...allapot.entitasok.values()].filter((e) => !e.szulo).map((e) => e.azonosito);
+  const gyerekeiOf = (k) => (k === GYOKER_KULCS ? gyokerGyerekei() : (gyerekek.get(k) ?? []));
 
-  const gyerekeiOf = (k) => (k === GYOKER_KULCS
-    ? [...allapot.entitasok.values()].filter((e) => !e.szulo).map((e) => e.azonosito)
-    : (gyerekek.get(k) ?? []));
-
-  const szint = async (k, melyseg) => {
-    const rendezett = gyerekeiOf(k)
-      .map((az) => ({ az, o: osszPontok.get(az) }))
-      .filter((x) => x.o)
-      .sort((a, b) => b.o.osszPont - a.o.osszPont || (a.az < b.az ? -1 : 1))
-      .slice(0, n);
-    const lista = [];
-    for (const { az, o } of rendezett) {
-      // ⚠️ A töredéknek nincs saját eseménye: a létrehozója a javaslat (D85/5).
-      const e = allapot.entitasok.get(az);
-      const letrehozo = await esemenyOlvas(e?.toredek ? e.toredek.csoport : az);
-      if (!letrehozo) continue;
-      let gyoker = null;
-      if (o.forras === 'szamolt') {
-        const fa = await karbantarto.fa(az, reszfaLevelei(az, allapot, osszPontok, gyerekek));
-        fak.set(az, fa);
-        gyoker = await reszfaGyokere(fa);
-      }
-      // ⚠️ A FELKERÜLT gyerek (a szülőjét a D14 elfelejtette — `szerkezetIgazitasa`): a létrehozója más szülőt mond.
-      // Ezt kimondjuk; a kérdező nem tudja ellenőrizni, hogy a régi szülő valóban elfelejtődött (D19).
-      const felkerult = letrehozoSzuloje(letrehozo, az) !== (k === GYOKER_KULCS ? null : k);
-      lista.push({ az, letrehozo, osszPont: o.osszPont, forras: o.forras, bizonytalan: o.bizonytalan, gyoker,
-        ...(felkerult ? { felkerult: true } : {}) });
+  const kupac = sorrendKupac();
+  const sorba = (k) => {
+    for (const az of gyerekeiOf(k)) {
+      const o = osszPontok.get(az);
+      if (o) kupac.betesz({ p: o.osszPont, az, o, sz: k === GYOKER_KULCS ? null : k });
     }
-    const valasz = { kulcs: k, lista };
-    // A legjobb ág: csak ha tartjuk (különben a gyerekeit sem ismerjük biztosan).
-    if (melyseg > 0 && lista.length && lista[0].forras === 'szamolt') valasz.ag = await szint(lista[0].az, melyseg - 1);
-    return valasz;
   };
-  return { valasz: await szint(kulcs, d), fak };
+  sorba(kulcs);
+
+  const lista = [];
+  let lepes = 0;
+  while (lista.length < n && kupac.meret() && lepes++ < BEJARAS_LEPES_KORLAT) {
+    const x = kupac.kivesz();
+    // ⭐ Mélyen: a tartott csomópont gyerekei is a sorba (a kimaradtak — a folytatás eleje előtt — is, hogy a mélyebbek
+    // a helyükre kerüljenek a sorrendben).
+    const tartja = tartott(x.az);
+    if (m && tartja) sorba(x.az);
+    if (utan && !elobbJon(utan, x)) continue;                   // a folytatás eleje előtt (vagy maga a határ)
+    // ⚠️ A töredéknek nincs saját eseménye: a létrehozója a javaslat (D85/5).
+    const e = allapot.entitasok.get(x.az);
+    const letrehozo = await esemenyOlvas(e?.toredek ? e.toredek.csoport : x.az);
+    if (!letrehozo) continue;
+    let gyoker = null;
+    if (x.o.forras === 'szamolt') {
+      const fa = await karbantarto.fa(x.az, reszfaLevelei(x.az, allapot, osszPontok, gyerekek));
+      fak.set(x.az, fa);
+      gyoker = await reszfaGyokere(fa);
+    }
+    // ⚠️ A FELKERÜLT gyerek (a szülőjét a D14 elfelejtette — `szerkezetIgazitasa`): a létrehozója más szülőt mond.
+    // Ezt kimondjuk; a kérdező nem tudja ellenőrizni, hogy a régi szülő valóban elfelejtődött (D19).
+    const felkerult = letrehozoSzuloje(letrehozo, x.az) !== x.sz;
+    lista.push({ az: x.az, sz: x.sz, letrehozo, osszPont: x.o.osszPont, forras: x.o.forras, bizonytalan: x.o.bizonytalan,
+      gyoker, ...(tartja ? { gy: gyerekeiOf(x.az).length } : {}), ...(felkerult ? { felkerult: true } : {}) });
+  }
+  const tartjaX = tartott(kulcs);
+  const valasz = { kulcs, m: !!m, lista, teljes: kupac.meret() === 0,
+    ...(tartjaX ? { gy: gyerekeiOf(kulcs).length } : {}), ...(utan ? { utan } : {}) };
+  return { valasz, fak };
 }
 
 /**
@@ -210,20 +284,17 @@ export async function mintakValasza({ fak, kert, esemenyOlvas, megvan = [] }) {
 // ===================================
 
 /**
- * Mely fejléceket ellenőrizzük, és hol (a gyökerek bemondása UTÁN — a kérdező véletlene). A kiválasztott (ha van)
- * k = `kivalasztott` mintával, a lista legfelső `testverDb` tételéből a többi k = `testver`-rel. Csak aminek van
- * gyökere (a bemondott össz-pont a tartójánál ellenőrizhető).
+ * Mely fejléceket ellenőrizzük, és hol (a gyökerek bemondása UTÁN — a kérdező véletlene). A kiválasztott (ha van; mély
+ * válasznál alapból a lista első tétele — a legjobb) k = `kivalasztott` mintával, a lista legfelső `testverDb` tételéből a
+ * többi k = `testver`-rel. Csak aminek van gyökere (a bemondott össz-pont a tartójánál ellenőrizhető).
  * @returns {Object} { [azonosító]: [helyek] }
  */
 export function mintaKeres(valasz, { kivalasztott = null, minta = MINTA_ALAP } = {}) {
   const kert = {};
-  const mind = [];
-  const bejar = (v) => { for (const t of v?.lista ?? []) mind.push(t); if (v?.ag) bejar(v.ag); };
-  bejar(valasz);
-  const kivalasztottak = new Set(kivalasztott ? [kivalasztott] : []);
-  if (!kivalasztott && valasz?.ag) kivalasztottak.add(valasz.lista?.[0]?.az);      // a legjobb ág a „kiválasztott”
+  const lista = Array.isArray(valasz?.lista) ? valasz.lista : [];
+  const kivalasztottak = new Set(kivalasztott ? [kivalasztott] : (valasz?.m && lista[0] ? [lista[0].az] : []));
   let testver = 0;
-  for (const t of mind) {
+  for (const t of lista) {
     if (Object.keys(kert).length >= MINTAZOTT_FEJLEC_KORLAT) break;
     if (!t?.gyoker || !osszegzesAlakja(t.gyoker, 1) || kert[t.az]) continue;
     if (kivalasztottak.has(t.az)) kert[t.az] = mintaHelyek(t.gyoker.o[0], minta.kivalasztott);
@@ -233,54 +304,68 @@ export function mintaKeres(valasz, { kivalasztott = null, minta = MINTA_ALAP } =
 }
 
 /**
- * ⭐ A FEJLÉCEK ELLENŐRZÉSE: minden tétel létrehozó eseménye hiteles, ő maga az entitás, és a szülője a kérdezett
- * kulcs (a gyökérnél: nincs szülője); a bemondott gyökér összege az össz-pont; a mintázott fejlécek mintái
- * átmennek (`fejlecEllenorzese`). ⛔ Egy hamis tétel nem dönti el a többit: tételenként mondjuk ki.
+ * ⭐ A FEJLÉCEK ELLENŐRZÉSE: minden tétel létrehozó eseménye hiteles, ő maga az entitás, a szülője az, amit a tétel mond
+ * (`sz`), és ez a kérdezett kulcs (a gyökérnél: nincs szülője) — mély válasznál egy KORÁBBI, rendben lévő tétel is lehet;
+ * a sorrend csökkenő (és a folytatásnál az `utan` után kezdődik); a gyerekszám egész; a bemondott gyökér összege az
+ * össz-pont; a mintázott fejlécek mintái átmennek (`fejlecEllenorzese`). ⛔ Egy hamis tétel nem dönti el a többit:
+ * tételenként mondjuk ki.
  *
+ * @param {Function} [b.ismert] - az → ismeri-e már a kérő (a folytatás szülője egy korábbi oldalon állhatott)
  * @returns {Promise<{tetelek: Map<string, Object>, hibas: number, ellenorzott: number}>}
  */
-export async function fejlecekEllenorzese({ valasz, kert, mintak = {}, esemenyek = [] }) {
+export async function fejlecekEllenorzese({ valasz, kert, mintak = {}, esemenyek = [], ismert = () => false }) {
   const terkep = new Map((Array.isArray(esemenyek) ? esemenyek : []).map((e) => [e?.azonosito, e]));
   const tetelek = new Map();
   let hibas = 0, ellenorzott = 0;
-
-  const bejar = async (v, kulcs, melyseg) => {
-    if (!v || typeof v !== 'object' || !Array.isArray(v.lista) || v.kulcs !== kulcs || melyseg > MELYSEG_KORLAT) return;
-    for (const t of v.lista.slice(0, FEJLEC_KORLAT)) {
-      const ered = await tetelEllenorzese(t, kulcs);
-      if (ered.rendben && kert?.[t.az]) {
-        const m = await fejlecEllenorzese({ azonosito: t.az, gyoker: t.gyoker, helyek: kert[t.az], mintak: mintak[t.az],
-          esemenyek: terkep });
-        if (!m.rendben) Object.assign(ered, { rendben: false, ok: m.ok });
-        else Object.assign(ered, { mintazott: true, minta: m });
-      }
-      if (!ered.rendben) hibas++;
-      else if (ered.mintazott) ellenorzott++;
-      if (azonositoAlaku(t?.az)) tetelek.set(t.az, ered);
+  if (!valasz || typeof valasz !== 'object' || !Array.isArray(valasz.lista)) return { tetelek, hibas, ellenorzott };
+  const kulcs = valasz.kulcs;
+  const kulcsSzulo = kulcs === GYOKER_KULCS ? null : kulcs;
+  const rendbenLevok = new Set();
+  let elozo = valasz.utan && Number.isSafeInteger(valasz.utan.p) && azonositoAlaku(valasz.utan.az) ? valasz.utan : null;
+  for (const t of valasz.lista.slice(0, FEJLEC_KORLAT)) {
+    // ⭐ D102: mélyen a szülő egy korábbi (rendben lévő) tétel is lehet — a folytatásnál egy KORÁBBI oldalé, amit a kérő
+    // már ismer (`ismert`): akkor a saját tudásából illeszti a fába.
+    const helyesSzulo = t?.sz === kulcsSzulo
+      || (valasz.m === true && typeof t?.sz === 'string' && (rendbenLevok.has(t.sz) || ismert(t.sz)));
+    let ered = await tetelEllenorzese(t, helyesSzulo);
+    // ⛔ D102: a sorrend csökkenő — a kérő a levágás határát erre építi (egy összekevert lista hamis teljességet mutatna).
+    if (ered.rendben && elozo && !elobbJon(elozo, { p: t.osszPont, az: t.az })) ered = { rendben: false, ok: 'a sorrend nem csökkenő' };
+    if (ered.rendben && t.gy !== undefined && !(Number.isSafeInteger(t.gy) && t.gy >= 0)) ered = { rendben: false, ok: 'hibás gyerekszám' };
+    if (ered.rendben && kert?.[t.az]) {
+      const m = await fejlecEllenorzese({ azonosito: t.az, gyoker: t.gyoker, helyek: kert[t.az], mintak: mintak[t.az],
+        esemenyek: terkep });
+      if (!m.rendben) Object.assign(ered, { rendben: false, ok: m.ok });
+      else Object.assign(ered, { mintazott: true, minta: m });
     }
-    if (v.ag && v.lista.length) await bejar(v.ag, v.lista[0].az, melyseg + 1);
-  };
-  await bejar(valasz, valasz?.kulcs, 0);
+    if (!ered.rendben) hibas++;
+    else {
+      rendbenLevok.add(t.az);
+      elozo = { p: t.osszPont, az: t.az };
+      if (ered.mintazott) ellenorzott++;
+    }
+    if (azonositoAlaku(t?.az)) tetelek.set(t.az, ered);
+  }
   return { tetelek, hibas, ellenorzott };
 }
 
-async function tetelEllenorzese(t, kulcs) {
+async function tetelEllenorzese(t, helyesSzulo) {
   const hiba = (ok) => ({ rendben: false, ok });
   if (!t || typeof t !== 'object' || !azonositoAlaku(t.az)) return hiba('hibás tétel');
   if (!Number.isSafeInteger(t.osszPont) || t.osszPont < 0) return hiba('hibás össz-pont');
+  if (!helyesSzulo) return hiba('a tétel nem a kérdezett entitás gyereke');
   const e = t.letrehozo;
   const szulo = letrehozoSzuloje(e, t.az);
   if (szulo === undefined) return hiba('a létrehozó esemény nem az entitásé');
   const al = await esemenyEllenorzese(e);
   if (!al.rendben) return hiba('a létrehozó esemény nem hiteles: ' + al.ok);
-  const helyen = kulcs === GYOKER_KULCS ? szulo === null : szulo === kulcs;
+  const helyen = szulo === t.sz;
   if (!helyen && t.felkerult !== true) return hiba('a tétel nem a kérdezett entitás gyereke');
   if (t.gyoker !== null && t.gyoker !== undefined) {
     if (!osszegzesAlakja(t.gyoker, 1)) return hiba('hibás gyökér');
     if (t.gyoker.o[0] !== t.osszPont) return hiba('a gyökér összege nem a bemondott össz-pont');
   }
-  return { rendben: true, osszPont: t.osszPont, forras: t.forras ?? null, gyokerVan: !!t.gyoker,
-    ...(helyen ? {} : { felkerult: true }) };
+  return { rendben: true, osszPont: t.osszPont, forras: t.forras ?? null, gyokerVan: !!t.gyoker, sz: t.sz ?? null,
+    ...(Number.isSafeInteger(t.gy) ? { gy: t.gy } : {}), ...(helyen ? {} : { felkerult: true }) };
 }
 
 // ===================================

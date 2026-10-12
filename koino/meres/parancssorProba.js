@@ -2437,6 +2437,79 @@ proba('⛔⛔ D101: a lapról jött küszöb a gondolat létrehozásakor és az 
 });
 
 // ===================================
+// ⭐⭐ D102: A BEJÁRÓ A LAPON — a tartó maga jár be, és a sor biztos előtagja
+// ===================================
+//
+// A egy háromszintű ágat ír (R → P → C), mindhármat tartja; B („alap” — a szigorú (b)) a cserén csak a gyökér-darabot
+// kapja (R születését). ⭐ Viselkedést mérünk: B lapjának lapos „ágazati pont” listája kimondja, hogy a sor nem biztos, és
+// MÉLY fejléc-kérést ír be (B lemezén: `kerelmek.json`, `m: true`); B őrjárata elhozza A-tól — a tartó maga jár be, tehát
+// EGY válasz hozza P-t és C-t is, a gyerekszámukkal —, és utána UGYANAZ a futó felület az egész sort biztosnak mutatja,
+// P-re külön kérés nélkül. Rontás: a tartó nem jár be mélyen → P vagy C nem jön meg egy válaszban; a gyerekszám elmarad →
+// a sor nem lesz biztos.
+proba('⭐⭐ D102: a bejáró a lapon — egy mély válasz hozza az ágat, és utána a sor biztos', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const alap = { KOINO_KISZOLGALAS: 'alap' };
+  const futok = [];
+  try {
+    await fut(a, 'koino', 'Bejáró', 'próba', 'nyilt', alap);
+    const aFel = await feluletet(a, 7497, alap);
+    futok.push(aFel.folyamat);
+    const uj = async (cim, szuloId = null, pont = 10) => {
+      const v = await aFel.hiv('/api/gondolat', { method: 'POST',
+        body: JSON.stringify({ cim, ...(szuloId ? { szuloId } : {}), kezdoTudatpont: pont }) });
+      return v.adat?.data?._id ?? null;
+    };
+    const R = await uj('R gyökér', null, 30);
+    const P = await uj('P közép', R, 20);
+    const C = await uj('C levél', P, 10);
+    aFel.folyamat.kill();
+    await varj(500);
+    if (!R || !P || !C) return false;
+    await fut(b, 'tars', '127.0.0.1', '7495', 'A', alap);
+    await csereKor(a, b, 7495, alap);
+    const bFel = await feluletet(b, 7498, alap);
+    futok.push(bFel.folyamat);
+    const lista = () => bFel.hiv('/api/pakli?rendezes=agazatiPont&irany=csokkeno&darab=20');
+    const elotte = await lista();
+    const kerelmek = JSON.parse(await readFile(join(b, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '{}'));
+    const figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', '7495'], { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
+    futok.push(figyelo);
+    await varj(1500);
+    const orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', '7496'], { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
+    futok.push(orjarat);
+    await varj(25000);
+    orjarat.kill();
+    figyelo.kill();
+    await varj(1000);
+    // ⭐ UGYANAZ a felület-folyamat kérdez, ami az őrjárat előtt is futott.
+    const utana = await lista();
+    const kesz = JSON.parse(await readFile(join(b, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '{}')).kesz ?? [];
+    const azok = (x) => (x.adat?.kartyak ?? []).map((k) => k.azonosito);
+    const ki = {
+      elotte: azok(elotte).includes(R) && !azok(elotte).includes(P) && elotte.adat.biztos === 0
+        && /még nem biztos/.test(elotte.adat.koinoMegjegyzes ?? ''),
+      melyenKert: (kerelmek.fuggo ?? []).some((x) => x.fajta === 'fejlecek' && x.m === true),
+      megjott: azok(utana).includes(P) && azok(utana).includes(C),
+      biztos: utana.adat.biztos === utana.adat.osszes && utana.adat.osszes >= 3,
+      // ⭐ a mély válasz P-t is hozta: P-re külön fejléc-kérés nem kellett
+      egyValasz: !kesz.some((x) => x.fajta === 'fejlecek' && x.kulcs === P)
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  bejáró — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+        + ' · ' + JSON.stringify({ elotte: { k: azok(elotte).length, b: elotte.adat.biztos, m: elotte.adat.koinoMegjegyzes, h: elotte.adat.hianyzik },
+          utana: { k: azok(utana).length, b: utana.adat.biztos, o: utana.adat.osszes, m: utana.adat.koinoMegjegyzes }, kesz }).slice(0, 900) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const f of futok) f.kill();
+    await varj(1000);
+    await rm(a, { recursive: true, force: true });
+    await rm(b, { recursive: true, force: true });
+  }
+});
+
+// ===================================
 // ⭐⭐ GONDOLAT LÉTREHOZÁSA A LAPRÓL (5.7)
 // ===================================
 //

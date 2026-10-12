@@ -808,3 +808,33 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     része a koinóban nem létezik (a bejelentkezés — D15) vagy nem lehet (az alsó sáv platform-szintű számai: hány e-ember,
     hány gondolat — 9. szabály), a meghívás és a profil pedig P2P-ben más út (saját átvizsgálás) · az I. csoport
     építésekor, Claude · `foMenu.js`, `index.html`.
+112. **2026-10-11 · a fejléc-válasz alakja (D102, J1)** → **egyetlen lista a sorrendben (össz-pont szerint csökkenő, a
+    holtverseny az azonosító), minden tétel a szülőjével (`sz`) — a szintenként fészkelt `ag` helyett; az egy szintű mód
+    (`m` nélkül) megmarad** · mert az össz-pont lefelé nem nő, tehát a legjobb-először bejárás sorrendje pontosan ez a
+    sorrend — egy lista, egy összehasonlítás (`elobbJon`), és a folytatás (`utan`) természetes; a ház testvér-sora és
+    gyökér-szintje egy szintet kér (a mély válasz a testvéreket kiszoríthatná) · a bejáró építésekor, Claude · `kerelem.js`.
+113. **2026-10-11 · a bejáró a kérő oldalán (D102)** → **nem külön gépezet: a helyi tudás rendezett listájának BIZTOS
+    ELŐTAGJA (`biztosElotag`) — egy csomópont gyerekei teljesek, ha tartom, vagy a bemondott gyerekszámnyit ismerem; ha
+    nem, a még nem ismert gyerek legfeljebb az össz-pont − a saját pont (legalább 1, D14) − az ismert gyerekek, és a
+    levágásnál sem nagyobb** · mert a sorrend már a helyi listában van, csak a végleges hossza a kérdés; a „tömeg-határ” a
+    gyerekszám nélkül is sokszor pontos (a 74. mérés G-je ezt nem használta ki) · a bejáró építésekor, Claude · `pakli.js`.
+114. **2026-10-11 · a folytatás szülője (D102)** → **a folytatás egy tétele egy KORÁBBI oldal tétele alá kerülhet: az
+    ellenőrzés elfogadja, ha a kérő már ismeri a szülőt (`ismert`)** · mert különben a folytatás minden mély tétele (és
+    láncban a gyerekei) elbukna — a modul-próba mérte · a bejáró építésekor, Claude · `kerelem.js`, `koino.js`.
+115. **2026-10-11 · hol a gyerekszám és a levágás (D102, J2)** → **egy külön helyi feljegyzésben (`fejlectudas.json`), nem
+    a bemondott össz-pontok közt** · mert a bemondás egy entitás pontszáma, ez pedig egy csomópont gyerekeiről szóló tudás
+    (a gyökérről is, aminek nincs pontszáma); ugyanúgy helyi, korlátos, nem esemény · a bejáró építésekor, Claude ·
+    `koino.js` (`fejlecTudas`).
+116. **2026-10-11 · a gyökér biztossága a szigorú (b) alatt (D102)** → **egy tartó kifogyott (teljes) gyökér-válasza a
+    legjobb, amit tudhatunk — a határ 0; a levágott válasznál a levágás; válasz nélkül semmi nem biztos** · mert az
+    „alap” készülék a gyökeret csak darabjaiban ismeri, globális teljességet semmi nem ígérhet (D19 — a lap kimondja) · a
+    bejáró építésekor, Claude · `pakli.js`.
+117. **2026-10-11 · a J4 megvalósítása** → **a raj tartói az ágból tartott (jegyzett) szeleteik száma szerint állnak a
+    céllista elején, az induló címek utánuk; egy társ azt a kérelmet viszi, amelyiknek a céllistáján ő áll a legelöl
+    (holtversenyben a legrégebbit, a már próbáltat kihagyva)** · mert egy körben minden cél sorra kerül, tehát a „kitől
+    előre” a társankénti választásban dől el; az ág-számlálás korlátos (500 csomópont) · a bejáró építésekor, Claude ·
+    `koino.js` (`agSzeleteiTartonkent`), `fuggoKerelmek.js` (`tarshozIllo`).
+118. **2026-10-11 · a lapos nézet a lapon (D102)** → **amíg a bejáró kérései úton vannak, a lapos lista is csendben
+    újrakérdez (4 → 60 mp), és csak akkor rajzol újra, ha az első oldal vagy a biztos előtag változott** · mert eddig csak a
+    fa-szelet kérdezett újra; a lapos „ágazati” lista különben a beérkezett választ soha nem mutatná · a bejáró építésekor,
+    Claude · `koinoPakli.js`, `kartyaAdat.js`.

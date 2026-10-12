@@ -1520,7 +1520,7 @@ export async function szeletKapcsolaton(tar, koino, kapcsolat, entitas, tovabb =
  *
  * @param {Object} kapcsolat
  * @param {string} koino
- * @param {{fajta: string, kulcs: string, n?: number, d?: number}} kerelem
+ * @param {{fajta: string, kulcs: string, n?: number, m?: boolean, utan?: {p: number, az: string}}} kerelem
  * @param {Object} [beallitas] - `mintaValaszto(valasz) → kert`, `megvan` (a már meglévő esemény-azonosítók),
  *        `blob` és `korlat` (a törzshöz)
  * @returns {Promise<Object>} fejléceknél { valasz, kert, mintak, esemenyek }; törzsnél { lenyomatok, fajlok }
@@ -1528,7 +1528,9 @@ export async function szeletKapcsolaton(tar, koino, kapcsolat, entitas, tovabb =
 export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = {}) {
   const sor = uzenetSor(kapcsolat);
   const kuld = (u) => kapcsolat.write(JSON.stringify(u) + '\n');
-  kuld({ uzenet: 'KERELEM', koino, fajta: kerelem.fajta, kulcs: kerelem.kulcs, n: kerelem.n, d: kerelem.d,
+  // ⭐ D102: a mélység (`m` — a válaszoló maga jár be) és a folytatás (`utan`) a `d` (a legjobb ág) helyett.
+  kuld({ uzenet: 'KERELEM', koino, fajta: kerelem.fajta, kulcs: kerelem.kulcs, n: kerelem.n, m: kerelem.m === true,
+    ...(kerelem.utan ? { utan: kerelem.utan } : {}),
     ...(kerelem.az ? { az: kerelem.az, htl: kerelem.htl } : {}),
     ...(beallitas.ki ? { ki: beallitas.ki } : {}) });
   // A NYITAS-t (és bármi mást) átlépjük, amíg a válasz meg nem jön. ⭐ D93/3: a KELL-re a tagsági csomagunk megy.

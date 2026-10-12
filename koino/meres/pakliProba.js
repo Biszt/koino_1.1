@@ -19,8 +19,9 @@ import {
   pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja,
   entitasReszletei, entitasKuszobei, hianyzoFelmenok, MAX_DARAB, RENDEZESEK, kuszobokBefele,
   pakliHierarchia, TESTVER_KORLAT,
-  agHelyzete, sajatHozzarendelesek, HOZZARENDELES_KORLAT
+  agHelyzete, sajatHozzarendelesek, HOZZARENDELES_KORLAT, biztosElotag, ELORE_KERES
 } from '../js/allapot/pakli.js';
+import { GYOKER_KULCS } from '../js/csere/szeletEgyeztetes.js';
 
 import { ALAP_KUSZOBOK } from '../js/allapot/javaslatSzamitas.js';
 
@@ -754,9 +755,9 @@ proba('⭐⭐ A SZIGORÚ (b) ALATT: amit nem tartok, annak a gyerekeit és a gy�
   const csakA = new Set([f.A]);
   const h = await pakliHierarchia(f.tar, KOINO, { entitas: f.A, tartott: (x) => csakA.has(x), gyokerTeljes: false });
   const kerendo = (fajta, kulcs) => h.hianyzik.some((x) => x.fajta === fajta && x.kulcs === kulcs);
-  // ⭐ a bogárnál csak az ELSŐ bizonytalan szint kérendő, mélyen (a kérelem a legjobb ágat d szintig hozza)
+  // ⭐ a bogárnál csak az ELSŐ bizonytalan szint kérendő, MÉLYEN (D102: a tartó maga jár be legjobb-először)
   const a1 = h.hianyzik.find((x) => x.fajta === 'fejlecek' && x.kulcs === f.A1);
-  return kerendo('fejlecek', '') && a1?.d === 4 && !kerendo('fejlecek', f.A11) && !kerendo('fejlecek', f.A)
+  return kerendo('fejlecek', '') && a1?.m === true && !kerendo('fejlecek', f.A11) && !kerendo('fejlecek', f.A)
     && h.pakli[0].tartom === true && h.pakli[1].tartom === false;
 });
 
@@ -1382,6 +1383,70 @@ proba('⭐⭐ D101: a lapos rendezés ÁG-SZŰRVE (a Rendezés modál) — csak 
     && a.nemEldontheto === 1 && a.hianyzik[0]?.kulcs === szulo.azonosito
     && egesz.agazat === null && egesz.nemEldontheto === 0 && egesz.kartyak.length === 6
     && azok(lapok) === azok(a.kartyak);
+});
+
+// ===================================
+// ⭐⭐ D102: A BEJÁRÓ — az ágazati pont szerint csökkenő sor biztos előtagja
+// ===================================
+
+/** Egy kis, kézzel írt entitás-térkép a bejáróhoz: { az: [szülő, saját pont, ágazati pont] }. */
+function terkepe(leiras) {
+  const entitasok = new Map();
+  const agazati = new Map();
+  for (const [az, [szulo, sajat, agaz]] of Object.entries(leiras)) {
+    entitasok.set(az, { azonosito: az, szulo, osszesPont: sajat, pontokIsmeretlenek: sajat === null });
+    agazati.set(az, agaz);
+  }
+  const lista = [...agazati.keys()].sort((a, b) => agazati.get(b) - agazati.get(a) || (a < b ? -1 : 1));
+  return { entitasok, agazati, lista };
+}
+
+proba('⭐⭐ D102: MINDENT tartva az egész sor biztos — semmit nem kér', () => {
+  const { entitasok, agazati, lista } = terkepe({ A: [null, 10, 30], A1: ['A', 15, 15], A2: ['A', 5, 5], B: [null, 8, 8] });
+  const b = biztosElotag(lista, entitasok, agazati, { tartott: () => true, gyokerTeljes: true });
+  return b.biztos === 4 && b.kerendo.length === 0;
+});
+
+proba('⭐⭐ D102: a SZIGORÚ (b) alatt a gyökér szintje nem ismert — semmi nem biztos, és a gyökeret (mélyen) kéri', () => {
+  const { entitasok, agazati, lista } = terkepe({ A: [null, 10, 30], A1: ['A', 15, 15], A2: ['A', 5, 5] });
+  const b = biztosElotag(lista, entitasok, agazati, { tartott: () => true, gyokerTeljes: false });
+  return b.biztos === 0 && b.kerendo[0]?.kulcs === '' && b.kerendo[0].m === true;
+});
+
+proba('⭐⭐ D102: a gyökér LEVÁGÁSA és a nem tartott csomópont HATÁRA dönti el a biztos előtagot', () => {
+  // A (30) nem tartott — a gyerekei közül csak A1 (15) ismert, a saját pontja 10: egy még nem ismert gyereke legfeljebb
+  // 30 − 10 − 15 = 5 lehet. A gyökér egy válaszban 6-nál levágva. → A, A1 biztos; B (8) is (8 > 6 és 8 > 5); C (5) nem.
+  const { entitasok, agazati, lista } = terkepe({ A: [null, 10, 30], A1: ['A', 15, 15], B: [null, 8, 8], C: [null, 5, 5] });
+  const tudas = new Map([[GYOKER_KULCS, { levag: { p: 6, az: 'Z'.repeat(43) } }]]);
+  const b = biztosElotag(lista, entitasok, agazati, { tartott: (az) => az !== 'A', tudas });
+  const kertA = b.kerendo.find((x) => x.kulcs === 'A');
+  const gyoker = b.kerendo.find((x) => x.kulcs === '');
+  return b.biztos === 3 && kertA?.m === true && gyoker?.utan?.p === 6;
+});
+
+proba('⭐ D102 (J2): ha a fejléc bemondta a gyerekszámot, és ennyit ismerek, a csomópont TELJES — nem blokkol, nem kér', () => {
+  // A (30, saját 5): az ismert gyerekei 15 + 5 — egy harmadik gyerek legfeljebb 5 lehetne. Ha a fejléc 2 gyereket mondott,
+  // A teljes (a sor végig biztos); ha 3-at, A2 (5) már nem biztos (egy még nem ismert, 5 pontos testvér elé kerülhetne).
+  const { entitasok, agazati, lista } = terkepe({ A: [null, 5, 30], A1: ['A', 15, 15], A2: ['A', 5, 5], B: [null, 3, 3] });
+  const tudas = new Map([['A', { gy: 2 }], [GYOKER_KULCS, { levag: 'teljes' }]]);
+  const b = biztosElotag(lista, entitasok, agazati, { tartott: (az) => az !== 'A', tudas });
+  const kevesebb = biztosElotag(lista, entitasok, agazati, { tartott: (az) => az !== 'A',
+    tudas: new Map([['A', { gy: 3 }], [GYOKER_KULCS, { levag: 'teljes' }]]) });
+  return b.biztos === 4 && !b.kerendo.some((x) => x.kulcs === 'A')
+    && kevesebb.kerendo.some((x) => x.kulcs === 'A') && kevesebb.biztos === 2;
+});
+
+proba('⭐ D102: ág-szűrve az ág maga a kiindulás; a még nem ismert ágat kéri; az előre kérés korlátos', () => {
+  const leiras = { X: [null, 1, 200] };
+  for (let i = 0; i < 40; i++) leiras['Y' + String(i).padStart(2, '0')] = ['X', null, 100 - i];
+  const { entitasok, agazati, lista } = terkepe(leiras);
+  const ag = lista.filter((az) => az !== 'X' || true);
+  const b = biztosElotag(ag, entitasok, agazati, { tartott: () => false, agazat: 'X',
+    tudas: new Map([['X', { gy: 40 }]]) });
+  const ismeretlen = biztosElotag([], entitasok, agazati, { tartott: () => false, agazat: 'Q'.repeat(43) });
+  // X teljes (40 gyerek, mind ismert), a gyerekei nem tartottak és nem teljesek: az első blokkol, a többit előre kéri
+  return b.biztos === 2 && b.kerendo.length === ELORE_KERES && b.kerendo[0].kulcs === 'Y00'
+    && ismeretlen.biztos === 0 && ismeretlen.kerendo[0]?.kulcs === 'Q'.repeat(43);
 });
 
 proba('⭐ D101: a lista felülről korlátos (a prototípus 100-a), és megmondja, hány van összesen', async () => {

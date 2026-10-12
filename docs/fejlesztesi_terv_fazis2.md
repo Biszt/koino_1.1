@@ -5203,6 +5203,46 @@ készülékkel, „alap” módban — a hiányzó felmenőt B lemezén kéri; a
 rontással. Böngészőben kipróbálva: a fő menü, a Tudatpontok, az új kategória (feltöltött ikonnal), a kártya-menü
 Rendezése és Tudatpontok-ja.
 
+### D102. A BEJÁRÓ: A TARTÓ MAGA JÁR BE (2026-10-11, Csaba: „minden javaslatodat elfogadom, mehetünk tovább”)
+
+**Amiből jött:** a 74. mérés (`bejaroMeres.js`) és a [`modalok_atvizsgalas.md`](modalok_atvizsgalas.md) 6. szakasza: egy friss
+készüléken a mai menettel egy oldal 80–114 perc — a kérésenkénti késés (a NAT-os tartó ~20 perces kopogtatása) × a sorrend
+szintjei; nem a koinó méretétől függ.
+
+#### A DÖNTÉS
+
+1. ⭐ **J1 (A) — a tartó maga jár be legjobb-először, amit tud:** a fejléc-kérdés X alatt a legjobb n csomópontot adja a
+   saját tudásából (egy csomópont gyerekeit akkor ismeri, ha a szeletét tartja), egyetlen, össz-pont szerint csökkenő
+   listában, mindegyiket a szülőjével. A mai `d` (a legjobb ág d szintig) ennek szűkebb esete — ezt váltja fel.
+2. ⭐ **J2 (A) — a gyerekszám a fejlécben** (a tartó bemondja, ha tartja a csomópontot — a levélre nem kell kérni), és a
+   függő-korlát 64 (helyi paraméter).
+3. **J3 (A) — nincs több kérelem egy kapcsolaton.** ⚠️ **ÚJRA NYITVA** (a 74. mérés pótlása, még aznap): véletlen tartókkal
+   valóban nem számít, de ha EGYETLEN jól ellátott tartó kapja a kérelmeket (a kis, családi koinó), a kapcsolatonkénti 1
+   kérelem mindent sorba állít (egy 200-as Struktúra 2–3 perc helyett 46–85 perc). Csabánál.
+4. ⭐ **J4 (A) — a célválasztás:** X ismert tartói közül előre az, amelyik X ágából a legtöbbet tartja (a raj-jegyzékből).
+5. (M1-ből) **A folytatás** (`utan`: az utolsó össz-pont és azonosító) — a sorrend következő n eleme.
+
+#### ✅ MEGÉPÜLT — ② a bejáró (2026-10-11)
+
+⭐ **A tartó oldala** (`kerelem.js` `fejlecekValasza`): a fejléc-kérdés `m`-mel (mélyen) és `utan`-nal (a folytatás); a
+válasz EGY lista a sorrendben (össz-pont szerint csökkenő, holtversenyben az azonosító szerint — `elobbJon`, egy helyen),
+minden tétel a szülőjével (`sz`), és ha a válaszoló tartja, a gyerekszámával (`gy`); `teljes` — kifogyott-e a bejárás. A
+bejárás korlátos (`BEJARAS_LEPES_KORLAT`). Egy szinten (m nélkül) a ház testvér-sora és gyökér-szintje kéri. ⭐ **Az
+ellenőrzés** (`fejlecekEllenorzese`): a szülő a kérdezett, egy korábbi rendben lévő tétel, vagy (a folytatásnál) amit a
+kérő már ismer (`ismert`); a sorrend csökkenő; a gyerekszám egész. ⭐ **A kérő oldala** (`pakli.js` `biztosElotag`): a
+bejáró NEM külön gépezet — a helyi tudás ágazati pont szerinti listája maga a bejárás sorrendje, csak azt kell tudni,
+meddig végleges: egy csomópont gyerekei teljesek, ha tartom a szeletét, vagy a bemondott gyerekszámnyit ismerem; ha nem,
+egy még nem ismert gyereke legfeljebb az össz-pontja − a saját pontja − az ismert gyerekei össz-pontja, és a levágásnál
+sem nagyobb. A blokkolókat és a biztos rész utáni következőket mélyen (és ha kell, folytatással) elkéri, legfeljebb 16-ot
+egy lekérdezésre. A gyerekszám és a levágás határa a kérőnél egy külön helyi feljegyzésben (`fejlectudas.json`, `koino.js`
+`fejlecTudas`). ⭐ **A lap**: az „ágazati pont” lapos listája kimondja, meddig biztos (`biztos`, `koinoMegjegyzes`), és
+amíg van mit várni, csendben újrakérdez (`koinoPakli.js`). ⭐ **J2**: a függők korlátja 64, a lap egy lekérdezésre 16-ot
+kér. ⭐ **J4**: a raj tartói az ágból tartott szeleteik száma szerint állnak elöl (az induló címek utánuk), és egy társ azt
+a kérelmet viszi, amelyiknek a céllistáján ő áll a legelöl (`tarshozIllo`). Elágazás 112–118. Próbák: a kérelem
+(`kerelemProba.js` — a mély bejárás, a folytatás, a gyerekszám, a hamis sorrend / szülő / gyerekszám, a J4, a folytatás a
+nyilvántartásban), a bejáró (`pakliProba.js`), és a bekötés (`parancssorProba.js`: két készülék, „alap”, egy mély válasz
+hozza az ágat, és utána a sor biztos — P-re külön kérés nélkül) — mind rontással.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

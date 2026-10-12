@@ -305,7 +305,10 @@ const VALTOZATOK = [
   { nev: 'E — D + a tartó mélyen felel (amit tart, ≤4 szint)', Q: 64, C: 64, gyerekszam: true, mely: true },
   { nev: 'F — egy „mindent” tartó a kötések között', Q: 64, C: 64, gyerekszam: true, mindent: true },
   { nev: 'G — D + a tartó maga jár be (a legjobb 50, amit tud)', Q: 64, C: 64, gyerekszam: true, legjobbK: true },
-  { nev: 'H — F + G (a „mindent” tartó maga jár be)', Q: 64, C: 64, gyerekszam: true, mindent: true, legjobbK: true }
+  { nev: 'H — F + G (a „mindent” tartó maga jár be)', Q: 64, C: 64, gyerekszam: true, mindent: true, legjobbK: true },
+  // ⚠️ A J3 (nincs több kérelem egy kapcsolaton) próbája ott, ahol számíthat: egyetlen jól ellátott tartó kapja a kérelmeket.
+  { nev: 'H1 — H, de kapcsolatonként 1 kérelem (Q=1)', Q: 1, C: 64, gyerekszam: true, mindent: true, legjobbK: true },
+  { nev: 'G1 — G, de kapcsolatonként 1 kérelem (Q=1)', Q: 1, C: 64, gyerekszam: true, legjobbK: true }
 ];
 const CELOK = [20, 200, 500, 2000];
 const ISMETLES = 3;

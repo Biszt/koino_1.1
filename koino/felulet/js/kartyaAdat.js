@@ -272,7 +272,9 @@ export function prototipusUtvonala(utvonal) {
       jel: (v) => ({ fajta: 'lapos', kovetkezoKurzor: v?.kovetkezoKurzor ?? null, osszes: v?.osszes ?? 0,
         darab: (v?.kartyak ?? []).length, rendezes: v?.rendezes, irany: v?.irany,
         ujdonsag: v?.ujdonsag === true, ujEsemenyek: v?.ujEsemenyek ?? 0,
-        agazat: v?.agazat ?? null, nemEldontheto: v?.nemEldontheto ?? 0, koinoMegjegyzes: v?.koinoMegjegyzes ?? null }),
+        agazat: v?.agazat ?? null, nemEldontheto: v?.nemEldontheto ?? 0, koinoMegjegyzes: v?.koinoMegjegyzes ?? null,
+        // ⭐ D102: a bejáró — a biztos előtag, és hogy van-e még mit várni (a lap ettől kérdez újra a lapos nézetben is)
+        biztos: Number.isInteger(v?.biztos) ? v.biztos : null, betoltes: v?.betoltes === true, kitolKerni: v?.kitolKerni ?? 0 }),
       horgonyt: true
     };
   }

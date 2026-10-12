@@ -1476,15 +1476,22 @@ async function tartottSzeleteim() {
  * G tartói (a raj, készülék-azonosítóval; ha `dht`, a DHT hirdetői is) és az induló címek; a kopogtató témák (a készüléké, a
  * szeleté vagy a gyökér darabjaié). ⛔ Önmagunkat nem kérdezzük. ⭐ A felület `dht: false`-szal hívja: a DHT-n keresni és
  * jelentkezni az őrjárat címjegyzék-köre úgyis megteszi (új függőnél azonnal) — egy lapletöltés ne kerüljön KB-okba.
- * @param {{fajta: string, kulcs: string, n?: number, d?: number}} k
+ * @param {{fajta: string, kulcs: string, n?: number, m?: boolean, utan?: {p: number, az: string}}} k
  * @param {{cimek?: Array<Object>, dht?: boolean}} [b]
  * @returns {Promise<{r: Object, kopogtatok: Array<Object>, kp: number}>}
  */
 async function fuggoKerelemFelvetele(k, { cimek = null, dht = false } = {}) {
-  const celok = [...(cimek ?? tarsakSorrendje(await tarsakTarolo().olvas()).map((c) => ({ hoszt: c.hoszt, port: Number(c.port) })))];
+  const induloCelok = [...(cimek ?? tarsakSorrendje(await tarsakTarolo().olvas()).map((c) => ({ hoszt: c.hoszt, port: Number(c.port) })))];
+  const celok = [];
   const kopogtatok = [];
   if (k.kulcs !== GYOKER_KULCS) {
-    for (const c of szeletCimei(await szeletJegyzekTarolo().olvas(), k.kulcs)) {
+    // ⭐ D102 (J4): X tartói közül ELŐRE az, aki X ágából a legtöbbet tartja (a raj-jegyzékből) — az ő legjobb-először
+    // válasza hozza a legtöbb szintet. A rang a lista sorrendje (`tarshozIllo` ebből választ).
+    const jegyzek = await szeletJegyzekTarolo().olvas();
+    const tartoi = szeletCimei(jegyzek, k.kulcs);
+    const agban = await agSzeleteiTartonkent(jegyzek, k.kulcs, tartoi);
+    tartoi.sort((a, b) => (agban.get(b.alairo) ?? 0) - (agban.get(a.alairo) ?? 0));
+    for (const c of tartoi) {
       celok.push({ hoszt: c.hoszt, port: Number(c.port), ...(c.alairo ? { alairo: c.alairo } : {}) });
       if (c.alairo) kopogtatok.push({ fajta: 'keszulek', kulcs: c.alairo });
     }
@@ -1507,15 +1514,44 @@ async function fuggoKerelemFelvetele(k, { cimek = null, dht = false } = {}) {
       }
     }
   }
+  // Az induló címek a raj tartói UTÁN (a raj tartója biztosan tartja X-et; az induló cím nem feltétlenül).
+  celok.push(...induloCelok);
   // ⛔ ÖNMAGUNKAT NEM KÉRDEZZÜK: a saját gyökér-darabunkat mi is hirdetjük, a DHT a mi címünket is visszaadja
   // (a gép címe + a futó kapu portja — a 42. mérés tanulsága: a készülék önmagát hívogatta).
   const sajatGep = await sajatOsszesCim();
   const kp = await kapuPortja();
   const idegenCelok = celok.filter((c) => !(sajatCimE(c.hoszt, sajatGep) && Number(c.port) === kp));
-  const r = kerelemFelvetele(await kerelmekOlvasasa(), { fajta: k.fajta, kulcs: k.kulcs, n: k.n ?? 20, d: k.d ?? 0,
-    celok: idegenCelok, kopogtatok }, Date.now(), randomUUID());
+  const r = kerelemFelvetele(await kerelmekOlvasasa(), { fajta: k.fajta, kulcs: k.kulcs, n: k.n ?? 20, m: k.m === true,
+    ...(k.utan ? { utan: k.utan } : {}), celok: idegenCelok, kopogtatok }, Date.now(), randomUUID());
   await kerelmekIrasa(r.nyilvantartas);
   return { r, kopogtatok, kp };
+}
+
+/**
+ * ⭐ D102 (J4): X tartói közül ki mennyit tart X ÁGÁBÓL — a raj-jegyzék szerint, az ág ismert szeletein (X és a helyben
+ * ismert leszármazottai, legfeljebb `AG_SZAMLALAS_KORLAT` — a 9. szabály: a terhe korlátos).
+ * @returns {Promise<Map<string, number>>} tábla-aláíró → hány ág-szeletnél tartóként jegyezve
+ */
+const AG_SZAMLALAS_KORLAT = 500;
+async function agSzeleteiTartonkent(jegyzek, kulcs, tartoi) {
+  const ki = new Map();
+  const keresett = new Set(tartoi.map((c) => c.alairo).filter(Boolean));
+  if (!keresett.size) return ki;
+  let entitasok;
+  try { entitasok = (await kepetKeszit()).allapot.entitasok; } catch { return ki; }
+  const gyerekek = new Map();
+  for (const e of entitasok.values()) {
+    if (!e.szulo) continue;
+    if (!gyerekek.has(e.szulo)) gyerekek.set(e.szulo, []);
+    gyerekek.get(e.szulo).push(e.azonosito);
+  }
+  const sor = [kulcs];
+  const latott = new Set(sor);
+  for (let i = 0; i < sor.length && i < AG_SZAMLALAS_KORLAT; i++) {
+    for (const c of szeletCimei(jegyzek, sor[i])) if (c.alairo && keresett.has(c.alairo)) ki.set(c.alairo, (ki.get(c.alairo) ?? 0) + 1);
+    for (const g of gyerekek.get(sor[i]) ?? []) if (!latott.has(g)) { latott.add(g); sor.push(g); }
+  }
+  return ki;
 }
 
 /**
@@ -1524,7 +1560,8 @@ async function fuggoKerelemFelvetele(k, { cimek = null, dht = false } = {}) {
  * addig „betöltés…”-t mutat, és újrakérdez).
  * @param {Array<{fajta: string, kulcs: string, d?: number}>} hianyzik - a `pakliHierarchia` listája
  */
-const LAP_KERES_KORLAT = 4;
+// ⭐ D102: 16 (a bejáró előre kér — a 74. mérés; a függők korlátja 64).
+const LAP_KERES_KORLAT = 16;
 
 /**
  * ⭐ D101: a lapos pakli megjegyzése — a lista határa (M2) és az ág-szűrés tudás-határa (D19); a lap az állapot-sorba írja.
@@ -1535,6 +1572,12 @@ const LAP_KERES_KORLAT = 4;
  */
 function laposMegjegyzes(oldal, keres, szigoru) {
   const reszek = [];
+  // ⭐ D102: az ágazati pont szerint csökkenő sor biztos előtagja — utána még hiányozhat, amit nem ismerek.
+  if (Number.isInteger(oldal.biztos) && oldal.biztos < oldal.osszes) {
+    reszek.push((oldal.biztos > 0 ? 'Az első ' + oldal.biztos + ' biztos sorrendben; utána még hiányozhat, amit nem ismerek'
+      : 'A sorrend még nem biztos: bármelyik elé kerülhet, amit még nem ismerek')
+      + (keres.fuggo > 0 ? (keres.celos > 0 ? ' — elkértem, az őrjárat hozza.' : ' — elkértem, a tartóit keresem.') : '.'));
+  }
   // ⭐ D101/M2: a lapos rendezés (az időrend, a saját pont, a növekvő irány — és amíg a bejáró nincs meg, az ágazati is)
   // a HELYBEN ismert entitásokból áll. A szigorú (b) alatt ez a koinó töredéke — kimondjuk, végleges alakként.
   if (szigoru) reszek.push('A lista a készülékeden ismert entitásokból áll — ami nincs ezen a készüléken, abban nem.');
@@ -1571,17 +1614,20 @@ const LAP_FRISSESSEG = 10 * 60 * 1000;
 async function lapHianyzoinakElkerese(hianyzik) {
   const kertek = [];
   const eddig = await kerelmekOlvasasa();
-  const nemregKesz = (fajta, kulcs) => (eddig?.kesz ?? []).some((x) => x.fajta === fajta && x.kulcs === kulcs
+  // ⭐ D102: a folytatás (`utan`) külön kérelem — a nemrég elhozott ELEJE nem tiltja a folytatást.
+  const nemregKesz = (fajta, kulcs, utan) => (eddig?.kesz ?? []).some((x) => x.fajta === fajta && x.kulcs === kulcs
+    && (x.utan?.az ?? null) === (utan?.az ?? null)
     && String(x.eredmeny).startsWith('megjött') && Date.now() - (x.ido ?? 0) < LAP_FRISSESSEG);
   for (const h of (Array.isArray(hianyzik) ? hianyzik : []).slice(0, LAP_KERES_KORLAT)) {
     const kulcs = h.kulcs === '' ? GYOKER_KULCS : h.kulcs;
-    if (nemregKesz(h.fajta, kulcs)) continue;
-    const k = { fajta: h.fajta, kulcs, n: 50, d: Number.isInteger(h.d) ? h.d : 0 };
+    if (nemregKesz(h.fajta, kulcs, h.utan)) continue;
+    const k = { fajta: h.fajta, kulcs, n: 50, m: h.m === true, ...(h.utan ? { utan: h.utan } : {}) };
     try { await fuggoKerelemFelvetele(k, { dht: false }); kertek.push(h); }
     catch (hiba) { console.warn('a lap kérelme nem vehető fel', { ok: hiba.message }); }
   }
   const ny = await kerelmekOlvasasa();
-  const fuggok = (ny?.fuggo ?? []).filter((x) => kertek.some((h) => x.fajta === h.fajta && x.kulcs === (h.kulcs === '' ? GYOKER_KULCS : h.kulcs)));
+  const fuggok = (ny?.fuggo ?? []).filter((x) => kertek.some((h) => x.fajta === h.fajta && x.kulcs === (h.kulcs === '' ? GYOKER_KULCS : h.kulcs)
+    && (x.utan?.az ?? null) === (h.utan?.az ?? null)));
   // ⭐ Van-e kitől kérni (egy ismert tartó vagy induló cím)? Ha nincs, a kérelem csak kopogtat (a G témáin) — a lap ezt
   // kimondja, nem ígér „betöltést”, ami egy társ nélküli készüléken soha nem érkezne meg.
   const celos = fuggok.filter((x) => (x.celok ?? []).length > 0).length;
@@ -1716,26 +1762,70 @@ async function kerelmekIrasa(ny) {
  * @returns {Promise<{e: Object, tetelek: Array, jok: number, bevett: number}>}
  */
 async function fejlecValaszFeldolgozasa(r) {
-  const e = await fejlecekEllenorzese({ valasz: r.valasz, kert: r.kert, mintak: r.mintak, esemenyek: r.esemenyek });
-  const tetelek = [];
-  const bejar = (v) => { for (const t of v?.lista ?? []) tetelek.push(t); if (v?.ag) bejar(v.ag); };
-  bejar(r.valasz);
+  // ⭐ D102: a folytatás tételeinek szülője egy KORÁBBI oldalon állhat — amit a két tárban már ismerek, oda illesztem.
+  let ismertek = new Map();
+  try { ismertek = (await kepetKeszit()).allapot.entitasok; } catch { /* a kép nélkül csak a válaszon belül illeszt */ }
+  const e = await fejlecekEllenorzese({ valasz: r.valasz, kert: r.kert, mintak: r.mintak, esemenyek: r.esemenyek,
+    ismert: (az) => ismertek.has(az) });
+  const tetelek = Array.isArray(r.valasz?.lista) ? r.valasz.lista : [];
   const ujBemondasok = new Map();
+  const ujTudas = new Map();
+  // ⭐ D102: A LEVÁGÁS HATÁRA. Ha a lista kifogyott (`teljes`), a válaszoló tartott csomópontjainak (és a kérdezettnek, ha
+  // tartja) minden gyereke benne van; ha nem, a kimaradtak mind az utolsó (rendben lévő) tétel UTÁN jönnének a sorrendben.
+  const rendben = tetelek.filter((t) => e.tetelek.get(t.az)?.rendben);
+  const utolso = rendben.at(-1);
+  const levag = r.valasz?.teljes === true && rendben.length === tetelek.length ? 'teljes'
+    : (utolso ? { p: utolso.osszPont, az: utolso.az } : null);
   let bevett = 0, jok = 0;
-  for (const t of tetelek) {
+  for (const t of rendben) {
     const ered = e.tetelek.get(t.az);
-    if (!ered?.rendben) continue;
     jok++;
     const m = await esemenyMentese(atmeneti, t.letrehozo);
     if (m.mentve && !m.marMegvolt) bevett++;
     ujBemondasok.set(t.az, { osszPont: t.osszPont, ido: Date.now(), ellenorzott: ered.mintazott ? ered.minta.ellenorzott : 0 });
+    // ⭐ J2: a gyerekszám (csak ha a válaszoló tartja), és vele a levágás.
+    if (Number.isSafeInteger(ered.gy)) ujTudas.set(t.az, { gy: ered.gy, ...(levag ? { levag } : {}), ido: Date.now() });
+  }
+  // A kérdezett maga: a gyerekszáma (ha a válaszoló tartja) és a levágás — a folytatás innen tudja, hol tart.
+  const kulcs = r.valasz?.kulcs;
+  if (typeof kulcs === 'string' && (Number.isSafeInteger(r.valasz?.gy) || levag) && rendben.length === tetelek.length) {
+    ujTudas.set(kulcs, { ...(Number.isSafeInteger(r.valasz.gy) ? { gy: r.valasz.gy } : {}), ...(levag ? { levag } : {}),
+      m: r.valasz.m === true, ido: Date.now() });
   }
   for (const pe of r.esemenyek) {
     const m = await esemenyMentese(atmeneti, pe);
     if (m.mentve && !m.marMegvolt) bevett++;
   }
   await bemondasokBeirasa(ujBemondasok);
+  await fejlecTudasBeirasa(ujTudas);
   return { e, tetelek, jok, bevett };
+}
+
+// ===================================
+// ⭐ D102: A FEJLÉC-TUDÁS — mit tudok egy csomópont gyerekeiről (a gyerekszám és a levágás határa)
+// ===================================
+//
+// Helyi feljegyzés (nem esemény, nem terjed — 3. szabály), mint a bemondott össz-pontok: a bejáró (`pakli.js`) ebből tudja,
+// mikor ismeri egy csomópont összes gyerekét (a helyben ismert gyerekek száma ≥ a bemondott gyerekszám), és ha nem,
+// mekkora lehet egy még nem ismert gyerek (a levágás határa). Korlátos, mint a bemondások.
+function fejlecTudasFajl() {
+  return join(alapHely(), KOINO, 'fejlectudas.json');
+}
+/** A fejléc-tudás: azonosító (vagy `GYOKER_KULCS`) → { gy?, levag?: 'teljes' | { p, az }, m?, ido }. */
+async function fejlecTudas() {
+  try {
+    const b = JSON.parse(await readFile(fejlecTudasFajl(), 'utf8'));
+    return new Map(Object.entries(b && typeof b === 'object' ? b : {}).filter(([, x]) => x && typeof x === 'object'));
+  } catch {
+    return new Map();
+  }
+}
+async function fejlecTudasBeirasa(ujak) {
+  if (!ujak.size) return;
+  const m = await fejlecTudas();
+  for (const [az, x] of ujak) { m.delete(az); m.set(az, x); }
+  const lista = [...m.entries()].sort((a, b) => (a[1].ido ?? 0) - (b[1].ido ?? 0)).slice(-BEMONDAS_KORLAT);
+  await writeFile(fejlecTudasFajl(), JSON.stringify(Object.fromEntries(lista)), 'utf8');
 }
 
 /**
@@ -1747,7 +1837,7 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
   allapot.kerelemProbaltak.add(fk.az + '|' + tars.cim + ':' + tars.port);
   // ⭐ D92/3: a kérő UGRAS_MAX-ot küld (és az azonosítót) — így a társ, ha nem tartja, továbbadhatja.
   const tovabb = { az: fk.az, htl: UGRAS_MAX };
-  const k = { fajta: fk.fajta, kulcs: fk.kulcs, n: fk.n, d: fk.d, ...tovabb };
+  const k = { fajta: fk.fajta, kulcs: fk.kulcs, n: fk.n, m: fk.m === true, ...(fk.utan ? { utan: fk.utan } : {}), ...tovabb };
   const vege = { uj: 0, kuldott: 0, korok: 1, bajt: 0, alairo: null, kerelem: fk.fajta };
   let r;
   try {
@@ -1871,12 +1961,14 @@ function kerelemKiszolgaloja() {
     },
     async fejlecek(k) {
       const { allapot } = await kepetKeszit();
-      const { valasz, fak } = await fejlecekValasza({ allapot, kulcs: k.kulcs, n: k.n, d: k.d,
-        karbantarto: kerelemKarbantarto, esemenyOlvas: esemenyKetTarbol, bemondasok: await bemondasok() });
       // ⭐ A ház (D100): tartom-e az entitást (akkor a gyerekeit teljesen ismerem — az üres lista is válasz). A gyökeret
-      // csak „mindent” módban tartom egészében.
+      // csak „mindent” módban tartom egészében. ⭐ D102: ugyanez dönti el, hol jár be mélyen a válasz (J1), és kinek
+      // mondom be a gyerekszámát (J2).
       const tartottak = await tartottSzeleteim();
-      const tartja = k.kulcs === GYOKER_KULCS ? !tartottak : (tartottak ? tartottak.has(k.kulcs) : allapot.entitasok.has(k.kulcs));
+      const tartott = (az) => (az === GYOKER_KULCS ? !tartottak : (tartottak ? tartottak.has(az) : allapot.entitasok.has(az)));
+      const tartja = tartott(k.kulcs);
+      const { valasz, fak } = await fejlecekValasza({ allapot, kulcs: k.kulcs, n: k.n, m: k.m === true, utan: k.utan ?? null,
+        tartott, karbantarto: kerelemKarbantarto, esemenyOlvas: esemenyKetTarbol, bemondasok: await bemondasok() });
       return { valasz, tartja, mintak: (kert, megvan) => mintakValasza({ fak, kert, megvan, esemenyOlvas: esemenyKetTarbol }) };
     },
     /** ⭐ D92/1 (c): átveszem-e továbbadásra? (nem kaptam már meg, a számláló enged, van hely) */
@@ -1886,7 +1978,7 @@ function kerelemKiszolgaloja() {
       if ((await kerelmekOlvasasa()).fuggo.some((x) => x.az === k.az)) return false;     // a saját kérelmem jött vissza
       const htl = tovabbiUgras(k.htl);
       if (htl <= 0) return false;
-      tovabbitasok.set(k.az, { fajta: k.fajta, kulcs: k.kulcs, n: k.n, d: k.d, htl, honnan,
+      tovabbitasok.set(k.az, { fajta: k.fajta, kulcs: k.kulcs, n: k.n, m: k.m === true, ...(k.utan ? { utan: k.utan } : {}), htl, honnan,
         lejar: Date.now() + TOVABBITAS_ELEVULES, kuldtuk: new Set([honnan.cim + ':' + honnan.port]), valasz: null });
       kiir(SZIN.halvany + '  ↪ ' + ora() + ' kérelmet vettem át továbbadásra (' + k.fajta + ' ' + k.kulcs.slice(0, 8) + '…)' + SZIN.vege);
       return true;
@@ -2410,7 +2502,8 @@ function resMunka(allapot, halo, tars) {
       try {
         const r = t.fajta === 'szelet'
           ? await szeletUdpResen(halo, tars.cim, tars.port, null, KOINO, t.kulcs, { tovabb, ...await azonossagBeallitasa() })
-          : await kerelemUdpResen(halo, tars.cim, tars.port, KOINO, { fajta: t.fajta, kulcs: t.kulcs, n: t.n, d: t.d, ...tovabb },
+          : await kerelemUdpResen(halo, tars.cim, tars.port, KOINO, { fajta: t.fajta, kulcs: t.kulcs, n: t.n, m: t.m === true,
+            ...(t.utan ? { utan: t.utan } : {}), ...tovabb },
             { ...await azonossagBeallitasa(), mintaValaszto: (valasz) => mintaKeres(valasz), blob: memoria, korlat: FAJL_KORLAT });
         const kiszolgalta = t.fajta === 'szelet' ? (r.kapott ?? 0) > 0
           : r.kiszolgalta && (t.fajta !== 'torzs' || (memoria?.mind().length ?? 0) > 0)
@@ -2432,8 +2525,8 @@ function resMunka(allapot, halo, tars) {
       allapot.kerelemProbaltak ??= new Set();
       const ny = await kerelmekOlvasasa();
       const nemProbalt = (x) => !allapot.kerelemProbaltak.has(x.az + '|' + tars.cim + ':' + tars.port);
-      let fk = tarshozIllo(ny, tars.cim, tars.port);
-      if (fk && !nemProbalt(fk)) fk = null;
+      // ⭐ D102 (J4): a társ azt viszi, amelyiknek a céllistáján ő áll a legelöl (a már próbáltakat kihagyva).
+      let fk = tarshozIllo(ny, tars.cim, tars.port, (x) => !nemProbalt(x));
       // ⭐ A ház (D100): a „miközben kopogtatunk” pontosan — a kérelem egy kopogtató témáján TÉNYLEG jelentkeztünk (az
       // őrjárat címjegyzék-köre: `bejelentettKopogtatok`). A lap magától ír be kérelmet; e nélkül minden új bekopogó (egy
       // csatlakozó készülék kézi cseréje is) a csere helyett egy kérelmet kapna, amit nem tud kiszolgálni (mérve).
@@ -4312,11 +4405,12 @@ try {
       const fajta = ervek[0];
       const kulcsErv = ervek[1];
       const kulcs = kulcsErv === 'gyoker' ? GYOKER_KULCS : kulcsErv;
-      const k = kerelemAlakja({ fajta, kulcs, n: parseInt(ervek[4], 10), d: parseInt(ervek[5], 10) });
+      // ⭐ D102: az 5. érv `mely` (vagy `m`, `1`) — a tartó maga jár be (a régi `d` helyett).
+      const k = kerelemAlakja({ fajta, kulcs, n: parseInt(ervek[4], 10), m: ['mely', 'm', '1'].includes(String(ervek[5] ?? '')) });
       // ⚠️ A szelet címmel a `hozd` (az közvetlen); cím NÉLKÜL a szelet is függő kérelem lehet (továbbadható — D92/1 (c)).
       if (!k || (k.fajta === 'szelet' && ervek[2])) {
         throw new Error('Mit kérjek, és miről?'
-          + '\n  node koino/koino.js kerelem fejlecek <azonosító|gyoker> [cím] [port] [n] [d]'
+          + '\n  node koino/koino.js kerelem fejlecek <azonosító|gyoker> [cím] [port] [n] [mely]'
           + '\n  node koino/koino.js kerelem torzs <azonosító> [cím] [port]'
           + '\n  node koino/koino.js kerelem szelet <azonosító>   (cím nélkül: függő, továbbadható)'
           + '\n  (egy szelet eseményei egy címről: node koino/koino.js hozd <azonosító> <cím> [port])');
@@ -4400,11 +4494,16 @@ try {
         kiir(behuz + SZIN.halvany + t.az.slice(0, 8) + SZIN.vege + '  ' + cim + SZIN.halvany + '  · össz-pont ' + t.osszPont
           + (t.felkerult ? ' · felkerült' : '') + SZIN.vege + '  ' + jel);
       };
-      const kiirSzint = (v, behuz) => {
-        for (const t of v?.lista ?? []) sor(t, behuz);
-        if (v?.ag?.lista?.length) { kiir(behuz + SZIN.halvany + '  ↳ a legjobb ág:' + SZIN.vege); kiirSzint(v.ag, behuz + '    '); }
-      };
-      kiirSzint(r.valasz, '  ');
+      // ⭐ D102: egy lista, össz-pont szerint csökkenően; a mélyebb tételt a szülője alá húzzuk be.
+      const melyseg = new Map([[kulcs, 0]]);
+      for (const t of r.valasz?.lista ?? []) {
+        const mm = (melyseg.get(t.sz ?? GYOKER_KULCS) ?? 0) + 1;
+        melyseg.set(t.az, mm);
+        sor(t, '  ' + '    '.repeat(Math.max(0, mm - 1)));
+      }
+      if (r.valasz && r.valasz.teljes === false) {
+        kiir(SZIN.halvany + '  … a lista folytatható (a következő az utolsó tétel után jönne)' + SZIN.vege);
+      }
       if (e.hibas) kiir(SZIN.nem + '  ' + e.hibas + ' tétel nem ment át az ellenőrzésen — nem vettük be.' + SZIN.vege);
       break;
     }
@@ -6258,7 +6357,9 @@ try {
               // ⭐ D92/5: a nem tartott entitások bemondott össz-pontja (a kérelmek válaszaiból)
               bemondasok: await bemondasok(),
               // ⭐ D101: a kártya menüjének Rendezése — csak az ág
-              agazat: kereses.get('agazat') || undefined
+              agazat: kereses.get('agazat') || undefined,
+              // ⭐ D102: a bejáróhoz — mit tudok a csomópontok gyerekeiről (a gyerekszám és a levágás)
+              fejlecTudas: sajatKoino ? await fejlecTudas() : new Map()
             });
             // ⭐ D101: az ág-szűréshez hiányzó felmenőket a ház útján elkérjük; és kimondjuk a lista határát (M2).
             const keres = sajatKoino && oldal.hianyzik.length ? await lapHianyzoinakElkerese(oldal.hianyzik)
@@ -6266,7 +6367,7 @@ try {
             let szigoru = false;
             try { szigoru = sajatKoino && !(await kiszolgalasBeallitas()).mindent; } catch { szigoru = false; }
             return { adat: { ...oldal, betoltes: keres.fuggo > 0, kitolKerni: keres.celos,
-              koinoMegjegyzes: laposMegjegyzes(oldal, keres, szigoru) } };
+              koinoMegjegyzes: laposMegjegyzes(oldal, keres, szigoru && !(Number.isInteger(oldal.biztos) && oldal.biztos >= oldal.osszes)) } };
           } catch (hiba) {
             // ⚠️ A rossz KÉRÉS nem a program hibája — 400, és mondjuk meg, mi a baj.
             return { allapot: 400, adat: { hiba: hiba.message } };

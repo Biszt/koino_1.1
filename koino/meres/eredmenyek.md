@@ -5060,3 +5060,10 @@ ugyanaz) — a 9. szabály rendben. ⚠️ Egy friss készülék nagy koinóban,
 kap meg egy oldalt, egy 200-as Struktúrát másfél óra alatt — a lap tehát fokozatosan tölt (a ház csendes újrakérdezése),
 és a „mindent” tartók (D83/2, önkéntesek) értéke a felületen ezzel lesz mérhető. ⚠️ Az ára: egy oldal ~0,7–1,4 MB (a G-vel —
 a válaszonkénti 50 fejléc és a minták); egy kisebb `n` a bejárónál ezt csökkentené.
+
+**⚠️ PÓTLÁS (2026-10-11, a D102 után — a J3 próbája ott, ahol számíthat):** a „B — több kérelem egy kapcsolaton” változatot
+csak véletlen tartókkal mértem; ott valóban nem számít (G és „G1 — G, kapcsolatonként 1 kérelem” ugyanaz). ⛔ De ha
+EGYETLEN jól ellátott tartó kapja a kérelmeket (a kis, családi koinó — H), a kapcsolatonkénti 1 kérelem („H1”) mindent
+sorba állít: egy oldal 1 kör helyett 6, egy 200-as Struktúra 2–3 perc helyett 46–85 perc (1 perces körrel; 5 percessel
+10–15 helyett 230–425 perc), egy 2000-es 19–29 helyett 176–447 perc. ⭐ A J3 („nem kell”) tehát a nagy, szétszórt
+koinóra igaz, a kicsire nem — a döntés újra Csabáé.

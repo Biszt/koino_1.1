@@ -170,6 +170,41 @@ export class KoinoPakli extends Pakli {
     this.megjelenitettKulcs = null;
     this._allapotSor();
     this._tovabbGombFrissitese();
+    this._laposUjrakerdezesUtemezese();
+  }
+
+  // ===================================
+  // ⭐ D102: A LAPOS NÉZET CSENDES ÚJRAKÉRDEZÉSE — amíg a bejáró kérései úton vannak
+  // ===================================
+  //
+  // Az ágazati pont szerint csökkenő sor biztos előtagját a bejáró kéri ki (a tartó maga jár be — J1); amíg van mit várni
+  // (`betoltes`), a lap csendben újrakérdez (ugyanazzal az ütemmel, mint a fa-szeletnél), és csak akkor rajzol újra, ha az
+  // első oldal változott — a „További kártyák”-kal hozzáfűzött oldalak addig maradnak.
+
+  _laposUjrakerdezesUtemezese() {
+    clearTimeout(this.laposIdozito);
+    if (this.rendezesMod === 'hierarchikus' || !this.utolsoLapos?.betoltes) { this.laposVarakozas = UJRAKERDEZES_KEZDO; return; }
+    const varj = this.laposVarakozas ?? UJRAKERDEZES_KEZDO;
+    this.laposVarakozas = Math.min(UJRAKERDEZES_MAX, Math.round(varj * UJRAKERDEZES_SZORZO));
+    this.laposIdozito = setTimeout(() => this._laposUjrakerdezes(), varj);
+  }
+
+  async _laposUjrakerdezes() {
+    if (this.rendezesMod === 'hierarchikus') return;
+    const lenyomat = (l) => JSON.stringify((l ?? []).map((e) => [e.entitasId, e.hierarchikusOsszesPont]));
+    const elotte = lenyomat(this.lapositottLista.slice(0, LAPOS_OLDAL));
+    const biztosElotte = this.utolsoLapos?.biztos ?? null;
+    try {
+      await this.rendezettLekerese();
+      if (lenyomat(this.lapositottLista) !== elotte || (this.utolsoLapos?.biztos ?? null) !== biztosElotte) {
+        await this.lapositottRendel();
+        return;
+      }
+    } catch (hiba) {
+      console.warn('KoinoPakli._laposUjrakerdezes - nem sikerült', { hiba: hiba.message });
+    }
+    this._allapotSor();
+    this._laposUjrakerdezesUtemezese();
   }
 
   // ===================================
