@@ -168,14 +168,21 @@
 }
 
 /* ⭐ D101 ③: a Struktúra kész nézetében a megjegyzés a vászon TETEJÉRE kerül (a súgó-sor alul, abszolút pozícióban ül —
-   a normál folyamban a vászon alá csúszna, nem látszana). */
-.struktura-modal__nezet > .koino-megjegyzes {
+   a normál folyamban a vászon alá csúszna, nem látszana). ⭐ D101 ④: a Síkidomban ugyanígy, csak a bal felső
+   betöltés-jelző alá. */
+.struktura-modal__nezet > .koino-megjegyzes,
+.sikidom-modal__nezet > .koino-megjegyzes {
   position: absolute;
   top: var(--space-2, .5rem);
   left: 0;
   right: 0;
+  max-width: none;                                     /* a bekezdések közös szélessége (~65ch) itt a bal szélre szorítaná */
   margin: 0;
   padding: 0 1rem;
   text-align: center;
   pointer-events: none;
+}
+
+.sikidom-modal__nezet > .koino-megjegyzes {
+  top: calc(var(--space-4, 1rem) + 1.75rem);
 }

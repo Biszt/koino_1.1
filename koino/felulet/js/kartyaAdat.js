@@ -217,7 +217,11 @@ export function hierarchiaAdatta(h) {
   const kivalasztott = h?.kivalasztott ?? null;
   const elem = kivalasztott ? pakli.find((p) => p.entitasId === kivalasztott) : null;
   return {
-    kivalasztottEntitas: elem ? { entitasId: elem.entitasId, entitasTipus: elem.entitasTipus } : null,
+    // ⛔ D101 ④: a TELJES elem, nem csak az azonosító és a típus. A `Pakli.js` csak az azonosítót olvassa ki belőle, a
+    // `SikidomKartyaPanel` viszont ebből építi a kártyát („a kártya teljes adatait a meglévő pakli-végpont adja”) — a
+    // prototípus szolgáltatása csak `{ entitasId, entitasTipus }`-t adott, ezért a Síkidom adatlapja ott „(cím nélkül)”
+    // állt (régi hiba; a böngésző mérte). A bővebb válasz a Pakli.js-nek semmit nem változtat.
+    kivalasztottEntitas: elem ?? null,
     pakli,
     testverek: oldalAdatta(h?.testverek)
   };

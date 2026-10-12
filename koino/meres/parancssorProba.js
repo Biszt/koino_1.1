@@ -2546,8 +2546,10 @@ proba('⭐⭐ D102: a bejáró a lapon — két ág mélyen, egy sorozatban, és
     const melyek = (kerelmek.fuggo ?? []).filter((x) => x.fajta === 'fejlecek' && x.m === true).map((x) => x.kulcs);
     const megjott = kesz.filter((x) => x.fajta === 'fejlecek' && String(x.eredmeny).startsWith('megjött') && [R1, R2].includes(x.kulcs));
     const ki = {
-      // (a két ág sorrendje már biztos, de a sor folytatódhat — és ezt a lap kimondja)
+      // (a két ág sorrendje már biztos, de a sor folytatódhat — és ezt a lap kimondja). ⛔ D101 ④: R1 a bemondott össz-pontján
+      // (60) áll — korábban a saját pontján (30), mert a bemondás a nem tartott, de ismert saját pontú entitásnál nem számított.
       elotte: azok(elotte).includes(R1) && azok(elotte).includes(R2) && !azok(elotte).includes(P1)
+        && (elotte.adat.kartyak ?? []).find((k) => k.azonosito === R1)?.agazatiPont === 60
         && /folytatódhat|nem biztos|hiányozhat/.test(elotte.adat.koinoMegjegyzes ?? ''),
       melyenKert: melyek.includes(R1) && melyek.includes(R2),
       megjott: [P1, C1, P2].every((x) => azok(utana).includes(x)),
@@ -2562,6 +2564,94 @@ proba('⭐⭐ D102: a bejáró a lapon — két ág mélyen, egy sorozatban, és
         + ' · ' + JSON.stringify({ elotte: { k: azok(elotte).length, b: elotte.adat.biztos, o: elotte.adat.osszes, h: elotte.adat.hianyzik },
           utana: { k: azok(utana).length, b: utana.adat.biztos, o: utana.adat.osszes }, fuggo: kerelmek.fuggo?.map((x) => [x.kulcs.slice(0, 6), x.m]),
           kesz: kesz.map((x) => [x.kulcs.slice(0, 6), x.ido % 100000, String(x.eredmeny).slice(0, 30)]) }).slice(0, 1200) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const f of futok) f.kill();
+    await varj(1000);
+    await rm(a, { recursive: true, force: true });
+    await rm(b, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐⭐ D101 ④: A SÍKIDOM A LAPON — a nem tartott síkidom gyerekei és az ős-lánc a kérelem útján
+// ===================================
+//
+// A egy ágat ír (R1 → P1 → C1, mellette R2), mindet tartja; B („alap” — a szigorú (b)) a cserén csak a gyökér-darabot kapja,
+// aztán egy közvetlen, egy szintű gyökér-kérelemmel megismeri R1 és R2 össz-pontját. ⭐ Viselkedést mérünk, úgy, ahogy az
+// örökölt `SikidomModal` kérdez: B lapján a gyökér szintje R1-et mutatja, és tudja, hogy van gyereke (az össz-pontból); R1
+// gyerekeit még nem ismeri — a válasz üres, de MÉLY fejléc-kérést ír be (B lemezén: `kerelmek.json`) és `betoltes`-t mond, a
+// helyüket pedig az össz-pontból foglalja; C1 ős-láncát sem ismeri — elkéri. B őrjárata hozza, és UGYANAZ a futó felület
+// utána R1 alatt P1-et mutatja (gyerekkel), C1 ős-lánca pedig C1 → P1 → R1. ⛔ Ez a próba mérte, hogy a nem tartott R1
+// össz-pontja a fele értékén állt (a saját pontját B a gyökér-darabbal ismeri — a bemondás nem számított). Rontás: a
+// program nem kér → semmi nem jön; a bemondás nem számít a nem tartottnál → R1 30-on áll.
+proba('⭐⭐ D101 ④: a Síkidom a lapon — a nem tartott síkidom gyerekei és az ős-lánc a kérelem útján, ugyanabban a futó felületben', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const alap = { KOINO_KISZOLGALAS: 'alap' };
+  const futok = [];
+  try {
+    await fut(a, 'koino', 'Síkidom', 'próba', 'nyilt', alap);
+    const aFel = await feluletet(a, 7474, alap);
+    futok.push(aFel.folyamat);
+    const uj = async (cim, szuloId = null, pont = 10) => {
+      const v = await aFel.hiv('/api/gondolat', { method: 'POST',
+        body: JSON.stringify({ cim, ...(szuloId ? { szuloId } : {}), kezdoTudatpont: pont }) });
+      return v.adat?.data?._id ?? null;
+    };
+    const R1 = await uj('R1 gyökér', null, 30);
+    const P1 = await uj('P1 közép', R1, 20);
+    const C1 = await uj('C1 levél', P1, 10);
+    const R2 = await uj('R2 gyökér', null, 25);
+    aFel.folyamat.kill();
+    await varj(500);
+    if (!R1 || !P1 || !C1 || !R2) return false;
+    await fut(b, 'tars', '127.0.0.1', '7471', 'A', alap);
+    await csereKor(a, b, 7471, alap);
+    const figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', '7471'], { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
+    futok.push(figyelo);
+    await varj(1500);
+    // B egy szinten megismeri a két gyökér össz-pontját (a gyerekeiket nem)
+    await fut(b, 'kerelem', 'fejlecek', 'gyoker', '127.0.0.1', '7471', alap);
+    const bFel = await feluletet(b, 7472, alap);
+    futok.push(bFel.folyamat);
+    const gyerekei = (szulo) => bFel.hiv('/api/sikidom/gyerekek?' + (szulo ? 'szulo=' + szulo + '&' : '') + 'minPont=0&darab=150');
+    const gyokerElotte = await gyerekei(null);
+    const r1Elotte = await gyerekei(R1);
+    const lancElotte = await bFel.hiv('/api/sikidom/oslanc?entitas=' + C1);
+    const kerelmek = JSON.parse(await readFile(join(b, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '{}'));
+    const orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', '7473'], { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
+    futok.push(orjarat);
+    await varj(25000);
+    orjarat.kill();
+    figyelo.kill();
+    await varj(1000);
+    // ⭐ UGYANAZ a felület-folyamat kérdez, ami az őrjárat előtt is futott.
+    const r1Utana = await gyerekei(R1);
+    const lancUtana = await bFel.hiv('/api/sikidom/oslanc?entitas=' + C1);
+    const azok = (x) => (x.adat?.gyerekek ?? []).map((g) => g.entitasId);
+    const r1Sor = (gyokerElotte.adat?.gyerekek ?? []).find((g) => g.entitasId === R1);
+    const p1Sor = (r1Utana.adat?.gyerekek ?? []).find((g) => g.entitasId === P1);
+    const ki = {
+      gyoker: azok(gyokerElotte).join() === [R1, R2].join() && r1Sor?.vanGyereke === true && r1Sor?.hierarchikusOsszesPont === 60
+        && /ismert részből/.test(gyokerElotte.adat?.koinoMegjegyzes ?? ''),
+      // R1 gyerekeit még nem ismeri: üres, de kér, és a helyüket az össz-pontból foglalja (a bemondott 60 − a saját 30 —
+      // a saját pontját a gyökér-darabbal ismeri, az össz-pont mégis a bemondás: D101 ④, `osszPont.js`)
+      kert: azok(r1Elotte).length === 0 && r1Elotte.adat?.betoltes === true && r1Elotte.adat?.osszesGyerekPont === 30
+        && (kerelmek.fuggo ?? []).some((x) => x.fajta === 'fejlecek' && x.kulcs === R1 && x.m === true),
+      lancKert: (lancElotte.adat?.oslanc ?? []).length === 0
+        && (kerelmek.fuggo ?? []).some((x) => x.fajta === 'szelet' && x.kulcs === C1),
+      megjott: azok(r1Utana).includes(P1) && p1Sor?.vanGyereke === true && p1Sor?.hierarchikusOsszesPont === 30,
+      lanc: (lancUtana.adat?.oslanc ?? []).map((x) => x.entitasId).join() === [C1, P1, R1].join()
+        && lancUtana.adat?.teljesLanc === true && lancUtana.adat?.legerosebbGyokerPont === 60
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  síkidom — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+        + ' · ' + JSON.stringify({ gy: gyokerElotte.adat?.gyerekek?.map((g) => [g.cim, g.hierarchikusOsszesPont, g.vanGyereke]),
+          r1: [azok(r1Elotte).length, r1Elotte.adat?.betoltes, r1Elotte.adat?.osszesGyerekPont], fuggo: kerelmek.fuggo?.map((x) => [x.fajta, x.kulcs.slice(0, 6), x.m]),
+          utana: r1Utana.adat?.gyerekek?.map((g) => [g.cim, g.hierarchikusOsszesPont, g.vanGyereke]),
+          lanc: lancUtana.adat?.oslanc?.map((x) => x.cim) }).slice(0, 1200) + '\n');
     }
     return Object.values(ki).every(Boolean);
   } finally {

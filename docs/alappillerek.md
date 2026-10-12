@@ -238,8 +238,9 @@ tölt, az örökölt `Pakli.js`-szel), később a síkidom- és a térkép-néze
 terep (✅ PC–mobil két külön címen, 72–73. mérés; ⏸️ két mobil — a 🅱️). 🚧 **A maradék modálok (D101, 2026-10-11):**
 átvizsgálva ([`modalok_atvizsgalas.md`](modalok_atvizsgalas.md)); ✅ az I. csoport kész (Tudatpontok, a besorolások
 létrehozása, Rendezés, a fő menü); ✅ a közös alap, a legjobb-először bejáró (D102: a tartó maga jár be, a fejléc
-folytatásával, a kérelem-sorozattal); ✅ a Struktúra (a bejáró sorrendjéből, egy keretig); ⏭️ Síkidom → Keresés → az
-értesítés-réteg. ⭐ **És egy új pillér a láthatáron: a KERESŐ-RÉTEG** (skálázási terv II.,
+folytatásával, a kérelem-sorozattal); ✅ a Struktúra (a bejáró sorrendjéből, egy keretig); ✅ a Síkidom (egy szint a
+bejáró sorrendjéből, a nem tartott síkidom gyerekei a kérelem útján; vele az össz-pont javítása — 133.); ⏭️ Keresés →
+az értesítés-réteg. ⭐ **És egy új pillér a láthatáron: a KERESŐ-RÉTEG** (skálázási terv II.,
 S8–S10) — három dolog épül rá (a Keresés, a besorolás-lenyílók, az entitás-hivatkozás); a D101 szerint a modálok után,
 saját átvizsgálással.
 
@@ -367,7 +368,7 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 *Utána a ház:* a pakli-nézet a felületen, a terep (két mobil, a 🅱️ változat). ✅ **A terep PC–mobil között
 (72–73. mérés, D99) és a ház (D100, 2026-10-10) KÉSZ** — a részletek a fázis-2 terv D100-ában és az 5. szakasz
 96–104. bejegyzésében. ⏭️ Csaba a maradék modálokat választotta (D101, 2026-10-11) — az I. csoport kész (105–111.), a
-bejáró (D102, 112–121.) és a Struktúra (122–126.) is.
+bejáró (D102, 112–121.), a Struktúra (122–126.) és a Síkidom (127–135.) is.
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 
@@ -874,3 +875,45 @@ bejáró (D102, 112–121.) és a Struktúra (122–126.) is.
     tetején (abszolút pozícióban, a súgó-sor mintájára)** · mert a kész nézet súgó-sora alul, abszolút pozícióban ül: a
     normál folyamban a megjegyzés a vászon alá csúszott, és nem látszott (a böngészőben derült ki) · Claude ·
     `koinoKartya.css`.
+127. **2026-10-12 · a Síkidom forrása (D101 ④)** → **egy szint a bejáró sorrendjéből (az ágazati pont szerint, holtversenyben
+    az azonosító), a küszöb fölött, kurzorral — és a HELYBEN ISMERT gyerekek mind, nem csak a biztos előtag** · mert a
+    gyökér szintje a szigorú (b) alatt soha nem teljes: a biztos előtag ott üres volna, és a nézet semmit nem mutatna; a
+    később érkező (akár nagyobb) gyereket a lap újrakérdezése hozza (a kurzor elölről, a modál saját szűrője a meglévőket
+    kihagyja) · a Síkidom építésekor, Claude · `pakli.js` (`sikidomGyerekek`).
+128. **2026-10-12 · a gyerek-tudás egy helyen (D101 ④, D102)** → **`gyerekTudas`: teljes-e, a `maradek` (a még nem ismert
+    gyerekek össz-pontjának összege) és a `hatar` (EGY még nem ismert gyerek — a maradék és a levágás kisebbike) külön** ·
+    mert a bejáró a sorrendhez az egy gyerek határát kérdezi, a Síkidom a helyfoglaláshoz az összeget — és a kettő egy
+    forrásból jöjjön (két másolat csendben szétcsúszna) · Claude · `pakli.js`.
+129. **2026-10-12 · a `vanGyereke` a szigorú (b) alatt (D101 ④)** → **igaz, ha ismerek gyereket, ha a tartó gyerekszámot
+    mondott (> 0), vagy ha nem ismerem mind, és az össz-pontból hely marad egy még nem ismertnek** · mert a prototípus csak
+    annak a síkidomnak kéri a gyerekeit, amelyiknek „van”; ha csak az ismerteket néznénk, a nem tartott síkidom levélnek
+    látszana, és a nézet soha nem kérné el · Claude · `pakli.js` (`sikidomSora`).
+130. **2026-10-12 · az `osszesGyerekPont` a még nem ismertek helyével (D101 ④)** → **az ismertek összege + a maradék (ha
+    nem ismerem mind; a gyökérnél nincs ilyen szám — ott az ismertek)** · mert a prototípus ebből foglal helyet a később
+    érkezőknek (a pakolási mag — a lerakott síkidom soha nem mozdul), és ebből tudja, van-e még mit letölteni · Claude ·
+    `pakli.js`.
+131. **2026-10-12 · a Síkidom csendes újrakérdezése (D101 ④)** → **a `betoltes` jel a `koino:megjegyzes` eseménnyel jön;
+    a lap a síkidom „kész” jegyét (`mindenLetoltve`, `betoltottKuszob`), a kurzorát és az összes pontját visszaállítja, és a
+    prototípus a SZOKÁSOS útján kér újra — ha a síkidom épp látszik (ha nem, akkor, amikor látszani fog); az üres világnál a
+    megnyitás útját futtatja újra; 4 → 60 mp** · mert a modál egy síkidomot végleg „kész”-nek jegyez, ha a válasz szerint
+    nincs több, a kérelem válasza viszont később jön · Claude · `koinoModalok.js`, `apiHelper.js`.
+132. **2026-10-12 · a Síkidom képe mindig friss (D101 ④)** → **a program a lap horgonyát nem veszi át (a tár mai vége)** ·
+    mert a nézet újrakérdez, és a közben megjött gyerekeket látnia kell; a horgony a pakli lapozásáé (ott a sorrend ne
+    csússzon el két lap között) · Claude · `koino.js`, `pakli.js` (`sikidomAlap`).
+133. **2026-10-12 · az össz-pont a NEM TARTOTT entitásnál (D101 ④ — lelet, D92/5 javítása)** → **ha a szeletét nem tartom, és
+    van érvényes bemondás, az számít — akkor is, ha a saját pontjait ismerem (az `osszPontokSzamitasa` `tartott` kérdést
+    kap; nélküle a régi: csak a `pontokIsmeretlenek` dönt)** · mert a gyökér-darabbal a legfelső szintűek saját pontja is
+    megjön, a gyerekeik nem: a „saját + az ismert gyerekek” alulszámolt (a bekötés-próbában egy ág 60 helyett 30-on állt), és
+    a bejáró biztos előtagja ettől hibásan bővülhetett; a D92/5 terve („a nem tartott entitásnál a bemondott össz-pont
+    számít”) eddig csak a pont nélküli entitásra teljesült · a Síkidom bekötés-próbája mérte, Claude · `osszPont.js`,
+    `pakli.js` (`agazatiPontok`, `tartottKerdes`), `kerelem.js`.
+134. **2026-10-12 · a lap modul-fájának sorrendje (D101 ④ — lelet)** → **az `index.html` a kártya-gyárat importálja
+    először; egy próba az ES kiértékelési sorrendjét járja be a belépőktől, és megnézi, hogy minden `extends` szülője előbb
+    kész-e** · mert az örökölt kártyák körbe importálnak (Kartya → SikidomModal → … → kartyaGyar → GondolatKartya → Kartya),
+    és ha a fát a `Kartya.js` felől érjük el (a `Pakli.js` így tenné), a leszármazott a kész szülő előtt értékelődik ki — a lap
+    semmit nem töltött be; a prototípus fájljaihoz nem nyúlunk (M5/A), a belépő a koinóé · a böngésző mérte, Claude ·
+    `index.html`, `pakliProba.js`.
+135. **2026-10-12 · a pakli válaszának kiválasztottja a TELJES elem (D101 ④ — régi hiba)** → **a `hierarchiaAdatta` a teljes
+    kártya-adatot adja `kivalasztottEntitas`-ként** · mert a `SikidomKartyaPanel` ebből építi az adatlapot, a prototípus
+    szolgáltatása viszont csak azonosítót és típust adott — az adatlap ott „(cím nélkül)” állt; a `Pakli.js` csak az
+    azonosítót olvassa, neki a bővebb válasz semmit nem változtat · a böngésző mérte, Claude · `kartyaAdat.js`.

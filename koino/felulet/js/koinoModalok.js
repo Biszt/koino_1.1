@@ -22,18 +22,26 @@
 
 import TudatpontokModal from './components/modals/TudatpontokModal.js';
 import StrukturaModal from './components/modals/StrukturaModal.js';
+import SikidomModal from './components/modals/SikidomModal.js';
 
 // ===================================
 // A PROGRAM MEGJEGYZÉSEI — útvonalanként a legutóbbi
 // ===================================
 
 const utolsoMegjegyzes = new Map();
+// ⭐ D101 ④: a Síkidom gyerek-kéréseinek `betoltes` jele, szülőnként (a gyökér szintje: 'vilag' — a modál jele).
+const SIKIDOM_VILAG = 'vilag';
+const sikidomBetoltes = new Map();
 
 document.addEventListener('koino:megjegyzes', (e) => {
-  const { utvonal, szoveg } = e.detail ?? {};
+  const { utvonal, szoveg, betoltes } = e.detail ?? {};
   if (typeof utvonal !== 'string') return;
+  const [ut, kerdes = ''] = utvonal.split('?');
   // ⭐ Az útvonal a kérdőjel előtti rész — a modál ugyanazt az útvonalat kérdezi más paraméterekkel is.
-  utolsoMegjegyzes.set(utvonal.split('?')[0], typeof szoveg === 'string' && szoveg ? szoveg : null);
+  utolsoMegjegyzes.set(ut, typeof szoveg === 'string' && szoveg ? szoveg : null);
+  if (ut === 'sikidom/gyerekek') {
+    sikidomBetoltes.set(new URLSearchParams(kerdes).get('szulo') || SIKIDOM_VILAG, betoltes === true);
+  }
 });
 
 /**
@@ -105,4 +113,75 @@ koruleIr(StrukturaModal, '_darabszamLekerese', function () {
   const szoveg = megjegyzes('struktura/darabszam');
   megjegyzesKirajzolasa(document.getElementById('struktura-folyamat'), szoveg);
   megjegyzesKirajzolasa(document.querySelector('#struktura-nezet .struktura-modal__sugo'), szoveg);
+});
+
+// ===================================
+// ⭐ A SÍKIDOM (D101 ④)
+// ===================================
+//
+// A prototípus egy síkidom gyerekeit képernyő-vezérelten kéri (`_gyerekekBetoltese`), és „kész”-nek jegyzi, ha a válasz
+// szerint nincs több (`mindenLetoltve`, `betoltottKuszob`, a kurzor). A szigorú (b) alatt egy nem tartott síkidom gyerekei
+// a kérelem útján jönnek — később. ⭐ Ezért ha a program azt mondja, hogy egy síkidom hiányzó gyerekeit elkérte
+// (`betoltes`), a lap csendben újrakérdez (4 → 60 mp, mint a pakli): a síkidom „kész” jegyét és a kurzorát visszaállítja, és
+// a prototípus a SZOKÁSOS útján kéri újra — ha a síkidom épp látszik; ha nem, akkor, amikor látszani fog. A már meglévőket
+// a modál saját szűrője kihagyja (`_varolistaraFuzes`). A megjegyzés a vászon tetejére kerül.
+const SIKIDOM_UJRA_ELSO = 4000;
+const SIKIDOM_UJRA_LEGFELJEBB = 60000;
+
+function sikidomMegjegyzesKirajzolasa(modal) {
+  const szoveg = [megjegyzes('sikidom/gyerekek'), modal._koinoLancMegjegyzes].filter(Boolean).join(' ') || null;
+  // a kész nézetben a vászon tetején; amíg a nézet tölt (vagy még semmit nem ismer), a töltő felirat alatt
+  megjegyzesKirajzolasa(document.querySelector('#sikidom-nezet .sikidom-modal__sugo'), szoveg);
+  megjegyzesKirajzolasa(document.getElementById('sikidom-betoltes-szoveg'), szoveg);
+}
+
+function sikidomUjrakerdezesUtemezese(modal) {
+  if (modal._koinoUjraOra) return;
+  const koz = modal._koinoUjraKoz ?? SIKIDOM_UJRA_ELSO;
+  modal._koinoUjraKoz = Math.min(koz * 2, SIKIDOM_UJRA_LEGFELJEBB);
+  modal._koinoUjraOra = setTimeout(() => {
+    modal._koinoUjraOra = null;
+    if (!modal.modal?.nyitottE || !modal._koinoFuggok?.size) return;
+    // ⚠️ Az üres világ (még semmit nem ismertem — „Még nincs megjeleníthető entitás.”): a prototípus a megnyitáskor dönt
+    // erről, a vászon ilyenkor méretezetlen — ugyanazt az utat futtatjuk újra.
+    const vilag = modal._tar.get(SIKIDOM_VILAG);
+    if (!vilag?.gyerekIdk.length && !vilag?.varolista.length) {
+      modal._koinoFuggok.clear();
+      modal.megnyitas();
+      return;
+    }
+    for (const id of modal._koinoFuggok) {
+      const cs = modal._tar.get(id);
+      if (!cs) continue;
+      // A „kész” jegy és a kurzor vissza: a következő kérés elölről jön (az új, nagyobb gyerek is a sorba kerülhet), az
+      // összes pontot is újra elkérjük.
+      cs.kurzorPont = null;
+      cs.kurzorId = null;
+      cs.betoltottKuszob = Infinity;
+      cs.mindenLetoltve = false;
+      cs.osszesGyerekPont = 0;
+    }
+    modal._koinoFuggok.clear();
+    modal._tennivalokFeldolgozasa();
+  }, koz);
+}
+
+koruleIr(SikidomModal, '_gyerekekBetoltese', function (szuloId) {
+  sikidomMegjegyzesKirajzolasa(this);
+  if (sikidomBetoltes.get(szuloId) === true) {
+    (this._koinoFuggok ??= new Set()).add(szuloId);
+    sikidomUjrakerdezesUtemezese(this);
+  }
+});
+
+koruleIr(SikidomModal, '_osLancFelfuzese', function () {
+  this._koinoLancMegjegyzes = megjegyzes('sikidom/oslanc');
+  sikidomMegjegyzesKirajzolasa(this);
+});
+
+koruleIr(SikidomModal, '_takaritasBezaraskor', function () {
+  clearTimeout(this._koinoUjraOra);
+  this._koinoUjraOra = null;
+  this._koinoFuggok?.clear();
+  this._koinoUjraKoz = null;
 });

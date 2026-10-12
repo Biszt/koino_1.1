@@ -294,11 +294,18 @@ function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
  * de egy hibás vagy rosszindulatú esemény előállíthatja, és egy naiv bejárás **végtelen
  * ciklusba** futna. A látogatott halmaz ezt zárja ki.
  */
-function agazatiPontok(entitasok, bemondasok = new Map()) {
+function agazatiPontok(entitasok, bemondasok = new Map(), tartott = null) {
   // ⭐⭐ D92/5 (2026-10-03): EGY FORRÁS — az össz-pont (`osszPont.js`). Eddig a pakli a saját bejárásával számolta;
   // most ugyanaz a számítás adja, amit a kérelem fejlécei is mondanak (különben a nézet és a kérelem más össz-pontot
-  // mutatna). A nem tartott entitásnál a bemondott össz-pont számít (ha a hívó adja).
-  return new Map([...osszPontokSzamitasa(entitasok, bemondasok)].map(([az, o]) => [az, o.osszPont]));
+  // mutatna). A nem tartott entitásnál a bemondott össz-pont számít (ha a hívó adja) — ⛔ D101 ④: a `tartott`-tal akkor
+  // is, ha a saját pontjait ismerjük.
+  return new Map([...osszPontokSzamitasa(entitasok, bemondasok, tartott)].map(([az, o]) => [az, o.osszPont]));
+}
+
+/** ⛔ D101 ④: a nézet tartott szeleteinek kérdése (null: „mindent” mód — mindent tartok, a bemondás nem kell). */
+async function tartottKerdes(nezet) {
+  const t = typeof nezet?.tartott === 'function' ? await nezet.tartott() : null;
+  return t ? (az) => t.has(az) : null;
 }
 
 /**
@@ -431,7 +438,7 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
   const kep = await kepetKerni(nezet, koino, horgony, most, esemenyek, tar.csakAtmeneti?.() ?? null);
 
   // ----- A RENDEZÉSI ÉRTÉK -----
-  const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok);
+  const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok, await tartottKerdes(nezet));
   const utak = rendezes === 'hierarchikus' ? utvonalak(kep.entitasok) : null;
 
   const ertekhez = (e) => {
@@ -647,7 +654,7 @@ export async function pakliHierarchia(tar, koino, beallitas = {}) {
   const most = beallitas.most ?? Date.now();
   const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek, tar.csakAtmeneti?.() ?? null);
   const entitasok = kep.entitasok;
-  const osszPontok = osszPontokSzamitasa(entitasok, bemondasok);
+  const osszPontok = osszPontokSzamitasa(entitasok, bemondasok, tartott);
   const pontja = (az) => osszPontok.get(az)?.osszPont ?? 0;
   const gyerekek = gyerekJegyzek(entitasok);
   // ⭐ Az erősebb előbb, holtversenyben az azonosító (mint a kérelem fejléceinél — egy sorrend).
@@ -909,7 +916,7 @@ export async function entitasReszletei(tar, koino, azonosito, beallitas = {}) {
   const e = kep.entitasok.get(azonosito);
   if (!e) return null;
 
-  const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok);
+  const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok, await tartottKerdes(beallitas.nezet));
   const en = beallitas.szerzo;
   // ⭐ D72: a szöveg feloldása (lásd `entitasSzovege`).
   const reszletSzoveg = await szovegFeloldasa(e.szoveg ?? null, beallitas.darabOlvas);
@@ -1027,8 +1034,18 @@ export async function hianyzoFelmenok(tar, koino, azonosito, beallitas = {}) {
  * @param {string|null} [b.agazat] - az ág gyökere (null: az egész koinó)
  * @returns {{biztos: number, kerendo: Array<Object>}}
  */
-export function biztosElotag(lista, entitasok, agazati, { tartott, gyokerTeljes = false, tudas = new Map(), agazat = null,
-  elore = ELORE_KERES } = {}) {
+/**
+ * ⭐ D102, D101 ④: amit egy csomópont gyerekeiről tudok — EGY helyen (a bejáró és a Síkidom közös segédje; két másolat
+ * csendben szétcsúszna). A gyökér jele a `GYOKER` ('').
+ *
+ *   · `teljes(az)` — ismerem-e mind: tartom a szeletét (a gyökérnél: „mindent” mód), vagy a tartó bemondott gyerekszámnyit
+ *     ismerek (`fejlectudas.json` — `gy`);
+ *   · `maradek(az)` — a még nem ismert gyerekek össz-pontjának ÖSSZEGE legfeljebb: az össz-pont − a saját pont (≥ 1, ha
+ *     nem láttam — D14) − az ismert gyerekek össz-pontja (a gyökérnél és ismeretlen össz-pontnál végtelen);
+ *   · `hatar(az)` — EGY még nem ismert gyerek legfeljebb: a maradék, és a tartó levágásánál sem nagyobb;
+ *   · `keres(az, ok)` — a kérés a gyerekeiért: mély (a tartó maga jár be — D102), és ha a levágás határa ismert, folytatással.
+ */
+function gyerekTudas(entitasok, agazati, { tartott, gyokerTeljes = false, tudas = new Map() } = {}) {
   const gyerekek = gyerekJegyzek(entitasok);
   const gyokerek = [...entitasok.values()].filter((e) => !e.szulo).map((e) => e.azonosito);
   const ertek = (az) => agazati.get(az) ?? 0;
@@ -1039,26 +1056,35 @@ export function biztosElotag(lista, entitasok, agazati, { tartott, gyokerTeljes 
     const t = tudasa(az);
     return Number.isSafeInteger(t?.gy) && ismertek(az).length >= t.gy;
   };
+  const maradek = (az) => {
+    if (az === GYOKER || !(ertek(az) > 0)) return Infinity;
+    const e = entitasok.get(az);
+    const sajat = e && !e.pontokIsmeretlenek ? Math.max(1, e.osszesPont) : 1;
+    return Math.max(0, ertek(az) - sajat - ismertek(az).reduce((s, g) => s + ertek(g), 0));
+  };
   // Egy még nem ismert gyerek legfeljebb ekkora lehet.
   const hatar = (az) => {
     const t = tudasa(az);
-    let h = Infinity;
-    if (az !== GYOKER) {
-      const e = entitasok.get(az);
-      const sajat = e && !e.pontokIsmeretlenek ? Math.max(1, e.osszesPont) : 1;
-      if (ertek(az) > 0) h = Math.max(0, ertek(az) - sajat - ismertek(az).reduce((s, g) => s + ertek(g), 0));
-    } else if (t?.levag === 'teljes') {
-      h = 0;                                             // a gyökérnél a tartó teljes tudása a legjobb, amit tudhatunk (D19)
-    }
+    // a gyökérnél a tartó teljes tudása a legjobb, amit tudhatunk (D19)
+    let h = az === GYOKER && t?.levag === 'teljes' ? 0 : maradek(az);
     if (t?.levag && typeof t.levag === 'object' && Number.isSafeInteger(t.levag.p)) h = Math.min(h, t.levag.p);
     return h;
   };
+  const keres = (az, ok) => {
+    const lev = tudasa(az)?.levag;
+    return { fajta: 'fejlecek', kulcs: az, ok, m: true,
+      ...(lev && typeof lev === 'object' && ismertek(az).length > 0 ? { utan: { p: lev.p, az: lev.az } } : {}) };
+  };
+  return { ertek, ismertek, tudasa, teljes, maradek, hatar, keres };
+}
+
+export function biztosElotag(lista, entitasok, agazati, { tartott, gyokerTeljes = false, tudas = new Map(), agazat = null,
+  elore = ELORE_KERES } = {}) {
+  const { ertek, teljes, hatar, keres } = gyerekTudas(entitasok, agazati, { tartott, gyokerTeljes, tudas });
   const kerendo = [];
   const kerj = (az, ok) => {
     if (kerendo.length >= elore || kerendo.some((x) => x.kulcs === az)) return;
-    const lev = tudasa(az)?.levag;
-    kerendo.push({ fajta: 'fejlecek', kulcs: az, ok, m: true,
-      ...(lev && typeof lev === 'object' && ismertek(az).length > 0 ? { utan: { p: lev.p, az: lev.az } } : {}) });
+    kerendo.push(keres(az, ok));
   };
 
   // A kiindulás: az egész koinóban a gyökér (a még nem ismert legfelső szintűek), egy ágban maga az ág.
@@ -1108,7 +1134,7 @@ async function strukturaSorrend(tar, koino, beallitas = {}) {
   const horgony = Number.isInteger(beallitas.horgony) ? Math.min(beallitas.horgony, esemenyek.length) : esemenyek.length;
   const most = Number.isInteger(beallitas.most) ? beallitas.most : Date.now();
   const kep = await kepetKerni(nezet, koino, horgony, most, esemenyek, tar.csakAtmeneti?.() ?? null);
-  const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok);
+  const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok, await tartottKerdes(nezet));
   const agazat = typeof beallitas.agazat === 'string' && beallitas.agazat ? beallitas.agazat : null;
   let nemEldontheto = 0;
   const hianyzik = [];
@@ -1201,6 +1227,130 @@ export async function strukturaLap(tar, koino, beallitas = {}) {
   return {
     sorok,
     kovetkezoKurzor: kov < s.latszik.length ? kurzorKodolas({ horgony: s.horgony, most: s.most, ertek: kov, azonosito: '' }) : null
+  };
+}
+
+// ===================================
+// ⭐⭐ D101 ④: A SÍKIDOM — egy szülő gyerekei egy küszöb fölött, és az ős-lánc
+// ===================================
+//
+// A prototípus Síkidom nézete képernyő-vezérelten tölt: egy síkidom gyerekeit akkor kéri, amikor elég nagyra nőtt, és csak
+// azokat, amelyek elérik a küszöböt (`sikidom/gyerekek` — pont szerint csökkenően, kurzorral); a kártya-menüből indítva az
+// ős-láncot is (`sikidom/oslanc`). ⭐ Ez a bejáró sorrendjének EGY szintje: egy csomópont ismert gyerekei az ágazati pont
+// szerint (holtversenyben az azonosító — mint a fejléc-kérdésnél, `elobbJon`). A szigorú (b) alatt egy nem tartott
+// csomópont gyerekeit nem mind ismerem: a válasz ilyenkor a helyben ismerteket adja (D19 — kimondva), a hiányzót a ház
+// útján elkéri (mélyen — a tartó maga jár be, D102), és az `osszesGyerekPont` a még nem ismert gyerekek helyét is
+// tartalmazza (a prototípus ebből foglal helyet a később érkezőknek — a pakolási mag). A `vanGyereke` igaz, ha ismerek
+// gyereket, ha a tartó gyerekszámot mondott, vagy ha az össz-pontból hely marad egy még nem ismertnek.
+
+/** Egy kérésre legfeljebb ennyi gyerek (a prototípus síkidom-szolgáltatásának `MAX_DARAB`-ja). */
+export const SIKIDOM_DARAB = 300;
+
+/** A Síkidom közös alapja: a friss kép (mindig a tár mai vége — a nézet újrakérdez), az ágazati pontok, a gyerek-tudás. */
+async function sikidomAlap(tar, koino, beallitas = {}) {
+  const nezet = beallitas.nezet ?? ujPakliNezet();
+  const esemenyek = await koinoEsemenyei(tar, koino);
+  const kep = await kepetKerni(nezet, koino, esemenyek.length, Date.now(), esemenyek, tar.csakAtmeneti?.() ?? null);
+  const tartottak = typeof nezet.tartott === 'function' ? await nezet.tartott() : null;
+  const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok, tartottak ? (az) => tartottak.has(az) : null);
+  const t = gyerekTudas(kep.entitasok, agazati, {
+    tartott: tartottak ? (az) => tartottak.has(az) : () => true,
+    gyokerTeljes: !tartottak,
+    tudas: beallitas.fejlecTudas ?? new Map()
+  });
+  return { kep, agazati, t, mindentTart: !tartottak };
+}
+
+/** Egy entitás Síkidom-sora (a prototípus `sikidomService` alakja): a Struktúra sora + van-e gyereke. */
+function sikidomSora(e, s) {
+  const { szuloId, ...sor } = strukturaSora(e, s.agazati, s.kep.entitasok, s.kep.javaslatok);
+  const az = e.azonosito;
+  const gy = s.t.tudasa(az)?.gy;
+  return { ...sor, vanGyereke: s.t.ismertek(az).length > 0 || (Number.isSafeInteger(gy) && gy > 0)
+    || (!s.t.teljes(az) && s.t.hatar(az) > 0) };
+}
+
+/**
+ * ⭐ Egy szülő gyerekei a küszöb fölött — a prototípus alakjában (`{ gyerekek, osszesGyerekPont, kurzor, vanTovabb }`),
+ * és a koinós többlet: ismerem-e mind (`teljes`), hányat ismerek, és mit kell elkérni (`hianyzik`).
+ * @param {Object} [beallitas] - { szulo (null: a gyökér szintje), minPont, kurzor: {pont, id}, darab, osszesKell, nezet,
+ *   bemondasok, fejlecTudas }
+ * @returns {Promise<Object>}
+ */
+export async function sikidomGyerekek(tar, koino, beallitas = {}) {
+  const s = await sikidomAlap(tar, koino, beallitas);
+  const { t } = s;
+  const szulo = typeof beallitas.szulo === 'string' && beallitas.szulo ? beallitas.szulo : null;
+  const kulcs = szulo ?? GYOKER;
+  const hianyzik = [];
+  if (szulo && !s.kep.entitasok.has(szulo)) {
+    hianyzik.push({ fajta: 'szelet', kulcs: szulo, ok: 'a síkidomot még nem ismerem' });
+    return { gyerekek: [], osszesGyerekPont: beallitas.osszesKell === false ? null : 0, kurzor: null, vanTovabb: false,
+      teljes: false, ismert: 0, hianyzik, mindentTart: s.mindentTart };
+  }
+  const rendezett = [...t.ismertek(kulcs)].sort((a, b) => t.ertek(b) - t.ertek(a) || (a < b ? -1 : a > b ? 1 : 0));
+  const k = beallitas.kurzor;
+  const utana = k && Number.isFinite(k.pont) && typeof k.id === 'string'
+    ? rendezett.filter((az) => t.ertek(az) < k.pont || (t.ertek(az) === k.pont && az > k.id)) : rendezett;
+  const minPont = Number.isFinite(beallitas.minPont) && beallitas.minPont > 0 ? beallitas.minPont : 0;
+  const kuszobFolott = [];
+  for (const az of utana) { if (t.ertek(az) < minPont) break; kuszobFolott.push(az); }
+  const darab = Math.max(1, Math.min(Number.isInteger(beallitas.darab) ? beallitas.darab : SIKIDOM_DARAB, SIKIDOM_DARAB));
+  const adag = kuszobFolott.slice(0, darab);
+  const teljes = t.teljes(kulcs);
+  if (!teljes) hianyzik.push(t.keres(kulcs, szulo ? 'a gyerekeit nem ismerem mind' : 'a gyökér szintjét csak részben ismerem'));
+  // ⭐ Az összes gyerek pontja: az ismertek, és ha nem ismerem mind, a még nem ismertek helye (az össz-pontból — a gyökérnél
+  // nincs ilyen szám, ott az ismertek).
+  const ismertOsszeg = rendezett.reduce((x, az) => x + t.ertek(az), 0);
+  const maradek = teljes ? 0 : t.maradek(kulcs);
+  const utolso = adag[adag.length - 1];
+  return {
+    gyerekek: adag.map((az) => sikidomSora(s.kep.entitasok.get(az), s)),
+    osszesGyerekPont: beallitas.osszesKell === false ? null : ismertOsszeg + (Number.isFinite(maradek) ? maradek : 0),
+    kurzor: utolso ? { pont: t.ertek(utolso), id: utolso } : null,
+    vanTovabb: kuszobFolott.length > adag.length,
+    teljes,
+    ismert: rendezett.length,
+    hianyzik,
+    mindentTart: s.mindentTart
+  };
+}
+
+/**
+ * ⭐ Egy entitás ős-lánca (elöl maga, a végén a legfelső ismert felmenő) — a prototípus alakjában
+ * (`{ oslanc, legerosebbGyokerPont }`). Ha egy felmenő nincs meg, a lánc ott véget ér (`teljesLanc: false`), és a hiányzót
+ * elkéri; a legerősebb gyökér pontja ilyenkor a legfelső ismert felmenőét is figyelembe veszi (a nézet a VILÁG alá fűzi).
+ * @param {Object} [beallitas] - { entitas, nezet, bemondasok, fejlecTudas }
+ * @returns {Promise<Object>}
+ */
+export async function sikidomOslanc(tar, koino, beallitas = {}) {
+  const s = await sikidomAlap(tar, koino, beallitas);
+  const { t } = s;
+  const lanc = [];
+  const hianyzik = [];
+  const latott = new Set();
+  let az = typeof beallitas.entitas === 'string' && beallitas.entitas ? beallitas.entitas : null;
+  let teljesLanc = false;
+  while (az && lanc.length < FELMENO_KORLAT && !latott.has(az)) {
+    const e = s.kep.entitasok.get(az);
+    if (!e) {
+      hianyzik.push({ fajta: 'szelet', kulcs: az, ok: lanc.length ? 'egy felmenőjét nem ismerem' : 'még nem ismerem' });
+      break;
+    }
+    latott.add(az);
+    lanc.push(e);
+    az = e.szulo ?? null;
+    if (!az) teljesLanc = true;
+  }
+  let legerosebb = 0;
+  for (const g of t.ismertek(GYOKER)) legerosebb = Math.max(legerosebb, t.ertek(g));
+  if (lanc.length) legerosebb = Math.max(legerosebb, t.ertek(lanc[lanc.length - 1].azonosito));
+  return {
+    oslanc: lanc.map((e) => sikidomSora(e, s)),
+    legerosebbGyokerPont: legerosebb,
+    teljesLanc,
+    hianyzik,
+    mindentTart: s.mindentTart
   };
 }
 

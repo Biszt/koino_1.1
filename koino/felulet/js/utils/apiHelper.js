@@ -237,10 +237,11 @@ async function apiGet(utvonal, token = null) {
   // ⭐ A LAP HORGONYA: minden olvasás ugyanabból a képből jöjjön, amiből a lista készült.
   const eredmeny = await apiKeres(horgonnyal(utvonal), { method: 'GET' }, token);
   // ⭐ D101: a tudás határa — ha a program megjegyzést fűzött a válaszhoz (D19: kimondja, amit nem tud), az esemény a
-  // `koinoModalok.js`-hez viszi (az örökölt modál nem ismeri ezt a mezőt).
+  // `koinoModalok.js`-hez viszi (az örökölt modál nem ismeri ezt a mezőt). ⭐ D101 ④: vele a `betoltes` jel is (a
+  // program elkérte, ami hiányzik — érdemes később újrakérdezni).
   if (eredmeny && typeof eredmeny === 'object' && 'koinoMegjegyzes' in eredmeny) {
     document.dispatchEvent(new CustomEvent('koino:megjegyzes',
-      { detail: { utvonal, szoveg: eredmeny.koinoMegjegyzes } }));
+      { detail: { utvonal, szoveg: eredmeny.koinoMegjegyzes, betoltes: eredmeny.betoltes === true } }));
   }
   // Metódus vég log
   console.log('apiHelper.apiGet - VÉGE', { utvonal });

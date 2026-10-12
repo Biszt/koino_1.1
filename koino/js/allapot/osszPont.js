@@ -73,14 +73,19 @@ const bemondasErvenyes = (b) => !!b && Number.isSafeInteger(b.osszPont) && b.oss
  * Egy entitás SAJÁT pontja akkor ismert, ha a szeletét tartjuk (nincs `pontokIsmeretlenek` jelzése); ha nem, a
  * bemondott össz-pontját vesszük (és a gyerekeit nem járjuk be — azok benne vannak a bemondásban); ha az sincs, a saját
  * pontja 0, de az ISMERT gyerekei számítanak (`bizonytalan` +1).
+ * ⛔ D101 ④ (a Síkidom bekötés-próbája mérte): a NEM TARTOTT entitásnál akkor is a bemondás számít, ha a saját pontjait
+ * véletlenül ismerjük (pl. a gyökér-darabbal jöttek) — a gyerekeit ilyenkor sem ismerjük mind, és a „saját + az ismert
+ * gyerekek” alulszámol (egy ág a fele értékén állt, és a bejáró biztos előtagja ettől hibásan bővült). Ehhez kell a
+ * `tartott`; nélküle (vagy ha mindent tartok) csak a `pontokIsmeretlenek` jelzés dönt, mint eddig.
  * ⚠️ A `szulo`-lánc körbe mutathat (hibás vagy rosszindulatú esemény): a körbe eső entitás csak egyszer számít.
  *
  * @param {Map<string, Object>} entitasok - az állapot entitásai
  * @param {Map<string, {osszPont: number}>} [bemondasok] - a nem tartott entitások bemondott össz-pontja
+ * @param {Function|null} [tartott] - az → tartom-e a szeletét (null: nem tudom — a régi viselkedés)
  * @returns {Map<string, {osszPont: number, sajat: number|null, forras: 'szamolt'|'bemondott'|'ismeretlen',
  *   bizonytalan: number}>} — `bizonytalan`: a részfában hány entitás pontja nem ismert és nincs bemondva
  */
-export function osszPontokSzamitasa(entitasok, bemondasok = new Map()) {
+export function osszPontokSzamitasa(entitasok, bemondasok = new Map(), tartott = null) {
   const gyerekek = gyerekJegyzek(entitasok);
   const ki = new Map();
   const folyamatban = new Set();
@@ -93,7 +98,9 @@ export function osszPontokSzamitasa(entitasok, bemondasok = new Map()) {
       const [az, kesz] = verem.pop();
       if (ki.has(az)) continue;
       const e = entitasok.get(az);
-      const ismeretlen = !!e.pontokIsmeretlenek;
+      // ⭐ „Ismeretlen” (a bemondás dönt): ha a pontjait nem láttuk, VAGY ha a szeletét nem tartjuk és van bemondás.
+      const ismeretlen = !!e.pontokIsmeretlenek
+        || (typeof tartott === 'function' && !tartott(az) && bemondasErvenyes(bemondasok.get(az)));
       // ⭐ D95/1: a NAGY szeletet összegezve tartom — a saját pontjaim megvannak, a többi pont-tartóé nem; az össz-pontot a
       // teljes tartótól kapott, mintákkal ellenőrzött gyökér adja (`osszegzett` jelű bemondás — az egész részfát fedi).
       const osszegzett = !ismeretlen && bemondasok.get(az)?.osszegzett === true && bemondasErvenyes(bemondasok.get(az));

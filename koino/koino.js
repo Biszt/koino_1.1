@@ -228,7 +228,9 @@ import {
   // ⭐ D101: a Tudatpontok modál listája.
   sajatHozzarendelesek,
   // ⭐ D101 ③: a Struktúra nézet.
-  strukturaDarabszam, strukturaLap
+  strukturaDarabszam, strukturaLap,
+  // ⭐ D101 ④: a Síkidom nézet.
+  sikidomGyerekek, sikidomOslanc
 } from './js/allapot/pakli.js';
 // ⭐ A RANDEVÚ (2026-09-14): a csere ÉS a fájlok is átmennek az átfúrt résen.
 // ⭐ És a szelet-kérés is a résen (D69/2): a `hozd` 2026-09-26 óta ezen megy.
@@ -1579,6 +1581,29 @@ const LAP_KERES_KORLAT = 16;
  * ⭐ D101 ③: a Struktúra megjegyzése — mire épül a fa (a készüléken ismert rész, a keret), meddig biztos a sorrend, és
  * mit kértem el (D19, M2). A lap a folyamatjelző és a súgó alá írja (`koinoModalok.js`).
  */
+/**
+ * ⭐ D101 ④: a Síkidom megjegyzése — EGY mondat a nézet egészéről (nem síkidomonként: a lap a vászon tetejére írja). A
+ * gyerekek válaszán: mire épül a nézet, és ha kérés úton van a hiányzóért, hogy magától megjelenik; az ős-lánc válaszán:
+ * ha egy felmenő nincs meg (D19, M2).
+ */
+function sikidomMegjegyzes(r, allas) {
+  if (Array.isArray(r.oslanc)) {
+    return r.oslanc.length && !r.teljesLanc
+      ? 'A felmenői közül nem ismerek mindet — elkértem; addig a legfelső ismert felmenőtől látszik.' : null;
+  }
+  if (r.mindentTart && allas.fuggo === 0) return null;
+  return 'A síkidom a készülékeden ismert részből épül' + (allas.fuggo > 0
+    ? ' — ' + allas.fuggo + ' kérés úton van a hiányzó ágakért; ' + (allas.celos > 0
+      ? 'ami megjön, magától megjelenik.' : 'a tartóikat keresem.')
+    : '.');
+}
+
+/** Hány fejléc- és szelet-kérelem vár (és hánynak van célja) — a nézetek megjegyzéséhez. */
+async function fuggoKerelmekAllasa() {
+  const f = ((await kerelmekOlvasasa())?.fuggo ?? []).filter((x) => x.fajta === 'fejlecek' || x.fajta === 'szelet');
+  return { fuggo: f.length, celos: f.filter((x) => (x.celok ?? []).length > 0).length };
+}
+
 function strukturaMegjegyzes(d, keres) {
   const elkertem = keres.fuggo > 0 ? (keres.celos > 0 ? ' — elkértem, az őrjárat hozza (nyisd meg újra később).'
     : ' — elkértem, a tartóit keresem.') : '.';
@@ -6418,6 +6443,37 @@ try {
         // A prototípus útvonalai és alakja (`StrukturaModal`, M5/A): a darabszám (`{ osszesDarab, agDarab }`) és a lapok
         // (`{ sorok, kovetkezoKurzor }`). ⚠️ A modál a lapokat nyers `fetch`-csel kéri (`Authorization: Bearer` — a kapu
         // elfogadja). A darabszámnál a hiányzót a ház útján elkérjük, és kimondjuk, mire épül a fa (D101/M2).
+        // ===================================
+        // ⭐⭐ D101 ④: A SÍKIDOM NÉZET — egy szülő gyerekei egy küszöb fölött (kurzorral), és az ős-lánc
+        // ===================================
+        //
+        // A prototípus útvonalai és alakja (`SikidomModal`, M5/A). ⚠️ A kép mindig a tár mai vége (a lap horgonyát nem
+        // vesszük át): a nézet újrakérdez, és a közben megjött gyerekeket látnia kell. A hiányzót a ház útján elkérjük, és
+        // kimondjuk, mire épül a nézet (D101/M2); a `betoltes` jel mondja meg a lapnak, hogy érdemes újrakérdezni.
+        if (utvonal === '/api/sikidom/gyerekek' || utvonal === '/api/sikidom/oslanc') {
+          const kozos = { szerzo, nezet: pakliNezet,
+            bemondasok: sajatKoino ? await bemondasok() : new Map(),
+            fejlecTudas: sajatKoino ? await fejlecTudas() : new Map() };
+          const szam = (x) => { const n = parseFloat(x); return Number.isFinite(n) ? n : null; };
+          let r;
+          if (utvonal === '/api/sikidom/gyerekek') {
+            const kurzorPont = szam(kereses.get('kurzorPont'));
+            r = await sikidomGyerekek(olvasoTar, KOINO, { ...kozos,
+              szulo: kereses.get('szulo') || null,
+              minPont: szam(kereses.get('minPont')) ?? 0,
+              kurzor: kurzorPont !== null && kereses.get('kurzorId') ? { pont: kurzorPont, id: kereses.get('kurzorId') } : null,
+              darab: parseInt(kereses.get('darab'), 10),
+              osszesKell: kereses.get('osszesKell') !== '0' });
+          } else {
+            if (!kereses.get('entitas')) return { allapot: 400, adat: { success: false, message: 'Hiányzó entitás azonosító' } };
+            r = await sikidomOslanc(olvasoTar, KOINO, { ...kozos, entitas: kereses.get('entitas') });
+          }
+          const keres = sajatKoino && r.hianyzik.length ? await lapHianyzoinakElkerese(r.hianyzik)
+            : { kert: 0, fuggo: 0, celos: 0 };
+          return { adat: { success: true, ...r, betoltes: keres.fuggo > 0, kitolKerni: keres.celos,
+            koinoMegjegyzes: sikidomMegjegyzes(r, sajatKoino ? await fuggoKerelmekAllasa() : { fuggo: 0, celos: 0 }) } };
+        }
+
         if (utvonal === '/api/struktura/darabszam') {
           const d = await strukturaDarabszam(olvasoTar, KOINO, {
             szerzo, nezet: pakliNezet, agazat: kereses.get('agEntitasId') || null,

@@ -20,8 +20,9 @@
   nem készültek el —, a belépő tér (5.6) és a szövegszerkesztő (5.7).
 
   ⭐ D101 (2026-10-11): a maradék modálok — a Tudatpontok, a Kategória, a Gondolattípus, a Rendezés már a prototípuséi,
-  és a FŐ MENÜ is (`js/foMenu.js`); a ③ óta a Struktúra is (a fa a bejáró sorrendjéből, egy keretig). A koinós többlet a
-  `js/koinoModalok.js`-ben. Helyőrző még: Síkidom, Keresés, Értesítések, Értesítési beállítások.
+  és a FŐ MENÜ is (`js/foMenu.js`); a ③ óta a Struktúra is (a fa a bejáró sorrendjéből, egy keretig), a ④ óta a Síkidom
+  (egy szint a bejáró sorrendjéből). A koinós többlet a `js/koinoModalok.js`-ben. Helyőrző még: Keresés, Értesítések,
+  Értesítési beállítások.
 
   ⭐⭐ A HÁZ (D100, 2026-10-10): a pakli is a prototípusé — a `Pakli.js` (láncos-testvéres
   nézet, kacsacsőrök, húzás, lapos rendezés) bájtra változatlanul jött át; a koinós többlet
@@ -95,6 +96,12 @@
 <div id="modal-kontener"></div>
 
 <script type="module">
+// ⛔ D101 ④: A KÁRTYA-GYÁR ELŐRE. Az örökölt kártyák körbe importálnak: Kartya → SikidomModal → SikidomKartyaPanel →
+// kartyaGyar → GondolatKartya → Kartya. Ha a modul-fát a `Kartya.js` felől érjük el először (a `Pakli.js` így tenné), a
+// GondolatKartya a még nem kész Kartya-osztályból öröklődne („Cannot access 'Kartya' before initialization”), és a lap
+// semmit nem töltene be. A prototípusban a fő oldal a Síkidomot importálta előbb; itt a gyárat — a kör így a gyár felől
+// nyílik, és a Kartya előbb kész, mint a leszármazottai. (A prototípus fájljai változatlanok — M5/A.)
+import './js/components/kartya/kartyaGyar.js';
 import { KoinoPakli } from './js/koinoPakli.js';
 import { TerNezet } from './js/terNezet.js';
 import GondolatModal from './js/components/modals/GondolatModal.js';

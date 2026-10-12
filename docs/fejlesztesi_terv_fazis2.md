@@ -5221,6 +5221,45 @@ folyamatjelző alatt, a kész fán a vászon tetején. Elágazás 122–126. Pr�
 egy kapu-próba (a Bearer), és a bekötés (`parancssorProba.js`: a darabszám, a lapok Bearer-rel, az ág részfája, a
 megjegyzés) — mind rontással. Böngészőben: a modál megnyílik, a fa felépül (5/5 elhelyezve), a megjegyzés megjelenik.
 
+#### ✅ MEGÉPÜLT — ④ a Síkidom (2026-10-12, a D102 bejáróján)
+
+⭐ **A prototípus két kérdése, egy szint a bejáró sorrendjéből** (`pakli.js` `sikidomGyerekek`, `sikidomOslanc`): a Síkidom
+képernyő-vezérelten tölt — egy síkidom gyerekeit akkor kéri, amikor elég nagyra nőtt, és csak azokat, amelyek elérik a
+küszöböt (pont szerint csökkenően, kurzorral); a kártya-menüből indítva az ős-láncot is. A program egy csomópont ismert
+gyerekeit adja az ágazati pont szerint (holtversenyben az azonosító — mint a fejléc-kérdés), a küszöb fölött, a kurzor
+után (legfeljebb 300). ⭐ **A szigorú (b) alatt** egy nem tartott síkidom gyerekeit nem mind ismerem: a válasz a helyben
+ismerteket adja (D19 — kimondva), a hiányzót a ház útján MÉLYEN elkéri (a tartó maga jár be — D102), és az
+`osszesGyerekPont` a még nem ismert gyerekek helyét is tartalmazza (az össz-pont − a saját pont − az ismertek: a prototípus
+ebből foglal helyet a később érkezőknek, a pakolási mag); a `vanGyereke` igaz, ha ismerek gyereket, ha a tartó gyerekszámot
+mondott, vagy ha az össz-pontból hely marad egy még nem ismertnek — különben a nem tartott síkidom levélnek látszana, és a
+nézet soha nem kérné a gyerekeit. Az ős-lánc ott ér véget, ahol egy felmenő nincs meg (kimondva, elkérve). ⭐ **A gyerek-tudás
+egy helyen** (`gyerekTudas`): a bejáró (`biztosElotag`) és a Síkidom közös segédje — teljes-e egy csomópont, mekkora
+lehet egy még nem ismert gyereke (`hatar`), és mennyi az összegük (`maradek`). ⭐ **A lapon** a `SikidomModal`, a
+`SikidomKartyaPanel` és a nyolc segéd (`sikidomMeret`, `sikidomPakolas`, `sikidomHorgony`, `sikidomRajzolo`,
+`sikidomFormak`, `sikidomRacs`, `sikidomTar`, `sikidomNagyitas` — + `debugFogantyu`, sablon, CSS) bájtra a prototípuséi; a
+koinós többlet a `koinoModalok.js`-ben: ha a program egy síkidom hiányzó gyerekeit elkérte (`betoltes`), a lap csendben
+újrakérdez (4 → 60 mp) — a síkidom „kész” jegyét és a kurzorát visszaállítja, és a prototípus a szokásos útján kéri újra
+(a meglévőket a saját szűrője kihagyja); az üres világnál a megnyitás útját futtatja újra. A megjegyzés a vászon tetején.
+
+⛔⛔ **Három lelet az építésből.** (1) **Az össz-pont a nem tartott, de ismert saját pontú entitásnál alulszámolt** (a
+bekötés-próba mérte): a bemondás csak akkor számított, ha az entitás egyetlen pont-eseményét sem láttuk — a gyökér-darabbal
+viszont a legfelső szintűek saját pontja is megjön, a gyerekeik nem, így egy ág a fele értékén állt (60 helyett 30), és a
+bejáró biztos előtagja ettől hibásan bővülhetett (a D102 sorrendje is ezen a számon áll). Javítva: az
+`osszPontokSzamitasa` a `tartott` kérdéssel a nem tartott entitásnál a bemondást veszi; a pakli, a Struktúra, a Síkidom és
+a kérelem fejlécei ugyanazt adják. (2) **Egy importkör a lapon** (a böngésző mérte): az örökölt kártyák körbe importálnak
+(Kartya → SikidomModal → SikidomKartyaPanel → kartyaGyar → GondolatKartya → Kartya); a koinó lapja a fát a `Kartya.js`
+felől érte el, és a lap semmit nem töltött be. Javítva az `index.html`-ben (a kártya-gyár előre), és egy próba őrzi (az ES
+kiértékelési sorrendje az `index.html` belépőitől). (3) **A Síkidom adatlapja „(cím nélkül)”** — régi hiba a prototípusban:
+a panel a pakli válaszának `kivalasztottEntitas`-ából építi a kártyát, ami ott csak azonosító és típus. Javítva a
+fordításban (`kartyaAdat.js` — a teljes elem; a `Pakli.js` csak az azonosítót olvassa).
+
+Elágazás 127–135. Próbák: két modul-próba (`pakliProba.js`: a sorrend, a küszöb, a kurzor, az ős-lánc; a szigorú (b) — a
+kérés, a hely, a gyerekszám, a hiányzó felmenő), az össz-pont (`osszPontProba.js`), a lap modul-fája és a teljes kiválasztott
+(`pakliProba.js`), és a bekötés (`parancssorProba.js`: két készülék, „alap” — a nem tartott síkidom gyerekei és az ős-lánc a
+kérelem útján, ugyanabban a futó felületben; a D102 bejáró-próbája most az össz-pontot is nézi) — mind rontással.
+Böngészőben: a modál megnyílik, a három gyökér és a gyerekeik felépülnek, az egérrel nagyítva a következő szint betöltődik,
+az adatlap a címmel jön, a megjegyzés a vászon tetején, bezáráskor az újrakérdezés leáll.
+
 ### D102. A BEJÁRÓ: A TARTÓ MAGA JÁR BE (2026-10-11, Csaba: „minden javaslatodat elfogadom, mehetünk tovább”)
 
 **Amiből jött:** a 74. mérés (`bejaroMeres.js`) és a [`modalok_atvizsgalas.md`](modalok_atvizsgalas.md) 6. szakasza: egy friss

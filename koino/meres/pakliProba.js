@@ -9,9 +9,10 @@
 // ⭐⭐ ÉS A LEGFONTOSABBAT: hogy a lapozás **nem csúszik el**, ha közben változik a koino.
 // A tudatpont bármikor átrendezhető — enélkül egy kártya kimaradna vagy kétszer jönne.
 
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname, resolve, basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import { esemenyMentese } from '../js/tar/esemenyTar.js';
@@ -20,7 +21,8 @@ import {
   entitasReszletei, entitasKuszobei, hianyzoFelmenok, MAX_DARAB, RENDEZESEK, kuszobokBefele,
   pakliHierarchia, TESTVER_KORLAT,
   agHelyzete, sajatHozzarendelesek, HOZZARENDELES_KORLAT, biztosElotag, ELORE_KERES,
-  strukturaDarabszam, strukturaLap, STRUKTURA_KERET
+  strukturaDarabszam, strukturaLap, STRUKTURA_KERET,
+  sikidomGyerekek, sikidomOslanc, SIKIDOM_DARAB
 } from '../js/allapot/pakli.js';
 import { GYOKER_KULCS } from '../js/csere/szeletEgyeztetes.js';
 
@@ -837,7 +839,9 @@ proba('⭐ D100: a prototípus pakli-útvonalai és alakja — a lap fordít (a 
   const lapos = prototipusUtvonala('pakli/rendezett?mod=sajatPont&irany=novekvo');
   const jel = fa.jel({ ...h, betoltes: true, kitolKerni: 1 });
   const ki = {
-    kivalasztott: p.kivalasztottEntitas?.entitasId === A1 && p.kivalasztottEntitas?.entitasTipus === 'Gondolat',
+    kivalasztott: p.kivalasztottEntitas?.entitasId === A1 && p.kivalasztottEntitas?.entitasTipus === 'Gondolat'
+      // ⛔ D101 ④: a teljes kártya-adat (a Síkidom adatlapja ebből épít — a prototípusban „(cím nélkül)” állt)
+      && p.kivalasztottEntitas?.adatok?.cim === 'A1',
     lanc: p.pakli.map((x) => x.entitasId).join() === [A, A1].join() && p.pakli[1].szuloId === A
       && p.pakli[0].melysegiSzint === 1 && p.pakli[1].melysegiSzint === 2,
     testver: p.testverek.length === 1 && p.testverek[0].hierarchikusOsszesPont === 5
@@ -1499,6 +1503,110 @@ proba('⭐ D101 ③: a program sorait a prototípus fa-elrendezője (`faElrendez
   const egesz = (await strukturaLap(f.tar, KOINO, {})).sorok;
   const ag = (await strukturaLap(f.tar, KOINO, { agazat: f.A1 })).sorok;
   return helyez(egesz) === 5 && helyez(ag, f.A1) === 2;
+});
+
+// ===================================
+// ⭐⭐ D101 ④: A SÍKIDOM — egy szülő gyerekei egy küszöb fölött, és az ős-lánc
+// ===================================
+
+proba('⭐⭐ D101 ④: a Síkidom gyerekei pont szerint, a küszöb fölött, kurzorral hiánytalanul — és az ős-lánc', async () => {
+  const f = await kisFa();
+  // az ágazati pontok: A = 50 + 30 + 10 + 5 = 95 · A1 = 40 · A11 = 10 · A2 = 5 · B = 20
+  const gyoker = await sikidomGyerekek(f.tar, KOINO, {});
+  const a = await sikidomGyerekek(f.tar, KOINO, { szulo: f.A });
+  const kuszob = await sikidomGyerekek(f.tar, KOINO, { szulo: f.A, minPont: 10 });
+  const elso = await sikidomGyerekek(f.tar, KOINO, { szulo: f.A, darab: 1 });
+  const masodik = await sikidomGyerekek(f.tar, KOINO, { szulo: f.A, darab: 1, kurzor: elso.kurzor, osszesKell: false });
+  const lanc = await sikidomOslanc(f.tar, KOINO, { entitas: f.A11 });
+  const azok = (r) => r.gyerekek.map((x) => x.entitasId).join();
+  const a1 = a.gyerekek[0];
+  const ki = {
+    gyoker: azok(gyoker) === [f.A, f.B].join() && gyoker.osszesGyerekPont === 115 && gyoker.teljes && !gyoker.vanTovabb
+      && gyoker.hianyzik.length === 0 && gyoker.gyerekek[0].vanGyereke === true && gyoker.gyerekek[1].vanGyereke === false,
+    sor: a1.entitasId === f.A1 && a1.entitasTipus === 'Gondolat' && a1.cim === 'A1' && a1.hierarchikusOsszesPont === 40
+      && !('szuloId' in a1) && 'letrehozva' in a1 && Array.isArray(a1.kategoriaIkonok),
+    a: azok(a) === [f.A1, f.A2].join() && a.osszesGyerekPont === 45,
+    kuszob: azok(kuszob) === f.A1 && kuszob.vanTovabb === false,
+    kurzor: azok(elso) === f.A1 && elso.vanTovabb === true && elso.kurzor?.pont === 40 && elso.kurzor?.id === f.A1
+      && azok(masodik) === f.A2 && masodik.vanTovabb === false && masodik.osszesGyerekPont === null,
+    lanc: lanc.oslanc.map((x) => x.entitasId).join() === [f.A11, f.A1, f.A].join() && lanc.teljesLanc === true
+      && lanc.legerosebbGyokerPont === 95 && lanc.hianyzik.length === 0 && lanc.oslanc[1].vanGyereke === true,
+    korlat: SIKIDOM_DARAB === 300
+  };
+  if (!Object.values(ki).every(Boolean)) console.log('    (síkidom — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ')');
+  return Object.values(ki).every(Boolean);
+});
+
+proba('⭐⭐ D101 ④: a szigorú (b) alatt — a nem tartott síkidom gyerekeit elkéri (mélyen), a helyüket az össz-pontból foglalja, és a hiányzó felmenőt is', async () => {
+  const { tar, anna } = await ujKoino();
+  // A-t tartom; a gyerekeinek és B-nek CSAK A SZÜLETÉSE van meg (a szigorú (b) alatt így jön el)
+  const A = await gondolat(tar, anna, 'A', 50);
+  const masik = await ujEember(KOINO);
+  const szuletes = async (cim, szulo = null) => {
+    const e = await masik.tesz('GondolatLetrehozas', { cim, meret: 10, szulo });
+    await esemenyMentese(tar, e);
+    return e.azonosito;
+  };
+  const A1 = await szuletes('A1', A), A2 = await szuletes('A2', A), B = await szuletes('B');
+  const arva = await gondolat(tar, anna, 'árva', 10, 'Z'.repeat(43));
+  const nezet = ujPakliNezet({ tartott: async () => new Set([A, arva]) });
+  const bemondasok = new Map([[A1, { osszPont: 77, ellenorzott: true }], [A2, { osszPont: 9, ellenorzott: false }]]);
+  const gyoker = await sikidomGyerekek(tar, KOINO, { nezet, bemondasok });
+  const a = await sikidomGyerekek(tar, KOINO, { szulo: A, nezet, bemondasok });
+  const a1 = await sikidomGyerekek(tar, KOINO, { szulo: A1, nezet, bemondasok });
+  // ⭐ ha a tartó azt mondta, hogy A1-nek nincs gyereke (gy = 0), A1 teljes: levél, nem kér
+  const tudas = new Map([[A1, { gy: 0 }]]);
+  const a1Level = await sikidomGyerekek(tar, KOINO, { szulo: A1, nezet, bemondasok, fejlecTudas: tudas });
+  const aTudva = await sikidomGyerekek(tar, KOINO, { szulo: A, nezet, bemondasok, fejlecTudas: tudas });
+  const lanc = await sikidomOslanc(tar, KOINO, { entitas: arva, nezet, bemondasok });
+  const sora = (r, az) => r.gyerekek.find((x) => x.entitasId === az);
+  const ki = {
+    // a gyökér szintje a szigorú (b) alatt soha nem teljes — kéri (a lap ''-ként)
+    gyoker: !gyoker.teljes && gyoker.hianyzik.some((x) => x.fajta === 'fejlecek' && x.kulcs === '' && x.m === true),
+    // A-t tartom: a gyerekeit mind ismerem, nem kér; a nem tartott gyerekeknek a bemondásból van gyereke
+    a: a.teljes && a.hianyzik.length === 0 && sora(a, A1)?.vanGyereke === true && sora(a, A2)?.vanGyereke === true
+      && a.gyerekek[0].entitasId === A1,
+    // A1-et nem tartom: a gyerekeit nem ismerem — mélyen kéri, és a helyük az össz-pontból: 77 − 1 (a saját ≥ 1)
+    a1: !a1.teljes && a1.gyerekek.length === 0 && a1.osszesGyerekPont === 76
+      && a1.hianyzik.some((x) => x.fajta === 'fejlecek' && x.kulcs === A1 && x.m === true),
+    level: a1Level.teljes && a1Level.hianyzik.length === 0 && a1Level.osszesGyerekPont === 0
+      && sora(aTudva, A1)?.vanGyereke === false,
+    // a hiányzó felmenő: a lánc ott véget ér, kimondja, és elkéri
+    lanc: lanc.oslanc.length === 1 && lanc.oslanc[0].entitasId === arva && lanc.teljesLanc === false
+      && lanc.hianyzik.some((x) => x.fajta === 'szelet' && x.kulcs === 'Z'.repeat(43)) && lanc.legerosebbGyokerPont >= 10
+  };
+  if (!Object.values(ki).every(Boolean)) console.log('    (síkidom (b) — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+    + ' ' + JSON.stringify({ g: gyoker.hianyzik, a: a.hianyzik, a1: [a1.osszesGyerekPont, a1.hianyzik], l: [a1Level.teljes, a1Level.osszesGyerekPont] }) + ')');
+  return Object.values(ki).every(Boolean);
+});
+
+// ⛔ D101 ④: A LAP MODUL-FÁJA. Az örökölt kártyák körbe importálnak (Kartya → SikidomModal → SikidomKartyaPanel →
+// kartyaGyar → GondolatKartya → Kartya); ha a fát a `Kartya.js` felől érjük el először, a leszármazott a még nem kész
+// szülőből öröklődne, és a lap semmit nem töltene be („Cannot access 'Kartya' before initialization” — a böngésző mérte). A
+// próba az ES-modulok kiértékelési sorrendjét járja be (mélységi, utólagos — ahogy a böngésző) az `index.html` belépőitől, és
+// megnézi, hogy minden `extends` szülője előbb kész-e. Rontás: a kártya-gyár sora nélkül bukik.
+proba('⛔ D101 ④: a lap modul-fája — egy kártya-osztály sem értékelődik ki a szülője előtt (az örökölt importkör)', async () => {
+  const felulet = resolve(dirname(fileURLToPath(import.meta.url)), '../felulet');
+  const html = await readFile(join(felulet, 'index.html'), 'utf8');
+  const szkript = html.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1] ?? '';
+  const importok = (s) => [...s.matchAll(/^\s*import\s+(?:[^'"]*?from\s+)?['"](\.[^'"]+)['"]/gm)].map((m) => m[1]);
+  const belepok = importok(szkript).map((x) => resolve(felulet, x));
+  const allapot = new Map();
+  const kesz = new Set();
+  const hibak = [];
+  const bejar = async (f) => {
+    if (allapot.has(f)) return;
+    allapot.set(f, 'fut');
+    const s = await readFile(f, 'utf8');
+    for (const x of importok(s)) await bejar(resolve(dirname(f), x));
+    kesz.add(f);
+    const ext = s.match(/class\s+\w+\s+extends\s+(\w+)/);
+    const imp = ext && [...s.matchAll(/^\s*import\s+(\w+)[^'"]*from\s+['"](\.[^'"]+)['"]/gm)].find((m) => m[1] === ext[1]);
+    if (imp && !kesz.has(resolve(dirname(f), imp[2]))) hibak.push(basename(f));
+  };
+  for (const b of belepok) await bejar(b);
+  if (hibak.length) console.log('    (a szülője előtt: ' + hibak.join(', ') + ')');
+  return belepok.length >= 5 && kesz.size > 50 && hibak.length === 0;
 });
 
 proba('⭐ D101: a lista felülről korlátos (a prototípus 100-a), és megmondja, hány van összesen', async () => {

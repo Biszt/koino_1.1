@@ -207,7 +207,8 @@ function sorrendKupac() {
  */
 export async function fejlecekValasza({ allapot, kulcs, n, m = false, utan = null, tartott = () => true, karbantarto,
   esemenyOlvas, bemondasok = new Map() }) {
-  const osszPontok = osszPontokSzamitasa(allapot.entitasok, bemondasok);
+  // ⛔ D101 ④: a nem tartott gyerek össz-pontja a bemondás (akkor is, ha a saját pontjait ismerem).
+  const osszPontok = osszPontokSzamitasa(allapot.entitasok, bemondasok, (az) => tartott(az));
   const gyerekek = gyerekJegyzek(allapot.entitasok);
   const fak = new Map();
   const gyokerGyerekei = () => [...allapot.entitasok.values()].filter((e) => !e.szulo).map((e) => e.azonosito);

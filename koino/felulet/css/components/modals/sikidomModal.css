@@ -1,0 +1,226 @@
+/* frontend/css/components/modals/sikidomModal.css */
+
+/* ===== SÍKIDOM NÉZET MODAL ===== */
+/* A koino_1.0 síkidomos megjelenítésének újraépítése: háromszögeléses kör-pakolás,
+   entitástípus-formák, korlátlan nagyítás horgonyváltással. Teljes képernyős
+   (modal-panel--teljes, a közös modal.css-ből). A SikidomModal.js vezérli.
+
+   MEGJEGYZÉS az alsó sávhoz: a `body.teljes-nezet-nyitva` szabályok (az alsó sáv
+   a modal fölé emelése + a panel magasságának igazítása) a strukturaModal.css-ben
+   élnek, és minden .modal-panel--teljes nézetre érvényesek — a Síkidom nézet is
+   ezt használja, ezért itt nem ismételjük meg. */
+
+/* ===== A FEJLÉC A VÁSZON FÖLÉ, CSAK A ✕ MARAD (Csaba, 2026-08-17) ===== */
+/* A teljes képernyős fejléc függőleges teret vett el, a címe pedig nem fontos.
+   A `sikidom-panel` osztályt a SikidomModal.init teszi a panelre. A fejlécet
+   kivesszük a folyamatból (abszolút pozíció), átlátszóvá tesszük, a címet
+   elrejtjük — így a vászon a teljes magasságot megkapja, és csak a ✕ látszik,
+   jobbra fent, a vászon fölött (saját háttere van, ezért olvasható). */
+.sikidom-panel .modal-fejlec {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: auto;
+  padding: var(--space-3);
+  background: transparent;
+  border-bottom: none;
+  z-index: 5;
+}
+
+.sikidom-panel .modal-cim {
+  display: none;
+}
+
+/* A belső váz tölti ki a rendelkezésre álló magasságot */
+.sikidom-modal {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A nézet-váltás hidden attribútummal történik; a lenti display:flex ERŐSEBB
+   a beépített [hidden]-nél → explicit felülírás kell (mint a Struktúra nézetnél). */
+.sikidom-modal [hidden] {
+  display: none !important;
+}
+
+/* ----- TÖLTŐ ÁLLAPOT ----- */
+.sikidom-modal__betoltes {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.sikidom-modal__betoltes-jelzo {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary);
+  animation: sikidom-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes sikidom-shimmer {
+  0%   { opacity: 0.3; }
+  50%  { opacity: 0.7; }
+  100% { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sikidom-modal__betoltes-jelzo { animation: none; opacity: 0.5; }
+}
+
+.sikidom-modal__betoltes-szoveg {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text);
+}
+
+/* ----- NÉZET ----- */
+.sikidom-modal__nezet {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface-2);
+  cursor: grab;
+  touch-action: none; /* a mozgatást/nagyítást mi kezeljük, nem a böngésző */
+}
+
+.sikidom-modal__nezet:active { cursor: grabbing; }
+
+/* A vászon kitölti a nézetet. A tényleges képpont-felbontást a JS állítja be
+   (devicePixelRatio), hogy nagy felbontású kijelzőn is éles legyen. */
+.sikidom-modal__vaszon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ----- VEZÉRLŐ GOMBOK ----- */
+.sikidom-modal__vezerlok {
+  position: absolute;
+  right: var(--space-4);
+  bottom: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sikidom-modal__vezerlo-gomb {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.sikidom-modal__vezerlo-gomb:hover { background: var(--color-primary-highlight); }
+
+/* ----- HÁTTÉRBEN FUTÓ BETÖLTÉS JELZŐJE ----- */
+/* Diszkrét: a nézet közben használható marad, csak jelezzük, hogy jön még adat. */
+.sikidom-modal__folyamat {
+  position: absolute;
+  left: var(--space-4);
+  top: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  pointer-events: none;
+}
+
+.sikidom-modal__folyamat-pont {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  animation: sikidom-shimmer 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sikidom-modal__folyamat-pont { animation: none; opacity: 0.6; }
+}
+
+/* ----- EGYETLEN KÁRTYA (koppintásra) ----- */
+/* Koppintásra NEM váltunk pakli nézetre, csak a megkoppintott entitás kártyáját
+   mutatjuk meg — bezárhatóan, a nézet fölött lebegve. Az alsó sáv és a nézet
+   használható marad mögötte. */
+.sikidom-modal__kartya-panel {
+  position: absolute;
+  left: var(--space-4);
+  bottom: var(--space-8);
+  z-index: 2;
+  width: min(420px, calc(100% - 2 * var(--space-4)));
+  max-height: min(70%, 620px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.sikidom-modal__kartya-bezar {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sikidom-modal__kartya-bezar:hover { background: var(--color-primary-highlight); }
+
+.sikidom-modal__kartya-hely {
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+/* Kis képernyőn a panel a nézet alját tölti ki */
+@media (max-width: 640px) {
+  .sikidom-modal__kartya-panel {
+    left: var(--space-2);
+    right: var(--space-2);
+    width: auto;
+    bottom: var(--space-6);
+    max-height: 60%;
+  }
+}
+
+/* ----- SÚGÓ SOR ----- */
+.sikidom-modal__sugo {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--space-2);
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  pointer-events: none;
+}
