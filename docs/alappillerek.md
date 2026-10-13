@@ -239,8 +239,8 @@ terep (✅ PC–mobil két külön címen, 72–73. mérés; ⏸️ két mobil �
 átvizsgálva ([`modalok_atvizsgalas.md`](modalok_atvizsgalas.md)); ✅ az I. csoport kész (Tudatpontok, a besorolások
 létrehozása, Rendezés, a fő menü); ✅ a közös alap, a legjobb-először bejáró (D102: a tartó maga jár be, a fejléc
 folytatásával, a kérelem-sorozattal); ✅ a Struktúra (a bejáró sorrendjéből, egy keretig); ✅ a Síkidom (egy szint a
-bejáró sorrendjéből, a nem tartott síkidom gyerekei a kérelem útján; vele az össz-pont javítása — 133.); ⏭️ Keresés →
-az értesítés-réteg. ⭐ **És egy új pillér a láthatáron: a KERESŐ-RÉTEG** (skálázási terv II.,
+bejáró sorrendjéből, a nem tartott síkidom gyerekei a kérelem útján; vele az össz-pont javítása — 133.); ✅ a Keresés
+helyi alja (136–138.); ⏭️ az értesítés-réteg (⑥), utána a kereső-réteg (⑦, külön pillér). ⭐ **És egy új pillér a láthatáron: a KERESŐ-RÉTEG** (skálázási terv II.,
 S8–S10) — három dolog épül rá (a Keresés, a besorolás-lenyílók, az entitás-hivatkozás); a D101 szerint a modálok után,
 saját átvizsgálással.
 
@@ -368,7 +368,7 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 *Utána a ház:* a pakli-nézet a felületen, a terep (két mobil, a 🅱️ változat). ✅ **A terep PC–mobil között
 (72–73. mérés, D99) és a ház (D100, 2026-10-10) KÉSZ** — a részletek a fázis-2 terv D100-ában és az 5. szakasz
 96–104. bejegyzésében. ⏭️ Csaba a maradék modálokat választotta (D101, 2026-10-11) — az I. csoport kész (105–111.), a
-bejáró (D102, 112–121.), a Struktúra (122–126.) és a Síkidom (127–135.) is.
+bejáró (D102, 112–121.), a Struktúra (122–126.), a Síkidom (127–135.) és a Keresés helyi alja (136–138.) is.
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 
@@ -917,3 +917,15 @@ bejáró (D102, 112–121.), a Struktúra (122–126.) és a Síkidom (127–135
     kártya-adatot adja `kivalasztottEntitas`-ként** · mert a `SikidomKartyaPanel` ebből építi az adatlapot, a prototípus
     szolgáltatása viszont csak azonosítót és típust adott — az adatlap ott „(cím nélkül)” állt; a `Pakli.js` csak az
     azonosítót olvassa, neki a bővebb válasz semmit nem változtat · a böngésző mérte, Claude · `kartyaAdat.js`.
+136. **2026-10-12 · a Keresés korlátja (D101 ⑤)** → **típusonként, a prototípusé: alapból 10, legfeljebb 50 (eddig a koinóban
+    egyetlen 20-as összkorlát)** · mert a modál 20-at kér típusonként, a hivatkozás-mező semmit (alapból 10), és a két
+    útnak ugyanazt kell kapnia, mint a prototípusban; a felső korlát áll (egy kereső, ami mindent adhat, nem kereső) · Claude ·
+    `pakli.js` (`KERESES_ALAP`, `KERESES_MAX`).
+137. **2026-10-12 · a Keresés forrása és sorrendje (D101 ⑤, M4)** → **a két tárból (amit tartok és amit láttam — eddig csak
+    a tartósból), típusonként az ágazati pont szerint csökkenően (holtversenyben az azonosító)** · mert a látott (pl. a
+    kérelem hozta) entitás is az e-ember elé került már, és a prototípus adatbázis-sorrendje helyett a legerősebb elöl a
+    bejáró sorrendje; a hálózati MEGTALÁLÁS a kereső-rétegé (⑦) · Claude · `pakli.js` (`keresesHelyben`).
+138. **2026-10-12 · a Keresés megjegyzése (D101 ⑤, M2)** → **a válasz kimondja, hány ismert entitás címében keresett, és
+    hogy a hálózati keresés még nincs; ág-szűrésnél, hánynál nem dönthető el; a lap a keresés UTÁN írja ki, üres mezőnél
+    eltávolítja** · mert a „Nincs találat” a helyi aljánál nem a teljes igazság (D19) — és a régi megjegyzés egy új,
+    még nem futott keresés alatt félrevezetne · Claude · `koino.js` (`keresesMegjegyzes`), `koinoModalok.js`.

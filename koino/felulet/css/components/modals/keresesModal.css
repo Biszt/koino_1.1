@@ -1,0 +1,83 @@
+/* frontend/css/components/modals/keresesModal.css */
+
+/* A Keresés modal a standard modal-vázra épül (Modal.js).
+   Cím/név alapú entitás-keresés: keresőmező + típus-pipák + találati lista. */
+
+/* ===== KERESŐMEZŐ ===== */
+.kereses-modal__mezo {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.4));
+  border-radius: var(--radius-md);
+  background: var(--color-surface, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.kereses-modal__mezo:focus {
+  outline: 2px solid var(--color-accent, #37a24d);
+  outline-offset: 1px;
+}
+
+/* ===== TÍPUS-SZŰRŐ PIPÁK ===== */
+.kereses-modal__tipusok {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.kereses-modal__tipus-pipa {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+/* ===== TALÁLATI LISTA ===== */
+.kereses-modal__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+/* ===== ÜRES / ÚTMUTATÓ ÁLLAPOT ===== */
+.kereses-modal__ures {
+  margin: var(--space-4) 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ===== EGY TALÁLAT-SOR ===== */
+.kereses-modal__elem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.kereses-modal__elem:hover {
+  background: var(--color-surface-offset);
+}
+
+.kereses-modal__tipus {
+  flex: 0 0 auto;
+}
+
+/* A találat címe — hosszú címnél csonkolva */
+.kereses-modal__cim {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

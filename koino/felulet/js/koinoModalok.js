@@ -23,6 +23,7 @@
 import TudatpontokModal from './components/modals/TudatpontokModal.js';
 import StrukturaModal from './components/modals/StrukturaModal.js';
 import SikidomModal from './components/modals/SikidomModal.js';
+import KeresesModal from './components/modals/KeresesModal.js';
 
 // ===================================
 // A PROGRAM MEGJEGYZÉSEI — útvonalanként a legutóbbi
@@ -177,6 +178,18 @@ koruleIr(SikidomModal, '_gyerekekBetoltese', function (szuloId) {
 koruleIr(SikidomModal, '_osLancFelfuzese', function () {
   this._koinoLancMegjegyzes = megjegyzes('sikidom/oslanc');
   sikidomMegjegyzesKirajzolasa(this);
+});
+
+// ===================================
+// ⭐ A KERESÉS (D101 ⑤)
+// ===================================
+//
+// A helyi alja (M4): a program a készüléken ismert entitások címében keres, és kimondja, hogy a hálózati keresés (a
+// kereső-réteg) még nincs; ág-szűrésnél azt is, hánynál nem tudja eldönteni, hogy az ágban van-e. A lap a találati lista alá
+// írja — a keresés UTÁN (üres mezőnél nincs keresés, és a régi megjegyzés sem marad ott).
+koruleIr(KeresesModal, '_kereses', function () {
+  const ures = !(document.getElementById('kereses-mezo')?.value ?? '').trim();
+  megjegyzesKirajzolasa(document.getElementById('kereses-lista'), ures ? null : megjegyzes('kereses'));
 });
 
 koruleIr(SikidomModal, '_takaritasBezaraskor', function () {

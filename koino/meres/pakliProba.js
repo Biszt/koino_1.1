@@ -22,7 +22,8 @@ import {
   pakliHierarchia, TESTVER_KORLAT,
   agHelyzete, sajatHozzarendelesek, HOZZARENDELES_KORLAT, biztosElotag, ELORE_KERES,
   strukturaDarabszam, strukturaLap, STRUKTURA_KERET,
-  sikidomGyerekek, sikidomOslanc, SIKIDOM_DARAB
+  sikidomGyerekek, sikidomOslanc, SIKIDOM_DARAB,
+  keresesHelyben, KERESES_ALAP, KERESES_MAX
 } from '../js/allapot/pakli.js';
 import { GYOKER_KULCS } from '../js/csere/szeletEgyeztetes.js';
 
@@ -1607,6 +1608,46 @@ proba('⛔ D101 ④: a lap modul-fája — egy kártya-osztály sem értékelőd
   for (const b of belepok) await bejar(b);
   if (hibak.length) console.log('    (a szülője előtt: ' + hibak.join(', ') + ')');
   return belepok.length >= 5 && kesz.size > 50 && hibak.length === 0;
+});
+
+// ===================================
+// ⭐⭐ D101 ⑤: A KERESÉS — a helyi alja (M4)
+// ===================================
+
+proba('⭐⭐ D101 ⑤: a helyi keresés — típusonként a legerősebb elöl, a típus-szűrő, és ág-szűrve csak az ág (a hiányzó felmenőt elkéri)', async () => {
+  const f = await kisFa();
+  // az ágazati pontok: A = 95 · A1 = 40 · A11 = 10 · A2 = 5 · B = 20 — a cím mind egy betű + szám
+  const mind = await keresesHelyben(f.tar, KOINO, { q: 'a' });
+  const nagy = await keresesHelyben(f.tar, KOINO, { q: 'A1' });
+  const ag = await keresesHelyben(f.tar, KOINO, { q: 'a', agazat: f.A1 });
+  const kategoria = await keresesHelyben(f.tar, KOINO, { q: 'a', tipusok: ['Kategoria'] });
+  const ures = await keresesHelyben(f.tar, KOINO, { q: '   ' });
+  const arva = await gondolat(f.tar, f.anna, 'árva A', 10, 'Z'.repeat(43));
+  const agArva = await keresesHelyben(f.tar, KOINO, { q: 'a', agazat: f.A1 });
+  const azok = (r) => r.talalatok.map((t) => t.entitasId).join();
+  const ki = {
+    // mind a négy „A” című gondolat, a legerősebb elöl (B címében nincs „a”); kisbetűs kérdés, nagybetűs cím
+    sorrend: azok(mind) === [f.A, f.A1, f.A11, f.A2].join() && mind.talalatok.every((t) => t.entitasTipus === 'Gondolat'),
+    resz: azok(nagy) === [f.A1, f.A11].join(),
+    ag: azok(ag) === [f.A1, f.A11].join() && ag.nemEldontheto === 0,
+    tipus: kategoria.talalatok.length === 0,
+    ures: ures.talalatok.length === 0,
+    // az árva felmenője nincs meg: nem dönthető el, hogy az ágban van-e — kimondja és elkéri
+    arva: agArva.nemEldontheto === 1 && !azok(agArva).includes(arva)
+      && agArva.hianyzik.some((h) => h.fajta === 'szelet' && h.kulcs === 'Z'.repeat(43)) && agArva.ismert === 6
+  };
+  if (!Object.values(ki).every(Boolean)) console.log('    (keresés — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ')');
+  return Object.values(ki).every(Boolean);
+});
+
+proba('⭐ D101 ⑤: a keresés típusonként korlátos — alapból 10, legfeljebb 50 (a prototípusé)', async () => {
+  const { tar, anna } = await ujKoino();
+  for (let i = 0; i < 55; i++) await gondolat(tar, anna, 'sok ' + i, 1 + (i % 7));
+  const alap = await keresesHelyben(tar, KOINO, { q: 'sok' });
+  const husz = await keresesHelyben(tar, KOINO, { q: 'sok', limit: 20 });
+  const sok = await keresesHelyben(tar, KOINO, { q: 'sok', limit: 1000 });
+  return KERESES_ALAP === 10 && KERESES_MAX === 50 && alap.talalatok.length === 10 && husz.talalatok.length === 20
+    && sok.talalatok.length === 50;
 });
 
 proba('⭐ D101: a lista felülről korlátos (a prototípus 100-a), és megmondja, hány van összesen', async () => {

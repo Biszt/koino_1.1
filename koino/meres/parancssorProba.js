@@ -2878,7 +2878,7 @@ proba('⭐ ÁTHELYEZÉSI javaslat a lapról — és a gyökérre helyezés is (`
   }
 });
 
-proba('⭐ A KERESÉS megtalálja az entitást — és a találat-szám FELÜLRŐL KORLÁTOS', async () => {
+proba('⭐ A KERESÉS megtalálja az entitást — és a találat-szám FELÜLRŐL KORLÁTOS (D101 ⑤: típusonként, és ág-szűrve)', async () => {
   const hely = await ujKeszulek();
   let kiszolgalo = null;
   try {
@@ -2894,11 +2894,20 @@ proba('⭐ A KERESÉS megtalálja az entitást — és a találat-szám FELÜLR�
     }
 
     const talalt = await hiv('/api/kereses?q=' + encodeURIComponent('KERESHETŐ'));
+    const husz = await hiv('/api/kereses?q=' + encodeURIComponent('KERESHETŐ') + '&tipusok=Gondolat,Kategoria,GondolatTipus&limit=20');
     const semmi = await hiv('/api/kereses?q=' + encodeURIComponent('nincs-ilyen-sehol'));
     const ures = await hiv('/api/kereses?q=');
+    // ⭐ D101 ⑤: ág-szűrve (a kártya menüjének Keresése) — csak az ág alattiak
+    const egyik = talalt.adat.talalatok[0]?.entitasId;
+    const gyerek = (await hiv('/api/gondolat', { method: 'POST',
+      body: JSON.stringify({ cim: 'KERESHETŐ gyerek', szuloId: egyik, kezdoTudatpont: 5 }) })).adat?.data?._id;
+    const ag = await hiv('/api/kereses?q=' + encodeURIComponent('KERESHETŐ') + '&limit=20&agEntitasId=' + egyik);
 
-    return talalt.adat.talalatok.length === 20        // KERESES_KORLAT
+    // ⭐ D101 ⑤: a prototípus korlátja — típusonként alapból 10, a modál 20-at kér (a 25-ből)
+    return talalt.adat.talalatok.length === 10 && husz.adat.talalatok.length === 20
       && talalt.adat.talalatok.every((t) => t.entitasId && t.entitasTipus && t.cim)
+      && /ismert \d+ entitás címében/.test(talalt.adat.koinoMegjegyzes ?? '')
+      && ag.adat.talalatok.map((t) => t.entitasId).sort().join() === [egyik, gyerek].sort().join()
       && semmi.adat.talalatok.length === 0
       && ures.adat.talalatok.length === 0;
   } finally {

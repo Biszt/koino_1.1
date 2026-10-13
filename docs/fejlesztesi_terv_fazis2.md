@@ -5260,6 +5260,22 @@ kérelem útján, ugyanabban a futó felületben; a D102 bejáró-próbája most
 Böngészőben: a modál megnyílik, a három gyökér és a gyerekeik felépülnek, az egérrel nagyítva a következő szint betöltődik,
 az adatlap a címmel jön, a megjegyzés a vászon tetején, bezáráskor az újrakérdezés leáll.
 
+#### ✅ MEGÉPÜLT — ⑤ a Keresés, a helyi alja (2026-10-12, M4)
+
+⭐ **A prototípus kérdése, a készüléken ismert entitásokon** (`pakli.js` `keresesHelyben`): `q`, `tipusok` (a cím-viselők:
+gondolat, kategória, gondolattípus), `limit` TÍPUSONKÉNT (alapból 10, legfeljebb 50 — a prototípus `keresesController`-e;
+eddig a koinó egyetlen 20-as összkorlátot tartott), `agEntitasId` (ág-szűrve az `agHelyzete`-vel: a nem eldönthetőt
+kimondja, a hiányzó felmenőt elkéri). A két tárból keres (amit tartok és amit láttam — eddig csak a tartósból), és
+típusonként a legerősebb elöl (az ágazati pont szerint — a prototípusé az adatbázis sorrendje volt). ⭐ **A tudás határa:**
+a válasz kimondja, hogy a készüléken ismert N entitás címében keresett, és hogy a hálózati keresés (a kereső-réteg — ⑦)
+még nincs (`koino.js` `keresesMegjegyzes`); a lap a találati lista alá írja (`koinoModalok.js` — a keresés UTÁN; üres
+mezőnél eltűnik). Egy készülék terhe itt a saját szeletein múlik, nem a koinó méretén. A `KeresesModal` (+ sablon, CSS)
+bájtra a prototípusé; az `EntitasKeresoMezo` (a hivatkozás-mező) ugyanezt az útvonalat kérdezi, változatlanul. Elágazás
+136–138. Próbák: két modul-próba (`pakliProba.js`: a sorrend, a rész-egyezés, a típus-szűrő, az ág, az árva felmenője; a
+típusonkénti korlát) és a bekötés (`parancssorProba.js`: a meglévő keresés-próba a prototípus korlátjára, a
+megjegyzésre és az ág-szűrésre élesítve) — mind rontással. Böngészőben: a fő menü Keresése talál, a legerősebb elöl, a
+megjegyzés a lista alatt.
+
 ### D102. A BEJÁRÓ: A TARTÓ MAGA JÁR BE (2026-10-11, Csaba: „minden javaslatodat elfogadom, mehetünk tovább”)
 
 **Amiből jött:** a 74. mérés (`bejaroMeres.js`) és a [`modalok_atvizsgalas.md`](modalok_atvizsgalas.md) 6. szakasza: egy friss

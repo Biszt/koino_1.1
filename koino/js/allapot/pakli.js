@@ -1355,6 +1355,72 @@ export async function sikidomOslanc(tar, koino, beallitas = {}) {
 }
 
 // ===================================
+// ⭐⭐ D101 ⑤: A KERESÉS — a helyi alja (M4): a készüléken ismert entitások címében, ág-szűrve
+// ===================================
+//
+// A prototípus keresője (`keresesService`) a TELJES adatbázisban keresett, típusonként `limit` találattal (alapból 10,
+// legfeljebb 50), és ág-szűrve csak az ág alattiakat adta. ⭐ Itt a helyi alja (D101/M4): a készüléken ismert entitások
+// címében (a két tárból), ugyanazokkal a szabályokkal — a hálózati MEGTALÁLÁS a kereső-réteg (⑦, skálázási terv II.), ami még
+// nincs, és a válasz ezt kimondja (D19, M2). Egy készülék terhe itt a saját szeletein múlik (amit tart és látott), nem a koinó
+// méretén. A sorrend típusonként az ágazati pont szerint csökkenő (holtversenyben az azonosító — a bejáró sorrendje): a
+// prototípusé az adatbázisé volt, a koinóban a legerősebb elöl.
+
+/** A kereső típusai (a cím-viselők — a prototípus `TAMOGATOTT_TIPUSOK`-ja). */
+export const KERESES_TIPUSOK = ['Gondolat', 'Kategoria', 'GondolatTipus'];
+/** Típusonként alapból ennyi találat, és legfeljebb ennyi (a prototípus `keresesController`-e). */
+export const KERESES_ALAP = 10;
+export const KERESES_MAX = 50;
+
+/**
+ * ⭐ A helyi keresés — a prototípus alakjában (`{ talalatok: [{ entitasId, entitasTipus, cim }] }`), és a koinós többlet:
+ * hány entitás közt kerestem (`ismert`), és ág-szűrésnél hányról nem tudom eldönteni, hogy az ágban van-e.
+ * @param {Object} [beallitas] - { q, tipusok, limit, agazat, nezet, bemondasok }
+ * @returns {Promise<Object>}
+ */
+export async function keresesHelyben(tar, koino, beallitas = {}) {
+  const q = String(beallitas.q ?? '').trim().normalize('NFC').toLowerCase();
+  const kertTipusok = Array.isArray(beallitas.tipusok) && beallitas.tipusok.length
+    ? beallitas.tipusok.filter((t) => KERESES_TIPUSOK.includes(t)) : KERESES_TIPUSOK;
+  const limit = Number.isInteger(beallitas.limit) && beallitas.limit >= 1 ? Math.min(beallitas.limit, KERESES_MAX) : KERESES_ALAP;
+  const agazat = typeof beallitas.agazat === 'string' && beallitas.agazat ? beallitas.agazat : null;
+  if (!q) return { talalatok: [], ismert: 0, nemEldontheto: 0, hianyzik: [], agazat };
+  const nezet = beallitas.nezet ?? ujPakliNezet();
+  const esemenyek = await koinoEsemenyei(tar, koino);
+  const kep = await kepetKerni(nezet, koino, esemenyek.length, Date.now(), esemenyek, tar.csakAtmeneti?.() ?? null);
+  const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok, await tartottKerdes(nezet));
+  const ertek = (az) => agazati.get(az) ?? 0;
+  const tipusonkent = new Map(kertTipusok.map((t) => [t, []]));
+  const hianyzik = [];
+  let nemEldontheto = 0;
+  for (const e of kep.entitasok.values()) {
+    const lista = tipusonkent.get(e.tipus);
+    if (!lista) continue;
+    if (!String(e.cim ?? '').normalize('NFC').toLowerCase().includes(q)) continue;
+    if (agazat) {
+      const h = agHelyzete(kep.entitasok, e.azonosito, agazat);
+      if (h.alatta === null) {
+        nemEldontheto++;
+        if (h.hianyzo && hianyzik.length < MAX_DARAB && !hianyzik.some((x) => x.kulcs === h.hianyzo)) {
+          hianyzik.push({ fajta: 'szelet', kulcs: h.hianyzo, ok: 'egy felmenőt nem ismerek (az ág-szűréshez)' });
+        }
+        continue;
+      }
+      if (!h.alatta) continue;
+    }
+    lista.push(e);
+  }
+  const talalatok = [];
+  for (const [tipus, lista] of tipusonkent) {
+    lista.sort((a, b) => ertek(b.azonosito) - ertek(a.azonosito) || (a.azonosito < b.azonosito ? -1 : a.azonosito > b.azonosito ? 1 : 0));
+    for (const e of lista.slice(0, limit)) {
+      talalatok.push({ entitasId: e.azonosito, entitasTipus: tipus,
+        cim: e.cim ?? (tipus === 'Gondolat' ? '(cím nélkül)' : '(név nélkül)') });
+    }
+  }
+  return { talalatok, ismert: kep.entitasok.size, nemEldontheto, hianyzik, agazat };
+}
+
+// ===================================
 // ⭐ D101: „X ÁGA ALATT VAN-E?” — EGY HELYEN
 // ===================================
 //

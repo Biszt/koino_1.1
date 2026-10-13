@@ -230,7 +230,9 @@ import {
   // ⭐ D101 ③: a Struktúra nézet.
   strukturaDarabszam, strukturaLap,
   // ⭐ D101 ④: a Síkidom nézet.
-  sikidomGyerekek, sikidomOslanc
+  sikidomGyerekek, sikidomOslanc,
+  // ⭐ D101 ⑤: a Keresés (a helyi alja).
+  keresesHelyben
 } from './js/allapot/pakli.js';
 // ⭐ A RANDEVÚ (2026-09-14): a csere ÉS a fájlok is átmennek az átfúrt résen.
 // ⭐ És a szelet-kérés is a résen (D69/2): a `hozd` 2026-09-26 óta ezen megy.
@@ -258,10 +260,6 @@ const KOINO = process.env.KOINO_AZONOSITO ?? 'sajat';
 const KEZDO_PONT = 100;
 const NAP = 86400 * 1000;
 const ALAP_PORT = 7373;
-
-// ⛔ Egy keresés legfeljebb ennyi találatot ad (5.8). Nem kényelmi szám: egy kereső,
-// ami „mindent” adhat vissza, nem kereső — ugyanaz az érv, mint a pakli `MAX_DARAB`-jánál.
-const KERESES_KORLAT = 20;
 
 // ⛔⛔ ITT ELŐSZÖR EGY BEÉGETETT `MENET_KORLAT = 5` ÁLLT — és a 9. szabály elkapta.
 //
@@ -1596,6 +1594,20 @@ function sikidomMegjegyzes(r, allas) {
     ? ' — ' + allas.fuggo + ' kérés úton van a hiányzó ágakért; ' + (allas.celos > 0
       ? 'ami megjön, magától megjelenik.' : 'a tartóikat keresem.')
     : '.');
+}
+
+/**
+ * ⭐ D101 ⑤: a Keresés megjegyzése — hol kerestem (a készüléken ismert entitások címében), és hogy a hálózati keresés még
+ * nincs; ág-szűrésnél, hánynál nem tudom eldönteni, hogy az ágban van-e (D19, M2). Üres kérdésre nincs mit mondani.
+ */
+function keresesMegjegyzes(r, keres) {
+  if (r.ismert === 0 && !r.talalatok.length && r.nemEldontheto === 0) return null;
+  const reszek = ['A keresés a készülékeden ismert ' + r.ismert + ' entitás címében keresett — a hálózati keresés még nincs.'];
+  if (r.nemEldontheto > 0) {
+    reszek.push(r.nemEldontheto + ' találatról nem tudom eldönteni, ebben az ágban van-e (egy felmenője nincs meg)'
+      + (keres.fuggo > 0 ? ' — elkértem.' : '.'));
+  }
+  return reszek.join(' ');
 }
 
 /** Hány fejléc- és szelet-kérelem vár (és hánynak van célja) — a nézetek megjegyzéséhez. */
@@ -6617,25 +6629,28 @@ try {
         // a hívó **kifejezést és korlátot** ad, nem „mindent" — tehát a kereső-réteg
         // (ami hálózatot is kíván, és elhagyható) **a hívó változtatása nélkül** léphet a
         // helyére. *Pontosan úgy, ahogy a 3.2-ben a tár-illesztő.*
+        // ===================================
+        // ⭐⭐ D101 ⑤: A KERESÉS — a helyi alja (M4): a készüléken ismert entitások címében, ág-szűrve
+        // ===================================
+        //
+        // A prototípus útvonala és alakja (`KeresesModal`, `EntitasKeresoMezo`): `q`, `tipusok`, `limit` (típusonként,
+        // alapból 10, legfeljebb 50), `agEntitasId`. ⛔ A TALÁLAT-SZÁM FELÜLRŐL KORLÁTOS — egy kereső, ami „mindent” adhat
+        // vissza, nem kereső. A két tárból keres (amit tartok és amit láttam), és kimondja, hogy a hálózati keresés (a
+        // kereső-réteg) még nincs; ág-szűrésnél a hiányzó felmenőt elkéri (D19, M2).
         if (utvonal === '/api/kereses') {
-          const q = (kereses.get('q') ?? '').trim().toLowerCase();
-          if (!q) return { adat: { talalatok: [] } };
-
-          const tipusok = (kereses.get('tipusok') ?? '')
-            .split(',').map((t) => t.trim()).filter(Boolean);
-
-          const { allapot } = await kepetKeszit(0, tar, KOINO);
-          const talalatok = [];
-          for (const e of allapot.entitasok.values()) {
-            if (tipusok.length && !tipusok.includes(e.tipus)) continue;
-            if (!(e.cim ?? '').toLowerCase().includes(q)) continue;
-            talalatok.push({ entitasId: e.azonosito, entitasTipus: e.tipus, cim: e.cim });
-            // ⛔ A TALÁLAT-SZÁM FELÜLRŐL KORLÁTOS — ugyanaz az érv, mint a pakli
-            // `MAX_DARAB`-jánál: egy kereső, ami „mindent" adhat vissza, nem kereső.
-            if (talalatok.length >= KERESES_KORLAT) break;
-          }
-
-          return { adat: { talalatok } };
+          const limit = parseInt(kereses.get('limit'), 10);
+          const r = await keresesHelyben(olvasoTar, KOINO, {
+            q: kereses.get('q') ?? '',
+            tipusok: (kereses.get('tipusok') ?? '').split(',').map((t) => t.trim()).filter(Boolean),
+            limit: Number.isInteger(limit) ? limit : undefined,
+            agazat: kereses.get('agEntitasId') || null,
+            nezet: pakliNezet,
+            bemondasok: sajatKoino ? await bemondasok() : new Map()
+          });
+          const keres = sajatKoino && r.hianyzik.length ? await lapHianyzoinakElkerese(r.hianyzik)
+            : { kert: 0, fuggo: 0, celos: 0 };
+          return { adat: { talalatok: r.talalatok, ismert: r.ismert, nemEldontheto: r.nemEldontheto,
+            betoltes: keres.fuggo > 0, koinoMegjegyzes: keresesMegjegyzes(r, keres) } };
         }
 
         // ⭐ EGY entitás szövege (5.3). A lista szándékosan nem hozza (9. szabály), ezért
