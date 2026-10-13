@@ -52,6 +52,8 @@
 @import './components/modals/strukturaModal.css';
 @import './components/modals/sikidomModal.css';
 @import './components/modals/keresesModal.css';
+@import './components/modals/ertesitesiBeallitasModal.css';
+@import './components/modals/ertesitesekModal.css';
 
 /* ⚠️ A BELÉPŐ TÉR (5.6) — az EGYETLEN nem örökölt CSS: a prototípusban a „koino" mint
    fogalom nem létezett, tehát nincs mit átemelni. Csak a meglévő változókra épül. */

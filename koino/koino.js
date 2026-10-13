@@ -109,8 +109,15 @@ import {
   // ⭐ D98/1 (F): a társankénti emlékezet helyi tára.
   emlekezetTarolo,
   // ⭐ D98/2–3: a lánc-ellenőrzés helyi tára.
-  lancEllenorzesTarolo
+  lancEllenorzesTarolo,
+  // ⭐ D101 ⑥: a postafiók és az értesítési beállítások helyi tára
+  ertesitesTarolo
 } from './js/tar/fajlTar.js';
+// ⭐⭐ D101 ⑥: az értesítés-réteg — a postafiók a készüléken, két pillanatkép különbségéből
+import {
+  beallitasokAlakja, ervenyesBeallitas, beallitasMentese, globalisMentese, ertesitesekSzamitasa,
+  postafiokAlakja, postafiokBovitese, postafiokLapja, olvasottnakJelol, olvasatlanTerkep
+} from './js/allapot/ertesites.js';
 import { naploFrissitese } from './js/csere/kozosHalmaz.js';
 // ⭐ D97/2: a raj a körben (69. mérés: a változott szeletek tartói sorban, aztán a forgatás).
 import { rajKorAllapot, valtozottFeljegyzese, rajKorCeljai } from './js/csere/rajKor.js';
@@ -123,7 +130,7 @@ import {
 } from './js/kulcs/kulcsTar.js';
 import { koinoEsemenyei, sajatLancEsemenyei, esemenyLekerese, esemenyMentese, entitasEsemenyei } from './js/tar/esemenyTar.js';
 // ⭐ B/2: a szelet-kulcs (az előléptetéshez).
-import { szelet, esemenyEllenorzese, bejelentesHelyei } from './js/esemeny/esemeny.js';
+import { szelet, esemenyEllenorzese, bejelentesHelyei, azonositoAlaku } from './js/esemeny/esemeny.js';
 import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
 import { ALLASPONT_MUVELET } from './js/allapot/szabalyok.js';
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
@@ -232,7 +239,9 @@ import {
   // ⭐ D101 ④: a Síkidom nézet.
   sikidomGyerekek, sikidomOslanc,
   // ⭐ D101 ⑤: a Keresés (a helyi alja).
-  keresesHelyben
+  keresesHelyben,
+  // ⭐ D101 ⑥: az értesítések pillanatképe.
+  ertesitesiKep
 } from './js/allapot/pakli.js';
 // ⭐ A RANDEVÚ (2026-09-14): a csere ÉS a fájlok is átmennek az átfúrt résen.
 // ⭐ És a szelet-kérés is a résen (D69/2): a `hozd` 2026-09-26 óta ezen megy.
@@ -1010,11 +1019,17 @@ async function gyokerMelysegem() {
 /**
  * ⭐ D95/4: a csak küldő út kulcsai — a saját legfelső szintű gondolatom születése a gyökér-darabja alatt is felajánlható
  * (a mélységem szerint): ha nem a saját darabomba esik, csak így jut el a darab tartóihoz.
+ * ⛔ D101 ⑥ (lelet — az értesítések bekötés-próbája mérte): és a BEJELENTÉSI HELYEIN is (`bejelentesHelyei`: a születés a
+ * szülőnél, a javaslat az érintettjeinél, a szavazat a bizonyítéka kulcsainál). Eddig csak a saját szeletén ment: ha valaki
+ * egy olyan gondolat alá írt, amelynek a szeletét nem tartja, a gyerek születése a szülő tartójához soha nem ért el (a
+ * szülő szeletében, ahová bejelentődik, nem vett részt) — a szigorú (b) alatt egy válasz nem jutott el ahhoz, akinek szólt.
  */
 function kuldoKulcsai(gy) {
   return (e) => {
     const ki = [e.entitas ?? e.azonosito];
     if (e.tipus === 'GondolatLetrehozas' && !e.adat?.szulo) ki.push(gyokerDarabKulcsa(gy.melyseg, gyokerDarabja(e.azonosito, gy.melyseg)));
+    // a gyökér ('') nem szelet: oda a gyökér-darab viszi (fent)
+    for (const h of bejelentesHelyei(e)) if (h !== '' && !ki.includes(h)) ki.push(h);
     return ki;
   };
 }
@@ -1608,6 +1623,67 @@ function keresesMegjegyzes(r, keres) {
       + (keres.fuggo > 0 ? ' — elkértem.' : '.'));
   }
   return reszek.join(' ');
+}
+
+// ===================================
+// ⭐⭐ D101 ⑥: A POSTAFIÓK — a készüléken, két pillanatkép különbségéből (`ertesites.js`)
+// ===================================
+//
+// A felület folyamata számol és ír (egy író): a postafiók kérdésére mindig, a kártyák számlálójához legfeljebb fél
+// percenként. ⛔ A műveletek egy folyamaton belül SORBAN mennek (`postafiokSor`): egy olvasott-jelölés különben elveszhetne
+// egy közben futó számolás írása alatt.
+
+/** A kártyák számlálója legfeljebb ennyi időnként számol újra (a postafiók kérdése mindig). */
+const POSTAFIOK_SZAMLALO_SZUNET = 30 * 1000;
+const postafiokIdo = new Map();                          // koinó → a legutóbbi számolás ideje
+let postafiokSor = Promise.resolve();
+
+/** Egy postafiók-művelet a sor végére (a hibája nem akasztja meg a többit). */
+function postafiokMuvelet(fn) {
+  const fut = postafiokSor.then(fn, fn);
+  postafiokSor = fut.catch(() => {});
+  return fut;
+}
+
+/**
+ * ⭐ A postafiók frissítése: a mostani pillanatkép az előzőhöz képest (az első az alapvonal — semmit nem jelez), az új
+ * tételek a postafiók elejére. Visszaadja a postafiókot és a kép entitásait (a címekhez, a lánchoz).
+ * @param {Object} k - { tar, koino, nezet, bemondasok, szerzo, szunet }
+ */
+async function postafiokFrissitese({ tar: t, koino, nezet, bemondasok: b, szerzo: en, szunet = 0 }) {
+  return postafiokMuvelet(async () => {
+    const tarolo = ertesitesTarolo(koino);
+    const pf = postafiokAlakja(await tarolo.postafiokOlvas());
+    const most = Date.now();
+    if (szunet > 0 && pf.kep && most - (postafiokIdo.get(koino) ?? 0) < szunet) return { pf, entitasok: null };
+    postafiokIdo.set(koino, most);
+    const beallitasok = beallitasokAlakja(await tarolo.beallitasOlvas());
+    const { kep, entitasok } = await ertesitesiKep(t, koino, { szerzo: en, nezet, bemondasok: b, most });
+    const ujak = ertesitesekSzamitasa(pf.kep, kep, { beallitasok, entitasok, en, most });
+    const uj = postafiokBovitese(pf, ujak, kep, most);
+    await tarolo.postafiokIr(uj);
+    return { pf: uj, entitasok };
+  });
+}
+
+/** Egy olvasott-jelölés vagy törlés a postafiókban (sorban a számolással). @returns {Promise<any>} a `fn` eredménye */
+async function postafiokModositasa(koino, fn) {
+  return postafiokMuvelet(async () => {
+    const tarolo = ertesitesTarolo(koino);
+    const pf = postafiokAlakja(await tarolo.postafiokOlvas());
+    const ki = fn(pf);
+    await tarolo.postafiokIr(pf);
+    return ki;
+  });
+}
+
+/**
+ * ⭐ D101 ⑥: a postafiók megjegyzése — hol számolódik, és mit nem tudhat (D19, M3/A). A szigorú (b) alatt csak abból, amit
+ * a készülék tart.
+ */
+function postafiokMegjegyzes(szigoru) {
+  return 'A postafiókod a készülékeden számolódik, abból, ami ide megérkezett'
+    + (szigoru ? ' — csak ahol tudatpontod van (amit a készüléked tart); egy mélyebb ágról, ahol nincs pontod, nem tudok.' : '.');
 }
 
 /** Hány fejléc- és szelet-kérelem vár (és hánynak van célja) — a nézetek megjegyzéséhez. */
@@ -5996,6 +6072,95 @@ try {
         // esemény ugyanazon az `esemenyMentese` kapun megy be, mint a hálózatról érkező
         // (3. szabály). ⭐ A szabályokat a SZÁMÍTÁS őrzi — ha a lap szabálysértőt küld, az
         // esemény létrejön, de nem fog számítani. *A felület nem véd, és nem is kell.*
+        // ===================================
+        // ⭐⭐ D101 ⑥: AZ ÉRTESÍTÉSEK — a postafiók és a beállítások (helyi feljegyzés, nem esemény)
+        // ===================================
+        //
+        // A prototípus útvonalai és alakja (`ErtesitesekModal`, `ErtesitesiBeallitasModal`, a kártyák számlálója). Itt
+        // nincs szerver, ami írna: a postafiókot a készülék számolja (`postafiokFrissitese`), a beállítás helyi fájl.
+        if (utvonal === '/api/ertesitesek' || utvonal.startsWith('/api/ertesitesek/')
+          || utvonal === '/api/ertesitesi-beallitasok' || utvonal.startsWith('/api/ertesitesi-beallitasok/')) {
+          if (!sajatKoino) return { adat: { success: true, adatok: { ertesitesek: [], osszes: 0, olvasatlan: 0, lapokSzama: 0 } } };
+          const kozos = { tar: olvasoTar, koino: KOINO, nezet: pakliNezet, bemondasok: await bemondasok(), szerzo };
+          const tarolo = ertesitesTarolo(KOINO);
+          const reszek = utvonal.split('/').slice(2);           // ['ertesitesek', …] | ['ertesitesi-beallitasok', …]
+          let szigoru = false;
+          try { szigoru = !(await kiszolgalasBeallitas()).mindent; } catch { szigoru = false; }
+
+          if (reszek[0] === 'ertesitesek') {
+            if (modszer === 'GET' && reszek.length === 1) {
+              const { pf, entitasok } = await postafiokFrissitese(kozos);
+              const lap = postafiokLapja(pf, { lap: parseInt(kereses.get('lap'), 10), lapMeret: parseInt(kereses.get('lapMeret'), 10),
+                agazat: kereses.get('agEntitasId') || null });
+              lap.ertesitesek = lap.ertesitesek.map((t) => ({ ...t, entitasCim: entitasok?.get(t.entitasId)?.cim ?? null }));
+              return { adat: { success: true, adatok: lap, koinoMegjegyzes: postafiokMegjegyzes(szigoru) } };
+            }
+            if (modszer === 'GET' && reszek[1] === 'olvasatlan-szam') {
+              const { pf } = await postafiokFrissitese({ ...kozos, szunet: POSTAFIOK_SZAMLALO_SZUNET });
+              return { adat: { success: true, adatok: { olvasatlan: pf.tetelek.filter((t) => !t.olvasva).length } } };
+            }
+            if (modszer === 'PATCH' && reszek[1] === 'mind-olvasott') {
+              const db = await postafiokModositasa(KOINO, (pf) => olvasottnakJelol(pf, { agazat: kereses.get('agEntitasId') || null }));
+              return { adat: { success: true, adatok: { modositottDarab: db } } };
+            }
+            if (modszer === 'PATCH' && reszek[2] === 'olvasott' && reszek[1]) {
+              const t = await postafiokModositasa(KOINO, (pf) => {
+                olvasottnakJelol(pf, { id: reszek[1] });
+                return pf.tetelek.find((x) => x._id === reszek[1]) ?? null;
+              });
+              return t ? { adat: { success: true, adatok: t } } : { allapot: 404, adat: { success: false, message: 'Az értesítés nem található' } };
+            }
+            if (modszer === 'DELETE' && reszek.length === 2) {
+              const t = await postafiokModositasa(KOINO, (pf) => {
+                const i = pf.tetelek.findIndex((x) => x._id === reszek[1]);
+                return i < 0 ? null : pf.tetelek.splice(i, 1)[0];
+              });
+              return t ? { adat: { success: true, adatok: t } } : { allapot: 404, adat: { success: false, message: 'Az értesítés nem található' } };
+            }
+          } else {
+            const beallitasok = beallitasokAlakja(await tarolo.beallitasOlvas());
+            if (reszek[1] === 'globalis') {
+              if (modszer === 'PUT') {
+                const uj = globalisMentese(beallitasok, test ?? {});
+                await tarolo.beallitasIr(uj);
+                return { adat: { success: true, adatok: uj.globalis } };
+              }
+              if (modszer === 'GET') {
+                return { adat: { success: true, adatok: beallitasok.globalis,
+                  koinoMegjegyzes: 'A koinóban nincs levél-kézbesítés: nincs szerver, ami küldené (2. szabály). Az e-mail kapcsoló'
+                    + ' megmarad, de nem küld semmit — a postafiók a készülékeden van.' } };
+              }
+            }
+            if (modszer === 'GET' && reszek.length === 1) {
+              return { adat: { success: true, adatok: Object.values(beallitasok.entitasok).map((b) => ({ ...b, _id: b.entitasId })) } };
+            }
+            if (modszer === 'PUT' && reszek.length === 1) {
+              const az = typeof test?.entitasId === 'string' ? test.entitasId : '';
+              if (!azonositoAlaku(az)) return { allapot: 400, adat: { success: false, message: 'Hiányzó vagy hibás entitás azonosító' } };
+              const uj = beallitasMentese(beallitasok, az, test);
+              await tarolo.beallitasIr(uj);
+              return { adat: { success: true, adatok: { ...uj.entitasok[az], _id: az } } };
+            }
+            if (modszer === 'GET' && (reszek[1] === 'ervenyes' || reszek[1] === 'entitas') && reszek[3]) {
+              const az = decodeURIComponent(reszek[3]);
+              if (reszek[1] === 'entitas') {
+                const b = beallitasok.entitasok[az];
+                return { adat: { success: true, adatok: b ? { ...b, _id: az } : null } };
+              }
+              const { entitasok } = await ertesitesiKep(olvasoTar, KOINO, { szerzo, nezet: pakliNezet, bemondasok: kozos.bemondasok });
+              return { adat: { success: true, adatok: ervenyesBeallitas(beallitasok, entitasok, az) } };
+            }
+            if (modszer === 'DELETE' && reszek.length === 2) {
+              const az = decodeURIComponent(reszek[1]);
+              if (!beallitasok.entitasok[az]) return { allapot: 404, adat: { success: false, message: 'A beállítás nem található' } };
+              delete beallitasok.entitasok[az];
+              await tarolo.beallitasIr(beallitasok);
+              return { adat: { success: true, adatok: { _id: az } } };
+            }
+          }
+          return { allapot: 404, adat: { success: false, message: 'ismeretlen értesítés-útvonal' } };
+        }
+
         if (modszer === 'POST' || modszer === 'PUT' || modszer === 'PATCH') {
 
           // ===================================
@@ -6512,6 +6677,18 @@ try {
           }
         }
 
+        /** ⭐ D101 ⑥: a kártyák számlálója — a postafiók (legfeljebb fél percenként újraszámolva) olvasatlanjai entitásonként. */
+        async function kartyaSzamlalo() {
+          try {
+            const { pf } = await postafiokFrissitese({ tar: olvasoTar, koino: KOINO, nezet: pakliNezet,
+              bemondasok: await bemondasok(), szerzo, szunet: POSTAFIOK_SZAMLALO_SZUNET });
+            return olvasatlanTerkep(pf);
+          } catch (hiba) {
+            console.warn('a kártyák számlálója nem számolható', { ok: hiba.message });
+            return new Map();
+          }
+        }
+
         if (utvonal === '/api/pakli/hierarchikus') {
           const h = await pakliHierarchia(olvasoTar, aktivKoino, {
             entitas: kereses.get('entitas') || null,
@@ -6522,7 +6699,11 @@ try {
           });
           const keres = aktivKoino === KOINO && h.hianyzik.length ? await lapHianyzoinakElkerese(h.hianyzik)
             : { kert: 0, fuggo: 0, celos: 0 };
-          return { adat: { ...h, betoltes: keres.fuggo > 0, kitolKerni: keres.celos, kertKerelmek: keres.kert } };
+          // ⭐ D101 ⑥: a kártyák számlálója — az ága alatti olvasatlan értesítések (a postafiók ős-láncaiból)
+          const olvasatlan = sajatKoino ? await kartyaSzamlalo() : new Map();
+          const szamlal = (lista) => (lista ?? []).map((k) => ({ ...k, olvasatlanErtesitesek: olvasatlan.get(k.azonosito) ?? 0 }));
+          return { adat: { ...h, pakli: szamlal(h.pakli), testverek: szamlal(h.testverek),
+            betoltes: keres.fuggo > 0, kitolKerni: keres.celos, kertKerelmek: keres.kert } };
         }
 
         if (utvonal === '/api/pakli') {
@@ -6549,7 +6730,10 @@ try {
               : { kert: 0, fuggo: 0, celos: 0 };
             let szigoru = false;
             try { szigoru = sajatKoino && !(await kiszolgalasBeallitas()).mindent; } catch { szigoru = false; }
-            return { adat: { ...oldal, betoltes: keres.fuggo > 0, kitolKerni: keres.celos,
+            const olvasatlan = sajatKoino ? await kartyaSzamlalo() : new Map();
+            return { adat: { ...oldal,
+              kartyak: (oldal.kartyak ?? []).map((k) => ({ ...k, olvasatlanErtesitesek: olvasatlan.get(k.azonosito) ?? 0 })),
+              betoltes: keres.fuggo > 0, kitolKerni: keres.celos,
               koinoMegjegyzes: laposMegjegyzes(oldal, keres, szigoru && !Number.isInteger(oldal.biztos)) } };
           } catch (hiba) {
             // ⚠️ A rossz KÉRÉS nem a program hibája — 400, és mondjuk meg, mi a baj.

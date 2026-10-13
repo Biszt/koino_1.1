@@ -33,7 +33,7 @@
 // és így a hiány LÁTSZIK, nem tűnik el egy kitalált érték mögött:
 //
 //   · `gondolatTipus`, `kategoriak` → a két entitástípus nem létezik (végpont-térkép 2.)
-//   · `olvasatlanErtesitesek`       → az értesítés-réteg még nem jött át (5.5)
+//   · `olvasatlanErtesitesek`       → ⭐ D101 ⑥: a program mondja (a postafiók ős-láncaiból); ha nem mondja, 0
 //   · `kulonvalasok`                → a prototípus különválás-fogalma
 //   · `modositva`, `szuloModositva` → a prototípus szerkesztés-követése; a koinóban az
 //                                     egyezmény MAGA a nyoma a változásnak
@@ -61,8 +61,8 @@ export function kartyaAdatta(k) {
     entitasId: k.azonosito,
     entitasTipus: k.tipus,
 
-    // ⏸️ Nincs értesítés-réteg — a kártya 0-t fog mutatni, ami igaz is.
-    olvasatlanErtesitesek: 0,
+    // ⭐ D101 ⑥: az ága alatti olvasatlan értesítések — a program számolja (a postafiók ős-láncaiból, `koino.js`).
+    olvasatlanErtesitesek: Number.isInteger(k.olvasatlanErtesitesek) ? k.olvasatlanErtesitesek : 0,
 
     // ⭐⭐ A TUDATPONT-SOR MEZŐI — és ezek a kártya LEGFELSŐ szintjén vannak, nem az
     // `adatok`-ban. ⚠️ *Ez mérésből derült ki, nem olvasásból:* elsőre mindent az

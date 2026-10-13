@@ -24,6 +24,8 @@ import TudatpontokModal from './components/modals/TudatpontokModal.js';
 import StrukturaModal from './components/modals/StrukturaModal.js';
 import SikidomModal from './components/modals/SikidomModal.js';
 import KeresesModal from './components/modals/KeresesModal.js';
+import ErtesitesekModal from './components/modals/ErtesitesekModal.js';
+import ErtesitesiBeallitasModal from './components/modals/ErtesitesiBeallitasModal.js';
 
 // ===================================
 // A PROGRAM MEGJEGYZÉSEI — útvonalanként a legutóbbi
@@ -190,6 +192,22 @@ koruleIr(SikidomModal, '_osLancFelfuzese', function () {
 koruleIr(KeresesModal, '_kereses', function () {
   const ures = !(document.getElementById('kereses-mezo')?.value ?? '').trim();
   megjegyzesKirajzolasa(document.getElementById('kereses-lista'), ures ? null : megjegyzes('kereses'));
+});
+
+// ===================================
+// ⭐ AZ ÉRTESÍTÉSEK (D101 ⑥)
+// ===================================
+//
+// A postafiók a készüléken számolódik (M3/A): a program kimondja, miből — a szigorú (b) alatt csak abból, ahol tudatpontod
+// van. A lista alá kerül (a lap betöltése után). A globális beállításnál azt is, hogy a koinóban nincs levél-kézbesítés
+// (nincs szerver, ami küldené — 2. szabály): a kapcsoló megmarad, de nem küld semmit.
+koruleIr(ErtesitesekModal, '_oldalBetoltese', function () {
+  megjegyzesKirajzolasa(document.getElementById('ertesitesek-lista'), megjegyzes('ertesitesek'));
+});
+
+koruleIr(ErtesitesiBeallitasModal, '_adatokBetoltese', function () {
+  const info = document.getElementById('ertesites-beallitas-info');
+  megjegyzesKirajzolasa(info, this.globalis ? megjegyzes('ertesitesi-beallitasok/globalis') : null);
 });
 
 koruleIr(SikidomModal, '_takaritasBezaraskor', function () {

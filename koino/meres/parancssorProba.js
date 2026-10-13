@@ -2663,6 +2663,83 @@ proba('⭐⭐ D101 ④: a Síkidom a lapon — a nem tartott síkidom gyerekei �
 });
 
 // ===================================
+// ⭐⭐ D101 ⑥: AZ ÉRTESÍTÉSEK A LAPON — a postafiók a készüléken, két készülékkel
+// ===================================
+//
+// B („alap” — a szigorú (b)) létrehozza a nyílt koinót és benne R-t (ponttal — tartja), és beállítja rajta az „új gyerek”
+// értesítést (a lapról: `PUT /api/ertesitesi-beallitasok`); a postafiókja az első kérdésre üres (alapvonal). A egy gyereket
+// ír R alá; a csere után UGYANAZ a futó felület a postafiókban mutatja (R-en, a gyerek azonosítójával, a címmel), R kártyáján
+// a számláló 1, és a gyerek az örökölt beállítást látja; olvasottnak jelölve a számláló 0; B saját gyereke nem jelez.
+// ⭐ Viselkedést mérünk (B lemezén a postafiók, a lap útvonalain). Rontás: a beállítás nem öröklődik / nem számol a
+// felület → nincs tétel; a számláló nem jön át → a kártya 0.
+proba('⭐⭐ D101 ⑥: az értesítések a lapon — a postafiók a készüléken, a kártya számlálója, olvasottnak jelölés, két készülékkel', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const alap = { KOINO_KISZOLGALAS: 'alap' };
+  const futok = [];
+  try {
+    await fut(b, 'koino', 'Értesítés', 'próba', 'nyilt', alap);
+    const bFel = await feluletet(b, 7477, alap);
+    futok.push(bFel.folyamat);
+    const uj = async (fel, cim, szuloId = null, pont = 10) => {
+      const v = await fel.hiv('/api/gondolat', { method: 'POST',
+        body: JSON.stringify({ cim, ...(szuloId ? { szuloId } : {}), kezdoTudatpont: pont }) });
+      return v.adat?.data?._id ?? null;
+    };
+    const R = await uj(bFel, 'R figyelt', null, 20);
+    if (!R) return false;
+    const beallit = await bFel.hiv('/api/ertesitesi-beallitasok', { method: 'PUT',
+      body: JSON.stringify({ entitasId: R, entitasTipus: 'Gondolat', ertesitesTipusok: ['ujGyerekEntitas'] }) });
+    const alapvonal = await bFel.hiv('/api/ertesitesek?lap=1&lapMeret=20');
+    // A megismeri a koinót és R-t (a gyökér-darabbal), aztán gyereket ír alá
+    await fut(a, 'tars', '127.0.0.1', '7475', 'B', alap);
+    await csereKor(b, a, 7475, alap);
+    const aFel = await feluletet(a, 7476, alap);
+    futok.push(aFel.folyamat);
+    const C = await uj(aFel, 'C az A-tól', R, 5);
+    aFel.folyamat.kill();
+    await varj(500);
+    if (!C) return false;
+    await csereKor(a, b, 7475, alap);
+    // ⭐ UGYANAZ a futó felület kérdez
+    const utana = await bFel.hiv('/api/ertesitesek?lap=1&lapMeret=20');
+    const t = utana.adat?.adatok?.ertesitesek?.[0];
+    const pakli = await bFel.hiv('/api/pakli/hierarchikus?entitas=' + R);
+    const rKartya = (pakli.adat?.pakli ?? []).find((k) => k.azonosito === R);
+    const orokolt = await bFel.hiv('/api/ertesitesi-beallitasok/ervenyes/Gondolat/' + C);
+    const sajat = await bFel.hiv('/api/ertesitesi-beallitasok/ervenyes/Gondolat/' + R);
+    const jelol = await bFel.hiv('/api/ertesitesek/mind-olvasott', { method: 'PATCH', body: '{}' });
+    const pakli2 = await bFel.hiv('/api/pakli/hierarchikus?entitas=' + R);
+    const rKartya2 = (pakli2.adat?.pakli ?? []).find((k) => k.azonosito === R);
+    // B saját gyereke nem jelez
+    await uj(bFel, 'D a B-től', R, 5);
+    const vegul = await bFel.hiv('/api/ertesitesek?lap=1&lapMeret=20');
+    const ki = {
+      beallit: beallit.allapot === 200 && beallit.adat?.adatok?.ertesitesTipusok?.join() === 'ujGyerekEntitas',
+      alapvonal: alapvonal.adat?.adatok?.osszes === 0 && /készülékeden számolódik/.test(alapvonal.adat?.koinoMegjegyzes ?? ''),
+      tetel: utana.adat?.adatok?.osszes === 1 && t?.tipus === 'ujGyerekEntitas' && t?.entitasId === R && t?.adatok?.gyerekId === C
+        && t?.entitasCim === 'R figyelt' && t?.olvasva === false,
+      szamlalo: rKartya?.olvasatlanErtesitesek === 1,
+      oroklodes: orokolt.adat?.adatok?.forras === 'orokolt' && sajat.adat?.adatok?.forras === 'sajat' && sajat.adat?.adatok?.vanSajat === true,
+      olvasott: jelol.adat?.adatok?.modositottDarab === 1 && rKartya2?.olvasatlanErtesitesek === 0,
+      sajatNem: vegul.adat?.adatok?.osszes === 1 && vegul.adat?.adatok?.olvasatlan === 0
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  értesítések — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+        + ' · ' + JSON.stringify({ beallit: beallit.adat, alap: alapvonal.adat?.adatok, utana: utana.adat?.adatok,
+          r: rKartya?.olvasatlanErtesitesek, r2: rKartya2?.olvasatlanErtesitesek, orokolt: orokolt.adat?.adatok?.forras,
+          vegul: vegul.adat?.adatok }).slice(0, 1400) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const f of futok) f.kill();
+    await varj(1000);
+    await rm(a, { recursive: true, force: true });
+    await rm(b, { recursive: true, force: true });
+  }
+});
+
+// ===================================
 // ⭐⭐ GONDOLAT LÉTREHOZÁSA A LAPRÓL (5.7)
 // ===================================
 //

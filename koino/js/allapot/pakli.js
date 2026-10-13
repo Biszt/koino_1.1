@@ -53,6 +53,7 @@ import { osszPontokSzamitasa, gyerekJegyzek } from './osszPont.js';
 // ⭐ D102: a gyökér kulcsa a fejléc-tudásban (a kérelem válasza ez alatt jegyzi a gyökér gyerekszámát és levágását) — egy
 // forrásból, a csere rétegéből (csak az állandó; hálózatot nem hoz).
 import { GYOKER_KULCS as GYOKER_TUDAS_KULCS } from '../csere/szeletEgyeztetes.js';
+import { pillanatkep } from './ertesites.js';
 
 /**
  * ⭐ D72 (2026-09-26): a javaslatok változásaiban a SZÖVEG-HIVATKOZÁS feloldása — a felület
@@ -1418,6 +1419,37 @@ export async function keresesHelyben(tar, koino, beallitas = {}) {
     }
   }
   return { talalatok, ismert: kep.entitasok.size, nemEldontheto, hianyzik, agazat };
+}
+
+// ===================================
+// ⭐⭐ D101 ⑥: AZ ÉRTESÍTÉSEK KÉPE — a pillanatkép a postafiókhoz (`ertesites.js`)
+// ===================================
+
+/**
+ * ⭐ A postafiók pillanatképe a tár mai végéből — a tartott entitások és a javaslataik (`ertesites.js` `pillanatkep`), a
+ * kép-gyorsítótárral (ugyanaz a kép, mint a lapé). A küszöbök a modál neveivel (`kuszobokKifele` — a javaslat alakja).
+ * @param {Object} [beallitas] - { szerzo, nezet, bemondasok, most }
+ * @returns {Promise<{kep: Object, entitasok: Map}>}
+ */
+export async function ertesitesiKep(tar, koino, beallitas = {}) {
+  const nezet = beallitas.nezet ?? ujPakliNezet();
+  const esemenyek = await koinoEsemenyei(tar, koino);
+  const most = Number.isFinite(beallitas.most) ? beallitas.most : Date.now();
+  const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek, tar.csakAtmeneti?.() ?? null);
+  const tartottak = typeof nezet.tartott === 'function' ? await nezet.tartott() : null;
+  const tartott = tartottak ? (az) => tartottak.has(az) : () => true;
+  const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok, tartottak ? tartott : null);
+  const szavazatok = new Map();
+  for (const e of kep.szamitok ?? []) {
+    if (e.tipus !== 'Szavazat' || typeof e.adat?.javaslat !== 'string') continue;
+    if (!szavazatok.has(e.adat.javaslat)) szavazatok.set(e.adat.javaslat, new Set());
+    szavazatok.get(e.adat.javaslat).add(e.szerzo);
+  }
+  return {
+    kep: pillanatkep({ entitasok: kep.entitasok, javaslatok: kep.javaslatok, agazati, tartott, en: beallitas.szerzo ?? null,
+      szavazatok, kuszobKi: (k) => kuszobokKifele(k, 'javaslat'), most }),
+    entitasok: kep.entitasok
+  };
 }
 
 // ===================================

@@ -334,7 +334,7 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 | **5.5** | 🚧 **A modálok** — ✅ tudatpont, érték javaslat, részletek, részvétel, **szavazás** (2026-09-06); ⏸️ a JavaslatModal és a létrehozó modálok (az 5.7-re várnak) | a teljes pakli |
 | **5.6** | ✅ **A belépő tér** — koino-kártyák létrehozási idő szerint, **19 önpróba** (2026-09-12) | a D25 nézete |
 | **5.7** | ✅ **A szövegszerkesztő + az „Új gondolat” + a FÁJL-RÉTEG helyi fele**, **20 önpróba** (2026-09-12) | a szövegszerkesztő teljes átemelése |
-| **5.8** | 🚧 ✅ **A `JavaslatModal`** (66 KB) — a lapról már **javasolni is** lehet, **3 önpróba** (2026-09-13); ✅ (D101, 2026-10-11) `TudatpontokModal`, `KategoriaModal`, `GondolatTipusModal`, `RendezesModal`, a fő menü; ✅ (D101 ③–⑤) `StrukturaModal`, `SikidomModal`, `KeresesModal` (a helyi alja); ⏸️ Értesítések | a pakli teljes működése |
+| **5.8** | 🚧 ✅ **A `JavaslatModal`** (66 KB) — a lapról már **javasolni is** lehet, **3 önpróba** (2026-09-13); ✅ (D101, 2026-10-11) `TudatpontokModal`, `KategoriaModal`, `GondolatTipusModal`, `RendezesModal`, a fő menü; ✅ (D101 ③–⑥) `StrukturaModal`, `SikidomModal`, `KeresesModal` (a helyi alja), `ErtesitesekModal`, `ErtesitesiBeallitasModal` | a pakli teljes működése |
 | **✅** | **A fájlok SZÁLLÍTÁSA** — felderítés · kérelem a bulin · átvitel · randevú az átfúrt résen, **43 önpróba** (2026-09-13) | a kép két készülék között is átjön |
 
 ⚠️ *Az 5.2 nem halasztható az 5.3 mögé: a kártya alakja attól függ, mit tud kérni a lap.*
@@ -361,8 +361,10 @@ kapcsolaton sorozatban; a lapos „ágazati” lista kimondja, meddig biztos. �
 ✅ **A Síkidom (2026-10-12):** a `SikidomModal` és a segédei bájtra a prototípuséi; egy szint a bejáró sorrendjéből, a nem
 tartott síkidom gyerekeit elkéri, és a lap csendben újrakérdez. ✅ **A Keresés helyi alja (2026-10-12):** a `KeresesModal`
 bájtra a prototípusé; a készüléken ismert entitások címében, típusonként korlátosan, ág-szűrve, és kimondja, hogy a hálózati
-keresés még nincs. ⏭️ A következő: az értesítés-réteg (⑥), utána a kereső-réteg (⑦). A helyőrzők közül ma kettő áll:
-Értesítések, Értesítési beállítások.
+keresés még nincs. ✅ **Az értesítés-réteg (2026-10-13):** az `ErtesitesekModal` és az `ErtesitesiBeallitasModal` bájtra a
+prototípuséi; a postafiók a készüléken számolódik (két pillanatkép különbségéből, a tartott szeletekből), a beállítások
+öröklődnek, a kártyák számlálója él; a levél-kézbesítés nincs (kimondva). Helyőrző modál már nincs. ⏭️ A következő: a
+kereső-réteg (⑦ — külön pillér, saját átvizsgálással).
 
 ### (RÉGEBBI) ITT TARTUNK (2026-09-13)
 

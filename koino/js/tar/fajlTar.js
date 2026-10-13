@@ -1166,6 +1166,39 @@ export function emlekezetTarolo(koino, hely = alapHely()) {
 }
 
 /**
+ * ⭐ D101 ⑥: az ÉRTESÍTÉSEK helyi tára — a postafiók (`<koino>/ertesitesek.json`: a tételek és a pillanatkép) és a
+ * beállítások (`<koino>/ertesitesiBeallitasok.json`). Helyi feljegyzés (a prototípusban is `helyi` réteg — H6), nem
+ * esemény, nem terjed. Az alakot az `ertesites.js` ellenőrzi; itt csak az olvasás és az atomi írás (a felület egy
+ * folyamat — ő számol és ír).
+ * @param {string} koino
+ * @param {string} [hely]
+ */
+export function ertesitesTarolo(koino, hely = alapHely()) {
+  const fajl = (nev) => join(hely, koino, nev);
+  const olvas = async (nev) => {
+    try { return JSON.parse(await readFile(fajl(nev), 'utf8')); } catch { return null; }
+  };
+  const ir = async (nev, adat) => {
+    const f = fajl(nev);
+    await mkdir(dirname(f), { recursive: true });
+    const ideiglenes = f + '.' + process.pid + '-' + Math.random().toString(36).slice(2) + '.uj';
+    try {
+      await writeFile(ideiglenes, JSON.stringify(adat), 'utf8');
+      await rename(ideiglenes, f);
+    } catch (hiba) {
+      await rm(ideiglenes, { force: true }).catch(() => {});
+      throw hiba;
+    }
+  };
+  return {
+    postafiokOlvas: () => olvas('ertesitesek.json'),
+    postafiokIr: (adat) => ir('ertesitesek.json', adat),
+    beallitasOlvas: () => olvas('ertesitesiBeallitasok.json'),
+    beallitasIr: (adat) => ir('ertesitesiBeallitasok.json', adat)
+  };
+}
+
+/**
  * ⭐ D98/2–3: a LÁNC-ELLENŐRZÉS helyi tára (`<koino>/lancellenorzes.json`): szerzőnként a legutóbb ellenőrzött napló-gyökér
  * és az ellenőrzött események, és a társak bemondott szerzői kulcsa (a tábla-aláírójuk alatt). A korlátokat a hívó vágja
  * (`lancEllenorzes.js` `lancJegyzekVagasa`). Helyi feljegyzés, nem esemény, nem terjed.

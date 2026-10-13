@@ -68,6 +68,7 @@ import dontesiCsomag from './dontesiCsomagProba.js';
 import titkositas from './titkositasProba.js';
 import cimjegyzek from './cimjegyzekProba.js';
 import osszpont from './osszPontProba.js';
+import ertesites from './ertesitesProba.js';
 import kerelem from './kerelemProba.js';
 import tagsag from './tagsagProba.js';
 // ⭐ A vállalás és az átmeneti tár (B/1–B/2, D75) — a kapu, az eldobás, a D14 csak a tartósra.
@@ -121,6 +122,7 @@ const PROBAK = [
   { nev: 'titkositas', futtat: titkositas },
   { nev: 'cimjegyzek', futtat: cimjegyzek },
   { nev: 'osszpont', futtat: osszpont },
+  { nev: 'ertesites', futtat: ertesites },
   { nev: 'kerelem', futtat: kerelem },
   { nev: 'osszegzotartas', futtat: osszegzoTartas },
   { nev: 'tagsagkisero', futtat: tagsagKisero },
@@ -156,7 +158,7 @@ const CSOPORTOK = {
   // a kanonikus alak, a kulcs, az aláírt esemény és a tár (az íróval)
   alap: ['kanonikus', 'kulcs', 'esemeny', 'tar', 'iro', 'atmeneti'],
   // események → állapot: entitások, döntéshozatal, szabályok, egyezmények, tagság
-  allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'dontesicsomag', 'lezarasiosszegzes', 'osszpont', 'felszabaditas', 'identitas', 'tagsag'],
+  allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'dontesicsomag', 'lezarasiosszegzes', 'osszpont', 'felszabaditas', 'identitas', 'tagsag', 'ertesites'],
   // a felületnek felelő réteg
   felulet: ['kapu', 'pakli', 'ter'],
   // két készülék között: a párbeszéd, a kézi út, a társak, a kapu, a kötések, a tábla, a DHT

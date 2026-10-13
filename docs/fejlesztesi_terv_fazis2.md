@@ -5276,6 +5276,39 @@ típusonkénti korlát) és a bekötés (`parancssorProba.js`: a meglévő keres
 megjegyzésre és az ág-szűrésre élesítve) — mind rontással. Böngészőben: a fő menü Keresése talál, a legerősebb elöl, a
 megjegyzés a lista alatt.
 
+#### ✅ MEGÉPÜLT — ⑥ az értesítés-réteg (2026-10-13, M3/A)
+
+⭐ **A postafiók a készüléken, két pillanatkép különbségéből** (`js/allapot/ertesites.js` — tiszta számítás): a prototípusban
+a szerver írta az értesítést, amikor valami történt; itt a készülék SZÁMOLJA. A pillanatkép a TARTOTT entitásokról (a saját
+és az ágazati pont, az én pontom, a gyerekek, a küszöbök) és a javaslataikról (állapot, lezárás, érintettek, a mások
+szavazóinak száma) szól (`pakli.js` `ertesitesiKep`); a nyolc fajta a két kép különbségéből jön (új gyerek, mások
+pont-változása a négy küszöbbel, küszöbváltozás a modál alakjában, új javaslat, elfogadás / elvetés, a határidő egyszer, új
+szavazat). Az első kép ALAPVONAL (semmit nem jelez), egy most tartani kezdett entitás szintén; a saját cselekvésem nem jelez
+(a prototípus „a cselekvőt nem értesítjük”); a nem tartott entitás nem jelez (M3/A — csak a részvételi szeletekből; ami
+csak most jött meg, az nem „új”). Egy készülék terhe a saját szeleteitől függ, nem a koinó méretétől. ⭐ **A beállítások**
+(entitásonként és a globális): a felmenőkön öröklődnek, a legközelebbi nyer, ha sehol nincs, a globális — a prototípus
+szabálya (`ervenyesBeallitas`: `forras` 'sajat' | 'orokolt' | 'globalis'); a tudatpont-szűrő (csak ahol pontom van). ⭐ **A
+helyi tár** (`fajlTar.js` `ertesitesTarolo`: `ertesitesek.json` — a tételek és a kép; `ertesitesiBeallitasok.json`):
+helyi feljegyzés (a prototípusban is `helyi` réteg — H6), korlátos (500 tétel, 30 nap, 1000 beállítás). ⭐ **A kapun** a
+prototípus útvonalai (`/api/ertesitesek` lapozva és ág-szűrve, `olvasatlan-szam`, `mind-olvasott`, `/:id/olvasott`,
+`DELETE /:id`; `/api/ertesitesi-beallitasok` — lista, mentés, `globalis`, `entitas/…`, `ervenyes/…`, `DELETE /:id`); a
+felület folyamata számol és ír (egy író), a postafiók kérdésére mindig, a kártyák számlálójához legfeljebb fél percenként,
+és a postafiók-műveletek sorban mennek (egy olvasott-jelölés nem veszhet el egy közben futó számolás alatt). A kártyák
+számlálója (`olvasatlanErtesitesek`) a postafiók ős-láncaiból, a pakli válaszain (a `kartyaAdat.js` átveszi). ⭐ **A lapon**
+az `ErtesitesekModal` és az `ErtesitesiBeallitasModal` (+ sablon, CSS) bájtra a prototípuséi; a megjegyzés kimondja, miből
+számolódik a postafiók, és a globális beállításnál, hogy a koinóban nincs levél-kézbesítés (nincs szerver, ami küldené —
+2. szabály; a kapcsoló megmarad, hatása nincs). Helyőrző modál már nincs.
+
+⛔⛔ **Egy lelet a bekötésből — a csak küldő út rése (D95/3):** a `kuldoKulcsai` egy saját eseményt csak a saját szeletén
+(és a legfelső szintű születést a gyökér-darabján) ajánlott fel, a BEJELENTÉSI HELYEIN nem. Ha valaki egy olyan gondolat alá
+írt, amelynek a szeletét nem tartja, a gyerek születése a szülő tartójához soha nem ért el — a szigorú (b) alatt egy válasz
+nem jutott el ahhoz, akinek szólt (és ugyanígy a javaslat az érintett tartójához). Javítva: a `bejelentesHelyei` is a
+kulcsok közé kerül (a gyökér kivételével). Elágazás 139–143. Próbák: nyolc modul-próba (`ertesitesProba.js` — új próba-fájl
+az „allapot” csoportban) és a bekötés (`parancssorProba.js`: két készülék, „alap” — a beállítás a lapról, az alapvonal, a
+másik készülék gyereke a postafiókban, a kártya számlálója, az öröklődés, az olvasottnak jelölés, a saját gyerek nem jelez)
+— mind rontással (a bejelentési helyek nélkül a gyerek nem ér át). Böngészőben: a két modál a fő menüből, a megjegyzések, a
+globális beállítás mentése.
+
 ### D102. A BEJÁRÓ: A TARTÓ MAGA JÁR BE (2026-10-11, Csaba: „minden javaslatodat elfogadom, mehetünk tovább”)
 
 **Amiből jött:** a 74. mérés (`bejaroMeres.js`) és a [`modalok_atvizsgalas.md`](modalok_atvizsgalas.md) 6. szakasza: egy friss

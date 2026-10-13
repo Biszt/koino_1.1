@@ -240,7 +240,9 @@ terep (✅ PC–mobil két külön címen, 72–73. mérés; ⏸️ két mobil �
 létrehozása, Rendezés, a fő menü); ✅ a közös alap, a legjobb-először bejáró (D102: a tartó maga jár be, a fejléc
 folytatásával, a kérelem-sorozattal); ✅ a Struktúra (a bejáró sorrendjéből, egy keretig); ✅ a Síkidom (egy szint a
 bejáró sorrendjéből, a nem tartott síkidom gyerekei a kérelem útján; vele az össz-pont javítása — 133.); ✅ a Keresés
-helyi alja (136–138.); ⏭️ az értesítés-réteg (⑥), utána a kereső-réteg (⑦, külön pillér). ⭐ **És egy új pillér a láthatáron: a KERESŐ-RÉTEG** (skálázási terv II.,
+helyi alja (136–138.); ✅ az értesítés-réteg (⑥ — a postafiók a készüléken; vele a csak küldő út rése javítva, 139–143.);
+🔍 a kereső-réteg (⑦, külön pillér) átvizsgálva ([`kereso_reteg_atvizsgalas.md`](kereso_reteg_atvizsgalas.md) — a
+gyökér-darab mintájára, a cím szavainak lenyomatával; K1–K6 Csabánál). ⭐ **És egy új pillér a láthatáron: a KERESŐ-RÉTEG** (skálázási terv II.,
 S8–S10) — három dolog épül rá (a Keresés, a besorolás-lenyílók, az entitás-hivatkozás); a D101 szerint a modálok után,
 saját átvizsgálással.
 
@@ -368,7 +370,8 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 *Utána a ház:* a pakli-nézet a felületen, a terep (két mobil, a 🅱️ változat). ✅ **A terep PC–mobil között
 (72–73. mérés, D99) és a ház (D100, 2026-10-10) KÉSZ** — a részletek a fázis-2 terv D100-ában és az 5. szakasz
 96–104. bejegyzésében. ⏭️ Csaba a maradék modálokat választotta (D101, 2026-10-11) — az I. csoport kész (105–111.), a
-bejáró (D102, 112–121.), a Struktúra (122–126.), a Síkidom (127–135.) és a Keresés helyi alja (136–138.) is.
+bejáró (D102, 112–121.), a Struktúra (122–126.), a Síkidom (127–135.), a Keresés helyi alja (136–138.) és az értesítés-réteg
+(139–143.) is.
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 
@@ -929,3 +932,26 @@ bejáró (D102, 112–121.), a Struktúra (122–126.), a Síkidom (127–135.) 
     hogy a hálózati keresés még nincs; ág-szűrésnél, hánynál nem dönthető el; a lap a keresés UTÁN írja ki, üres mezőnél
     eltávolítja** · mert a „Nincs találat” a helyi aljánál nem a teljes igazság (D19) — és a régi megjegyzés egy új,
     még nem futott keresés alatt félrevezetne · Claude · `koino.js` (`keresesMegjegyzes`), `koinoModalok.js`.
+139. **2026-10-13 · a postafiók két pillanatkép különbségéből (D101 ⑥, M3/A)** → **nem eseményenként, hanem a tartott
+    entitások és javaslataik két képének különbségéből; az első kép és a most tartani kezdett entitás alapvonal** · mert így
+    nem számít, honnan jött a változás (csere, kérelem, kézi út), nincs elveszett és nincs dupla jelzés, a terhe a saját
+    szeletekkel arányos; és egy friss készülék nem kap értesítést a teljes múltról · Claude · `ertesites.js`, `pakli.js`
+    (`ertesitesiKep`).
+140. **2026-10-13 · ki számol (D101 ⑥)** → **a felület folyamata (egy író): a postafiók kérdésére mindig, a kártyák
+    számlálójához legfeljebb fél percenként; a postafiók-műveletek sorban** · mert a postafiók csak annak kell, aki nézi; az
+    őrjárat és a felület egyszerre írva egy olvasott-jelölést elveszíthetne; a kihagyott időt a következő kép egyszerre
+    látja (a határidő-jelzés ilyenkor elmaradhat — a döntés kimenetele nem) · Claude · `koino.js` (`postafiokFrissitese`,
+    `postafiokMuvelet`).
+141. **2026-10-13 · a saját cselekvés és a nem tartott (D101 ⑥)** → **a saját gyerek, a saját javaslat és a saját pont nem
+    jelez (a prototípus „a cselekvőt nem értesítjük”); a nem tartott entitás nem jelez (csak a részvételi szeletekből)** ·
+    mert ami csak most jött meg egy kérelemmel, az nem „új” — csak most látom; a felület kimondja, hogy egy mélyebb ágról,
+    ahol nincs pontod, nem tudok · Claude · `ertesites.js` (`pillanatkep`, `ertesitesekSzamitasa`).
+142. **2026-10-13 · a levél-kézbesítés (D101 ⑥)** → **a prototípus e-mail kapcsolója megmarad (a modál bájtra a prototípusé),
+    tárolódik, de nincs hatása; a program kimondja, hogy a koinóban nincs levél-kézbesítés** · mert a levelet egy szerver
+    küldené (2. szabály: semmi ne múljon egyetlen szolgáltatáson) — ⏸️ hogy helyette a készülék saját értesítése (az
+    operációs rendszer felé) jöjjön-e, az Csaba döntése · Claude · `koino.js`, `koinoModalok.js`.
+143. **2026-10-13 · a csak küldő út a bejelentési helyeken is (D95/3 — lelet)** → **a `kuldoKulcsai` a saját szelet és a
+    gyökér-darab mellett a `bejelentesHelyei`-t is felajánlja (a gyökér kivételével)** · mert eddig egy nem tartott gondolat
+    alá írt gyerek születése a szülő tartójához soha nem ért el (a szülő szeletében, ahová bejelentődik, a szerző nem vett
+    részt) — ugyanígy a javaslat az érintett tartójához; a fogadó ugyanazon a kapun veszi be · az értesítések bekötés-próbája
+    mérte, Claude · `koino.js` (`kuldoKulcsai`).
