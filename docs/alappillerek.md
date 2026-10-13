@@ -371,7 +371,7 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 (72–73. mérés, D99) és a ház (D100, 2026-10-10) KÉSZ** — a részletek a fázis-2 terv D100-ában és az 5. szakasz
 96–104. bejegyzésében. ⏭️ Csaba a maradék modálokat választotta (D101, 2026-10-11) — az I. csoport kész (105–111.), a
 bejáró (D102, 112–121.), a Struktúra (122–126.), a Síkidom (127–135.), a Keresés helyi alja (136–138.) és az értesítés-réteg
-(139–143.) is.
+(139–143.), és a készülék saját értesítése (D103, 144–147.) is.
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 
@@ -955,3 +955,21 @@ bejáró (D102, 112–121.), a Struktúra (122–126.), a Síkidom (127–135.),
     alá írt gyerek születése a szülő tartójához soha nem ért el (a szülő szeletében, ahová bejelentődik, a szerző nem vett
     részt) — ugyanígy a javaslat az érintett tartójához; a fogadó ugyanazon a kapun veszi be · az értesítések bekötés-próbája
     mérte, Claude · `koino.js` (`kuldoKulcsai`).
+144. **2026-10-13 · a levél helyett a készülék (D103)** → **a prototípus e-mail kapcsolója és üteme a koinóban az operációs
+    rendszer felugró értesítését kapcsolja; a modál feliratait a koinós többlet írja át a betöltés után, és engedi a
+    kapcsolót** · mert a modál bájtra a prototípusé (M5/A), a levél szövege viszont hamis volna; a mezők (`emailErtesites`,
+    `emailMod`, `emailOrakoz`) ugyanazok, csak mást jelentenek — a 142. elágazás „hatás nélkül”-je ezzel feloldva · Claude ·
+    `koinoModalok.js`, `ertesites.js` (`keszulekErtesitesei`).
+145. **2026-10-13 · a platform saját eszköze, cserélhetően (D103)** → **Windows: PowerShell (WinRT toast), Mac: `osascript`,
+    Linux: `notify-send`, Termux: `termux-notification`; és a `KOINO_ERTESITO` (parancs vagy szkript — a címet és a
+    szöveget kapja)** · mert nulla npm-csomag (6. szabály), és ne múljon egyetlen eszközön (2. szabály); a szöveg érvként
+    vagy környezeti változóban megy, sosem a parancs részeként · Claude · `eszkozErtesites.js`.
+146. **2026-10-13 · az őrjárat is számol — zár alatt (D103; a 140. módosul)** → **a postafiókot a felület ÉS az őrjárat
+    (percenként legfeljebb egyszer) is számolja; a két folyamat egy zárral (atomi mappa, 60 mp-es elévülés) váltja egymást,
+    a kiküldés a záron kívül megy** · mert a készülék értesítésének zárt lapnál is jönnie kell, és két író zár nélkül egy
+    olvasott-jelölést elveszíthetne · Claude · `koino.js` (`postafiokMuvelet`, `orjaratErtesitesei`), `fajlTar.js`
+    (`ertesitesTarolo` `zar`).
+147. **2026-10-13 · az azonnali korlát és az összefoglaló kezdete (D103)** → **azonnal legfeljebb öt értesítés egy
+    számolásból, a többiről egy „és még N”; összefoglaló módban az első bekapcsoláskor az időköz onnan indul (nem jön
+    azonnal egy összegző)** · mert egy hosszú kiesés után (a készülék napokig nem futott) ne zúdítson száz felugró ablakot,
+    és a bekapcsolás ne jelezzen azonnal a múltról · Claude · `ertesites.js`.

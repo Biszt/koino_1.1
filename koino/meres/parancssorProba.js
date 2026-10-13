@@ -105,6 +105,23 @@ async function taggaTesziKeszulek(gazda, vendeg, nev = 'tag') {
   return horgony;
 }
 
+/**
+ * ⭐ A bejáró-próbák beállító lépése: a vendég EGY SZINTEN elkéri a gazda gyökerét (a két ág össz-pontját). ⚠️ A teljes sor
+ * terhelése alatt egyszer előfordult (2026-10-13), hogy a frissen indított `figyel` még nem felelt, és a lépés csendben
+ * üres maradt — a próba aztán a MÉRT viselkedésen bukott, a valódi ok kimondása nélkül. Ezért: ha a válasz nem jött meg
+ * („FEJLÉCEK: a gyökér”), legfeljebb kétszer újra, és a kimenet visszajön (a bukás üzenetébe).
+ * @returns {Promise<{rendben: boolean, kimenet: string}>}
+ */
+async function gyokerFejlecek(vendeg, port, kornyezet) {
+  let kimenet = '';
+  for (let i = 0; i < 3; i++) {
+    kimenet = await fut(vendeg, 'kerelem', 'fejlecek', 'gyoker', '127.0.0.1', String(port), kornyezet).catch((h) => String(h?.message ?? h));
+    if (/FEJLÉCEK: a gyökér/.test(kimenet)) return { rendben: true, kimenet };
+    await varj(2000);
+  }
+  return { rendben: false, kimenet };
+}
+
 /** A kiírt TELJES (43 karakteres) azonosító — a horgonyokhoz. */
 function teljesAzonosito(kimenet) {
   const talalat = kimenet.match(/[A-Za-z0-9_-]{43}/g);
@@ -2527,7 +2544,7 @@ proba('⭐⭐ D102: a bejáró a lapon — két ág mélyen, egy sorozatban, és
     futok.push(figyelo);
     await varj(1500);
     // B egy szinten megismeri a két ág össz-pontját (a gyerekeiket nem)
-    await fut(b, 'kerelem', 'fejlecek', 'gyoker', '127.0.0.1', '7495', alap);
+    const gyokerKer = await gyokerFejlecek(b, 7495, alap);
     const bFel = await feluletet(b, 7498, alap);
     futok.push(bFel.folyamat);
     const lista = () => bFel.hiv('/api/pakli?rendezes=agazatiPont&irany=csokkeno&darab=20');
@@ -2561,6 +2578,7 @@ proba('⭐⭐ D102: a bejáró a lapon — két ág mélyen, egy sorozatban, és
     };
     if (!Object.values(ki).every(Boolean)) {
       process.stdout.write('  bejáró — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+        + (gyokerKer.rendben ? '' : ' · ⚠️ a beállító gyökér-kérelem nem kapott választ: ' + gyokerKer.kimenet.slice(-300))
         + ' · ' + JSON.stringify({ elotte: { k: azok(elotte).length, b: elotte.adat.biztos, o: elotte.adat.osszes, h: elotte.adat.hianyzik },
           utana: { k: azok(utana).length, b: utana.adat.biztos, o: utana.adat.osszes }, fuggo: kerelmek.fuggo?.map((x) => [x.kulcs.slice(0, 6), x.m]),
           kesz: kesz.map((x) => [x.kulcs.slice(0, 6), x.ido % 100000, String(x.eredmeny).slice(0, 30)]) }).slice(0, 1200) + '\n');
@@ -2613,7 +2631,7 @@ proba('⭐⭐ D101 ④: a Síkidom a lapon — a nem tartott síkidom gyerekei �
     futok.push(figyelo);
     await varj(1500);
     // B egy szinten megismeri a két gyökér össz-pontját (a gyerekeiket nem)
-    await fut(b, 'kerelem', 'fejlecek', 'gyoker', '127.0.0.1', '7471', alap);
+    const gyokerKer = await gyokerFejlecek(b, 7471, alap);
     const bFel = await feluletet(b, 7472, alap);
     futok.push(bFel.folyamat);
     const gyerekei = (szulo) => bFel.hiv('/api/sikidom/gyerekek?' + (szulo ? 'szulo=' + szulo + '&' : '') + 'minPont=0&darab=150');
@@ -2648,6 +2666,7 @@ proba('⭐⭐ D101 ④: a Síkidom a lapon — a nem tartott síkidom gyerekei �
     };
     if (!Object.values(ki).every(Boolean)) {
       process.stdout.write('  síkidom — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+        + (gyokerKer.rendben ? '' : ' · ⚠️ a beállító gyökér-kérelem nem kapott választ: ' + gyokerKer.kimenet.slice(-300))
         + ' · ' + JSON.stringify({ gy: gyokerElotte.adat?.gyerekek?.map((g) => [g.cim, g.hierarchikusOsszesPont, g.vanGyereke]),
           r1: [azok(r1Elotte).length, r1Elotte.adat?.betoltes, r1Elotte.adat?.osszesGyerekPont], fuggo: kerelmek.fuggo?.map((x) => [x.fajta, x.kulcs.slice(0, 6), x.m]),
           utana: r1Utana.adat?.gyerekek?.map((g) => [g.cim, g.hierarchikusOsszesPont, g.vanGyereke]),
@@ -2729,6 +2748,86 @@ proba('⭐⭐ D101 ⑥: az értesítések a lapon — a postafiók a készülék
         + ' · ' + JSON.stringify({ beallit: beallit.adat, alap: alapvonal.adat?.adatok, utana: utana.adat?.adatok,
           r: rKartya?.olvasatlanErtesitesek, r2: rKartya2?.olvasatlanErtesitesek, orokolt: orokolt.adat?.adatok?.forras,
           vegul: vegul.adat?.adatok }).slice(0, 1400) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const f of futok) f.kill();
+    await varj(1000);
+    await rm(a, { recursive: true, force: true });
+    await rm(b, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐⭐ D103: A KÉSZÜLÉK SAJÁT ÉRTESÍTÉSE — az őrjárat számol és jelez (zárt lapnál is)
+// ===================================
+//
+// B („alap”) a lapról beállítja: R-en az „új gyerek” értesítést, globálisan a készülék értesítését azonnal (a prototípus
+// e-mail kapcsolója — a koinóban ezt jelenti); a postafiók első kérdése az alapvonal; aztán a felület BEZÁRUL. A gyereket ír
+// R alá; B ŐRJÁRATA a cserében megkapja, kiszámolja a postafiókot, és a készülék értesítőjét hívja — itt a cserélhető
+// értesítő (`KOINO_ERTESITO`) egy próba-szkript, ami fájlba írja a címet és a szöveget. ⭐ Viselkedést mérünk (a fájlt).
+// Rontás: az őrjárat nem számol → nincs értesítés; a kapcsoló kikapcsolva → nincs értesítés.
+proba('⭐⭐ D103: a készülék saját értesítése — az őrjárat számolja a postafiókot, és a (cserélhető) értesítővel jelez, zárt lapnál is', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const alap = { KOINO_KISZOLGALAS: 'alap' };
+  const futok = [];
+  try {
+    const naplo = join(b, 'ertesitesek-naplo.txt');
+    const szkript = join(b, 'ertesito.mjs');
+    await writeFile(szkript, "import { appendFileSync } from 'node:fs';\nappendFileSync(" + JSON.stringify(naplo)
+      + ", process.argv[2] + '|' + process.argv[3] + '\\n');\n", 'utf8');
+    await fut(b, 'koino', 'Értesítő', 'próba', 'nyilt', alap);
+    const bFel = await feluletet(b, 7478, alap);
+    futok.push(bFel.folyamat);
+    const R = (await bFel.hiv('/api/gondolat', { method: 'POST',
+      body: JSON.stringify({ cim: 'R figyelt', kezdoTudatpont: 20 }) })).adat?.data?._id;
+    if (!R) return false;
+    await bFel.hiv('/api/ertesitesi-beallitasok', { method: 'PUT',
+      body: JSON.stringify({ entitasId: R, entitasTipus: 'Gondolat', ertesitesTipusok: ['ujGyerekEntitas'] }) });
+    const glob = await bFel.hiv('/api/ertesitesi-beallitasok/globalis', { method: 'PUT',
+      body: JSON.stringify({ ertesitesTipusok: [], emailErtesites: true, emailMod: 'azonnal' }) });
+    await bFel.hiv('/api/ertesitesek?lap=1&lapMeret=20');           // az alapvonal
+    const megjegyzes = (await bFel.hiv('/api/ertesitesi-beallitasok/globalis')).adat?.koinoMegjegyzes ?? '';
+    bFel.folyamat.kill();
+    await varj(500);
+    // A megismeri a koinót és R-t, és gyereket ír alá
+    await fut(a, 'tars', '127.0.0.1', '7470', 'B', alap);
+    await csereKor(b, a, 7470, alap);
+    const aFel = await feluletet(a, 7479, alap);
+    futok.push(aFel.folyamat);
+    const C = (await aFel.hiv('/api/gondolat', { method: 'POST',
+      body: JSON.stringify({ cim: 'C az A-tól', szuloId: R, kezdoTudatpont: 5 }) })).adat?.data?._id;
+    aFel.folyamat.kill();
+    await varj(500);
+    if (!C) return false;
+    // A figyel, B őrjáratot futtat (a cserélhető értesítővel) — a csere után számol és jelez
+    const figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', '7470'], { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
+    futok.push(figyelo);
+    await varj(1500);
+    await fut(b, 'tars', '127.0.0.1', '7470', 'A', alap);
+    const orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', '7473'],
+      { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', KOINO_ERTESITO: szkript, ...alap }, stdio: ['ignore', 'pipe', 'pipe'] });
+    // a bukás nevezze meg magát: az őrjárat kimenete a hibaüzenetbe kerül
+    let kimenet = '';
+    orjarat.stdout.on('data', (d) => { kimenet += d; });
+    orjarat.stderr.on('data', (d) => { kimenet += d; });
+    futok.push(orjarat);
+    let sorok = [];
+    // ⚠️ az őrjárat percenként legfeljebb egyszer számol (a szünet a legutóbbi számolástól mér — a felület alapvonala is az)
+    for (let i = 0; i < 100 && !sorok.length; i++) {
+      await varj(1000);
+      sorok = (await readFile(naplo, 'utf8').catch(() => '')).trim().split('\n').filter(Boolean);
+    }
+    const ki = {
+      kapcsolo: glob.adat?.adatok?.emailErtesites === true && glob.adat?.adatok?.emailMod === 'azonnal',
+      megjegyzes: /készüléked saját értesítése/.test(megjegyzes),
+      ertesites: sorok.length === 1 && sorok[0] === 'koino — Új gondolat jött létre|R figyelt'
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  készülék-értesítés — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+        + ' · ' + JSON.stringify({ glob: glob.adat, megjegyzes, sorok }).slice(0, 900) + '\n');
+      process.stdout.write('  az őrjárat kimenete:\n' + kimenet.slice(-2000) + '\n');
     }
     return Object.values(ki).every(Boolean);
   } finally {

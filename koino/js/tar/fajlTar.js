@@ -1190,7 +1190,31 @@ export function ertesitesTarolo(koino, hely = alapHely()) {
       throw hiba;
     }
   };
+  // ⭐ D103: a postafiókot a felület ÉS az őrjárat is számolja — a két folyamat egy zárral váltja egymást (a mappa
+  // létrehozása atomi; a 60 mp-nél régebbi zár egy elhalt folyamaté, azt eldobjuk). A zárat csak a rövid olvas-számol-ír
+  // művelet tartja (a kiküldés kívül megy).
+  const zarHely = join(hely, koino, 'ertesitesek.zar');
+  const zar = async (fn) => {
+    await mkdir(join(hely, koino), { recursive: true });
+    const hatar = Date.now() + 15000;
+    for (;;) {
+      try {
+        await mkdir(zarHely);
+        break;
+      } catch (hiba) {
+        if (hiba.code !== 'EEXIST') throw hiba;
+        try {
+          const { mtimeMs } = await stat(zarHely);
+          if (Date.now() - mtimeMs > 60000) { await rm(zarHely, { recursive: true, force: true }); continue; }
+        } catch { continue; }
+        if (Date.now() > hatar) throw new Error('a postafiók zárja foglalt');
+        await new Promise((t) => setTimeout(t, 50));
+      }
+    }
+    try { return await fn(); } finally { await rm(zarHely, { recursive: true, force: true }).catch(() => {}); }
+  };
   return {
+    zar,
     postafiokOlvas: () => olvas('ertesitesek.json'),
     postafiokIr: (adat) => ir('ertesitesek.json', adat),
     beallitasOlvas: () => olvas('ertesitesiBeallitasok.json'),

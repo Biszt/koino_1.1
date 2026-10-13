@@ -8,13 +8,17 @@
 // a nyolc fajtát, a tudatpont-szűrőt és -küszöböt, és a postafiók korlátait (darab, idő, lap, ág, olvasott). A bekötést
 // (a felület útvonalai, a kártyák számlálója, két készülékkel) a `parancssorProba.js` méri.
 
+import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { probaGyujtemeny } from './probaFuttato.js';
 import {
   ERTESITES_TIPUSOK, POSTAFIOK_KORLAT, POSTAFIOK_ELETTARTAM, HATARIDO_ELORE,
   uresBeallitasok, beallitasokAlakja, beallitasMentese, globalisMentese, ervenyesBeallitas, tudatpontKuszobTeljesul,
   pillanatkep, ertesitesekSzamitasa, uresPostafiok, postafiokAlakja, postafiokBovitese, postafiokLapja,
-  olvasottnakJelol, olvasatlanTerkep
+  olvasottnakJelol, olvasatlanTerkep, keszulekErtesitesei, KESZULEK_AZONNAL_KORLAT
 } from '../js/allapot/ertesites.js';
+import { ertesitoParancsa, keszulekErtesitese } from '../js/felulet/eszkozErtesites.js';
 
 const { proba, futtatas } = probaGyujtemeny('Az értesítés-réteg (D101 ⑥)');
 
@@ -163,6 +167,64 @@ proba('⭐ a postafiók korlátos (darab és idő), lapoz, ág-szűr, olvasottna
     && lap.ertesitesek.length === 1 && lap.osszes === 3 && lap.olvasatlan === 2 && lap.lapokSzama === 3
     && ag.osszes === 2 && szamlalo.get('R') === 1 && szamlalo.get('P') === 1 && szamlalo.get('Q') === 1
     && db === 1 && olvasatlanTerkep(pf).get('R') === undefined;
+});
+
+// ===================================
+// 4. ⭐ D103: A KÉSZÜLÉK SAJÁT ÉRTESÍTÉSE
+// ===================================
+
+proba('⭐ D103: mit jelez a készülék — kikapcsolva semmit (és nem gyűjt), azonnal legfeljebb öt + „és még”, összefoglaló az időköz után egyszer', () => {
+  const t = (i, az = 'R') => ({ _id: 't' + i, tipus: 'ujGyerekEntitas', entitasId: az });
+  const cime = (az) => (az === 'R' ? 'R figyelt' : null);
+  const ki = keszulekErtesitesei([t(1)], { emailErtesites: false }, { utolso: 5, gyujto: 3 }, 100, cime);
+  const azonnal = keszulekErtesitesei(Array.from({ length: 8 }, (_, i) => t(i)), { emailErtesites: true, emailMod: 'azonnal' }, null, 100, cime);
+  const ora = 3600 * 1000;
+  const g = { emailErtesites: true, emailMod: 'osszefoglalo', emailOrakoz: 2 };
+  const elso = keszulekErtesitesei([t(1)], g, null, 10 * ora, cime);                        // az időköz innen indul
+  const kozben = keszulekErtesitesei([t(2), t(3)], g, elso.kezbesites, 11 * ora, cime);     // még nem telt le
+  const letelt = keszulekErtesitesei([], g, kozben.kezbesites, 12 * ora, cime);             // letelt: egy, a számmal
+  const ures = keszulekErtesitesei([], g, letelt.kezbesites, 20 * ora, cime);               // nincs mit: semmi
+  return ki.uzenetek.length === 0 && ki.kezbesites.gyujto === 0
+    && azonnal.uzenetek.length === KESZULEK_AZONNAL_KORLAT + 1 && azonnal.uzenetek[0].cim === 'koino — Új gondolat jött létre'
+    && azonnal.uzenetek[0].szoveg === 'R figyelt' && /és még 3/.test(azonnal.uzenetek.at(-1).szoveg) && azonnal.kezbesites.utolso === 100
+    && elso.uzenetek.length === 0 && elso.kezbesites.utolso === 10 * ora && elso.kezbesites.gyujto === 1
+    && kozben.uzenetek.length === 0 && kozben.kezbesites.gyujto === 3
+    && letelt.uzenetek.length === 1 && /^3 új értesítés/.test(letelt.uzenetek[0].szoveg) && letelt.kezbesites.gyujto === 0
+    && ures.uzenetek.length === 0;
+});
+
+proba('⭐ D103: a platform értesítője — Windows (a szöveg környezetben), Mac, Linux, Termux, a cserélhető (KOINO_ERTESITO), és ismeretlen platformon semmi', () => {
+  const win = ertesitoParancsa('cím', 'szöveg"; Remove-Item x', { platform: 'win32', env: {} });
+  const mac = ertesitoParancsa('c', 'sz', { platform: 'darwin', env: {} });
+  const lin = ertesitoParancsa('c', 'sz', { platform: 'linux', env: {} });
+  const termux = ertesitoParancsa('c', 'sz', { platform: 'linux', env: { PREFIX: '/data/data/com.termux/files/usr' } });
+  const sajatJs = ertesitoParancsa('c', 'sz', { platform: 'win32', env: { KOINO_ERTESITO: '/x/kuld.mjs' }, node: '/bin/node' });
+  const sajat = ertesitoParancsa('c', 'sz', { platform: 'linux', env: { KOINO_ERTESITO: 'ntfy-kuld' } });
+  const hosszu = ertesitoParancsa('c'.repeat(500), 'a\nb\u0000c', { platform: 'linux', env: {} });
+  return win.parancs === 'powershell.exe' && win.kornyezet.KOINO_ERTESITES_SZOVEG === 'szöveg"; Remove-Item x'
+    && !win.ervek.join(' ').includes('Remove-Item') && mac.parancs === 'osascript' && mac.ervek.slice(-2).join() === 'c,sz'
+    && lin.parancs === 'notify-send' && termux.parancs === 'termux-notification'
+    && sajatJs.parancs === '/bin/node' && sajatJs.ervek.join() === '/x/kuld.mjs,c,sz' && sajat.parancs === 'ntfy-kuld'
+    && hosszu.ervek[0].length === 80 && hosszu.ervek[1] === 'a b c'
+    && ertesitoParancsa('c', 'sz', { platform: 'aix', env: {} }) === null;
+});
+
+proba('⭐ D103: a kiküldés a cserélhető értesítővel valóban lefut (egy próba-szkript fájlba írja) — és a hiányzó eszköz hibája visszajön, nem dob', async () => {
+  const hely = await mkdtemp(join(tmpdir(), 'koino-ertesito-'));
+  try {
+    const naplo = join(hely, 'naplo.txt');
+    const szkript = join(hely, 'kuld.mjs');
+    await writeFile(szkript, "import { appendFileSync } from 'node:fs';\nappendFileSync(" + JSON.stringify(naplo)
+      + ", process.argv[2] + '|' + process.argv[3] + '\\n');\n", 'utf8');
+    const r = await keszulekErtesitese([{ cim: 'koino — Új gondolat jött létre', szoveg: 'R figyelt' }, { cim: 'k2', szoveg: 's2' }],
+      { env: { ...process.env, KOINO_ERTESITO: szkript } });
+    const sorok = (await readFile(naplo, 'utf8')).trim().split('\n');
+    const hiany = await keszulekErtesitese([{ cim: 'c', szoveg: 'sz' }], { env: { KOINO_ERTESITO: 'nincs-ilyen-parancs-' + Date.now() } });
+    return r.kuldve === 2 && r.hiba === null && sorok.join(';') === 'koino — Új gondolat jött létre|R figyelt;k2|s2'
+      && hiany.kuldve === 0 && typeof hiany.hiba === 'string';
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
 });
 
 export default futtatas;

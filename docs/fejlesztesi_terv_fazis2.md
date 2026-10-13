@@ -5364,6 +5364,41 @@ fejléc-kérelem egy kapcsolaton), a társhoz illő sorozat, és a bekötés: k�
 (35 ms-on belül) — rontással (a tartó nem szolgál ki sorozatot → a modul-próba a tétlenségi órán, a bekötés a „megjött /
 biztos / egy sorozat” pontokon bukik).
 
+### D103. A LEVÉL HELYETT A KÉSZÜLÉK SAJÁT ÉRTESÍTÉSE (2026-10-13, Csaba: „igen”)
+
+**Amiből jött:** a ⑥ (az értesítés-réteg) — a prototípus az értesítéseket kérésre e-mailben is kézbesítette (azonnal vagy
+N óránkénti összefoglalóban, egy szerver küldte). P2P-n nincs szerver, ami levelet küldene (2. szabály: semmi ne múljon
+egyetlen szolgáltatáson). A kérdés: jöjjön-e helyette a készülék saját értesítése, az operációs rendszer felé?
+
+#### A DÖNTÉS
+
+⭐ **Igen.** A prototípus kapcsolója és üteme (azonnal / összefoglaló N óránként) megmarad, de a koinóban az operációs
+rendszer felugró értesítését kapcsolja: ugyanazokról az eseményekről, amiket az e-ember kipipált, amikor a koino fut (a
+felület vagy az őrjárat). Az illesztő npm-csomag nélkül, a platform saját eszközével szól (Windows: a PowerShell
+értesítése; Mac: `osascript`; Linux: `notify-send`; telefon: a Termux `termux-notification`-je), és CSERÉLHETŐ
+(`KOINO_ERTESITO` — egy parancs vagy szkript, ami a címet és a szöveget kapja). Ha egy gépen nincs ilyen eszköz, a program
+kimondja (D19); a postafiók attól még él.
+
+#### ✅ MEGÉPÜLT (2026-10-13)
+
+⭐ **Mit jelezzen** (`ertesites.js` `keszulekErtesitesei` — tiszta számítás): kikapcsolva semmit (és nem gyűjt — a
+bekapcsolás után nem jön a múlt); azonnal az új tételek, legfeljebb öt, a többiről egy „és még N”; összefoglaló módban a
+tételek gyűlnek, és ha az időköz letelt, EGY értesítés a számukkal (az első bekapcsoláskor az időköz onnan indul). Az
+állapot a postafiókban (`kezbesites`: mikor ment ki utoljára, mennyi gyűlt, a legutóbbi hiba). ⭐ **Hogyan** (`js/felulet/
+eszkozErtesites.js`): a platform saját eszköze — Windowson a PowerShell felugró értesítése (WinRT, a PowerShell
+alkalmazás-azonosítójával), Macen `osascript`, Linuxon `notify-send`, Termuxon `termux-notification` —, és a cserélhető
+`KOINO_ERTESITO`. ⛔ A szöveg soha nem héjon át megy (érvként, Windowson környezeti változóban) — egy cím nem lehet
+parancs; a hiba visszajön, nem dob. ⭐ **Ki számol:** a felület ÉS az őrjárat (percenként legfeljebb egyszer) — hogy zárt
+lapnál is jöjjön az értesítés; a két folyamat egy zárral váltja egymást (`ertesitesTarolo` `zar` — a mappa létrehozása
+atomi, az elhalt folyamat zárja 60 mp után elesik), a kiküldés a záron kívül megy. ⭐ **A lapon** a modál bájtra a
+prototípusé; a koinós többlet a betöltés után átírja az e-mail kapcsoló és az ütem feliratait („A készülékem is jelezzen
+(felugró értesítéssel)”, „egy értesítés, benne az időszak értesítéseinek száma”), és engedi a kapcsolót (a prototípus az
+e-mail cím hiányában letiltaná); a megjegyzés kimondja, mi történik, és ha legutóbb nem sikerült, miért. Elágazás 144–147.
+Próbák: három modul-próba (mit jelez — a kapcsoló, az öt, az időköz; a platform parancsa — a szöveg nem a parancsban; a
+kiküldés egy valódi próba-szkripttel és a hiányzó eszköz) és a bekötés (`parancssorProba.js`: két készülék — a lapról
+bekapcsolt értesítés, a felület bezárva, az őrjárat a cserében megkapja a gyereket, kiszámolja, és a cserélhető
+értesítő fájlba írja) — mind rontással. Windowson egy valódi felugró értesítéssel is kipróbálva.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

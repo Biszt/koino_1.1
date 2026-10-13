@@ -199,8 +199,8 @@ koruleIr(KeresesModal, '_kereses', function () {
 // ===================================
 //
 // A postafiók a készüléken számolódik (M3/A): a program kimondja, miből — a szigorú (b) alatt csak abból, ahol tudatpontod
-// van. A lista alá kerül (a lap betöltése után). A globális beállításnál azt is, hogy a koinóban nincs levél-kézbesítés
-// (nincs szerver, ami küldené — 2. szabály): a kapcsoló megmarad, de nem küld semmit.
+// van. A lista alá kerül (a lap betöltése után). A globális beállításnál azt is, hogy a levél helyett a készülék saját
+// értesítése jön (D103 — nincs szerver, ami levelet küldene), és ha legutóbb nem sikerült, miért.
 koruleIr(ErtesitesekModal, '_oldalBetoltese', function () {
   megjegyzesKirajzolasa(document.getElementById('ertesitesek-lista'), megjegyzes('ertesitesek'));
 });
@@ -208,6 +208,31 @@ koruleIr(ErtesitesekModal, '_oldalBetoltese', function () {
 koruleIr(ErtesitesiBeallitasModal, '_adatokBetoltese', function () {
   const info = document.getElementById('ertesites-beallitas-info');
   megjegyzesKirajzolasa(info, this.globalis ? megjegyzes('ertesitesi-beallitasok/globalis') : null);
+});
+
+// ⭐ D103: a prototípus e-mail kapcsolója a koinóban a KÉSZÜLÉK SAJÁT ÉRTESÍTÉSÉT kapcsolja (felugró értesítés az
+// operációs rendszer felé — nincs szerver, ami levelet küldene). A modál bájtra a prototípusé; a feliratait ez írja át a
+// betöltés után, és a kapcsolót engedi (a prototípus e-mail cím hiányában letiltaná). Az ütem (azonnal / összefoglaló N
+// óránként) ugyanaz.
+const KESZULEK_FELIRATOK = [
+  ['E-mailben is kérem az értesítéseket', 'A készülékem is jelezzen (felugró értesítéssel)'],
+  ['Ugyanazokról az eseményekről, amiket fent kipipáltál — csak levélben is.',
+    'Ugyanazokról az eseményekről, amiket fent kipipáltál — a gépeden vagy a telefonodon, felugró értesítéssel, amikor a koino fut.'],
+  ['egy levél, benne az időszak értesítései', 'egy értesítés, benne az időszak értesítéseinek száma'],
+  ['minden értesítésről külön levél, rögtön', 'minden értesítés külön, rögtön']
+];
+
+koruleIr(ErtesitesiBeallitasModal, '_emailAllapotBetoltese', function () {
+  const szakasz = document.getElementById('ertesites-email-szakasz');
+  if (!szakasz) return;
+  const jaro = document.createTreeWalker(szakasz, NodeFilter.SHOW_TEXT);
+  for (let n = jaro.nextNode(); n; n = jaro.nextNode()) {
+    for (const [regi, uj] of KESZULEK_FELIRATOK) if (n.nodeValue.includes(regi)) n.nodeValue = n.nodeValue.replace(regi, uj);
+  }
+  const kapcsolo = document.getElementById('ertesites-email-kapcsolo');
+  if (kapcsolo) kapcsolo.disabled = false;
+  const figyelmeztetes = document.getElementById('ertesites-email-figyelmeztetes');
+  if (figyelmeztetes) figyelmeztetes.hidden = true;
 });
 
 koruleIr(SikidomModal, '_takaritasBezaraskor', function () {

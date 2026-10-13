@@ -116,8 +116,10 @@ import {
 // ⭐⭐ D101 ⑥: az értesítés-réteg — a postafiók a készüléken, két pillanatkép különbségéből
 import {
   beallitasokAlakja, ervenyesBeallitas, beallitasMentese, globalisMentese, ertesitesekSzamitasa,
-  postafiokAlakja, postafiokBovitese, postafiokLapja, olvasottnakJelol, olvasatlanTerkep
+  postafiokAlakja, postafiokBovitese, postafiokLapja, olvasottnakJelol, olvasatlanTerkep, keszulekErtesitesei
 } from './js/allapot/ertesites.js';
+// ⭐ D103: a készülék saját értesítése (az operációs rendszer felé — npm-csomag nélkül, cserélhető)
+import { keszulekErtesitese } from './js/felulet/eszkozErtesites.js';
 import { naploFrissitese } from './js/csere/kozosHalmaz.js';
 // ⭐ D97/2: a raj a körben (69. mérés: a változott szeletek tartói sorban, aztán a forgatás).
 import { rajKorAllapot, valtozottFeljegyzese, rajKorCeljai } from './js/csere/rajKor.js';
@@ -1629,52 +1631,73 @@ function keresesMegjegyzes(r, keres) {
 // ⭐⭐ D101 ⑥: A POSTAFIÓK — a készüléken, két pillanatkép különbségéből (`ertesites.js`)
 // ===================================
 //
-// A felület folyamata számol és ír (egy író): a postafiók kérdésére mindig, a kártyák számlálójához legfeljebb fél
-// percenként. ⛔ A műveletek egy folyamaton belül SORBAN mennek (`postafiokSor`): egy olvasott-jelölés különben elveszhetne
-// egy közben futó számolás írása alatt.
+// A felület ÉS az őrjárat számol (D103 óta — hogy zárt lapnál is jöjjön a készülék értesítése): a felület a postafiók
+// kérdésére mindig, a kártyák számlálójához legfeljebb fél percenként; az őrjárat percenként legfeljebb egyszer. ⛔ A
+// műveletek egy folyamaton belül SORBAN mennek (`postafiokSor`), a folyamatok közt egy ZÁR alatt (`ertesitesTarolo` `zar`):
+// egy olvasott-jelölés különben elveszhetne egy közben futó (másik folyamatbeli) számolás írása alatt.
 
 /** A kártyák számlálója legfeljebb ennyi időnként számol újra (a postafiók kérdése mindig). */
 const POSTAFIOK_SZAMLALO_SZUNET = 30 * 1000;
-const postafiokIdo = new Map();                          // koinó → a legutóbbi számolás ideje
+/** ⭐ D103: az őrjárat legfeljebb ennyi időnként számolja a postafiókot (a készülék értesítéséhez). */
+const POSTAFIOK_ORJARAT_SZUNET = 60 * 1000;
 let postafiokSor = Promise.resolve();
 
-/** Egy postafiók-művelet a sor végére (a hibája nem akasztja meg a többit). */
-function postafiokMuvelet(fn) {
-  const fut = postafiokSor.then(fn, fn);
+/** Egy postafiók-művelet a sor végére és a koinó zárja alá (a hibája nem akasztja meg a többit). */
+function postafiokMuvelet(koino, fn) {
+  const fut = postafiokSor.then(() => ertesitesTarolo(koino).zar(fn), () => ertesitesTarolo(koino).zar(fn));
   postafiokSor = fut.catch(() => {});
   return fut;
 }
 
 /**
  * ⭐ A postafiók frissítése: a mostani pillanatkép az előzőhöz képest (az első az alapvonal — semmit nem jelez), az új
- * tételek a postafiók elejére. Visszaadja a postafiókot és a kép entitásait (a címekhez, a lánchoz).
+ * tételek a postafiók elejére. ⭐ D103: és a készülék értesítése a globális beállítás szerint (`keszulekErtesitesei` — mit
+ * kell jelezni; a kiküldés a zár UTÁN megy, a hibája feljegyezve). Visszaadja a postafiókot és a kép entitásait.
  * @param {Object} k - { tar, koino, nezet, bemondasok, szerzo, szunet }
  */
 async function postafiokFrissitese({ tar: t, koino, nezet, bemondasok: b, szerzo: en, szunet = 0 }) {
-  return postafiokMuvelet(async () => {
+  const ki = await postafiokMuvelet(koino, async () => {
     const tarolo = ertesitesTarolo(koino);
     const pf = postafiokAlakja(await tarolo.postafiokOlvas());
     const most = Date.now();
-    if (szunet > 0 && pf.kep && most - (postafiokIdo.get(koino) ?? 0) < szunet) return { pf, entitasok: null };
-    postafiokIdo.set(koino, most);
+    if (szunet > 0 && pf.kep && most - (pf.frissitve ?? 0) < szunet) return { pf, entitasok: null, uzenetek: [] };
     const beallitasok = beallitasokAlakja(await tarolo.beallitasOlvas());
     const { kep, entitasok } = await ertesitesiKep(t, koino, { szerzo: en, nezet, bemondasok: b, most });
     const ujak = ertesitesekSzamitasa(pf.kep, kep, { beallitasok, entitasok, en, most });
     const uj = postafiokBovitese(pf, ujak, kep, most);
+    const k = keszulekErtesitesei(ujak, beallitasok.globalis, uj.kezbesites, most, (az) => entitasok.get(az)?.cim ?? null);
+    uj.kezbesites = k.kezbesites;
     await tarolo.postafiokIr(uj);
-    return { pf: uj, entitasok };
+    return { pf: uj, entitasok, uzenetek: k.uzenetek };
+  });
+  if (ki.uzenetek?.length) {
+    const r = await keszulekErtesitese(ki.uzenetek);
+    ki.kuldve = r.kuldve;
+    if ((r.hiba ?? null) !== (ki.pf.kezbesites?.hiba ?? null)) {
+      await postafiokModositasa(koino, (pf) => { pf.kezbesites = { ...pf.kezbesites, hiba: r.hiba }; });
+      ki.pf.kezbesites = { ...ki.pf.kezbesites, hiba: r.hiba };
+    }
+  }
+  return ki;
+}
+
+/** Egy olvasott-jelölés vagy törlés a postafiókban (sorban és zár alatt). @returns {Promise<any>} a `fn` eredménye */
+async function postafiokModositasa(koino, fn) {
+  return postafiokMuvelet(koino, async () => {
+    const tarolo = ertesitesTarolo(koino);
+    const pf = postafiokAlakja(await tarolo.postafiokOlvas());
+    const eredmeny = fn(pf);
+    await tarolo.postafiokIr(pf);
+    return eredmeny;
   });
 }
 
-/** Egy olvasott-jelölés vagy törlés a postafiókban (sorban a számolással). @returns {Promise<any>} a `fn` eredménye */
-async function postafiokModositasa(koino, fn) {
-  return postafiokMuvelet(async () => {
-    const tarolo = ertesitesTarolo(koino);
-    const pf = postafiokAlakja(await tarolo.postafiokOlvas());
-    const ki = fn(pf);
-    await tarolo.postafiokIr(pf);
-    return ki;
-  });
+/** ⭐ D103: az őrjárat köre — a postafiók és a készülék értesítése (percenként legfeljebb egyszer). */
+let orjaratNezete = null;
+async function orjaratErtesitesei() {
+  orjaratNezete ??= ujPakliNezet({ osszegzesek: ellenorzottOsszegzesek, tartott: tartottSzeleteim });
+  return postafiokFrissitese({ tar: ketTarNezet(tar, atmeneti), koino: KOINO, nezet: orjaratNezete,
+    bemondasok: await bemondasok(), szerzo, szunet: POSTAFIOK_ORJARAT_SZUNET });
 }
 
 /**
@@ -5372,6 +5395,11 @@ try {
             const t = await tomoritesFuttatasa();
             if (t.kivett) kiir(SZIN.halvany + '  🗜 ' + ora() + ' tömörítés: ' + t.kivett + ' esemény az átmeneti tárba (amit már nem vállalok)' + SZIN.vege);
           }
+          // ⭐ D103: a postafiók és a készülék saját értesítése (zárt lapnál is — a felülettel zár alatt váltják egymást).
+          try {
+            const e = await orjaratErtesitesei();
+            if (e.kuldve) kiir(SZIN.halvany + '  🔔 ' + ora() + ' ' + e.kuldve + ' értesítés a készüléken' + SZIN.vege);
+          } catch (hiba) { console.warn('a postafiók most nem számolható', { ok: hiba.message }); }
         } catch (hiba) {
           kiir(SZIN.halvany + '  ⚠ a döntési csomag most nem ment ki: ' + hiba.message + SZIN.vege);
         }
@@ -6126,9 +6154,11 @@ try {
                 return { adat: { success: true, adatok: uj.globalis } };
               }
               if (modszer === 'GET') {
+                const pf = postafiokAlakja(await tarolo.postafiokOlvas());
                 return { adat: { success: true, adatok: beallitasok.globalis,
-                  koinoMegjegyzes: 'A koinóban nincs levél-kézbesítés: nincs szerver, ami küldené (2. szabály). Az e-mail kapcsoló'
-                    + ' megmarad, de nem küld semmit — a postafiók a készülékeden van.' } };
+                  koinoMegjegyzes: 'A koinóban a levél helyett a készüléked saját értesítése jön (felugró értesítés — D103):'
+                    + ' ugyanazokról, amiket kipipáltál, amikor a koino fut (a felület vagy az őrjárat).'
+                    + (pf.kezbesites.hiba ? ' ⚠️ Legutóbb nem sikerült: ' + pf.kezbesites.hiba + '.' : '') } };
               }
             }
             if (modszer === 'GET' && reszek.length === 1) {

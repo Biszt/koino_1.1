@@ -300,7 +300,20 @@ export function ertesitesekSzamitasa(elozo, uj, { beallitasok, entitasok, en, mo
 // ===================================
 
 export function uresPostafiok() {
-  return { tetelek: [], kep: null };
+  return { tetelek: [], kep: null, kezbesites: uresKezbesites(), frissitve: 0 };
+}
+
+/** ⭐ D103: a készülék értesítésének állapota — mikor ment ki utoljára, és hány tétel gyűlt azóta (az összefoglalóhoz). */
+function uresKezbesites() {
+  return { utolso: null, gyujto: 0, hiba: null };
+}
+
+function kezbesitesAlakja(k) {
+  return {
+    utolso: Number.isFinite(k?.utolso) ? k.utolso : null,
+    gyujto: Number.isSafeInteger(k?.gyujto) && k.gyujto >= 0 ? k.gyujto : 0,
+    hiba: typeof k?.hiba === 'string' ? k.hiba.slice(0, 300) : null
+  };
 }
 
 /** A tárolt postafiók ellenőrzött alakja (a hibás tétel kimarad). */
@@ -310,7 +323,8 @@ export function postafiokAlakja(nyers) {
     && typeof t.createdAt === 'string').slice(0, POSTAFIOK_KORLAT)
     .map((t) => ({ ...t, olvasva: t.olvasva === true, adatok: t.adatok && typeof t.adatok === 'object' ? t.adatok : {} }));
   const kep = nyers?.kep && typeof nyers.kep === 'object' && nyers.kep.e && nyers.kep.j ? nyers.kep : null;
-  return { tetelek, kep };
+  return { tetelek, kep, kezbesites: kezbesitesAlakja(nyers?.kezbesites),
+    frissitve: Number.isFinite(nyers?.frissitve) ? nyers.frissitve : 0 };
 }
 
 /** Az új tételek a postafiók elejére; a túl régi és a korlát fölötti kiesik. */
@@ -318,7 +332,7 @@ export function postafiokBovitese(postafiok, ujak, kep, most = Date.now()) {
   const tetelek = [...ujak.slice().reverse(), ...postafiok.tetelek]
     .filter((t) => most - Date.parse(t.createdAt) <= POSTAFIOK_ELETTARTAM)
     .slice(0, POSTAFIOK_KORLAT);
-  return { tetelek, kep };
+  return { tetelek, kep, kezbesites: kezbesitesAlakja(postafiok.kezbesites), frissitve: most };
 }
 
 const agban = (t, agazat) => !agazat || t.entitasId === agazat || t.osLanc.includes(agazat);
@@ -360,4 +374,60 @@ export function olvasatlanTerkep(postafiok) {
     for (const az of new Set([t.entitasId, ...t.osLanc])) ki.set(az, (ki.get(az) ?? 0) + 1);
   }
   return ki;
+}
+
+// ===================================
+// ⭐ D103: A KÉSZÜLÉK SAJÁT ÉRTESÍTÉSE — mit kell most jeleznie (tiszta számítás)
+// ===================================
+//
+// A prototípus a postafiók tételeit kérésre levélben is kézbesítette (azonnal, vagy N óránként összefoglalva); a koinóban
+// a levél helyett a készülék saját értesítése jön (D103 — az operációs rendszer felé, `eszkozErtesites.js`). A kapcsoló és
+// az ütem a prototípus mezői (`emailErtesites`, `emailMod`, `emailOrakoz`) — a koinóban ezt jelentik.
+
+/** Azonnali módban egy számolásból legfeljebb ennyi értesítés megy ki; a többiről egy összegző („és még N”). */
+export const KESZULEK_AZONNAL_KORLAT = 5;
+
+/** A fajták felirata a készülék értesítésében (a modál szótára — `ErtesitesekModal` `TIPUS_SZOVEG`). */
+export const ERTESITES_FELIRAT = {
+  ujJavaslat: 'Új javaslat',
+  javaslatElfogadas: 'Javaslat elfogadva',
+  javaslatElvetve: 'Javaslat elvetve',
+  szavazatErkezett: 'Új szavazat',
+  szavazasiHatarido: 'Szavazási határidő közeleg',
+  tudatpontValtozas: 'Tudatpont-változás',
+  ujGyerekEntitas: 'Új gondolat jött létre',
+  kuszobValtozas: 'Küszöbváltozás'
+};
+
+/**
+ * ⭐ Mit jelezzen most a készülék — a globális beállítás szerint. Kikapcsolva semmit (és nem gyűjt: a bekapcsolás után nem
+ * jön a múlt); azonnal: az új tételek (legfeljebb `KESZULEK_AZONNAL_KORLAT`, a többiről egy összegző); összefoglaló: a
+ * tételek gyűlnek, és ha az időköz letelt, EGY értesítés a számukkal (az első bekapcsoláskor az időköz onnan indul).
+ * @param {Array<Object>} ujak - a most keletkezett tételek
+ * @param {Object} globalis - a globális beállítás (`emailErtesites`, `emailMod`, `emailOrakoz`)
+ * @param {Object} kezbesites - az eddigi állapot (`utolso`, `gyujto`)
+ * @param {number} most
+ * @param {Function} [cime] - az → az entitás címe (vagy null)
+ * @returns {{uzenetek: Array<{cim: string, szoveg: string}>, kezbesites: Object}}
+ */
+export function keszulekErtesitesei(ujak, globalis, kezbesites, most, cime = () => null) {
+  const k = kezbesitesAlakja(kezbesites);
+  if (!globalis?.emailErtesites) return { uzenetek: [], kezbesites: { ...k, gyujto: 0 } };
+  if (globalis.emailMod === 'azonnal') {
+    const uzenetek = ujak.slice(0, KESZULEK_AZONNAL_KORLAT).map((t) => ({
+      cim: 'koino — ' + (ERTESITES_FELIRAT[t.tipus] ?? 'Értesítés'),
+      szoveg: cime(t.entitasId) ?? 'egy gondolaton, amit figyelsz'
+    }));
+    if (ujak.length > KESZULEK_AZONNAL_KORLAT) {
+      uzenetek.push({ cim: 'koino', szoveg: 'és még ' + (ujak.length - KESZULEK_AZONNAL_KORLAT) + ' új értesítés — a postafiókban' });
+    }
+    return { uzenetek, kezbesites: { ...k, utolso: uzenetek.length ? most : k.utolso, gyujto: 0 } };
+  }
+  const gyujto = k.gyujto + ujak.length;
+  const koz = (Number.isFinite(globalis.emailOrakoz) ? globalis.emailOrakoz : 24) * 3600 * 1000;
+  if (k.utolso == null) return { uzenetek: [], kezbesites: { ...k, utolso: most, gyujto } };
+  if (gyujto > 0 && most - k.utolso >= koz) {
+    return { uzenetek: [{ cim: 'koino', szoveg: gyujto + ' új értesítés a postafiókban' }], kezbesites: { ...k, utolso: most, gyujto: 0 } };
+  }
+  return { uzenetek: [], kezbesites: { ...k, gyujto } };
 }
