@@ -118,3 +118,51 @@ kopogtatás percekig tart (74. mérés) — a kereső-réteg ezért nem lesz „
 hirdetés (a saját index-darab, +1 DHT-téma) → ④ a felajánlás (a csak küldő út a szavak darabjain, kopogtatással) → ⑤ a
 kérdés (`KERELEM` a darabra, több tartó, egyesítés) → ⑥ a halványulás → ⑦ a Keresés modálja a hálózati találatokkal
 („keresem” — a lap kimondja, mi helyi és mi jött a hálózatról).
+
+## 7. Az átnézés lelete (2026-10-15) — két rés és egy kiegészítés, a döntések elé
+
+> Session-nyitáskor, olvasva (próba nélkül). A K1–K6 mellé két új kérdés (K7, K8) és a K3 árának pontosítása; mind
+> D-szintű, Csabáé.
+
+**K7. A gyakori szavak — egy szó darabja nem osztható tovább (⛔ itt a „végtelen” próbája NEM áll).** A 4. szakasz
+becslése (~0,2–0,4 MB készülékenként, „a koinó méretétől függetlenül”) átlag: egyenletes szóeloszlást feltételez. A cím
+szavai viszont, mint minden nyelvben, erősen egyenlőtlenek (Zipf): a 3 jelnél hosszabb szavak közt is van néhány, ami a
+címek nagy részében áll (a magyarban pl. „egy”, „hogy”, „nem”, „kell”, „van”). Mivel a darab a szó lenyomatának
+bitjeiből jön, **egy szó minden bejegyzése mindig ugyanabba a darabba esik, akármilyen mély a darabolás**: ha egy szó a
+címek 10%-ában szerepel, a darabja a koinó gondolatainak 10%-át tartja — a tartóinak terhe (a tárolás, a beérkező
+felajánlások, a kérdések) a koinóval lineárisan nő. Ebből két baj lesz: (1) a 9. szabály szerint ez a darab nincs kész;
+(2) a mélység-becslés (a gyökér-darab mintája: a saját darab mérete × 2^mélység — `gyokerMelysegBecslese`) a gyakori szót
+tartó készüléken elszáll, a többin nem, így a két gép mélysége nem ±1-en belül tér el, és a kérdés elkerülheti a tartót.
+- **(A) ⭐ A szó darabja az entitás lenyomatával tovább osztódik — ezt javaslom.** Két szintű kulcs: a szó, alatta az
+  azonosító bitjei; a mélység szavanként, a szó saját darabjának méretéből (mint a gyökéré). A gyakori szóra a kérdés egy
+  vagy néhány al-darabot kérdez, és mintát kap (a gyakori szóra a „mind” úgysem értelmes válasz). ⭐ És mivel a bejegyzés a
+  TELJES címet hordozza, a több szavas kérdés a legritkább szava darabjához mehet: a tartó a többi szóra helyben szűr.
+- **(B) Stopszó-lista** — nyelvfüggő, és értelmezés (5.1: *„nem kell értelmezni, csak levezetni”*); új nyelvnél vagy
+  szleng-szónál elromlik. Nem javaslom.
+- **(C) Szavanként korlát a tartónál** (a legfrissebb n) — egyszerű, de a tárolást korlátozza, a beérkező felajánlásokat
+  nem, és a „több tartót kérdezünk, és egyesítünk” teljessége a gyakori szóra elvész.
+- ⚠️ A K6-hoz: a 75. mérés a szavakat **valószerű, Zipf-szerű eloszlással** húzza — egyenletes szavakkal az átlagot mérné,
+  és a farkat (épp ezt a darabot) elrejtené.
+
+**A K3 árának pontosítása — a két tulajdonos csak TAGKÉNT ér valamit.** Az 5.8 a küszöb értékét abból vezeti le, hogy
+*„az identitás-réteg miatt nem elég egy második kulcs”*, és a D93/1 óta a döntésben is csak a tag pontja számít. A tartónál
+tehát a két aláírt pont-esemény mellé a két szerző **tagsága** is kell (a tagsági csomagja vagy lánca — a 63. mérés szerint
+egymillió tagnál ~13 lépés, ~16 KB szerzőnként; a tartó szerzőnként gyorsítótárazhatja, mint a tagsági kísérőt — D95/2),
+különben a küszöböt egy második, ingyen kulcs teljesíti. A „+~1 KB” így alulbecslés — a 75. mérésben ezt is mérni kell (a
+másik út, hogy a kérdező maga ellenőrzi a találat után, a saját tagság-tudásából). ⚠️ És a küszöb a FELAJÁNLÁS pillanatáé:
+ha egy tulajdonos később leveszi a pontját, a tartó csak a megújításkor (K5) tudja meg.
+
+**K8. A darab-szám 16 bites korlátja — a gyökér-darabon MA is, és a kereső-réteg örökölné.** A gyökér-darab mélysége
+legfeljebb 16: a `cimjegyzek.js` `gyokerDarabja` 16 bitet olvas a lenyomatból, a darab kulcsa (`0`×34 + `g` + két hexa
+jegynyi mélység + NÉGY hexa jegynyi darab + `00`) a `gyokerDarabBol`-ban a 16 fölöttit elveti, és a `szeletEgyeztetes.js`
+meg a tömörítés (`koino.js` `tomoritesSzabalya`) is 16 bittel számol. A célméret (`GYOKER_DARAB_CEL` = 256) mellett ez
+2^16 × 256 ≈ **16,8 millió** legfelső szintű gondolatig tartja a darabot állandó méreten; fölötte a darab lineárisan nő
+(100 millió → ~1500, egymilliárd → ~15 000 darabonként) — a `gyokerMelysege` kommentje szerint pedig *„egy darab mérete
+nem nő a koinóval”*. A 9. szabály szerint a szerkezetet most olcsó kitágítani (a kulcsban 34 nulla jegy a tartalék), később
+protokoll-törés.
+- **(A) ⭐ A korlát kitágítása a ⑦ ② lépésével együtt — ezt javaslom** (a kereső index-darabja ugyanezt a mintát venné
+  át), a telefon terepi frissítése előtt, egy tiszta törésben.
+- **(B)** Marad: a növekedés lassú (16,8 millió fölött), és a darab akkor sem esik szét, csak nő.
+
+⭐ **A sorrendhez:** a K7 és a K8 a ② (a szó és az index-darab) ELÉ tartozik — a 75. mérés (①) már a választott alakot
+mérje.

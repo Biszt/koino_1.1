@@ -339,7 +339,7 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 
 ⚠️ *Az 5.2 nem halasztható az 5.3 mögé: a kártya alakja attól függ, mit tud kérni a lap.*
 
-### ⏭️ ITT TARTUNK (2026-10-11)
+### ⏭️ ITT TARTUNK (2026-10-15)
 
 ✅ **A PAKLI A PROTOTÍPUSÉ (D100, „a ház”, 2026-10-10):** az örökölt `Pakli.js` (a láncos-testvéres nézet a
 `TestverJelzo`-val és a `testverRendezes`-sel) bájtra változatlanul a felületen; a régi ideiglenes lista
@@ -363,8 +363,11 @@ tartott síkidom gyerekeit elkéri, és a lap csendben újrakérdez. ✅ **A Ker
 bájtra a prototípusé; a készüléken ismert entitások címében, típusonként korlátosan, ág-szűrve, és kimondja, hogy a hálózati
 keresés még nincs. ✅ **Az értesítés-réteg (2026-10-13):** az `ErtesitesekModal` és az `ErtesitesiBeallitasModal` bájtra a
 prototípuséi; a postafiók a készüléken számolódik (két pillanatkép különbségéből, a tartott szeletekből), a beállítások
-öröklődnek, a kártyák számlálója él; a levél-kézbesítés nincs (kimondva). Helyőrző modál már nincs. ⏭️ A következő: a
-kereső-réteg (⑦ — külön pillér, saját átvizsgálással).
+öröklődnek, a kártyák számlálója él; a levél helyett a készülék saját értesítése jelez (D103, 2026-10-13). Helyőrző modál
+már nincs. ✅ **Az alsó sáv (2026-10-15):** a prototípus `foOldalForm.html`-jének sávja a lap alján (a fő menü, vissza/előre,
+az infók — a készüléken ismert rész számai), és a koinós többlet: a csere ideje, és ha egy csere újat hozott, a lap magától
+frissül. ⏭️ A következő: a kereső-réteg (⑦ — külön pillér; átvizsgálva: [`kereso_reteg_atvizsgalas.md`](kereso_reteg_atvizsgalas.md),
+a K1–K8 Csabánál).
 
 ### (RÉGEBBI) ITT TARTUNK (2026-09-13)
 

@@ -59,7 +59,11 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    számított, hamisíthatatlan); a darabot a saját tartói tartják és hirdetik (+1 DHT-téma), a szerző a csak küldő úton
    ajánlja fel, a kérdező több tartót kérdez és egyesít. ⏸️ **Csabánál K1–K6:** K1 hash a meglévő DHT-n (SK7) · K2 egész
    szavak · K3 láthatósági küszöb (2 tulajdonos, rögzítve — SK10) · K4 a felajánlás a csak küldő úton, kopogtatással · K5 30
-   napos halványulás, megújítással · K6 előbb a 75. mérés (szimuláció).
+   napos halványulás, megújítással · K6 előbb a 75. mérés (szimuláció). ⛔ **Az átnézés (2026-10-15) az átvizsgálás 7.
+   szakaszába:** **K7** a gyakori szavak — egy szó minden bejegyzése egy darabba esik, a gyakori szó darabja a koinóval
+   lineárisan nő (javaslat: a szó darabja az entitás lenyomatával tovább osztódik; a 75. mérés Zipf-szerű szavakkal) · a
+   **K3 ára**: a két tulajdonos csak tagként ér valamit (a tagságuk is kell a tartónál) · **K8** a gyökér-darab 16 bites
+   mélység-korlátja (~16,8 millió legfelső szintű gondolat fölött a darab nő — most olcsó kitágítani, a ⑦-tel együtt).
 2. **A terep 🅱️ (két mobilnetes telefon)** — amikor meglesznek; előtte a telefon frissítése (lent).
 3. **Az „UTÁNA” lista** (lent).
 
