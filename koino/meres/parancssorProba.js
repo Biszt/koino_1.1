@@ -2839,6 +2839,84 @@ proba('⭐⭐ D103: a készülék saját értesítése — az őrjárat számolj
 });
 
 // ===================================
+// ⭐⭐ AZ ALSÓ SÁV (2026-10-15): a futó felület látja az őrjárat körét és a cseréjét
+// ===================================
+//
+// A lap alsó sávja kiírja, mikor cserélt utoljára a készülék és mikor jön a következő kör, és ha egy csere újat hozott,
+// magától frissül. A cserét az ŐRJÁRAT végzi (egy másik, hosszan futó folyamat) — ezért egy VÉGIG FUTÓ felülettel mérünk
+// (D100, elágazás 101: egy újraindított folyamat mindent frissen látna). B felülete fut; még nincs őrjárat → „nem fut”, és
+// nincs csere. A gyereket ír B gondolata alá; B őrjárata a cserében megkapja → a futó felület `csere-allapot`-ja: fut, a
+// kör üteme, az utolsó csere hozott újat (`utolsoUj`), és a számok (a lap horgonya nélkül) a gyerekkel együtt.
+// Rontás: a munka nem jegyzi a cserét → nincs `utolsoUj` → bukik; az őrjárat nem jegyzi a kört → „nem fut” → bukik.
+proba('⭐⭐ Az alsó sáv: a futó felület látja az őrjárat körét és a csere hozamát — és a számok a csere után nőnek', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const alap = { KOINO_KISZOLGALAS: 'alap' };
+  const futok = [];
+  try {
+    await fut(b, 'koino', 'Alsó sáv', 'próba', 'nyilt', alap);
+    const bFel = await feluletet(b, 7468, alap);
+    futok.push(bFel.folyamat);
+    const R = (await bFel.hiv('/api/gondolat', { method: 'POST',
+      body: JSON.stringify({ cim: 'R a B-től', kezdoTudatpont: 20 }) })).adat?.data?._id;
+    if (!R) return false;
+    const elotte = (await bFel.hiv('/api/csere-allapot')).adat?.adatok;
+    const szamElotte = (await bFel.hiv('/api/platform/statisztika')).adat;
+    // A megismeri a koinót és R-t (egy kézi csere B-vel), és gyereket ír alá.
+    await fut(a, 'tars', '127.0.0.1', '7466', 'B', alap);
+    const bFigyel = spawn(process.execPath, [KOINO_JS, 'figyel', '7466'],
+      { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
+    futok.push(bFigyel);
+    await varj(2000);
+    await fut(a, 'csere', '127.0.0.1', '7466', alap);
+    bFigyel.kill();
+    await varj(1000);
+    const aFel = await feluletet(a, 7469, alap);
+    futok.push(aFel.folyamat);
+    const C = (await aFel.hiv('/api/gondolat', { method: 'POST',
+      body: JSON.stringify({ cim: 'C az A-tól', szuloId: R, kezdoTudatpont: 5 }) })).adat?.data?._id;
+    aFel.folyamat.kill();
+    await varj(500);
+    if (!C) return false;
+    // A figyel, B őrjáratot futtat — B felülete VÉGIG fut.
+    const aFigyel = spawn(process.execPath, [KOINO_JS, 'figyel', '7466'],
+      { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
+    futok.push(aFigyel);
+    await varj(1500);
+    await fut(b, 'tars', '127.0.0.1', '7466', 'A', alap);
+    const orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', '7467'],
+      { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
+    futok.push(orjarat);
+    let utana = null;
+    for (let i = 0; i < 60 && !utana?.utolsoUj; i++) {
+      await varj(1000);
+      utana = (await bFel.hiv('/api/csere-allapot')).adat?.adatok ?? null;
+    }
+    const szamUtana = (await bFel.hiv('/api/platform/statisztika')).adat;
+    const most = Date.now();
+    const ki = {
+      elotteNemFut: elotte?.orjarat?.fut === false && elotte?.utolsoCsere === null && elotte?.utolsoUj === null,
+      fut: utana?.orjarat?.fut === true && utana.orjarat.perc === 0.1,
+      kovetkezo: utana?.orjarat?.korFut === true
+        || (Number.isFinite(utana?.orjarat?.kovetkezo) && utana.orjarat.kovetkezo > most - 10000 && utana.orjarat.kovetkezo < most + 20000),
+      csere: (utana?.utolsoCsere?.uj ?? 0) >= 1 && Number.isFinite(utana?.utolsoUj) && utana.utolsoUj <= most,
+      szamok: szamElotte?.gondolatokSzama === 1 && szamUtana?.gondolatokSzama === 2 && szamUtana?.eemberekSzama === 2
+        && /készüléken ismert/.test(szamUtana?.koinoMegjegyzes ?? '')
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  alsó sáv — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+        + ' · ' + JSON.stringify({ elotte, utana, szamElotte, szamUtana }).slice(0, 1200) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const f of futok) f.kill();
+    await varj(1000);
+    await rm(a, { recursive: true, force: true });
+    await rm(b, { recursive: true, force: true });
+  }
+});
+
+// ===================================
 // ⭐⭐ GONDOLAT LÉTREHOZÁSA A LAPRÓL (5.7)
 // ===================================
 //

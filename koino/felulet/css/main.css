@@ -55,31 +55,17 @@
 @import './components/modals/ertesitesiBeallitasModal.css';
 @import './components/modals/ertesitesekModal.css';
 
+/* ⭐ AZ ALSÓ SÁV (2026-10-15) — a prototípus főoldalának stílusa, bájtra változatlanul (a sáv, a vissza/előre gombok,
+   az infók). */
+@import './components/foOldal.css';
+
 /* ⚠️ A BELÉPŐ TÉR (5.6) — az EGYETLEN nem örökölt CSS: a prototípusban a „koino" mint
    fogalom nem létezett, tehát nincs mit átemelni. Csak a meglévő változókra épül. */
 @import './components/koinoKartya.css';
 
-/* ===== A LAP VÁZA — csak ami a prototípusban a foOldal.css dolga volt =====
-   ⚠️ Szándékosan kevés: a főoldal vázát (fejléc, alsó sáv, menük) az 5.5/5.6 hozza. */
-
-.koino-fejlec {
-  display: flex;
-  align-items: baseline;
-  gap: .75rem;
-  flex-wrap: wrap;
-  padding: .75rem 1rem .5rem;
-}
-
-.koino-fejlec h1 {
-  font-size: 1.15rem;
-  margin: 0;
-}
-
-.koino-fejlec .azonossag {
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: .8rem;
-  opacity: .7;
-}
+/* ===== A LAP VÁZA — ami a prototípus főoldalán nem volt =====
+   ⭐ 2026-10-15 óta a fő menü és az infók a prototípus alsó sávjában ülnek (`foOldal.css`); a felső fejléc megszűnt.
+   Ami itt maradt: a tér sávja, az állapot-sor és a „További kártyák”. */
 
 .koino-sav {
   display: flex;
@@ -100,3 +86,9 @@
 .allapot.nem { color: #c1121f; opacity: 1; }
 
 .tovabb-sav { padding: 1rem; text-align: center; }
+
+/* ⭐ Az alsó sáv fix: ami a lap alján áll, ne csússzon alá (a pakli-wrapper ezt maga is megteszi — a prototípusé). */
+#ter,
+.tovabb-sav:has(> button:not([hidden])) {
+  padding-bottom: calc(var(--space-12) + var(--space-4));
+}

@@ -108,22 +108,6 @@
   cursor: default;
 }
 
-/* ----- A TÉR/PAKLI VÁLTÓ A FEJLÉCBEN ----- */
-
-.ter-valto {
-  margin-left: auto;
-  background: none;
-  border: 1px solid var(--color-surface-offset);
-  color: var(--color-text-inverse);
-  border-radius: 6px;
-  padding: .3rem .75rem;
-  cursor: pointer;
-  font: inherit;
-  font-size: var(--text-sm, .9rem);
-}
-
-.ter-valto:hover { background: rgba(255, 255, 255, .1); }
-
 /* ===== ⭐ A HÁZ (D100, H2): A PAKLI KOINÓS JELEI =====
    A kártyák bájtra a prototípuséi; ezeket a jeleket a `koinoPakli.js` teszi rájuk a kirajzolás után.
    ⚠️ A hiány látszik, de nem vád (D19): halvány és dőlt, nem piros. */
@@ -150,11 +134,22 @@
   font-style: italic;
 }
 
-/* ===== ⭐ D101 (M6): A FŐ MENÜ A FEJLÉCBEN =====
-   A prototípusban az alsó sávban ült; itt a fejléc elején — a gomb a fejléc közepére igazodik (a fejléc a feliratokat
-   alapvonalra rendezi, a 44 px-es gombnak ez nem jó). */
-.koino-fejlec #hamburger-menu-kontener {
-  align-self: center;
+/* ===== ⭐ AZ ALSÓ SÁV KOINÓS TÖBBLETE: A CSERE (2026-10-15) =====
+   A prototípus info-elemének stílusa (`foOldal.css`) — csak gombként: kattintásra azonnal frissít. */
+.also-sav__csere {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.also-sav__csere:hover,
+.also-sav__csere:focus-visible {
+  opacity: 1;
+  text-decoration: underline dotted;
 }
 
 /* ===== ⭐ D101: A TUDÁS HATÁRA A MODÁLOK ALJÁN =====

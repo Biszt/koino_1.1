@@ -5509,6 +5509,24 @@ A natív futtatókörnyezetben a koino **kinyithat egy portot és figyelhet**. E
 
 ---
 
+### ⭐ AZ ALSÓ SÁV (Csaba kérése, 2026-10-15 — nem D-szintű döntés)
+
+> *„Az alsó sáv helyett a tetejére helyezted az alap információkat, és a főhamburger menüt. szeretném, ha az alsósávot is
+> megcsinálnád. ha tudjuk, akkor a csere lejárati idejét, jelezhetnénk, az alsó sávon, és egy automatikus frissítést is
+> használhatnánk, miután a csere megtörtént.”*
+
+✅ **MEGÉPÜLT (2026-10-15).** A prototípus alsó sávja a helyén: a fő menü, a vissza/előre gombok (a prototípus
+történet-kezelőjével, Alt+←/→), és az infók — a név, a szabad tudatpont, és a számok, amelyek itt a KÉSZÜLÉKEN ismert részéi
+(9. szabály; a lap képéből, `helyiStatisztika`). A koinós többlet a sáv végén a CSERE: „🔄 2 perce +3 · ⏭ 0:42” (az utolsó
+csere ideje és hozama, a következő kör visszaszámlálása; ha az őrjárat nem fut, kimondja), a súgóban a részletek, és a
+feliratra kattintva azonnal frissít. ⭐ Ha egy csere új eseményt hozott, a lap magától frissül — csendben, a kiválasztás
+helyén, nyitott modál alatt vár. A cserét az őrjárat végzi, ezért egy helyi feljegyzés (`csere.json`) köti össze a kettőt
+(`csereAllapot.js`). A felső sáv kimaradt (a rendezés és az új gondolat a fő menüben), a tér a menüből nyílik. Lelet: a fő
+menü értesítés-számlálója a ⑥ óta 0-t mutatott — javítva. Elágazás 148–152. Próbák: a csere-állapot modul-próbája (5,
+`csereAllapotProba.js`), a számok (`pakliProba.js`), a bekötés (`parancssorProba.js`: egy végig futó felület látja a
+másik folyamat — az őrjárat — körét és a csere hozamát, és a számok a csere után nőnek) — mind rontással; böngészőben két
+készülékkel kipróbálva (a gyerek a csere után kézi frissítés nélkül megjelent).
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

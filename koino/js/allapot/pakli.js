@@ -1453,6 +1453,44 @@ export async function ertesitesiKep(tar, koino, beallitas = {}) {
 }
 
 // ===================================
+// ⭐ AZ ALSÓ SÁV SZÁMAI (Csaba, 2026-10-15) — a KÉSZÜLÉKEN ismert rész
+// ===================================
+//
+// A prototípus alsó sávja a platform számait mutatta (`platform/statisztika`: hány e-ember, gondolat, kategória,
+// gondolattípus, javaslat, egyezmény). ⛔ A koinó egészét senki nem számolja meg (9. szabály) — ez a lap képe: a kártyák
+// száma típusonként (ugyanazzal a típussal, amit a kártya mutat — az elfogadott javaslat egyezmény, D85/4), és az
+// e-emberek, akiknek eseménye a két táramban van. A kép ugyanaz, mint a lapé (a horgony gyorsítótárából).
+
+/**
+ * ⭐ A lap horgonyával (`horgony`, `most`) ugyanaz a kép, mint a paklié — a számok azt mondják, amit a kártyák mutatnak,
+ * és a kép-gyorsítótár sem cserélődik a kettő között.
+ * @param {Object} [beallitas] - { nezet, horgony, most }
+ * @returns {Promise<{eemberekSzama: number, gondolatokSzama: number, kategoriakSzama: number, gondolatTipusokSzama: number,
+ *   javaslatokSzama: number, egyezmenyekSzama: number}>}
+ */
+export async function helyiStatisztika(tar, koino, beallitas = {}) {
+  const esemenyek = await koinoEsemenyei(tar, koino);
+  const kep = await lapKepe(tar, koino, beallitas);
+  const db = { Gondolat: 0, Kategoria: 0, GondolatTipus: 0, Javaslat: 0, Egyezmeny: 0 };
+  for (const e of kep.entitasok.values()) {
+    const tipus = kartyaTipusa(e, entitasDontese(e, kep.javaslatok));
+    if (tipus in db) db[tipus]++;
+  }
+  // Az e-emberek ugyanabból a bemenetből, amiből a kép (az első `horgony` esemény — `lapKepe`).
+  const horgony = Number.isInteger(beallitas.horgony) ? Math.max(0, Math.min(beallitas.horgony, esemenyek.length)) : esemenyek.length;
+  const szerzok = new Set();
+  for (let i = 0; i < horgony; i++) szerzok.add(esemenyek[i].szerzo);
+  return {
+    eemberekSzama: szerzok.size,
+    gondolatokSzama: db.Gondolat,
+    kategoriakSzama: db.Kategoria,
+    gondolatTipusokSzama: db.GondolatTipus,
+    javaslatokSzama: db.Javaslat,
+    egyezmenyekSzama: db.Egyezmeny
+  };
+}
+
+// ===================================
 // ⭐ D101: „X ÁGA ALATT VAN-E?” — EGY HELYEN
 // ===================================
 //

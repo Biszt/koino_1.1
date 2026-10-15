@@ -334,7 +334,7 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 | **5.5** | 🚧 **A modálok** — ✅ tudatpont, érték javaslat, részletek, részvétel, **szavazás** (2026-09-06); ⏸️ a JavaslatModal és a létrehozó modálok (az 5.7-re várnak) | a teljes pakli |
 | **5.6** | ✅ **A belépő tér** — koino-kártyák létrehozási idő szerint, **19 önpróba** (2026-09-12) | a D25 nézete |
 | **5.7** | ✅ **A szövegszerkesztő + az „Új gondolat” + a FÁJL-RÉTEG helyi fele**, **20 önpróba** (2026-09-12) | a szövegszerkesztő teljes átemelése |
-| **5.8** | 🚧 ✅ **A `JavaslatModal`** (66 KB) — a lapról már **javasolni is** lehet, **3 önpróba** (2026-09-13); ✅ (D101, 2026-10-11) `TudatpontokModal`, `KategoriaModal`, `GondolatTipusModal`, `RendezesModal`, a fő menü; ✅ (D101 ③–⑥) `StrukturaModal`, `SikidomModal`, `KeresesModal` (a helyi alja), `ErtesitesekModal`, `ErtesitesiBeallitasModal` | a pakli teljes működése |
+| **5.8** | 🚧 ✅ **A `JavaslatModal`** (66 KB) — a lapról már **javasolni is** lehet, **3 önpróba** (2026-09-13); ✅ (D101, 2026-10-11) `TudatpontokModal`, `KategoriaModal`, `GondolatTipusModal`, `RendezesModal`, a fő menü; ✅ (D101 ③–⑥) `StrukturaModal`, `SikidomModal`, `KeresesModal` (a helyi alja), `ErtesitesekModal`, `ErtesitesiBeallitasModal`; ✅ (2026-10-15) az ALSÓ SÁV (a prototípus `foOldalForm.html`-jéé: menü, vissza/előre, infók — és a csere ideje, automatikus frissítés a csere után) | a pakli teljes működése |
 | **✅** | **A fájlok SZÁLLÍTÁSA** — felderítés · kérelem a bulin · átvitel · randevú az átfúrt résen, **43 önpróba** (2026-09-13) | a kép két készülék között is átjön |
 
 ⚠️ *Az 5.2 nem halasztható az 5.3 mögé: a kártya alakja attól függ, mit tud kérni a lap.*

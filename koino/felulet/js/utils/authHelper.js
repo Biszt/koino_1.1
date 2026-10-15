@@ -100,6 +100,15 @@ export function aktivEntitasMentese(entitasId, entitasTipus) {
     // Egy tiltott tároló nem akadályozhatja meg a felület működését.
     console.warn('authHelper.aktivEntitasMentese - a tároló nem elérhető, kihagyva');
   }
+  // ===== KÖZÖS NAVIGÁCIÓS JELZÉS (a prototípusé, 2026-10-15 — az alsó sáv vissza/előre gombjaihoz) =====
+  // MINDEN entitás-váltás átfut ezen a függvényen (kártya-koppintás, testvér-ugrás, struktúra nézet/kereső/értesítés —
+  // akár a fő menüből, akár egy kártya menüjéből), ezért ez az egyetlen közös hely, ahonnan a vissza/előre történetet
+  // rögzíteni lehet. Az alsó sáv (`alsoSav.js`) erre az eseményre figyel.
+  if (entitasId && entitasTipus) {
+    document.dispatchEvent(new CustomEvent('koino:aktivEntitasValtozas', {
+      detail: { entitasId: entitasId.toString(), entitasTipus }
+    }));
+  }
   console.log('authHelper.aktivEntitasMentese - VÉGE');
 }
 

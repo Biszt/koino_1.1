@@ -1223,6 +1223,43 @@ export function ertesitesTarolo(koino, hely = alapHely()) {
 }
 
 /**
+ * ⭐ A CSERE ÁLLAPOTA (`<koino>/csere.json`, Csaba, 2026-10-15): az őrjárat köre és az utolsó csere — a lap alsó sávja
+ * ebből mondja ki a csere idejét, és ebből frissül, ha egy csere újat hozott (`csereAllapot.js`). Helyi feljegyzés, nem
+ * esemény, nem terjed. ⚠️ Több folyamat írhatja (az őrjárat, egy kézi csere): a `modosit` a mostanit olvassa és arra
+ * vezeti rá a változást; a folyamaton belül sorban. Ha az írás nem sikerül, csendben elmarad — a csere fontosabb.
+ * @param {string} koino
+ * @param {string} [hely]
+ * @param {Function} alak - a beolvasott adat ellenőrzött alakja (`csereAllapotAlakja`)
+ */
+export function csereAllapotTarolo(koino, hely = alapHely(), alak = (x) => x) {
+  const fajl = join(hely, koino, 'csere.json');
+  const olvas = async () => {
+    try { return alak(JSON.parse(await readFile(fajl, 'utf8'))); } catch { return alak(null); }
+  };
+  let sor = Promise.resolve();
+  return {
+    fajl,
+    olvas,
+    modosit(fn) {
+      const munka = sor.then(async () => {
+        const uj = fn(await olvas());
+        await mkdir(dirname(fajl), { recursive: true });
+        const ideiglenes = fajl + '.' + process.pid + '-' + Math.random().toString(36).slice(2) + '.uj';
+        try {
+          await writeFile(ideiglenes, JSON.stringify(uj), 'utf8');
+          await rename(ideiglenes, fajl);
+        } catch {
+          await rm(ideiglenes, { force: true }).catch(() => {});
+        }
+        return uj;
+      });
+      sor = munka.catch(() => {});
+      return munka.catch(() => null);
+    }
+  };
+}
+
+/**
  * ⭐ D98/2–3: a LÁNC-ELLENŐRZÉS helyi tára (`<koino>/lancellenorzes.json`): szerzőnként a legutóbb ellenőrzött napló-gyökér
  * és az ellenőrzött események, és a társak bemondott szerzői kulcsa (a tábla-aláírójuk alatt). A korlátokat a hívó vágja
  * (`lancEllenorzes.js` `lancJegyzekVagasa`). Helyi feljegyzés, nem esemény, nem terjed.

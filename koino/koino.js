@@ -111,8 +111,12 @@ import {
   // ⭐ D98/2–3: a lánc-ellenőrzés helyi tára.
   lancEllenorzesTarolo,
   // ⭐ D101 ⑥: a postafiók és az értesítési beállítások helyi tára
-  ertesitesTarolo
+  ertesitesTarolo,
+  // ⭐ Az alsó sáv (2026-10-15): a csere állapota a lapnak
+  csereAllapotTarolo
 } from './js/tar/fajlTar.js';
+// ⭐ Az alsó sáv (2026-10-15): mikor cserélt utoljára a készülék, és mikor jön a következő kör (helyi feljegyzés)
+import { csereAllapotAlakja, korKezdete, korVege, csereFeljegyzese, csereAllapotKepe } from './js/csere/csereAllapot.js';
 // ⭐⭐ D101 ⑥: az értesítés-réteg — a postafiók a készüléken, két pillanatkép különbségéből
 import {
   beallitasokAlakja, ervenyesBeallitas, beallitasMentese, globalisMentese, ertesitesekSzamitasa,
@@ -243,7 +247,9 @@ import {
   // ⭐ D101 ⑤: a Keresés (a helyi alja).
   keresesHelyben,
   // ⭐ D101 ⑥: az értesítések pillanatképe.
-  ertesitesiKep
+  ertesitesiKep,
+  // ⭐ Az alsó sáv (2026-10-15): a készüléken ismert entitások száma típusonként.
+  helyiStatisztika
 } from './js/allapot/pakli.js';
 // ⭐ A RANDEVÚ (2026-09-14): a csere ÉS a fájlok is átmennek az átfúrt résen.
 // ⭐ És a szelet-kérés is a résen (D69/2): a `hozd` 2026-09-26 óta ezen megy.
@@ -1909,6 +1915,16 @@ async function kapuPortja() {
   }
 }
 
+/**
+ * ⭐ AZ ALSÓ SÁV (Csaba, 2026-10-15): a csere állapota a lapnak (`csereAllapot.js`) — az őrjárat köre és az utolsó csere,
+ * egy helyi feljegyzésben (`<koino>/csere.json`). Folyamatonként egy tároló (a módosítások sorban mennek).
+ */
+const csereAllapotTarolok = new Map();
+function csereAllapota(koino = KOINO) {
+  if (!csereAllapotTarolok.has(koino)) csereAllapotTarolok.set(koino, csereAllapotTarolo(koino, alapHely(), csereAllapotAlakja));
+  return csereAllapotTarolok.get(koino);
+}
+
 /** A függő kérelmek nyilvántartása (`fuggoKerelmek.js` — helyi, nem esemény). */
 function kerelmekFajl() {
   return join(alapHely(), KOINO, 'kerelmek.json');
@@ -2826,6 +2842,8 @@ function resMunka(allapot, halo, tars) {
 
     // ⭐ D99: a sikeres csere ideje a társ tábla-aláírója alatt (a kör ebből tudja, hogy ebben a fél körben már beszéltünk).
     if (alairo) utolsoCsereTarssal.set(alairo, Date.now());
+    // ⭐ Az alsó sáv (2026-10-15): a lap ebből mondja ki a csere idejét, és ha újat hozott, frissül (a bekopogó cseréje is).
+    await csereAllapota().modosit((a) => csereFeljegyzese(a, { uj: alap.uj, kuldott: alap.kuldott, most: Date.now() }));
     kiir(SZIN.jo + '  ✓ ' + ora() + ' csere a résen ' + tars.cim + ':' + tars.port
       + SZIN.vege + SZIN.halvany + ' — ' + alap.uj + ' új esemény, küldtem '
       + alap.kuldott + ' (' + alap.korok + ' kör, '
@@ -5049,6 +5067,9 @@ try {
       for (;;) {
         const induloLista = await tarolo.olvas();
         let sikeresEbbenAKorben = 0;    // ⭐ hányan feleltek — ettől lesz a körből BULI
+        // ⭐ Az alsó sáv (2026-10-15): a kör eredménye a lapnak (hány címre kopogtunk, hány új esemény jött).
+        let korCelok = 0, korUj = 0;
+        await csereAllapota().modosit((a) => korKezdete(a, { perc, port: kapu.port, most: Date.now() }));
 
         // ⭐⭐⭐ AZ ABLAK VÉGE: ebből jön a menetek korlátja ÉS a kopogásé is (30. mérés).
         const kozMs = Math.max(1, Math.round(perc * 60 * 1000));
@@ -5198,6 +5219,8 @@ try {
           // ⛔ 2026-09-26-ig itt egy hiba ült: a UDP-sikereket a TCP-kör száma FELÜLÍRTA, tehát
           // egy csak-UDP-s kör „néma" körnek számított a felszabadításnál.
           sikeresEbbenAKorben = sikeresCimek.size;
+          korCelok = elso.celok;
+          korUj = osszesUj;
 
           // ⭐ A KÖNYVELÉS: az induló címek közül ki felelt, ki nem — csak az ELSŐ menetből
           // (a többi menet csak az ott sikereseket ismételte). ⚠️ A `modosit()`-on át, és
@@ -5222,6 +5245,15 @@ try {
                   ? elso.foglalt + ' társ foglalt volt (egy korábbi munkán dolgozik velem)'
                   : 'egyik rés sem nyílt meg') + SZIN.vege);
           }
+        }
+
+        // ⭐ Az alsó sáv (2026-10-15): a kör CSERE része kész — a lap innen a következő ablakot mutatja, nem „csere most”-ot
+        // (a tábla, a címjegyzék és a házimunka még tart, de az már nem csere). A kör végén a feljegyzés újra frissül.
+        {
+          const korUtan = Date.now() + (Number.parseInt(process.env.KOINO_ORAELTOLAS ?? '0', 10) || 0);
+          const kovetkezo = Math.ceil((korUtan + 1) / kozMs) * kozMs - (korUtan - Date.now());
+          await csereAllapota().modosit((a) => korVege(a, { perc, port: kapu.port, kovetkezo,
+            sikeres: sikeresEbbenAKorben, celok: korCelok, uj: korUj, most: Date.now() }));
         }
 
         // ===== ⭐⭐⭐ A HIRDETŐTÁBLA (2026-09-20) =====
@@ -5430,7 +5462,10 @@ try {
         const oraEltolas = Number.parseInt(process.env.KOINO_ORAELTOLAS ?? '0', 10) || 0;
         const most = Date.now() + oraEltolas;
         const kovetkezoAblak = Math.ceil((most + 1) / kozMs) * kozMs;
-        await new Promise((teljesites) => setTimeout(teljesites, kovetkezoAblak - most));
+        // ⭐ Az alsó sáv (2026-10-15): a kör vége és a következő ablak (a saját óránkon — a lap ugyanezen a gépen fut).
+        await csereAllapota().modosit((a) => korVege(a, { perc, port: kapu.port, kovetkezo: kovetkezoAblak - oraEltolas,
+          sikeres: sikeresEbbenAKorben, celok: korCelok, uj: korUj, most: Date.now() }));
+        await new Promise((teljesites) => setTimeout(teljesites, Math.max(0, kovetkezoAblak - (Date.now() + oraEltolas))));
       }
       // ide nem jutunk el; a kaput a folyamat vége zárja
     }
@@ -6955,6 +6990,26 @@ try {
             success: true, eemberNev: rovidAzonosito(szerzo), nev: null, email: null, emailMegerositve: false,
             lokacio: null, tudatpontok: lista.szabad
           } };
+        }
+
+        // ===================================
+        // ⭐ AZ ALSÓ SÁV (Csaba, 2026-10-15) — a prototípus statisztikája és a csere állapota
+        // ===================================
+        //
+        // ⛔ A prototípus `platform/statisztika`-ja a PLATFORM számait adta (hány e-ember, hány gondolat). A koinó egészét
+        // senki nem számolja meg (9. szabály: egy készülék terhe nem függhet a koinó méretétől) — itt a KÉSZÜLÉKEN ismert
+        // rész számai állnak, a prototípus alakjában, és a program kimondja, mit jelentenek.
+        if (utvonal === '/api/platform/statisztika') {
+          const st = await helyiStatisztika(olvasoTar, KOINO, { ...lapHorgonya, nezet: pakliNezet });
+          return { adat: { success: true, ...st,
+            koinoMegjegyzes: 'A készüléken ismert rész: a koinó egészét senki nem számolja meg — az e-emberek száma azoké, '
+              + 'akiknek eseménye nálam van.' } };
+        }
+        // ⭐ A csere állapota: a lap ebből mondja ki, mikor cserélt utoljára a készülék és mikor jön a következő kör — és ha
+        // egy csere újat hozott, csendben frissül. Az őrjárat írja (egy másik folyamat — `csereAllapot.js`).
+        if (utvonal === '/api/csere-allapot') {
+          const kep = csereAllapotKepe(await csereAllapota(KOINO).olvas(), Date.now());
+          return { adat: { success: true, adatok: { ...kep, most: Date.now() } } };
         }
 
         // ----- EGY ENTITÁS RÉSZLETEI (5.5) — a ReszletekModal kéri -----

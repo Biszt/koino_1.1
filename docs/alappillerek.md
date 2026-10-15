@@ -371,7 +371,8 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 (72–73. mérés, D99) és a ház (D100, 2026-10-10) KÉSZ** — a részletek a fázis-2 terv D100-ában és az 5. szakasz
 96–104. bejegyzésében. ⏭️ Csaba a maradék modálokat választotta (D101, 2026-10-11) — az I. csoport kész (105–111.), a
 bejáró (D102, 112–121.), a Struktúra (122–126.), a Síkidom (127–135.), a Keresés helyi alja (136–138.) és az értesítés-réteg
-(139–143.), és a készülék saját értesítése (D103, 144–147.) is.
+(139–143.), és a készülék saját értesítése (D103, 144–147.) is. ⭐ Csaba kérésére (2026-10-15) az ALSÓ SÁV: a fő menü és
+az infók a prototípus helyén, a csere ideje és az automatikus frissítés a csere után (148–152.).
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 
@@ -973,3 +974,31 @@ bejáró (D102, 112–121.), a Struktúra (122–126.), a Síkidom (127–135.),
     számolásból, a többiről egy „és még N”; összefoglaló módban az első bekapcsoláskor az időköz onnan indul (nem jön
     azonnal egy összegző)** · mert egy hosszú kiesés után (a készülék napokig nem futott) ne zúdítson száz felugró ablakot,
     és a bekapcsolás ne jelezzen azonnal a múltról · Claude · `ertesites.js`.
+148. **2026-10-15 · az alsó sáv a prototípus helyén (Csaba: „szeretném, ha az alsósávot is megcsinálnád”)** → **a fő menü
+    és az alap-információk a lap ALJÁN, a prototípus `foOldalForm.html`-jének sávjával: a stílus bájtra (`foOldal.css`), a
+    vissza/előre történet bájtra (`FoOldalTortenetKezelo.js`), a vezérlő a `foOldal.js` alsó sáv része (`alsoSav.js`); a felső
+    sáv (rendezés-választó, frissítés, új gondolat) kimarad, mert a prototípusban ezek a fő menüben vannak; a tér a menüből
+    nyílik (koinós többlet), és a tér sávján a „Vissza a paklihoz”** · mert a felület a prototípusból öröklődik (M5/A), és a
+    D101 M6-ja a menüt ideiglenesen a fejlécbe tette · Claude · `index.html`, `alsoSav.js`, `foMenu.js`, `authHelper.js`
+    (a `koino:aktivEntitasValtozas` jelzés — a prototípusé).
+149. **2026-10-15 · a „platform statisztika” a készüléken ismert rész (9. szabály)** → **a prototípus alakjában
+    (`/api/platform/statisztika`), de a lap képéből: a kártyák száma típusonként (az elfogadott javaslat egyezmény — D85/4) és
+    az e-emberek, akiknek eseménye a bemenetben van; a lap horgonyával (ugyanaz a kép, mint a paklié — egyeznek, és a kép-
+    gyorsítótár sem cserélődik); a program kimondja, mit jelentenek** · mert a koinó egészét senki nem számolja meg · Claude ·
+    `pakli.js` (`helyiStatisztika`), `koino.js`.
+150. **2026-10-15 · a csere állapota helyi feljegyzésben** → **`<koino>/csere.json` (`csereAllapot.js`, `fajlTar.js`
+    `csereAllapotTarolo`): az őrjárat a kör elején, a csere-rész végén (a kopogás után — a tábla és a házimunka már nem csere)
+    és a kör végén írja (a következő ablak), a MUNKA a sikeres csere után (idő, hozam — a bekopogóé is); a felület adja
+    (`/api/csere-allapot`); „nem fut”, ha a feljegyzés két ablak + 2 perc óta nem frissült; a lap 10 mp-enként kérdez (rejtett
+    lapnál nem), a visszaszámlálás helyben** · mert a cserét egy MÁSIK folyamat végzi (D100, 101.: a futó felület csak így
+    látja); és a feljegyzés mérete állandó · Claude.
+151. **2026-10-15 · az automatikus frissítés: csak az „új eseményt hozott” cserére, a kiválasztás helyén** → **a lap az
+    `utolsoUj` változásából frissül (a „nincs újdonság” csere nem rajzoltat újra), csendben (`KoinoPakli.kulsoValtozas`: a
+    kiválasztott fa-szelete, és csak ha változott; a többi gyorsítótárazott szelet elfelejtve); nyitott modál alatt vár; ha a
+    kiválasztott eltűnt (pl. a 0 pontos egyezmény — D14), a szülőjére lép; utána az infók és a menü számlálója** · mert a
+    néző épp írhat vagy olvashat, és egy villogó újrarajzolás a kiválasztást is elmozdítaná · Claude · `alsoSav.js`,
+    `koinoPakli.js`.
+152. **2026-10-15 · lelet: a fő menü értesítés-számlálója 0-t mutatott (a ⑥ óta)** → **a prototípus
+    `_ertesitesBadgeFrissitese`-je a menüben (betöltéskor, olvasottnak jelöléskor, a csere után)** · mert a D101 ⑥ a
+    postafiókot megépítette, a kártyák számlálóját bekötötte, de a fő menüét nem — a „réteg kész, az éles út nem hívja”
+    minta; az alsó sáv bekötésekor derült ki · Claude · `foMenu.js`.

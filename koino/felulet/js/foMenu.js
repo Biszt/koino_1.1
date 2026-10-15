@@ -35,6 +35,7 @@ import TudatpontokModal from './components/modals/TudatpontokModal.js';
 import ErtesitesekModal from './components/modals/ErtesitesekModal.js';
 import ErtesitesiBeallitasModal from './components/modals/ErtesitesiBeallitasModal.js';
 import { aktivEntitasLekerese, aktivEntitasMentese, tokenLekerese } from './utils/authHelper.js';
+import { apiGet } from './utils/apiHelper.js';
 
 const MODAL_KONTENER = 'modal-kontener';
 
@@ -43,11 +44,13 @@ export class FoMenu {
   /**
    * @param {string} kontenerAzon - a menü konténere (a prototípusé: `hamburger-menu-kontener`)
    * @param {Object} pakli - a lap paklija (`KoinoPakli`) — a navigálás és a rendezés ezen fut
+   * @param {Object} [opciok] - { terMegnyitasa } — a belépő tér (5.6) a lapé (`index.html`); a menü csak hívja
    */
-  constructor(kontenerAzon, pakli) {
+  constructor(kontenerAzon, pakli, opciok = {}) {
     console.log('FoMenu.constructor - KEZDÉS', { kontenerAzon });
     this.kontenerAzon = kontenerAzon;
     this.pakli = pakli;
+    this.terMegnyitasa = opciok.terMegnyitasa ?? null;
     this.token = tokenLekerese();
     this.hamburgerMenu = null;
     console.log('FoMenu.constructor - VÉGE');
@@ -57,9 +60,31 @@ export class FoMenu {
     console.log('FoMenu.init - KEZDÉS');
     this.hamburgerMenu = new HamburgerMenu(this.kontenerAzon, this._hamburgerOpciokEpitese());
     await this.hamburgerMenu.init();
-    // ⏸️ Az értesítések számlálója (a prototípus `_ertesitesBadgeFrissitese`-je) az értesítés-réteggel jön (D101 ⑥).
-    this.hamburgerMenu.badgeFrissitese(0);
+    // ⭐ Az értesítések számlálója (a prototípus `_ertesitesBadgeFrissitese`-je). ⛔ 2026-10-15-ig itt 0 állt: a D101 ⑥
+    // a postafiókot megépítette, de a fő menü számlálója nem kérdezte meg (a kártyáké igen) — az alsó sáv bekötésekor
+    // derült ki.
+    await this._ertesitesBadgeFrissitese();
+    // A KÁRTYÁK ág-szűrt postafiókjából érkező jelzés (a `Kartya.js` küldi): olvasottnak jelölés után a menü számlálója is.
+    document.addEventListener('koino:ertesitesValtozas', () => this._ertesitesBadgeFrissitese());
     console.log('FoMenu.init - VÉGE');
+  }
+
+  // =====================================
+  // ÉRTESÍTÉS-BADGE FRISSÍTÉSE — a prototípus `_ertesitesBadgeFrissitese`-je
+  // =====================================
+  // Lekéri az olvasatlan értesítések számát, és a HamburgerMenu badge-eire írja (a gomb sarka + az „Értesítések”
+  // menüpont). Hívjuk: betöltéskor, a postafiókban történt olvasottnak jelölés után, és ha egy csere újat hozott (az alsó
+  // sáv). Hiba esetén csak naplózunk — a badge nem kritikus.
+  async _ertesitesBadgeFrissitese() {
+    console.log('FoMenu._ertesitesBadgeFrissitese - KEZDÉS');
+    try {
+      const valasz = await apiGet('ertesitesek/olvasatlan-szam', this.token);
+      const olvasatlan = valasz?.adatok?.olvasatlan ?? 0;
+      this.hamburgerMenu?.badgeFrissitese(olvasatlan);
+      console.log('FoMenu._ertesitesBadgeFrissitese - VÉGE', { olvasatlan });
+    } catch (hiba) {
+      console.error('FoMenu._ertesitesBadgeFrissitese - HIBA', hiba.message);
+    }
   }
 
   // =====================================
@@ -76,6 +101,8 @@ export class FoMenu {
       { ikon: '🚧', felirat: 'Világtérkép', akcio: () => fejlesztesreVarMegjelenitese('Világtérkép', MODAL_KONTENER) },
       { ikon: '🔷', felirat: 'Síkidom nézet', akcio: () => this._sikidomMegnyitasa() },
       { ikon: '↕️', felirat: 'Rendezés', akcio: () => this._rendezesMegnyitasa() },
+      // ⭐ A koinós többlet (5.6): a belépő tér — a koinók, amiket ismerek (a prototípusban a „koinó” mint fogalom nem volt)
+      ...(this.terMegnyitasa ? [{ ikon: '🌐', felirat: 'A tér — a koinóim', akcio: () => this._terMegnyitasa() }] : []),
       // — 2) Értesítések —
       { ikon: '🔔', felirat: 'Értesítések', elvalaszto: true, badge: true, akcio: () => this._ertesitesekMegnyitasa() },
       { ikon: '🔔', felirat: 'Értesítési beállítások', akcio: () => this._ertesitesiBeallitasokGlobalis() },
@@ -159,15 +186,31 @@ export class FoMenu {
     modal.megnyitas();
   }
 
+  // A belépő tér (a lapé — a menü csak megnyitja).
+  async _terMegnyitasa() {
+    this.hamburgerMenu?.bezaras();
+    await this.terMegnyitasa?.();
+  }
+
   // A fő menüs „Struktúra nézet” — az egész koinó (ág nélkül).
   async _strukturaMegnyitasa() {
     this.hamburgerMenu?.bezaras();
+    await this._strukturaModalLetrehozasa(null, null);
+  }
+
+  // A prototípus `_strukturaModalLetrehozasa`-ja: a fő menü ÉS a vissza/előre visszajátszás (az alsó sáv) is ezt hívja.
+  // @param {string|null} agEntitasId - null: teljes fa (fő menü); id: ág-szűrt (kártya)
+  // @param {string|null} cim - opcionális modal-cím (ág-szűrt struktúra nézetnél az ág neve)
+  async _strukturaModalLetrehozasa(agEntitasId = null, cim = null) {
     const { entitasId: aktualisEntitasId } = aktivEntitasLekerese();
-    const modal = new StrukturaModal(MODAL_KONTENER, {
+    const konfig = {
       token: this.token,
       aktualisEntitasId,
       onEntitasKivalasztas: (entitasId, entitasTipus) => this._navigalasEntitasra(entitasId, entitasTipus)
-    });
+    };
+    if (agEntitasId) konfig.agEntitasId = agEntitasId;
+    if (cim) konfig.cim = cim;
+    const modal = new StrukturaModal(MODAL_KONTENER, konfig);
     await modal.init();
     modal.megnyitas();
   }
@@ -175,14 +218,38 @@ export class FoMenu {
   // A fő menüs „Síkidom nézet” — a VILÁG-tól (horgony nélkül).
   async _sikidomMegnyitasa() {
     this.hamburgerMenu?.bezaras();
+    await this._sikidomModalLetrehozasa(null, null);
+  }
+
+  // A prototípus `_sikidomModalLetrehozasa`-ja — háromféle indulás: `kamera` (pontos visszaállítás), `horgonyEntitasId`
+  // (fókuszált), egyik sem (a VILÁG-tól, fő menü).
+  async _sikidomModalLetrehozasa(horgonyEntitasId = null, cim = null, kamera = null) {
     const { entitasId: aktualisEntitasId } = aktivEntitasLekerese();
-    const modal = new SikidomModal(MODAL_KONTENER, {
+    const konfig = {
       token: this.token,
       aktualisEntitasId,
       onEntitasKivalasztas: (entitasId, entitasTipus) => this._navigalasEntitasra(entitasId, entitasTipus)
-    });
+    };
+    if (kamera) konfig.kamera = kamera;
+    if (horgonyEntitasId) konfig.horgonyEntitasId = horgonyEntitasId;
+    if (cim) konfig.cim = cim;
+    const modal = new SikidomModal(MODAL_KONTENER, konfig);
     await modal.init();
     await modal.megnyitas();
+  }
+
+  // A prototípus `_nezetModalNyitasa`-ja: egy 'nezet' állapot (vissza/előre) újranyitása a mentett paraméterekkel.
+  // @param {{nezet:string, agEntitasId:string|null, horgonyEntitasId:string|null, kamera:Object|null, cim:string|null}} allapot
+  async _nezetModalNyitasa(allapot) {
+    console.log('FoMenu._nezetModalNyitasa - KEZDÉS', { allapot });
+    if (allapot.nezet === 'struktura') {
+      await this._strukturaModalLetrehozasa(allapot.agEntitasId, allapot.cim);
+    } else if (allapot.nezet === 'sikidom') {
+      await this._sikidomModalLetrehozasa(allapot.horgonyEntitasId, allapot.cim, allapot.kamera);
+    } else {
+      console.warn('FoMenu._nezetModalNyitasa - ismeretlen nézet', { nezet: allapot.nezet });
+    }
+    console.log('FoMenu._nezetModalNyitasa - VÉGE');
   }
 
   // A fő menüs „Tudatpontok” — a saját aktív hozzárendelések teljes listája (ág nélkül).
@@ -191,6 +258,8 @@ export class FoMenu {
     const modal = new TudatpontokModal(MODAL_KONTENER, {
       token: this.token,
       onEntitasKivalasztas: (entitasId, entitasTipus) => this._navigalasEntitasra(entitasId, entitasTipus),
+      // Pont-módosítás után az alsó sáv (szabad tudatpont) frissítése — ugyanaz a jelzés, amit a kártyák küldenek.
+      onValtozas: () => document.dispatchEvent(new CustomEvent('koino:tudatpontValtozas')),
       // Bezáráskor (ha volt módosítás, de nem navigáltunk) a pakli újratöltése
       onBezarasValtozassal: () => this._pakliUjratoltese()
     });
@@ -198,12 +267,14 @@ export class FoMenu {
     await modal.megnyitas();
   }
 
-  // A fő menüs „Értesítések” — a postafiók (az értesítés-réteggel jön, D101 ⑥).
+  // A fő menüs „Értesítések” — a postafiók (a készüléken számolva, D101 ⑥).
   async _ertesitesekMegnyitasa() {
     this.hamburgerMenu?.bezaras();
     const modal = new ErtesitesekModal(MODAL_KONTENER, {
       token: this.token,
-      onEntitasKivalasztas: (entitasId, entitasTipus) => this._navigalasEntitasra(entitasId, entitasTipus)
+      onEntitasKivalasztas: (entitasId, entitasTipus) => this._navigalasEntitasra(entitasId, entitasTipus),
+      // Olvasottnak jelölés után (egy vagy mind) a badge-számláló frissítése
+      onValtozas: () => this._ertesitesBadgeFrissitese()
     });
     await modal.init();
     await modal.megnyitas();

@@ -144,6 +144,60 @@ export class KoinoPakli extends Pakli {
     console.log('KoinoPakli.ujKoino - VÉGE');
   }
 
+  /**
+   * ⭐ AZ ALSÓ SÁV (Csaba, 2026-10-15): egy csere új eseményt hozott — csendben újra, a kiválasztás helyén (mint a H1
+   * újrakérdezése: villogás nélkül, csak ha a fa-szelet tényleg változott). A többi fa-szelet gyorsítótára elavult: azt
+   * elfelejtjük (a következő lépés frissen kéri). Ha a kiválasztott eltűnt (pl. egy egyezményről mindenki levette a
+   * pontját — D14), a szülőjére lépünk, ha az sincs, a legerősebb gyökérre.
+   * ⚠️ Betöltés és testvérváltás közben nem nyúlunk hozzá (a hívó később újra próbálja).
+   * @returns {Promise<boolean>} megtörtént-e (false: most nem lehetett)
+   */
+  async kulsoValtozas() {
+    console.log('KoinoPakli.kulsoValtozas - KEZDÉS', { mod: this.rendezesMod });
+    if (this.testverBetoltesAlatt || this.allapot.betoltesFolyamatban) return false;
+    if (this.rendezesMod !== 'hierarchikus') {
+      await this._laposUjrakerdezes();
+      return true;
+    }
+    const kulcs = this.allapot.kivalasztottEntitasId ?? null;
+    if (!kulcs) {
+      await this.init();
+      return true;
+    }
+    const kartya = this.kartyaPeldanyok[this.kivalasztottIndex]?.entitas;
+    const tipus = kartya?.entitasId?.toString() === kulcs ? kartya.entitasTipus : null;
+    const szulo = kartya?.entitasId?.toString() === kulcs ? kartya.szuloId ?? null : null;
+    const elotte = this._szeletLenyomata(kulcs);
+    const megtartott = this.allapot.paklikEsTestverek[kulcs];
+    this.allapot.paklikEsTestverek = megtartott ? { [kulcs]: megtartott } : {};
+    await this.pakliLekerese(kulcs, tipus, true);
+    if (this.feljegyzesek.get(kulcs)?.nemTalalt) {
+      // Eltűnt: a szülője (ha a program azt sem ismeri, az `init` a gyökértől indul). A `Pakli.js` csak típussal együtt
+      // kérdez entitásra — a szülő a kirajzolt láncban áll (a felmenők közt), onnan a típusa.
+      const szuloTipus = (megtartott?.pakli ?? []).find((e) => e.entitasId === szulo)?.entitasTipus ?? 'Gondolat';
+      if (szulo) aktivEntitasMentese(szulo, szuloTipus);
+      else aktivEntitasMentese(null, null);
+      const rendben = szulo ? await this.init(szulo, szuloTipus) : await this.init();
+      console.log('KoinoPakli.kulsoValtozas - VÉGE (a kiválasztott eltűnt)', { szulo, rendben });
+      return true;
+    }
+    if (this._szeletLenyomata(kulcs) === elotte) {
+      this.testverJelzoFrissitese();
+      this._allapotSor();
+      console.log('KoinoPakli.kulsoValtozas - VÉGE (nem változott)');
+      return true;
+    }
+    // Változott: újra, a kiválasztás helyén. Ha a néző a kirajzolt láncon belül egy másik kártyát nyitott ki, annak a
+    // láncát rajzoljuk (mint egy újratöltés ugyanott).
+    const pakli = this.allapot.paklikEsTestverek[kulcs]?.pakli ?? [];
+    const hol = pakli.findIndex((e) => e.entitasId === kulcs);
+    this.kivalasztottIndex = hol >= 0 ? hol : 0;
+    await this.kivalasztottSzovegFrissitese();
+    await this.paklitRendel();
+    console.log('KoinoPakli.kulsoValtozas - VÉGE (újrarajzolva)');
+    return true;
+  }
+
   // ===================================
   // A KIRAJZOLÁS UTÁN: jelölés, állapot-sor, újrakérdezés
   // ===================================

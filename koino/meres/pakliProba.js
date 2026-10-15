@@ -23,7 +23,8 @@ import {
   agHelyzete, sajatHozzarendelesek, HOZZARENDELES_KORLAT, biztosElotag, ELORE_KERES,
   strukturaDarabszam, strukturaLap, STRUKTURA_KERET,
   sikidomGyerekek, sikidomOslanc, SIKIDOM_DARAB,
-  keresesHelyben, KERESES_ALAP, KERESES_MAX
+  keresesHelyben, KERESES_ALAP, KERESES_MAX,
+  helyiStatisztika
 } from '../js/allapot/pakli.js';
 import { GYOKER_KULCS } from '../js/csere/szeletEgyeztetes.js';
 
@@ -1657,6 +1658,43 @@ proba('⭐ D101: a lista felülről korlátos (a prototípus 100-a), és megmond
   const senki = await sajatHozzarendelesek(f.tar, KOINO, {});
   return ketto.data.length === 2 && ketto.count === 2 && ketto.osszes === 5
     && sok.data.length === 5 && HOZZARENDELES_KORLAT === 100 && senki.data.length === 0;
+});
+
+// ===================================
+// ⭐ AZ ALSÓ SÁV SZÁMAI (2026-10-15) — a készüléken ismert rész, a lap képéből
+// ===================================
+//
+// A prototípus alsó sávja a platform számait mutatta; itt a lap képének számai állnak (9. szabály): a kártyák típusonként
+// (az elfogadott javaslat EGYEZMÉNY — ugyanaz a típus, amit a kártya mutat, D85/4), és az e-emberek, akiknek eseménye a
+// bemenetben van. ⭐ A lap horgonyával ugyanaz a kép, mint a paklié: a horgony utáni események nem számítanak bele.
+// Rontás: a kártya-típus helyett az entitás típusa → az egyezmény javaslatnak számít; a horgony kihagyva → a késői
+// események is beleszámítanak.
+proba('⭐ Az alsó sáv: a készüléken ismert rész számai típusonként (az elfogadott javaslat egyezmény), a lap horgonyával', async () => {
+  const { tar, anna } = await ujKoino();
+  await gondolat(tar, anna, 'A', 5);
+  const horgony = (await tar.betolt()).length;
+  const bela = await ujTag(KOINO);
+  for (const e of tagsagiEsemenyei(bela)) await esemenyMentese(tar, e);
+  await gondolat(tar, bela, 'B', 3);
+  await besorolas(tar, anna, 'Kategoria', 'Természet', '🌲');
+  await besorolas(tar, anna, 'GondolatTipus', 'Kérdés', '❓');
+  await javaslatosEset(tar, anna);                                  // 2026-01-01-i: mára elfogadva → egyezmény
+  await javaslatosEset(tar, bela, { kezdet: Date.now() - 1000 });   // most indult: folyamatban → javaslat
+  const st = await helyiStatisztika(tar, KOINO, {});
+  const regi = await helyiStatisztika(tar, KOINO, { horgony });
+  const ki = {
+    eemberek: st.eemberekSzama === 3,                               // az alapító, anna, béla
+    gondolatok: st.gondolatokSzama === 4,                           // A, B és a két javaslat gondolata
+    besorolasok: st.kategoriakSzama === 1 && st.gondolatTipusokSzama === 1,
+    dontesek: st.javaslatokSzama === 1 && st.egyezmenyekSzama === 1,
+    horgony: regi.eemberekSzama === 2 && regi.gondolatokSzama === 1 && regi.kategoriakSzama === 0
+      && regi.javaslatokSzama === 0 && regi.egyezmenyekSzama === 0
+  };
+  if (!Object.values(ki).every(Boolean)) {
+    console.log('    (az alsó sáv számai — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
+      + JSON.stringify({ st, regi }) + ')');
+  }
+  return Object.values(ki).every(Boolean);
 });
 
 export default futtatas;

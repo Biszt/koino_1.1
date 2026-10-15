@@ -35,6 +35,7 @@ import identitas from './identitasProba.js';
 import kapu from './kapuProba.js';
 import pakli from './pakliProba.js';
 import ter from './terProba.js';
+import csereAllapot from './csereAllapotProba.js';
 import fajl from './fajlProba.js';
 import fajlIgeny from './fajlIgenyProba.js';
 import fajlKerelem from './fajlKerelemProba.js';
@@ -101,6 +102,7 @@ const PROBAK = [
   { nev: 'kapu', futtat: kapu },
   { nev: 'pakli', futtat: pakli },
   { nev: 'ter', futtat: ter },
+  { nev: 'csereallapot', futtat: csereAllapot },
   { nev: 'fajl', futtat: fajl },
   { nev: 'fajligeny', futtat: fajlIgeny },
   { nev: 'fajlkerelem', futtat: fajlKerelem },
@@ -160,7 +162,7 @@ const CSOPORTOK = {
   // események → állapot: entitások, döntéshozatal, szabályok, egyezmények, tagság
   allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'dontesicsomag', 'lezarasiosszegzes', 'osszpont', 'felszabaditas', 'identitas', 'tagsag', 'ertesites'],
   // a felületnek felelő réteg
-  felulet: ['kapu', 'pakli', 'ter'],
+  felulet: ['kapu', 'pakli', 'ter', 'csereallapot'],
   // két készülék között: a párbeszéd, a kézi út, a társak, a kapu, a kötések, a tábla, a DHT
   csere: ['csere', 'fajlcsere', 'tarsak', 'tartomany', 'titkositas', 'udpkapu', 'kotes', 'tabla', 'dht', 'cimjegyzek', 'kerelem', 'osszegzotartas', 'tagsagkisero', 'gyokerdarab', 'kozoshalmaz', 'reszvetel', 'tarsemlekezet', 'vizsga'],
   // a fájl-bájtok és a szöveg-darab: tár, igény, kérelem, átvitel
