@@ -57,7 +57,9 @@ import {
   vonalKulcsa, GYOKER_KULCS, szeletPar, KOINO_SZULETES_KULCS
 } from './szeletEgyeztetes.js';
 import { rendezettHalmaz, halmazLenyomata } from '../esemeny/halmaz.js';
-import { gyokerDarabBol, gyokerDarabKulcsai } from './cimjegyzek.js';
+import {
+  gyokerDarabBol, gyokerDarabKulcsai, gyokerJelSzovege, gyokerJelOlvasasa, GYOKER_MAX_MELYSEG
+} from './cimjegyzek.js';
 import {
   valtozottKulcsok, valtozottAlakja, valtozottUnio, kivulLenyomat, uParjai, parokAlakja, uOsztalyozasa,
   emlekezetFeljegyzes, VALTOZOTT_KORLAT
@@ -250,7 +252,8 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   const tablaKulcsElore = typeof beallitas.tablaKulcs === 'function'
     ? beallitas.tablaKulcs() : (beallitas.tablaKulcs ?? null);
   const gyokerMelyseg = Number.isInteger(beallitas.gyokerMelyseg) && beallitas.gyokerMelyseg >= 0
-    && beallitas.gyokerMelyseg <= 16 && typeof tablaKulcsElore?.alairo === 'string' ? beallitas.gyokerMelyseg : null;
+    && beallitas.gyokerMelyseg <= GYOKER_MAX_MELYSEG && typeof tablaKulcsElore?.alairo === 'string'
+    ? beallitas.gyokerMelyseg : null;
   const sajatDarabKulcsok = gyokerMelyseg === null ? [] : gyokerDarabKulcsai(tablaKulcsElore.alairo, gyokerMelyseg);
   const sajatDarabSet = new Set(sajatDarabKulcsok);
   const hivoReszvesz = beallitas.reszvesz ?? (() => true);
@@ -372,7 +375,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   if (sajatDarabKulcsok.length) {
     const l = [];
     for (const k of sajatDarabKulcsok) l.push((await szeletPar(tar, koino, k))?.slice(44, 55) ?? null);
-    sajatGyd = { m: gyokerMelyseg, l, szoveg: gyokerMelyseg + ':' + l.map((x) => x ?? '').join(':') };
+    sajatGyd = { m: gyokerMelyseg, l, szoveg: gyokerJelSzovege(gyokerMelyseg, l) };
   }
   // ⭐ D95/2: van-e FÜGGŐ tagság-kérdésem (akinek a tagságát a szeleteimben nem tudom)? Ha igen, a tagsági kör akkor is
   // lemegy, ha a szeletek egyeznek — a társnál lehet meg a csomag. ⚠️ Csak egy jel a nyitásban (1 bájt), ha van.
@@ -611,12 +614,11 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // ----- ⭐ D95/4: A KÖZÖS GYÖKÉR-DARABOK KÖZÜL AZ ELTÉRŐK (mindkét fél ugyanazt számolja: a két nyitásból) -----
   const elteroDarabok = [];
   {
-    const g = typeof oveNyitas.gyd === 'string' && /^\d{1,2}(:[A-Za-z0-9_-]{0,11}){1,3}$/.test(oveNyitas.gyd)
-      ? oveNyitas.gyd.split(':') : null;
-    const gm = g ? parseInt(g[0], 10) : -1;
-    if (sajatGyd && typeof kapottTablaKulcs?.alairo === 'string' && g && gm >= 0 && gm <= 16) {
-      const oveKulcsok = gyokerDarabKulcsai(kapottTablaKulcs.alairo, gm);
-      const oveL = new Map(oveKulcsok.map((k, i) => [k, g[i + 1] ? g[i + 1] : null]));
+    // ⭐ D106: a mélység a koinó saját határáig (`GYOKER_MAX_MELYSEG`) — a jel olvasása egy helyen (`cimjegyzek.js`).
+    const g = gyokerJelOlvasasa(oveNyitas.gyd);
+    if (sajatGyd && typeof kapottTablaKulcs?.alairo === 'string' && g) {
+      const oveKulcsok = gyokerDarabKulcsai(kapottTablaKulcs.alairo, g.melyseg);
+      const oveL = new Map(oveKulcsok.map((k, i) => [k, g.lenyomatok[i] ?? null]));
       // ⭐ A darabok egymásba ágyazottak (a mélyebb a sekélyebb része): ha a LEGSEKÉLYEBB közös darab egyezik, a
       // mélyebbek is; ha eltér, elég azt egyeztetni (a mélyebbek benne vannak). A kulcsok mélység szerint jönnek.
       const i = sajatDarabKulcsok.findIndex((k) => oveL.has(k));

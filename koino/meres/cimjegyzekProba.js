@@ -9,7 +9,7 @@
 import { probaGyujtemeny } from './probaFuttato.js';
 import {
   cimjegyzekTema, gyokerDarabja, sajatGyokerDarabjai, gyokerMelysege, gyokerDarabTemaja, hirdetendoTemak,
-  GYOKER_DARAB_CEL, HIRDETES_KOZ, keszulekKopogtatoTemaja, temaKopogtatoja, figyelendoKopogtatok
+  GYOKER_DARAB_CEL, HIRDETES_KOZ, keszulekKopogtatoTemaja, temaKopogtatoja, figyelendoKopogtatok, GYOKER_MAX_MELYSEG
 } from '../js/csere/cimjegyzek.js';
 
 const { proba, futtatas } = probaGyujtemeny('A CÍMJEGYZÉK — a vakított téma és a hirdetés (G, D91)');
@@ -44,9 +44,9 @@ proba('a gyökér-darab a tartományban van, determinisztikus, 0 bitnél 0; a ha
     if (!(d >= 0 && d < 16) || d !== gyokerDarabja(AZ(i), 4)) return false;
   }
   let dobott = 0;
-  try { gyokerDarabja(AZ(1), 17); } catch { dobott++; }
+  try { gyokerDarabja(AZ(1), GYOKER_MAX_MELYSEG + 1); } catch { dobott++; }
   try { gyokerDarabja(AZ(1), -1); } catch { dobott++; }
-  return gyokerDarabja(AZ(1), 0) === 0 && dobott === 2;
+  return gyokerDarabja(AZ(1), 0) === 0n && dobott === 2;
 });
 
 proba('a gyökér-darabok egyenletesen telnek (1600 gondolat, 16 darab → mind 60 és 140 között)', () => {
@@ -58,17 +58,18 @@ proba('a gyökér-darabok egyenletesen telnek (1600 gondolat, 16 darab → mind 
 proba('egy készülék darabjai: a kért szám, körbeérve, a darab-számnál nem több', () => {
   const ket = sajatGyokerDarabjai('alairo-x', 3, 2);
   const mind = sajatGyokerDarabjai('alairo-x', 1, 5);
-  return ket.length === 2 && ket[1] === (ket[0] + 1) % 8 && mind.length === 2
+  return ket.length === 2 && ket[1] === (ket[0] + 1n) % 8n && mind.length === 2
     && sajatGyokerDarabjai('alairo-x', 0, 3).join() === '0';
 });
 
 // ===== A MÉLYSÉG („végtelen": egy darab mérete nem nő a koinóval) =====
 
-proba('⭐ a mélység: kis koinóban 0, és KETTŐZÉSENKÉNT +1 (logaritmikus), legfeljebb 16', () =>
+proba('⭐ a mélység: kis koinóban 0, és KETTŐZÉSENKÉNT +1 (logaritmikus) — D106: a koinó saját határáig (144), nem 16-ig', () =>
   gyokerMelysege(0) === 0 && gyokerMelysege(GYOKER_DARAB_CEL) === 0
   && gyokerMelysege(GYOKER_DARAB_CEL + 1) === 1 && gyokerMelysege(2 * GYOKER_DARAB_CEL) === 1
   && gyokerMelysege(2 * GYOKER_DARAB_CEL + 1) === 2 && gyokerMelysege(4 * GYOKER_DARAB_CEL + 1) === 3
-  && gyokerMelysege(1e12) === 16 && gyokerMelysege(-5) === 0 && gyokerMelysege(NaN) === 0);
+  && gyokerMelysege(1e12) === 32 && gyokerMelysege(1e60) === GYOKER_MAX_MELYSEG
+  && gyokerMelysege(-5) === 0 && gyokerMelysege(NaN) === 0);
 
 proba('egy darabban sosem több, mint ~2 × a cél (a mélység a darab-méretet korlátozza)', () => {
   for (const n of [300, 1000, 5000, 100000, 3000000]) {
@@ -107,7 +108,7 @@ proba('a gyökér-darab a koinó méretével mélyül (300 legfelső gondolat �
   for (let i = 0; i < 40; i++) {
     darabok.add(hirdetendoTemak({ koino: 'k1', alairo: 'a' + i, legfelsoDarab: 5000 })[0].kulcs);
   }
-  return m === 1 && d === sajatGyokerDarabjai('a1', 1)[0] && darabok.size > 1;
+  return m === 1 && BigInt(d) === sajatGyokerDarabjai('a1', 1)[0] && darabok.size > 1;
 });
 
 proba('a hirdetés üteme a felejtésnél (30–60 perc, 58. mérés) gyorsabb', () =>

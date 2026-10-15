@@ -31,7 +31,7 @@
 
 import { alakiHiba, szelet, bejelentesHelyei, azonositoAlaku } from '../esemeny/esemeny.js';
 import { rendezettHalmaz, halmazLenyomata } from '../esemeny/halmaz.js';
-import { gyokerDarabBol, gyokerDarabja, darabbaEsik } from './cimjegyzek.js';
+import { gyokerDarabBol, gyokerLenyomata, darabbaEsik } from './cimjegyzek.js';
 
 /**
  * A gyökér kulcsa a vonalon (a tárban: ''). ⭐ Egy érvényes alakú, 43 jeles szöveg, amit egyetlen
@@ -71,7 +71,7 @@ export async function egyeztetettEsemenyek(tar, koino, kulcs) {
   const darab = gyokerDarabBol(kulcs);
   if (darab) {
     return (await egyeztetettEsemenyek(tar, koino, GYOKER_KULCS))
-      .filter((e) => darabbaEsik(gyokerDarabja(e.azonosito, 16), darab.melyseg, darab.darab));
+      .filter((e) => darabbaEsik(gyokerLenyomata(e.azonosito), darab.melyseg, darab.darab));
   }
   const s = tarKulcsa(kulcs);
   const sajat = s === '' ? [] : await tar.szeletEsemenyei(s);
@@ -170,10 +170,10 @@ export function szeletbeTartozik(e, kulcsok) {
   if (helyek.some((k) => kulcsok.has(vonalKulcsa(k)))) return true;
   // ⭐ D95/4: a gyökérhez bejelentett születés abba a gyökér-darabba is tartozik, amelyikbe esik.
   if (helyek.includes('')) {
-    const d16 = gyokerDarabja(e.azonosito, 16);
+    const h = gyokerLenyomata(e.azonosito);
     for (const k of kulcsok) {
       const d = gyokerDarabBol(k);
-      if (d && darabbaEsik(d16, d.melyseg, d.darab)) return true;
+      if (d && darabbaEsik(h, d.melyseg, d.darab)) return true;
     }
   }
   return false;

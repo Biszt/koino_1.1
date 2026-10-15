@@ -5595,6 +5595,62 @@ végtelen).« ezt leszámítva, addig, ameddig át nem pontosítjuk, a gyakorlat
 **A sorrend:** ① a 75. mérés → ② a szó és az index-darab (a K8 után) → ③ a tartás és a hirdetés → ④ a felajánlás → ⑤ a
 kérdés → ⑥ a halványulás → ⑦ a Keresés modálja a hálózati találatokkal. Elágazás 154.
 
+### D106. A „VÉGTELEN” MÉRCÉJE: A KOINÓ SAJÁT HATÁRA, ÉS A KIMONDOTT KIVÉTEL (2026-10-15, Csaba: „A (C)-t választom”)
+
+**A kérdés** (a D105 K8-a nyomán): Csaba a darab-szám szélessége előtt a „gyakorlatilag végtelen” fogalmát pontosíttatta.
+A szó két állítást mosott össze: *nincs korlát*, és *van, de a valóságban nem érjük el* — az utóbbi egy feltevésen áll a
+valóságról (az IPv4 32 bitje 1981-ben „gyakorlatilag végtelen” volt; 2011-re elfogyott, mert a használatról szóló feltevés
+változott).
+
+**A megkülönböztetés:** a *teher-korlát* egy készülék munkáját fogja meg (K = 3 kötés, ≤ 3 cím, 8 raj-tartó, 20 MB
+átmeneti tár, a bizonyítékok hossza) — ezek a „végtelen” eszközei: ettől nem nő a teher a koinóval. A *méret-korlát* egy
+szám, ami a koinóval nőne, de rögzített szélességű: ha a koinó kinövi, vagy a teher kezd nőni, vagy a szám nem ábrázolható.
+Az átnézéskor három ilyen állt: a gyökér-darab 16 bites száma, a tagsági lánc 64-es mélység-korlátja, és a kanonikus alak
+„biztonságos egész” határa (2^53).
+
+**Csaba döntése — (C):** *„A (C)-t választom: az (A) a szabály, a drága helyen kimondott (B)-kivétel.”*
+- **A SZABÁLY (A — a belső mérce):** egy méret-korlát se legyen szűkebb, mint a koinó SAJÁT határa — az azonosító-tér: egy
+  entitás neve a 256 bites lenyomata, és ~2^128 entitás fölött két név véletlenül egybeeshet; ennél többet a koinó semmilyen
+  formában nem tud megkülönböztetni. Feltevés nélküli.
+- **A KIVÉTEL (B — a levezetett mérce):** ahol a szabály betartása drága, ott KIMONDOTT kivétel áll, a koinó szabályaiból
+  levezetett legnagyobb mérettel (az e-ember élő, külön ember — D18/1 → legfeljebb az emberiség, ~10^10; élő entitás csak
+  ponttal — D14, fejenként 10 000 pont → legfeljebb ~10^14 élő entitás) és a tartalékkal, EGY HELYEN leírva (a CLAUDE.md
+  „végtelen” szakasza).
+- **Ma egy kivétel:** a kanonikus alak „biztonságos egész” határa (2^53 ≈ 9·10^15 — `kanonikusAlak.js`, az összegző fa
+  összegei, az össz-pont bemondása — `osszegzoFa.js`, `osszPont.js`): egy ág össz-pontja (legfeljebb e-ember × 10 000) ~900
+  milliárd e-emberig pontos, az emberiség ~87-szereséig. A nagy egészek a kanonikus alakban (a „legveszélyesebb részlet”)
+  formátum-szintű munka lennének.
+- **Az ellenőrizhető alak:** minden rögzített számnál a kérdés: *a koinó saját határa előtt áll-e meg?* Ha igen, vagy
+  tágítjuk, vagy kimondott kivétel lesz belőle — a számmal és az indoklással. A „gyakorlatilag” szó nem érv.
+
+**A K8 (a D105-ből) ezzel:** a darab-szám a lenyomat annyi bitje, amennyi a mélységhez kell, legfeljebb
+`GYOKER_MAX_MELYSEG` = 144 — amennyi a 43 jeles kulcsba fér (a koinó határához ~120 bit kell, a kereső-réteg indexéhez —
+gondolatonként ~10 bejegyzéssel — ~124).
+
+#### ✅ MEGÉPÜLT (2026-10-15) — a K8
+
+⭐ `cimjegyzek.js`: `GYOKER_MAX_MELYSEG` = 144; `gyokerLenyomata` (a darab-számítás lenyomatának első 144 bitje, `BigInt` —
+a JS-szám 2^53 fölött pontatlan); `gyokerDarabja` `BigInt`-et ad (16 bitig ugyanazt a számot, mint előtte); a kulcsban a
+darab jegyeinek száma a mélységből jön (16-ig négy, 34 nullával — bájtra a régi kulcs; fölötte ⌈m/4⌉, a 144-es mélységen
+36, két nullával), és egy darabnak egyetlen kulcsa van (a jegyek száma kötött); `darabbaEsik` a gyökér-lenyomatból; a
+mélység becslése a saját darab maradékát szűri tovább (a munka a darab méretével arányos); a nyitás gyökér-jele (`gyd`)
+egy helyen íródik és olvasódik (`gyokerJelSzovege`, `gyokerJelOlvasasa` — a mélység legfeljebb három számjegy, 144-ig).
+A `vonal.js`, a `szeletEgyeztetes.js` és a `koino.js` (a mélység becslése, a tömörítés, a függő kérelem szomszédos
+mélységei, a `cimjegyzek gyoker` parancs) a gyökér-lenyomatból számol, a mélység 144-ig. ⚠️ Visszafelé: 16 mélységig minden
+kulcs és DHT-téma bájtra a régi — a mai koinókban és a telefonnal semmi nem változik (a 16-os mélységen a ±1 szint a 17-est
+is hozza; a régi program a nyitás jelét a sorrend szerint ugyanígy olvassa). A gyökér-darab nem állapot-befolyásoló (azt
+mondja meg, ki mit tart, nem azt, mi a koinó állapota) — a D66 nem érinti.
+
+Próbák: négy új (`gyokerDarabProba.js`: a kulcs oda-vissza 144-ig és 16-ig bájtra a régi alak, egy darab = egy kulcs ·
+az egymásba ágyazás 144 bitig · a mélység 16 fölött a saját darabból (sűrű darab → 21), a ±1 szint 16-on · a nyitás jele),
+a meglévők `BigInt`-re igazítva; rontás (`GYOKER_MAX_MELYSEG` = 16): pontosan a négy D106-próba bukik.
+
+⏸️ **A szabály másik következménye (külön lépés):** a tagsági lánc 64-es mélység-korlátja (`MELYSEG_KORLAT`, és a 2.
+lépcső szúrópróbájának útja) az (A) szerint szűk: a természetes lánc (63. mérés: egymillió tagnál ~13 lépés, lépésenként
+~2,9-szeres) ~10^29–10^30 tagnál éri el, a koinó határához ~85 kell. A felemelése olcsó (a legrosszabb bizonyíték kétszer
+hosszabb), de ⚠️ állapotot befolyásoló állandó (D66 — a tagság a döntés bemenete): éles koinó előtt kell megtenni. Elágazás
+155.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

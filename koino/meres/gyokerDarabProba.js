@@ -12,6 +12,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createSocket } from 'node:dgram';
+import { createHash, randomBytes } from 'node:crypto';
 
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
@@ -21,7 +22,8 @@ import { ujTablaKulcs, nyilvanosResz } from '../js/csere/tablaKulcs.js';
 import { kezfogasAlairasa } from '../js/csere/titkositas.js';
 import { egyeztetettEsemenyek, ervenyesKulcs, GYOKER_KULCS } from '../js/csere/szeletEgyeztetes.js';
 import {
-  gyokerDarabKulcsa, gyokerDarabBol, gyokerDarabja, darabbaEsik, gyokerMelysegBecslese, sajatGyokerDarabjai
+  gyokerDarabKulcsa, gyokerDarabBol, gyokerDarabja, darabbaEsik, gyokerMelysegBecslese, sajatGyokerDarabjai,
+  gyokerLenyomata, gyokerDarabKulcsai, gyokerMelysege, gyokerJelSzovege, gyokerJelOlvasasa, GYOKER_MAX_MELYSEG
 } from '../js/csere/cimjegyzek.js';
 import { sajatKuldo, kuldoFogado } from '../js/allapot/osszegzoTartas.js';
 
@@ -42,7 +44,7 @@ async function udpParos() {
 
 const alairoja = (t) => nyilvanosResz(t).alairo;
 const darabja = (t, m) => sajatGyokerDarabjai(alairoja(t), m, 1)[0];
-const esik = (e, m, d) => darabbaEsik(gyokerDarabja(e.azonosito, 16), m, d);
+const esik = (e, m, d) => darabbaEsik(gyokerLenyomata(e.azonosito), m, d);
 
 /** Két tábla-kulcs, amelyeknek a darabja az `m` mélységen EGYEZIK (`egyezo`) vagy a sekélyebb szinten is ELTÉR. */
 async function kulcsPar(m, egyezo) {
@@ -91,7 +93,7 @@ async function csere(tarA, tarB, tA, tB, { mA = null, mB = null, a = {}, b = {} 
 proba('⭐ a darab kulcsa érvényes vonal-kulcs, visszafejthető, és nem azonos semmilyen azonosítóval vagy a gyökérrel', () => {
   const k = gyokerDarabKulcsa(5, 29);
   const v = gyokerDarabBol(k);
-  return k.length === 43 && ervenyesKulcs(k) && v?.melyseg === 5 && v?.darab === 29 && k !== GYOKER_KULCS
+  return k.length === 43 && ervenyesKulcs(k) && v?.melyseg === 5 && v?.darab === 29n && k !== GYOKER_KULCS
     && gyokerDarabBol(GYOKER_KULCS) === null && gyokerDarabBol('A'.repeat(43)) === null
     && gyokerDarabBol(k.slice(0, 41) + 'zz') === null                    // érvénytelen farok
     && gyokerDarabBol('0'.repeat(34) + 'g' + '02' + '0004' + '00') === null; // a darab ≥ 2^mélység
@@ -99,12 +101,13 @@ proba('⭐ a darab kulcsa érvényes vonal-kulcs, visszafejthető, és nem azono
 
 proba('⭐⭐ a mélység BECSLÉSE a saját darabból ugyanaz, mint a teljes tudásból (a szigorú (b) alatt senki nem látja az egészet)', () => {
   const xs = [];
-  for (let i = 0; i < 5000; i++) xs.push(gyokerDarabja('az' + i, 16));
-  const sajat16 = gyokerDarabja('keszulek|x', 16);
-  const teljes = gyokerMelysegBecslese(xs, sajat16);
-  const resz = [3, 4, 5].map((s) => gyokerMelysegBecslese(xs.filter((x) => darabbaEsik(x, s, sajat16 >> (16 - s))), sajat16));
+  for (let i = 0; i < 5000; i++) xs.push(gyokerLenyomata('az' + i));
+  const sajat = gyokerLenyomata('keszulek|x');
+  const teljes = gyokerMelysegBecslese(xs, sajat);
+  const resz = [3, 4, 5].map((s) => gyokerMelysegBecslese(
+    xs.filter((x) => darabbaEsik(x, s, sajat >> BigInt(GYOKER_MAX_MELYSEG - s))), sajat));
   return teljes.melyseg === 5 && resz.every((r) => r.melyseg === teljes.melyseg)
-    && gyokerMelysegBecslese(xs.slice(0, 10), sajat16).melyseg === 0;
+    && gyokerMelysegBecslese(xs.slice(0, 10), sajat).melyseg === 0;
 });
 
 proba('⭐ a darab halmaza a gyökérhez bejelentett születések közül a darabba esők — más nem', async () => {
@@ -114,6 +117,77 @@ proba('⭐ a darab halmaza a gyökérhez bejelentett születések közül a dara
   const benne = (await egyeztetettEsemenyek(t, KOINO, kulcs)).map((e) => e.azonosito).sort();
   const vart = g.filter((e) => esik(e, 2, 1)).map((e) => e.azonosito).sort();
   return benne.length === vart.length && benne.every((x, i) => x === vart[i]);
+});
+
+// ===================================
+// ⭐⭐ D106: A DARAB-SZÁM A KOINÓ SAJÁT HATÁRÁIG (144 bit)
+// ===================================
+//
+// A „végtelen” mércéje (D106): a darab-szám nem állhat meg a koinó saját határa (~2^128 entitás) előtt. A D106 előtt 16
+// bites volt — ~16,8 millió legfelső szintű gondolat fölött a darab a koinóval nőtt volna. Rontás: `GYOKER_MAX_MELYSEG`
+// = 16 → a kulcs 16 fölött nem készül, a becslés 16-nál megáll, a nyitás jele 16 fölött nem olvasható.
+
+proba('⭐⭐ D106: a darab kulcsa 144 mélységig oda-vissza, egy darabnak egy kulcsa — és 16 mélységig bájtra a régi alak', () => {
+  const ki = {};
+  ki.odaVissza = [0, 1, 5, 16, 17, 20, 40, 100, 143, 144].every((m) => {
+    const d = gyokerDarabja('x' + m, m);
+    const k = gyokerDarabKulcsa(m, d);
+    const v = gyokerDarabBol(k);
+    return k.length === 43 && ervenyesKulcs(k) && v?.melyseg === m && v?.darab === d;
+  });
+  // A D106 előtti alak (16 bit, négy hexa jegy, 34 nulla): a mai kulcsok nem változnak.
+  const regiDarab = (az, m) => (m === 0 ? 0
+    : createHash('sha256').update('koino-gyoker-darab-1').update(az).digest().readUInt16BE(0) >> (16 - m));
+  const regiKulcs = (m, d) => '0'.repeat(34) + 'g' + m.toString(16).padStart(2, '0') + d.toString(16).padStart(4, '0') + '00';
+  ki.regiAlak = [0, 3, 9, 16].every((m) => gyokerDarabKulcsa(m, gyokerDarabja('r' + m, m)) === regiKulcs(m, regiDarab('r' + m, m)));
+  // Egy darabnak egyetlen kulcsa: a jegyek száma a mélységé (a 20-as mélységen öt — négy jeggyel érvénytelen).
+  ki.egyKulcs = gyokerDarabBol('0'.repeat(34) + 'g' + '14' + 'abcd' + '00') === null
+    && gyokerDarabBol('0'.repeat(33) + 'g' + '14' + '0abcd' + '00')?.darab === 0xabcdn;
+  let dobott = 0;
+  try { gyokerDarabKulcsa(GYOKER_MAX_MELYSEG + 1, 0); } catch { dobott++; }
+  try { gyokerDarabja('x', GYOKER_MAX_MELYSEG + 1); } catch { dobott++; }
+  ki.hatar = dobott === 2 && gyokerDarabBol('00g' + '91' + '0'.repeat(36) + '00') === null;   // 145 > 144
+  if (!Object.values(ki).every(Boolean)) console.log('    (D106 kulcs — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ')');
+  return Object.values(ki).every(Boolean);
+});
+
+proba('⭐⭐ D106: a darabok minden mélységen egymásba ágyazottak (a mélyebb a sekélyebb fele) — 144 bitig', () => {
+  for (let i = 0; i < 20; i++) {
+    const az = 'beagyazott' + i;
+    const h = gyokerLenyomata(az);
+    for (let m = 1; m <= GYOKER_MAX_MELYSEG; m++) {
+      const d = gyokerDarabja(az, m);
+      if ((d >> 1n) !== gyokerDarabja(az, m - 1) || !darabbaEsik(h, m, d) || darabbaEsik(h, m, d ^ 1n)) return false;
+    }
+  }
+  return true;
+});
+
+proba('⭐⭐ D106: a mélység 16 fölé is megy — a sűrű saját darab 21-es mélységet ad (16 bittel 16 lett volna), és 16-on három szint', () => {
+  const sajat = gyokerLenyomata('keszulek|melyseg');
+  // 300 születés a készülék 20-as mélységű darabjában (a lenyomat első 20 bitje a sajátja, a többi véletlen).
+  const also = BigInt(GYOKER_MAX_MELYSEG - 20);
+  const xs = [];
+  for (let i = 0; i < 300; i++) {
+    const veletlen = BigInt('0x' + randomBytes(GYOKER_MAX_MELYSEG / 8).toString('hex')) & ((1n << also) - 1n);
+    xs.push(((sajat >> also) << also) | veletlen);
+  }
+  const ki = {
+    becsles: gyokerMelysegBecslese(xs, sajat).melyseg === 21,
+    sapka: gyokerMelysege(1e60) === GYOKER_MAX_MELYSEG && gyokerMelysege(1e12) === 32,
+    szintek: gyokerDarabKulcsai('a1', 16).length === 3 && gyokerDarabKulcsai('a1', GYOKER_MAX_MELYSEG).length === 2
+      && gyokerDarabKulcsai('a1', 0).length === 2
+  };
+  if (!Object.values(ki).every(Boolean)) console.log('    (D106 mélység — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ')');
+  return Object.values(ki).every(Boolean);
+});
+
+proba('⭐ D106: a nyitás gyökér-jele (`gyd`) 144 mélységig olvasható, fölötte és hibás alakban nem', () => {
+  const j = gyokerJelOlvasasa(gyokerJelSzovege(100, ['abc', null, 'X_-9']));
+  return j?.melyseg === 100 && j.lenyomatok.length === 3 && j.lenyomatok[0] === 'abc' && j.lenyomatok[1] === null
+    && j.lenyomatok[2] === 'X_-9' && gyokerJelOlvasasa('144:a')?.melyseg === 144 && gyokerJelOlvasasa('145:a') === null
+    && gyokerJelOlvasasa('16:a:b:c')?.melyseg === 16 && gyokerJelOlvasasa('1000:a') === null
+    && gyokerJelOlvasasa('5') === null && gyokerJelOlvasasa(null) === null && gyokerJelOlvasasa('5:a:b:c:d') === null;
 });
 
 // ===================================

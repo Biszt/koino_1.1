@@ -149,7 +149,9 @@ import {
   cimjegyzekTema, hirdetendoTemak, gyokerDarabTemaja, sajatGyokerDarabjai, HIRDETES_KOZ,
   keszulekKopogtatoTemaja, temaKopogtatoja, figyelendoKopogtatok,
   // ⭐ D95/4: a gyökér darabjai a cserében.
-  gyokerDarabja, gyokerMelysegBecslese, gyokerDarabKulcsai, gyokerDarabKulcsa, gyokerDarabBol, GYOKER_DARAB_CEL
+  gyokerDarabja, gyokerMelysegBecslese, gyokerDarabKulcsai, gyokerDarabKulcsa, gyokerDarabBol, GYOKER_DARAB_CEL,
+  // ⭐ D106: a darab-szám a koinó saját határáig (a gyökér-lenyomat, BigInt).
+  gyokerLenyomata, darabbaEsik, GYOKER_MAX_MELYSEG
 } from './js/csere/cimjegyzek.js';
 // ⭐⭐ D92/1: a függő kérelmek (a cím nélküli kérés — a kopogtatás).
 import {
@@ -1026,8 +1028,8 @@ async function gyokerMelysegem() {
   const alairo = (await tablaKulcsBiztositasa()).alairoNyilvanos;
   const valtozat = tar.szeletValtozata('') + '|' + alairo;
   if (gyokerBecslesEmlek?.valtozat === valtozat) return gyokerBecslesEmlek.b;
-  const szuletesek = (await tar.bejelentesek('')).filter((e) => e.koino === KOINO).map((e) => gyokerDarabja(e.azonosito, 16));
-  const { melyseg, becsles } = gyokerMelysegBecslese(szuletesek, gyokerDarabja('keszulek|' + alairo, 16), GYOKER_CEL);
+  const szuletesek = (await tar.bejelentesek('')).filter((e) => e.koino === KOINO).map((e) => gyokerLenyomata(e.azonosito));
+  const { melyseg, becsles } = gyokerMelysegBecslese(szuletesek, gyokerLenyomata('keszulek|' + alairo), GYOKER_CEL);
   const b = { melyseg, becsles, alairo, darabok: new Set(gyokerDarabKulcsai(alairo, melyseg)) };
   gyokerBecslesEmlek = { valtozat, b };
   return b;
@@ -1541,7 +1543,7 @@ async function fuggoKerelemFelvetele(k, { cimek = null, dht = false } = {}) {
   } else {
     // A gyökér: a darab a saját tudásomból (egy friss készüléknél 0), és a szomszédos mélységek (D91/3).
     const m = (await gyokerMelysegem()).melyseg;
-    const darabok = [[m, 0], ...(m > 0 ? [[m - 1, 0]] : []), [m + 1, 0], [m + 1, 1]];
+    const darabok = [[m, 0], ...(m > 0 ? [[m - 1, 0]] : []), ...(m < GYOKER_MAX_MELYSEG ? [[m + 1, 0], [m + 1, 1]] : [])];
     for (const [mm, dd] of darabok) {
       kopogtatok.push({ fajta: 'gyoker', kulcs: mm + ':' + dd });
       if (dht) {
@@ -2359,8 +2361,8 @@ async function tomoritesSzabalya() {
     const helyek = bejelentesHelyei(e);
     if (helyek.some((k) => p.has(k))) return true;
     if (helyek.includes('')) {
-      const d16 = gyokerDarabja(e.azonosito, 16);
-      if (darabok.some((d) => (d16 >> (16 - d.melyseg)) === d.darab)) return true;
+      const h = gyokerLenyomata(e.azonosito);
+      if (darabok.some((d) => darabbaEsik(h, d.melyseg, d.darab))) return true;
     }
     if (LANC_TIPUSOK.has(e.tipus) || e.tipus === TAGSAGI_CSOMAG) return true;
     if (e.tipus === LEZARASI_OSSZEGZES || lezarasJavaslatok.has(e.azonosito)) return true;
@@ -4587,13 +4589,15 @@ try {
         } else {
           const m = (await gyokerMelysegem()).melyseg;
           const sajat = sajatGyokerDarabjai((await tablaKulcsBiztositasa()).alairoNyilvanos, m, 1)[0];
-          const d = ervek[1] !== undefined ? parseInt(ervek[1], 10) : sajat;
-          if (!Number.isInteger(d) || d < 0 || d >= 2 ** m) {
-            throw new Error('A gyökér-darab sorszáma 0 és ' + (2 ** m - 1) + ' között (mélység: ' + m + ')');
+          // ⭐ D106: a darab száma BigInt (a mélység a koinó saját határáig mehet — `GYOKER_MAX_MELYSEG`).
+          const d = ervek[1] === undefined ? sajat : /^\d+$/.test(ervek[1]) ? BigInt(ervek[1]) : -1n;
+          const darabSzam = 1n << BigInt(m);
+          if (d < 0n || d >= darabSzam) {
+            throw new Error('A gyökér-darab sorszáma 0 és ' + (darabSzam - 1n) + ' között (mélység: ' + m + ')');
           }
           const parok = [[m, d]];
-          if (m > 0) parok.push([m - 1, d >> 1]);
-          if (m < 16) parok.push([m + 1, d * 2], [m + 1, d * 2 + 1]);
+          if (m > 0) parok.push([m - 1, d >> 1n]);
+          if (m < GYOKER_MAX_MELYSEG) parok.push([m + 1, d * 2n], [m + 1, d * 2n + 1n]);
           probak = parok.map(([mm, dd]) => ({ cimke: 'gyökér ' + mm + ':' + dd, tema: gyokerDarabTemaja(KOINO, mm, dd) }));
         }
         kiir(SZIN.vastag + 'KERESÉS a DHT-n' + SZIN.vege);

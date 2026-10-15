@@ -185,7 +185,10 @@ A K1–K7 a javaslat szerint — az átbeszélés két új szempontjával:
 - **K4 (A)** · **K5 (A)** — 30 nap; a gondolat tartói közül néhány „soros” újít, nem mind · **K6 (A)** — a 75. mérés a 7.
   szakasz és a fenti szempontok szerint · **K7 (A)**.
 
-### ⏸️ A K8 előtti kérdés: mi a „végtelen” mércéje egy rögzített szélességű számnál?
+### ✅ A K8 előtti kérdés: mi a „végtelen” mércéje egy rögzített szélességű számnál? — D106: a (C)
+
+> Csaba (2026-10-15): *„A (C)-t választom: az (A) a szabály, a drága helyen kimondott (B)-kivétel. Mehet a K8 és a 75.
+> mérés.”* — A K8 ezzel: a darab-szám legfeljebb 144 bit (megépült — a fázis-2 terv D106-a).
 
 A „végtelen” ellenőrizhető alakja (CLAUDE.md, 2026-09-26) a NÖVEKEDÉSRŐL szól: egy készülék terhe ne függjön a koinó
 méretétől. A „gyakorlatilag végtelen” két külön állítást mosott össze: *nincs korlát*, és *van, de olyan magasan, hogy a

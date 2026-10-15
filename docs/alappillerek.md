@@ -373,8 +373,8 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 bejáró (D102, 112–121.), a Struktúra (122–126.), a Síkidom (127–135.), a Keresés helyi alja (136–138.) és az értesítés-réteg
 (139–143.), és a készülék saját értesítése (D103, 144–147.) is. ⭐ Csaba kérésére (2026-10-15) az ALSÓ SÁV: a fő menü és
 az infók a prototípus helyén, a csere ideje és az automatikus frissítés a csere után (148–152.); és a kézi próba lelete
-nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldőlt (D105, 154.) — a K8 (a darab-szám szélessége)
-a „végtelen” mércéjének pontosítására vár; utána a 75. mérés.
+nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldőlt (D105, 154.), a „végtelen” mércéje is (D106,
+155.: a koinó saját határa — és vele a K8, a 144 bites darab-szám); utána a 75. mérés.
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 
@@ -1019,3 +1019,12 @@ a „végtelen” mércéjének pontosítására vár; utána a 75. mérés.
     „parkban”-t nem találná); mert a kulcs ingyen van (a két tulajdonos csak tagként ér valamit); és mert egy szó minden
     bejegyzése egy fiókba esik — a gyakori szó fiókja a koinóval lineárisan nőne (a „végtelen” próbája) · Claude (az
     átnézés és az átbeszélés), Csaba (a döntés) · `docs/kereso_reteg_atvizsgalas.md` 7–8. szakasz, a fázis-2 terv D105-e.
+155. **2026-10-15 · a „végtelen” mércéje (D106, Csaba: „A (C)-t választom”) és vele a K8** → **a SZABÁLY: egy
+    méret-korlát se legyen szűkebb, mint a koinó saját határa (az azonosító-tér, ~2^128 entitás); ahol ez drága, KIMONDOTT
+    kivétel, a koinó szabályaiból levezetett felső mérettel és tartalékkal, egy helyen (ma egy: a kanonikus alak 2^53-as
+    egész-határa, ~900 milliárd e-emberig); a gyökér-darab száma 16 bit helyett a mélységhez kellő bit, legfeljebb 144
+    (BigInt; 16-ig bájtra a régi kulcs)** · mert a „gyakorlatilag végtelen” egy feltevésen állt a valóságról (az IPv4 32
+    bitje is „végtelen” volt), és a 16 bites darab a kereső-indexnél már ~3,4 millió gondolatnál megállt volna; a teher-korlát
+    (egy készülék munkája) viszont a végtelen eszköze, nem korlát · Csaba (a mérce), Claude (a K8) · a fázis-2 terv D106-a,
+    `cimjegyzek.js` (`GYOKER_MAX_MELYSEG`, `gyokerLenyomata`, `gyokerJelOlvasasa`), `vonal.js`, `szeletEgyeztetes.js`,
+    `koino.js`. ⏸️ A tagsági lánc 64-es korlátja a szabály szerint szűk — külön lépés (állapot-befolyásoló, D66).
