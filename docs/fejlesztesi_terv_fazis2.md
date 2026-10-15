@@ -5595,6 +5595,14 @@ végtelen).« ezt leszámítva, addig, ameddig át nem pontosítjuk, a gyakorlat
 **A sorrend:** ① a 75. mérés → ② a szó és az index-darab (a K8 után) → ③ a tartás és a hirdetés → ④ a felajánlás → ⑤ a
 kérdés → ⑥ a halványulás → ⑦ a Keresés modálja a hálózati találatokkal. Elágazás 154.
 
+✅ **① A 75. MÉRÉS (2026-10-16, `keresoMeres.js` — az eredmények 75.): a D105 alakja kiállja.** A K7 nélkül a gyakori szó
+fiókja (a „nem”: a címek ~5%-a) a koinóval lineárisan nő — egymillió gondolatnál egy készüléken ~31 MB; osztódással (B =
+256) ~1,4 MB a legtöbbet tartónál, ~0,5 MB átlagosan, és nem nő a koinóval. A K2 (C) a tőre keresve a „legalább 10
+találatot” 47–72% helyett 91–96%-ban hozza. Az első válasz 1 perces körrel medián 1 perc. ⭐ A mérés két paramétert ad a
+②–④-hez: a darab **B = 256** (kisebbel a teher simább, de a teljesség romlik), és a tartó tagság-gyorsítótára a régiója
+szerzőinél nagyobb (**4096**); az új tartó első kitöltése (~8,4 MB egymillió gondolatnál) a háttérben jöjjön, a tagsági
+kísérők gépével.
+
 ### D106. A „VÉGTELEN” MÉRCÉJE: A KOINÓ SAJÁT HATÁRA, ÉS A KIMONDOTT KIVÉTEL (2026-10-15, Csaba: „A (C)-t választom”)
 
 **A kérdés** (a D105 K8-a nyomán): Csaba a darab-szám szélessége előtt a „gyakorlatilag végtelen” fogalmát pontosíttatta.

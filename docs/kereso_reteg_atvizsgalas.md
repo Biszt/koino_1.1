@@ -224,3 +224,23 @@ egy szám, ami a koinóval nőne, de rögzített szélességű: ha a koinó kin�
   (~900 milliárd e-emberig pontos). A K8 ezzel: a darab-szám annyi bitet vesz a lenyomatból, amennyi a mélységhez kell,
   legfeljebb 144-et (amennyi a kulcsba fér) — nem 48-at. A 64-es lánc-korlát az (A) szerint szűk: a felemelése (~128)
   olcsó, külön lépésként.
+
+## 9. ✅ A 75. mérés (2026-10-16) — a D105 alakja kiállja
+
+> A részletek: [`koino/meres/eredmenyek.md`](../koino/meres/eredmenyek.md) 75. (`node koino/meres/keresoMeres.js`).
+
+- **K7:** a legnagyobb fiók (a „nem”) a címek ~5%-a (prózai aránnyal ~10%) MINDEN méretnél — osztódás nélkül egymillió
+  gondolatnál egy készüléken ~53 ezer bejegyzés (~31 MB, az átlag 61-szerese); osztódással (B = 256) ~2400 (~1,4 MB,
+  2,8×), és nem nő a koinóval. ✅ A K7 kell, és működik.
+- **K2:** a tőre keresve („park”) a „legalább 10 találat vagy mind” (A) 47–72%, **(C) 91–96%** — a magyar toldalékolás
+  miatt az egész szavas kulcs a találatok több mint felét elveszíti. ✅ A (C) megéri a kétszeres tárolást.
+- **Két szavas kérdés:** 96–100%-ban a ritkább szó fiókja kicsi — egy helyről teljes válasz.
+- **A tartók és a késés:** régiónként ~8–12 tartó; az első válasz 1 perces körrel medián 1 perc, 99% 11–14 perc.
+- **K3:** a tartó a régiója ~1240 szerzőjét látja — a tagság-gyorsítótára ennél nagyobb legyen (**4096**: 30 naponként
+  ~5% új szerző, ~41 KB/nap). Az új tartó első kitöltése a közös ősökkel ~8,4 MB (egymillió gondolat, 100 ezer tag) — a
+  ④-ben a háttérben, a tagsági kísérők gépével, nem egyszerre.
+- **K4–K5:** a felajánlás ~90 KB gondolatonként (felső becslés); a megújítás „soros” újítóval ~15–17 KB/nap/készülék; a
+  legnagyobb állandó tétel a régió hirdetése a DHT-n (~650 KB/nap, mint a gyökér-darabé).
+
+⏭️ **A sorrendből:** ① ✅ · ② a szó és az index-darab (tiszta számítás, a D106 szerinti 144 bites darab-számmal; B = 256,
+T = 512) → ③ a tartás és a hirdetés → ④ a felajánlás (a tagság a háttérben) → ⑤ a kérdés → ⑥ a halványulás → ⑦ a modál.

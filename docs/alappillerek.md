@@ -374,7 +374,8 @@ bejáró (D102, 112–121.), a Struktúra (122–126.), a Síkidom (127–135.),
 (139–143.), és a készülék saját értesítése (D103, 144–147.) is. ⭐ Csaba kérésére (2026-10-15) az ALSÓ SÁV: a fő menü és
 az infók a prototípus helyén, a csere ideje és az automatikus frissítés a csere után (148–152.); és a kézi próba lelete
 nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldőlt (D105, 154.), a „végtelen” mércéje is (D106,
-155.: a koinó saját határa — és vele a K8, a 144 bites darab-szám); utána a 75. mérés.
+155.: a koinó saját határa — és vele a K8, a 144 bites darab-szám); ✅ a 75. mérés (2026-10-16): a D105 alakja kiállja
+(a K7 nélkül a gyakori szó fiókja a koinóval nő, vele nem; a K2 (C) kétszer annyi találat). ⏭️ ② a szó és az index-darab.
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 

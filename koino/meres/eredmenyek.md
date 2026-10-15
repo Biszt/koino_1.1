@@ -5067,3 +5067,68 @@ EGYETLEN jól ellátott tartó kapja a kérelmeket (a kis, családi koinó — H
 sorba állít: egy oldal 1 kör helyett 6, egy 200-as Struktúra 2–3 perc helyett 46–85 perc (1 perces körrel; 5 percessel
 10–15 helyett 230–425 perc), egy 2000-es 19–29 helyett 176–447 perc. ⭐ A J3 („nem kell”) tehát a nagy, szétszórt
 koinóra igaz, a kicsire nem — a döntés újra Csabáé.
+
+## 75. ⭐⭐ A KERESŐ-RÉTEG ÁRA — szimuláció (D105, K6: „előbb mérés”, 2026-10-16)
+
+*`node koino/meres/keresoMeres.js [N ...] [--prozai] [--B=256] [--T=512]` — magvas véletlen. A kérdés: a D105 kereső-rétege
+(hash a DHT-n, két kulcs szavanként, tag-tulajdonosok, osztódó fiók) mit kíván egy készüléktől, és mit ad a kérdezőnek —
+N = 10 000 · 100 000 · 1 000 000 gondolatnál (fejenként 10, M = N / 10 készülék)? A modell: a cím 2–8 szó (átlag 5); 20%
+rövid szó (1–2 jel, nem kerül indexbe); ~4,7% gyakori szó a prózai arány felével — a koino_1.1 magyar dokumentációjából
+mérve (44 fájl, 250 ezer szó: „nem” 2,14% · „egy” 1,13% · „csak” 0,59% · „két”, „kell”, „hogy” ~0,45% …; `--prozai`: a teljes
+arány és 30% rövid szó); a többi tartalmi szó: tő (Zipf–Mandelbrot, 500 ezer tő) + toldalék (45% nincs; gyakori ragok és
+képzők), a tövek 15%-a igekötővel. Egy fiók = a kulcsot tartalmazó címek; a régiók a gyökér-darab mintájára (a kulcs
+lenyomata, m mélység, ~512 bejegyzés / régió), egy készülék a ±1 legszélesebbjét tartja. Az árak az 58. és a 63. mérésből,
+a késés a 74. mérés modellje (a tartó körönként 70% eséllyel él, 30% eséllyel közvetlenül elérhető, különben ≤ 20 perc a
+kopogtató témáján).*
+
+**A kulcsok (K2):** címenként (A) 3,84–3,86 · (C) 7,04–7,08 kulcs — a (C) ×1,83 bejegyzés. Különböző fiók egymillió
+gondolatnál (A) 1,18 millió · (C) 1,22 millió.
+
+**⛔ K7 — A GYAKORI SZAVAK, MÉRVE:** a legnagyobb fiók (a „nem”) a címek **5,1–5,2%-a** minden méretnél (prózai aránnyal
+10,2–10,5%) — vagyis a koinóval LINEÁRISAN nő; a legnagyobb négybetűs szóeleje-fiók ~3%. Osztódás nélkül egy készülék
+LEGNAGYOBB terhe (C): 943 · 5603 · **53 299 bejegyzés (~31 MB)** — az átlag 1,7 · 8 · **61-szerese**; prózai aránnyal
+egymilliónál 102 915 (~60 MB). ⭐ Osztódással (B = 256): 863 · 1452 · **2443 (~1,4 MB)** — az átlag 1,6 · 2,1 · 2,8-szerese
+(prózai aránnyal 3,1); a 99% 837 · 1239 · 1656. ⭐ **A K7 kell, és működik:** a teher nem nő a koinóval. A maradék szórás a
+darabok „rögeiből” jön (egy darab 128–256 bejegyzés, egy régió ~860): a legtöbbet tartó készülék aránya csak az extrém érték
+módjára, lassan nő (a régiók számával, logaritmikusan). A darab mérete paraméter: B = 128-cal a legtöbb 2,2×, 64-gyel 1,9×
+— de a teljesség romlik (a tőre keresésnél „legalább 10 találat” 91% → 88% → 86%, a két szavas teljes válasz 96% → 93% →
+89%). ⭐ **B = 256 marad** (a legtöbbet tartó készülék is ~1,4 MB).
+
+**K2 — a tőre keresés:** ha a kérdező a tövet írja be („park”), a tővel kezdődő szavú címekből (A) átlagosan **45% · 40% ·
+31%** jön meg, (C) **95% · 79% · 55%** (egy darabot kérdezve egy osztódott fiókból; kettővel 95 · 86 · 63%). „Legalább 10
+találat, vagy mind”: (A) 47 · 58 · 72%, **(C) 96 · 94 · 91%** (kettővel 96 · 95 · 94%). A háromjeles tő (a kérdések ~8%-a)
+mindkettőnél csak a pontos alakot kapja. ⭐ A magyar toldalékolás miatt az egész szavas kulcs a találatok több mint felét
+elveszíti; a (C) megéri a kétszeres tárolást. A „teljes” válasz a gyakori tőnél nagy koinóban minta (a K7 szerint) — a
+felületnek ezt ki kell mondania.
+
+**Két szavas kérdés** (egy valódi cím két tartalmi szava): a ritkább szó fiókja 100 · 99,5 · **95,8%-ban** ≤ 256 — a
+kérdés egy helyről teljes választ kap (a tartó a másik szóra helyben szűr); a ritkább fiók mérete medián 1–2.
+
+**A tartók és a késés:** régiónként (C) átlag 7,8 · 9,8 · 12,2 tartó (az alsó 1%: 3–5), üres régió nincs. Az első válasz
+1 perces körrel medián **1 perc**, 90% 4,6 · 3,4 · 2,9 perc, 99% 14,1 · 12,2 · 10,6 perc; 5 perces körrel medián 5, 90%
+6,9–8,7, 99% 14,6–18,2 perc; válasz nélkül (12 körön belül) 0%. ⭐ A kereső nem „gépelés közbeni”, de nem is lassú: a
+legtöbb kérdésre egy körön belül jön válasz (a régió ~10 tartója közül mindig van közvetlenül elérhető).
+
+**A felajánlás (K4):** gondolatonként ~7 régió, ~7 bejegyzés → ~90 KB (felső becslés: DHT-keresés + kopogtatás
+régiónként; a közvetlenül elérhető tartónál a kopogtatás elmarad).
+
+**K3 — a tagság a tartónál:** a tartó a RÉGIÓJA bejegyzéseinek tulajdonosait látja, nem az egész koinóét: ~860 bejegyzés,
+~1240 különböző szerző egymilliónál. ⛔ A gyorsítótárnak ennél nagyobbnak kell lennie: 1024 szerzővel egymilliónál 30
+naponként a 64%-uk újra bizonyítékot kíván (~490 KB/nap), **4096-tal 5,4%** (~41 KB/nap; 100 ezernél 4,3%, 10 ezernél
+1,9%). Az új tartó ELSŐ kitöltése: 454 · 851 · 1241 szerző — ~3,5 · 8,8 · 16,1 MB, ha minden lánc külön jön; ⭐ a közös
+ősökkel (a meghívási fa teteje egyszer jön) egymilliónál **~8,4 MB**, és egy új szerző utána ~4 lépés (~5 KB). Egyszeri,
+de egy telefonon nem kicsi — a ④-ben a háttérben, a tagsági kísérők gépével és a függő-jegyzék korlátaival kell jönnie,
+nem egyszerre.
+
+**A megújítás (K5, 30 nap):** „soros” újítóval **~15–17 KB/nap/készülék** (ha minden tartó újítana, a háromszorosa); a
+tartó oldalán beérkező (bejegyzések + az új szerzők bizonyítéka) 16 · 35 · 59 KB/nap; ehhez jön a régió hirdetése a DHT-n
+(**~650 KB/nap** — 58. mérés) — **ez a kereső-réteg legnagyobb állandó tétele**, ugyanannyi, mint a gyökér-darabé.
+
+⭐ **A lelet:** a D105 alakja kiállja a próbát. A K7 (az osztódó fiók) nélkül a gyakori szó fiókja a koinóval lineárisan nő
+(egymilliónál ~31 MB egy készüléken) — vele egy készülék terhe ~0,5 MB átlagosan, ~1,4 MB a legtöbbet tartónál, és nem
+függ a koinó méretétől (a „végtelen” rendben). A K2 (C) a magyar toldalékolás miatt kétszer annyi találatot hoz, mint az
+egész szó. Két paraméter a mérésből: a darab B = 256, és a tartó tagság-gyorsítótára a régiója szerzőinél nagyobb (4096).
+⚠️ A határai: a szóeloszlás szintetikus (a gyakori szavak arányát a koino_1.1 magyar szövegéből mérve, a tövek és a
+toldalékok modellből — a tőváltozás, a hangrend kimarad); a „tő-találat” a tő minden toldalékos alakja (a véletlen tövek
+ritkán előtagjai egymásnak — elhanyagolva); a késés a 74. mérés modellje, nem terep; a régiók tartóinak egymás közti
+cseréje (a raj) nincs külön mérve.
