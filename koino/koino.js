@@ -407,7 +407,16 @@ const atmenetiCel = {
  */
 async function sajatVallalasa(allapot) {
   const lanc = (await sajatLancEsemenyei(tar, szerzo)).filter((e) => e.koino === KOINO);
-  return vallalasSzamitasa(lanc, { koinoSzuletes: allapot?.koino?.azonosito ?? null });
+  return vallalasSzamitasa(lanc, { koinoSzuletes: allapot?.koino?.azonosito ?? null, ...kifutasBeallitas() });
+}
+
+/**
+ * ⭐ D104: a kifutás hossza (a pont levétele után ennyi ideig tartom még a szeletet — `vallalas.js` `KIFUTAS`, 24 óra). A
+ * próbák a környezetből állíthatják (`KOINO_KIFUTAS`, ms; 0: nincs kifutás — a rontás-próba).
+ */
+function kifutasBeallitas() {
+  const n = Number.parseInt(process.env.KOINO_KIFUTAS ?? '', 10);
+  return Number.isInteger(n) && n >= 0 ? { kifutas: n } : {};
 }
 
 /**
@@ -2295,7 +2304,7 @@ async function ketFokAllapota(allapot = null) {
   // ⚠️ A teljes állapot nélkül (a csere minden munkájában fut): a koinó születését a tagsági láncom adja.
   const szuletes = allapot?.koino?.azonosito ?? (await koinoSzuletese())?.azonosito ?? null;
   const vallalas = vallalasSzamitasa((await sajatLancEsemenyei(tar, szerzo)).filter((e) => e.koino === KOINO),
-    { koinoSzuletes: szuletes });
+    { koinoSzuletes: szuletes, ...kifutasBeallitas() });
   const tarolo = osszegzesTarolo(KOINO);
   const t = await tarolo.olvas();
   const jegyzek = new Map((await tar.szeletek()).map((x) => [x.szelet, x.db + x.bejelentes]));
@@ -4842,7 +4851,9 @@ try {
       const reszvetel = await reszvetelHalmazom(kf);
       kiir(SZIN.vastag + 'VÁLLALOM (tartós tár): ' + v.szeletek.size + ' szelet' + SZIN.vege);
       kiir(SZIN.halvany + '  ' + pontosak.length + ' tudatpontos · ' + v.azonossag.length + ' azonosság-szelet'
-        + (v.koinoSzuletes ? ' · a koinó születése' : '') + ' · ' + osszegzoDb + ' összegezve (nagy, a küszöb: '
+        + (v.koinoSzuletes ? ' · a koinó születése' : '')
+        + (v.kifuto.size ? ' · ' + v.kifuto.size + ' kifutó (a pontomat levettem, de még követem — D104)' : '')
+        + ' · ' + osszegzoDb + ' összegezve (nagy, a küszöb: '
         + KETFOK.kuszob + ' esemény)' + ((await kiszolgalasBeallitas()).mindent ? ' · „mindent” beállítás (D83/2)' : '')
         + SZIN.vege);
       kiir(SZIN.halvany + '  a cserében: ' + (reszvetel ? reszvetel.size + ' szeletben veszek részt (a szigorú (b) — D97)'
@@ -4855,6 +4866,12 @@ try {
             ? ' · összegezve' + (o?.gyoker ? ' (ellenőrzött gyökér: ' + o.osszPont + ' össz-pont, ' + o.darab + ' levél)'
               : ' (még nincs ellenőrzött gyökér)')
             : ' · ' + (kf.jegyzek.get(az) ?? 0) + ' esemény')
+          + SZIN.vege);
+      }
+      // ⭐ D104: a kifutó szeletek — meddig követem még őket.
+      for (const [az, lejar] of [...v.kifuto.entries()].sort((a, b) => a[1] - b[1])) {
+        kiir('  ' + SZIN.halvany + az.slice(0, 8) + SZIN.vege + '  ' + (allapot.entitasok.get(az)?.cim ?? '(már nem látszik)')
+          + SZIN.halvany + '  · kifut: a pontomat levettem, még követem eddig: ' + new Date(lejar).toLocaleString('hu-HU')
           + SZIN.vege);
       }
       // ⭐ D95/3: a saját eseményeim a nem egészében tartott szeletekben, amiket még egy tartó sem vett át (csak küldő út).

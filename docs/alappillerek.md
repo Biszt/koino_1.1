@@ -372,7 +372,8 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 96–104. bejegyzésében. ⏭️ Csaba a maradék modálokat választotta (D101, 2026-10-11) — az I. csoport kész (105–111.), a
 bejáró (D102, 112–121.), a Struktúra (122–126.), a Síkidom (127–135.), a Keresés helyi alja (136–138.) és az értesítés-réteg
 (139–143.), és a készülék saját értesítése (D103, 144–147.) is. ⭐ Csaba kérésére (2026-10-15) az ALSÓ SÁV: a fő menü és
-az infók a prototípus helyén, a csere ideje és az automatikus frissítés a csere után (148–152.).
+az infók a prototípus helyén, a csere ideje és az automatikus frissítés a csere után (148–152.); és a kézi próba lelete
+nyomán a kifutás (D104, 153.).
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 
@@ -1002,3 +1003,9 @@ az infók a prototípus helyén, a csere ideje és az automatikus frissítés a 
     `_ertesitesBadgeFrissitese`-je a menüben (betöltéskor, olvasottnak jelöléskor, a csere után)** · mert a D101 ⑥ a
     postafiókot megépítette, a kártyák számlálóját bekötötte, de a fő menüét nem — a „réteg kész, az éles út nem hívja”
     minta; az alsó sáv bekötésekor derült ki · Claude · `foMenu.js`.
+153. **2026-10-15 · a kifutás (D104, Csaba: „rendben” — az (A))** → **a pont levétele után a készülék még 24 óráig tartja
+    a szeletet (a vállalás a saját láncból: a levétel ideje a saját eseményem `ido`-ja), így a többiek későbbi változásait
+    is megkapja; a lejárat után a napi tömörítés viszi az átmenetibe** · mert a telefon + laptop kézi próbáján a telefon a
+    levétele pillanatában elengedte az egyezmény szeletét, a laptop egy perccel későbbi levételéről soha nem értesült, és az
+    egyezmény nála életben maradt; az egyszeri utólagos lekérés (B) épp ezt nem javította volna · Claude · `vallalas.js`
+    (`KIFUTAS`, `kifuto`), `koino.js` (`kifutasBeallitas`, a `vallalas` kiírása).

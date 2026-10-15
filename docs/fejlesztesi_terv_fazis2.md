@@ -5527,6 +5527,36 @@ menü értesítés-számlálója a ⑥ óta 0-t mutatott — javítva. Elágazá
 másik folyamat — az őrjárat — körét és a csere hozamát, és a számok a csere után nőnek) — mind rontással; böngészőben két
 készülékkel kipróbálva (a gyerek a csere után kézi frissítés nélkül megjelent).
 
+### D104. A KIFUTÁS: A PONT LEVÉTELE UTÁN MÉG 24 ÓRÁIG TARTOM A SZELETET (2026-10-15, Csaba: „rendben”)
+
+**A lelet (a telefon + laptop kézi próbája, 2026-10-14):** *„a módosítási egyezményt a telefonról nem tudtam eltüntetni,
+pedig levettem róla az összes tudatpontot.”* Az események szerint a telefon 16:58-kor vette le a pontját, a laptop 16:59-kor.
+A laptopon az egyezmény helyesen eltűnt (D14). A telefon viszont a szigorú (b) alatt a levétele PILLANATÁBAN elengedte a
+szeletet (a vállalás a pozitív pontú szeletekből számolódott — D75/1), ezért a cserében már nem vett részt benne, a laptop
+egy perccel későbbi levételéről soha nem értesült, és a régi 1 pontját látta — az egyezmény nála életben maradt. ⛔ *Aki
+elengedi a szeletet, az az utolsó állapotáról lemarad.*
+
+**A három lehetőség:** (A) kifutás — a pont levétele után a készülék még egy ideig tartja a szeletet · (B) egyszeri
+lekérés az elengedés után — ⛔ épp ezt az esetet nem javította volna (16:58-kor a laptop pontja még állt) · (C) csak jelezni
+a lapon. ✅ **Csaba: (A).**
+
+#### ✅ MEGÉPÜLT (2026-10-15)
+
+⭐ A vállalás (`vallalas.js` `vallalasSzamitasa`) a saját láncomból azt is megjegyzi, mikor vettem le egy szeletről az
+utolsó pontomat (pozitívról 0-ra — a saját eseményem `ido`-ja, a saját órám); ha azóta `KIFUTAS` (24 óra) még nem telt el,
+a szelet vállalt marad (`kifuto`: mikor jár le). Ha újra pontot teszek rá, nem kifutó; ami soha nem volt pozitív, az nem
+fut ki. ⭐ Minden fogyasztó egységesen kapja, mert a vállalásból számol: a részvétel a cserében (`reszvetelHalmazom`), a
+tömörítés (a kifutó szelet a tartós tárban marad; a lejárat után a napi tömörítés viszi az átmenetibe), a törzs kiszolgálása,
+a lap tartott-kérdése. A D14 a kifutás alatt megkapott 0-s eseményből ítél (a 0 pont tudás), és a kifutás után is: amíg a
+pont-események bármelyik tárban megvannak, az entitás nem tér vissza. A `vallalas` parancs kiírja a kifutó szeleteket és a
+lejáratukat. A próbák a környezetből állíthatják (`KOINO_KIFUTAS`, ms; 0: nincs kifutás). ⚠️ A vállalás helyi: semmit nem
+dönt el a koinóban (D17 áll), és a terhe a saját tevékenységemmel arányos (egy nap levételei — a „végtelen” próbája).
+
+Próbák: a modul-próba (`atmenetiProba.js`: a kifutás kezdete a levételtől, a 24 órás határ, az újra pontozott és a soha nem
+pozitív szelet) és a bekötés (`parancssorProba.js`: a terepi eset két készüléken — a telefon („alap”) leveszi a pontját,
+a laptop („mindent”) később; a csere után a gondolat a telefonon is eltűnik) — mindkettő rontással; a bekötés rontása
+(`KOINO_KIFUTAS=0`) pontosan a terepi hibát hozza vissza. Elágazás 153.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

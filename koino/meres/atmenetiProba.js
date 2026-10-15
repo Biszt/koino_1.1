@@ -15,7 +15,7 @@ import { atmenetiTarNyitasa, ketTarBemenete, ketTarNezet } from '../js/tar/atmen
 import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import { esemenyMentese, koinoEsemenyei } from '../js/tar/esemenyTar.js';
 import { allapotSzamitasa } from '../js/allapot/allapotSzamitas.js';
-import { vallalasSzamitasa } from '../js/allapot/vallalas.js';
+import { vallalasSzamitasa, KIFUTAS } from '../js/allapot/vallalas.js';
 import { toredekAzonosito } from '../js/allapot/szabalyok.js';
 
 const { proba, futtatas } = probaGyujtemeny('A vállalás és az átmeneti tár (B/1–B/2, D75)');
@@ -147,10 +147,43 @@ proba('⭐⭐ B/1: a vállalás a saját láncból — a pozitív pontú szelete
     await anna.tesz('TudatpontRendezes', { entitas: g2.azonosito, pont: 5, kiosztva: 15 }),
     await anna.tesz('TudatpontRendezes', { entitas: tor, pont: 1, kiosztva: 16 }),
     await anna.tesz('TudatpontRendezes', { entitas: g2.azonosito, pont: 0, kiosztva: 11 })];   // visszavette
-  const v = vallalasSzamitasa([...lanc].reverse(), { koinoSzuletes: 'K'.repeat(43) });
+  // (A visszavett szelet kifutását — D104 — a következő próba méri; itt a kifutás nélküli ítélet.)
+  const v = vallalasSzamitasa([...lanc].reverse(), { koinoSzuletes: 'K'.repeat(43), kifutas: 0 });
   return v.szeletek.has(g1.azonosito) && !v.szeletek.has(g2.azonosito) && v.szeletek.has(tor)
     && v.szeletek.has(belep.azonosito) && v.szeletek.has('K'.repeat(43)) && v.szeletek.size === 4
     && !v.szeletek.has('');                            // ⛔ a gyökér nem vállalás (D90)
+});
+
+// ⭐⭐ D104 (Csaba, 2026-10-15): A KIFUTÁS — a pont levétele után még 24 óráig tartom a szeletet, hogy a többiek későbbi
+// változásait (pl. az utolsó pont levételét egy egyezményről) is megkapjam. Az idő a saját eseményem `ido`-ja.
+// Rontás: a kifutás nélkül a frissen visszavett szelet azonnal kiesik → bukik.
+proba('⭐⭐ D104: a KIFUTÁS — a visszavett pontú szeletet még 24 óráig tartom; utána kiesik, és ami újra pontot kapott, nem kifutó', async () => {
+  const anna = await ujEember(KOINO);
+  const T = Date.UTC(2026, 9, 15, 17, 0, 0);
+  const ORA = 3600 * 1000;
+  const g1 = await anna.tesz('GondolatLetrehozas', { cim: 'G1', meret: 10 }, T);
+  const g2 = await anna.tesz('GondolatLetrehozas', { cim: 'G2', meret: 10 }, T);
+  const g3 = await anna.tesz('GondolatLetrehozas', { cim: 'G3', meret: 10 }, T);
+  const lanc = [g1, g2, g3,
+    await anna.tesz('TudatpontRendezes', { entitas: g1.azonosito, pont: 10, kiosztva: 10 }, T),
+    await anna.tesz('TudatpontRendezes', { entitas: g2.azonosito, pont: 5, kiosztva: 15 }, T),
+    await anna.tesz('TudatpontRendezes', { entitas: g1.azonosito, pont: 0, kiosztva: 5 }, T + ORA),       // g1 levéve
+    await anna.tesz('TudatpontRendezes', { entitas: g1.azonosito, pont: 0, kiosztva: 5 }, T + 5 * ORA),   // újra 0: a kezdet marad
+    await anna.tesz('TudatpontRendezes', { entitas: g2.azonosito, pont: 0, kiosztva: 0 }, T + 2 * ORA),   // g2 levéve…
+    await anna.tesz('TudatpontRendezes', { entitas: g2.azonosito, pont: 3, kiosztva: 3 }, T + 3 * ORA),   // …és újra rajta
+    await anna.tesz('TudatpontRendezes', { entitas: g3.azonosito, pont: 0, kiosztva: 3 }, T + 3 * ORA)];  // soha nem volt pozitív
+  const kozben = vallalasSzamitasa(lanc, { most: T + 10 * ORA });
+  const hatar = vallalasSzamitasa(lanc, { most: T + ORA + KIFUTAS });
+  const elotte = vallalasSzamitasa(lanc, { most: T + ORA + KIFUTAS - 1 });
+  const ki = {
+    kozben: kozben.szeletek.has(g1.azonosito) && kozben.kifuto.get(g1.azonosito) === T + ORA + KIFUTAS,
+    ujraPont: kozben.szeletek.has(g2.azonosito) && !kozben.kifuto.has(g2.azonosito),
+    sosemPozitiv: !kozben.szeletek.has(g3.azonosito) && !kozben.kifuto.has(g3.azonosito),
+    hatar: !hatar.szeletek.has(g1.azonosito) && hatar.kifuto.size === 0 && elotte.szeletek.has(g1.azonosito),
+    napig: KIFUTAS === 24 * ORA
+  };
+  if (!Object.values(ki).every(Boolean)) console.log('    (kifutás — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ')');
+  return Object.values(ki).every(Boolean);
 });
 
 export default futtatas;

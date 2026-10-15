@@ -16,9 +16,20 @@
 //
 // ⚠️ Ha a pontomat visszaveszem, a szelet kiesik a vállalásból (D75/1) — a számítás a lánc végén áll.
 //
+// ⭐⭐ D104 (Csaba, 2026-10-15): A KIFUTÁS — de nem azonnal. A pont levétele után még `KIFUTAS` (24 óra) ideig tartom
+// a szeletet, így a többiek KÉSŐBBI változásait is megkapom. Mérte a kézi próba (telefon + laptop): a telefon levette a
+// pontját egy egyezményről, a laptop egy perccel később; a telefon a levétele pillanatában elengedte a szeletet, ezért a
+// laptop levételéről soha nem értesült — a régi pontot látta, és az egyezmény nála életben maradt (a laptopon helyesen
+// eltűnt). ⭐ Az egyszeri utólagos lekérés (B) épp ezt nem javította volna (a lekérés pillanatában a laptop pontja még
+// állt); a kifutás bármelyik későbbi változást elhozza, amíg tart. Az idő a SAJÁT órám (a saját eseményem `ido`-ja) —
+// a vállalás helyi, semmit nem dönt el a koinóban; a terhe a saját tevékenységemmel arányos (egy nap levételei).
+//
 // Használják: koino.js (a `vallalas` parancs, a `hozd`, a jelzés), a próbák.
 
 import { pontEsemenyMerlege } from './szabalyok.js';
+
+/** ⭐ D104: a pont levétele után ennyi ideig tartom még a szeletet (a többiek későbbi változásaiért). */
+export const KIFUTAS = 24 * 3600 * 1000;
 
 /**
  * A vállalás a saját láncomból.
@@ -26,13 +37,18 @@ import { pontEsemenyMerlege } from './szabalyok.js';
  * @param {Array<Object>} sajatEsemenyek - a saját eseményeim EBBEN a koinóban (bármilyen sorrendben)
  * @param {Object} [beallitas]
  * @param {string|null} [beallitas.koinoSzuletes] - a koinó `KoinoLetrehozas` eseményének azonosítója
+ * @param {number} [beallitas.most] - a mostani idő (a kifutáshoz; alapból `Date.now()`)
+ * @param {number} [beallitas.kifutas] - a kifutás hossza ms-ban (alapból `KIFUTAS`; 0: nincs kifutás)
  * @returns {{szeletek: Set<string>, pontok: Map<string, number>, azonossag: Array<string>,
- *            koinoSzuletes: string|null}}
+ *            koinoSzuletes: string|null, kifuto: Map<string, number>}} a `kifuto`: a pont nélkül, de még kifutásban
+ *            tartott szeletek → mikor jár le a kifutásuk
  */
 export function vallalasSzamitasa(sajatEsemenyek, beallitas = {}) {
   const lanc = [...sajatEsemenyek].sort((a, b) => a.sorszam - b.sorszam);
   const allas = { osszeg: 0, pontok: new Map() };
   const azonossag = [];
+  // ⭐ D104: szeletenként mikor vettem le az utolsó pontomat (pozitívról 0-ra) — ha azóta újra tettem rá, kiesik.
+  const levetel = new Map();
   // ⭐ A folytonosságot ugyanúgy követjük, mint a szabály-réteg (a saját láncunk rendes esetben ép — de
   // ha nem, az ítéletnek akkor is egyeznie kell).
   let folytonos = true;
@@ -44,8 +60,11 @@ export function vallalasSzamitasa(sajatEsemenyek, beallitas = {}) {
     if (e.tipus !== 'TudatpontRendezes') continue;
     const m = pontEsemenyMerlege(e, allas, folytonos);
     if (m.elvetve) continue;                     // ami nem számít, az a régi értéket hagyja érvényben
+    const elozo = allas.pontok.get(m.entitas) ?? 0;
     allas.pontok.set(m.entitas, m.pont);
     allas.osszeg = m.ujOsszeg;
+    if (m.pont > 0) levetel.delete(m.entitas);
+    else if (elozo > 0) levetel.set(m.entitas, Number.isFinite(e.ido) ? e.ido : 0);
   }
 
   const szeletek = new Set();
@@ -53,5 +72,14 @@ export function vallalasSzamitasa(sajatEsemenyek, beallitas = {}) {
   for (const a of azonossag) szeletek.add(a);
   const koinoSzuletes = typeof beallitas.koinoSzuletes === 'string' ? beallitas.koinoSzuletes : null;
   if (koinoSzuletes) szeletek.add(koinoSzuletes);
-  return { szeletek, pontok: allas.pontok, azonossag, koinoSzuletes };
+  // ⭐ D104: a kifutó szeletek — a pont levétele után még `kifutas` ideig.
+  const most = Number.isFinite(beallitas.most) ? beallitas.most : Date.now();
+  const kifutas = Number.isFinite(beallitas.kifutas) && beallitas.kifutas >= 0 ? beallitas.kifutas : KIFUTAS;
+  const kifuto = new Map();
+  for (const [kulcs, ido] of levetel) {
+    if (szeletek.has(kulcs) || most - ido >= kifutas) continue;
+    szeletek.add(kulcs);
+    kifuto.set(kulcs, ido + kifutas);
+  }
+  return { szeletek, pontok: allas.pontok, azonossag, koinoSzuletes, kifuto };
 }

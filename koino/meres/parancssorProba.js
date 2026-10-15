@@ -960,7 +960,9 @@ proba('⭐⭐ D98/2–4: a két ágú szerző eseményei egy harmadik készülé
 // B („alap”) vállalja G-t (megkapja az eseményeit, pontot tesz rá), aztán visszavonja a pontját. A `tomorit` után a
 // tartós tárban NINCS ott A G-re tett pontja (az átmeneti tárba került), de ott marad B saját minden eseménye, a koinó
 // születése és G születése (a gyökér-darabja). ⭐ Viselkedést mérünk: a két tár fájlját. Rontás: a `tomorit proba` nem ír.
-proba('⭐⭐ D75/1: a visszavett vállalás a TÖMÖRÍTÉSSEL az átmeneti tárba kerül — a saját eseményeim és a koinó születése maradnak',
+// ⭐ D104 (2026-10-15): a visszavett vállalás a KIFUTÁS után esik ki — a kifutás alatt a tömörítés megtartja (a szelet még
+// vállalt), utána (`KOINO_KIFUTAS=0` — mintha letelt volna) viszi az átmenetibe.
+proba('⭐⭐ D75/1: a visszavett vállalás a TÖMÖRÍTÉSSEL az átmeneti tárba kerül (a D104 kifutása után) — a saját eseményeim és a koinó születése maradnak',
   async () => {
     const a = await ujKeszulek();
     const b = await ujKeszulek();
@@ -976,9 +978,14 @@ proba('⭐⭐ D75/1: a visszavett vállalás a TÖMÖRÍTÉSSEL az átmeneti tá
       const gT = aEsemenyei.find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
       await fut(b, 'pont', g, '5');
       await fut(b, 'pont', g, '0');                         // a vállalás visszavéve
-      const proba = tiszta(await fut(b, 'tomorit', 'proba', kornyezet));
+      // ⭐ D104: a kifutás alatt a tömörítés megtartja (a szelet még vállalt) …
+      await fut(b, 'tomorit', kornyezet);
+      const kifutasban = await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8');
+      // … a kifutás után (mintha letelt volna) már kiviszi.
+      const lejart = { ...kornyezet, KOINO_KIFUTAS: '0' };
+      const proba = tiszta(await fut(b, 'tomorit', 'proba', lejart));
       const elotte = await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8');
-      const kesz = tiszta(await fut(b, 'tomorit', kornyezet));
+      const kesz = tiszta(await fut(b, 'tomorit', lejart));
       const tartos = await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8');
       const atmeneti = (await readdir(join(b, 'sajat', 'atmeneti')).catch(() => []));
       let atmenetiTartalom = '';
@@ -992,6 +999,7 @@ proba('⭐⭐ D75/1: a visszavett vállalás a TÖMÖRÍTÉSSEL az átmeneti tá
       const sajatPontok = tartos.split('\n').filter(Boolean).map((x) => JSON.parse(x)).filter((e) => e.tipus === 'TudatpontRendezes'
         && e.entitas === gT && e.szerzo !== aSzerzo).length;
       const ki = {
+        kifutasbanMarad: azonositok(kifutasban).has(aPont),
         probaNemIrt: /kerülne az átmenetibe/.test(proba) && azonositok(elotte).has(aPont),
         kiirta: /Tömörítve/.test(kesz),
         tartosbolKiment: !tartosAz.has(aPont),
@@ -2835,6 +2843,72 @@ proba('⭐⭐ D103: a készülék saját értesítése — az őrjárat számolj
     await varj(1000);
     await rm(a, { recursive: true, force: true });
     await rm(b, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐⭐ D104 (Csaba, 2026-10-15): A KIFUTÁS A CSERÉBEN — a terepi eset, két készüléken
+// ===================================
+//
+// A kézi próba lelete: a telefon („alap”) levette a pontját egy gondolatról, a laptop („mindent”) egy kicsit később; a
+// telefon a levétele pillanatában elengedte a szeletet, ezért a laptop levételéről soha nem értesült, és a gondolat nála
+// életben maradt (a laptopon helyesen eltűnt). ⭐ A kifutással a telefon a levétele után még 24 óráig tartja a szeletet:
+// a következő cserében megkapja a laptop levételét, és a gondolat nála is eltűnik (D14 — a 0 pont tudás). ⭐ Viselkedést
+// mérünk: a telefon állapotát (amit az ember lát) és a `vallalas` kiírását.
+// Rontás: `KOINO_KIFUTAS=0` a telefonon → a csere után is ott a gondolat → bukik.
+proba('⭐⭐ D104: a KIFUTÁS a cserében — a pontját levevő „alap” készülék megkapja a másik KÉSŐBBI levételét, és nála is eltűnik', async () => {
+  const l = await ujKeszulek();                       // a „laptop” („mindent” — a próbák alapja)
+  const t = await ujKeszulek();                       // a „telefon” („alap” — a szigorú (b))
+  const port = 7458;
+  const tEnv = { KOINO_KISZOLGALAS: 'alap' };
+  // Egy csere: a laptop figyel (a saját, „mindent” módjában), a telefon hívja („alap”-ként).
+  const kor = async () => {
+    const figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)],
+      { env: { ...process.env, KOINO_ADAT: l, KOINO_NAPLO: '' }, stdio: 'ignore' });
+    try {
+      await varj(2000);
+      await fut(t, 'csere', '127.0.0.1', String(port), tEnv);
+      await varj(1000);
+    } finally {
+      figyelo.kill();
+      await varj(1000);
+    }
+  };
+  try {
+    await fut(l, 'koino', 'Kifutás', 'próba', 'nyilt');
+    // ⚠️ A cím rövid: az `azonosito` segéd a sor utolsó 8 jeles szavát veszi (egy „GONDOLAT” szó azonosítónak látszana).
+    const g = azonosito(await fut(l, 'gondolat', 'KIFUT'), 'Létrejött:');
+    const elso = await lemezen(l);
+    const gT = elso.find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
+    const kT = elso.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
+    await fut(l, 'kivisz', join(l, 'k.jsonl'), kT);
+    await fut(t, 'behoz', join(l, 'k.jsonl'));
+    await fut(l, 'kivisz', join(l, 'g.jsonl'), gT);
+    await fut(t, 'behoz', join(l, 'g.jsonl'));
+    await taggaTesziKeszulek(l, t, 't');               // D93/1: a telefon pontja csak tagként számít
+    await fut(t, 'pont', g, '5', tEnv);                // a telefon is tartja
+    await kor();                                        // a laptop megkapja a telefon pontját
+    await fut(t, 'pont', g, '0', tEnv);                // ELŐBB a telefon veszi le…
+    await kor();                                        // (a laptop megtudja)
+    await fut(l, 'pont', g, '0');                       // …AZTÁN a laptop
+    const elotte = tiszta(await fut(t, 'allapot', tEnv));
+    const vallalas = tiszta(await fut(t, 'vallalas', tEnv));
+    await kor();                                        // a telefon a kifutás alatt részt vesz a szeletben
+    const utana = tiszta(await fut(t, 'allapot', tEnv));
+    const laptop = tiszta(await fut(l, 'allapot'));
+    const ki = {
+      elotte: elotte.includes('KIFUT'),                 // a csere előtt a telefon még a laptop pontját látja
+      kifuto: /1 kifutó/.test(vallalas) && /kifut: a pontomat levettem/.test(vallalas),
+      laptopon: !laptop.includes('KIFUT'),
+      telefonon: !utana.includes('KIFUT')               // ⭐ a lényeg: a telefonon is eltűnt
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  kifutás — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    await rm(l, { recursive: true, force: true });
+    await rm(t, { recursive: true, force: true });
   }
 });
 

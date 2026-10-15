@@ -1,10 +1,138 @@
-# A CLAUDE.md naplója (2026-09-06 – 2026-10-11)
+# A CLAUDE.md naplója (2026-09-06 – 2026-10-15)
 
 Ez a fájl a [`CLAUDE.md`](../CLAUDE.md) korábbi „HOL TARTUNK” szakaszainak **szó szerinti**
 archívuma. A 2026-09-25-i karcsúsításkor került ide, mert a CLAUDE.md minden session
 indulásakor betöltődik, és 233 KB-ra nőtt. A friss állapot, a szabályok és a tartós
 elvek a CLAUDE.md-ben maradtak; itt a **történet** és a döntések **indoklása** áll.
 Újabb bejegyzés a fájl **tetejére** kerül.
+
+---
+
+### ▶️ SESSION-VÁLTÁS (2026-10-11 → 10-15) — ahogy a CLAUDE.md-ben állt, az alsó sáv után (a D104 előtt)
+
+**Az állapot:** **1112 önpróba** (50 próba-fájl; a legutóbbi teljes soron mind zöld) · 296 fájl / 5481,4 KB (⚠️ CR nélkül mérve — lásd
+a 6. szabályt) · 0 npm-csomag · minden pusholva (2026-10-11/15: a D101 ①–⑥, a D102, a D103 és az alsó sáv — a session-váltáskor 1056 / 256 / 4662,1 volt). ⏸️ **A telefon a
+D103-as kódon** (`c038f59`, 2026-10-14 — Csaba a laptoppal kézzel próbálta, második teszt-e-emberrel) — a következő frissítése a terepi teszteléskor jön (a parancs lent, *„Ami nyitva maradt"*).
+
+⛔⛔ **SESSION-NYITÁSKOR („nézd át a koino_1.1 mappát") NE FUTTASS PRÓBÁT** (Csaba, 2026-10-01) — az
+átnézés OLVASÁS: a munkakönyvtár, az utolsó commitok, a dokumentáció, a kód. Lásd *A munka módja*.
+
+**Ami ebben a sessionben (2026-10-01 → 10-11) megépült** — az előző blokk szó szerint a
+[napló](docs/claude_naplo.md) tetején; a döntések (D84–D100) a [fázis-2 tervben](docs/fejlesztesi_terv_fazis2.md),
+az elágazások (1–104) az [alappillérek](docs/alappillerek.md) 5. szakaszában, a mérések (54–73.) az
+[eredményekben](koino/meres/eredmenyek.md):
+- ✅ **A próbák csoportjai** (`node koino/meres/mind.js <csoport>`, `KOINO_PROBA=<részlet>`).
+- ⭐⭐ **A VÉGLEGES SOR (①–⑧) — MINDEN ALAPPILLÉR ÁLL** ([`alappillerek.md`](docs/alappillerek.md) 4.): ① D85 az
+  entitás-modell (javaslat, egyezmény, töredék; a döntési csomag) · ② D89 a csere titkosítása, zárt/nyílt koinó ·
+  ③ B/1–B/2 a vállalás és a két tár (D90) · ④ G a címjegyzék (D91: fa, raj, DHT) · ⑤ D a kérelem (D92: kopogtatás,
+  továbbadás, ellenőrizhető össz-pont) · ⑥ E az identitás a szeletelt világban (D93–D94: csak a tag számít, zárt kapu,
+  Profil, a 2. lépcső szúrópróbával) · ⑦ B/3 a szigorú (b) (D95–D97: két fokú vállalás, tagsági kísérők, csak küldő
+  út, gyökér-darabok, közös halmaz, a részvétel a vállalásból, a raj a körben, tömörítés) · ⑧ F + az A hátralévői (D98:
+  a társankénti emlékezet, a lánc-kör).
+- ✅ **A terep** (72–73. mérés — laptop otthon, telefon a szomszéd wifijén, két külön címen): a zárt koinó, a
+  vállalás, a szöveg és a hazaút terepen megy; két lelet javítva; **D99** — társanként egy csere a fél körön belül, ha
+  nincs újdonság (három óra alatt nulla ütközés). ⭐ Csaba: *„ha működik pc-mobil között, külön címen, akkor az nekem
+  már elég ahhoz, hogy folytassuk a fejlesztést"* — a két mobilnetes telefon később.
+- ✅ **A HÁZ — D100** ([`haz_pakli_atvizsgalas.md`](docs/haz_pakli_atvizsgalas.md)): a felület paklija a
+  prototípus láncos-testvéres nézete — az örökölt `Pakli.js` bájtra változatlanul, a lap fordít (`kartyaAdat.js`,
+  `apiHelper.js`), a koinós többlet a `koinoPakli.js`-ben (a hiányzót az őrjárat hozza, a lap csendben újrakérdez;
+  az össz-pont forrásának jele). Böngészőben, két készülékkel kipróbálva; a bekötésből két hiba javítva (elágazás
+  100–101).
+
+#### ⏭️⏭️ A KÖVETKEZŐ SESSION — Csaba választ (a sorrend az övé)
+
+1. ⭐ **A maradék modálok (5.8)** — a kártyák menüjében ma NYOLC helyőrző áll: Rendezés, Struktúra nézet, Síkidom
+   nézet, Keresés, Tudatpontok, Kategória (alkategória létrehozása), Értesítések, Értesítési beállítások
+   (`felulet/js/components/modals/` — a `helyorzoModal` alakúak; ⚠️ a *Részvételi* beállítások NEM helyőrző, az
+   5.5 óta valódi). 🔍 **ÁTVIZSGÁLVA (Csaba: „az 1-est választom”, 2026-10-11)** —
+   [`modalok_atvizsgalas.md`](docs/modalok_atvizsgalas.md): három csoport — (I) a saját láncból / meglévő rétegből
+   (Tudatpontok, a besorolások létrehozása a kapun, Rendezés) · (II) a fa bejárása a kérelemre (Struktúra, Síkidom) ·
+   (III) új réteg kell alá (Keresés: a helyi alja megvan, a hálózati a kereső-réteg; Értesítések: helyben számolva). ⭐
+   **A lelet:** az össz-pont lefelé nem nő, tehát az „ágazati pont szerint csökkenő” sor legjobb-először bejárással
+   korlátosan kiszámolható — EGY bejáró hordozza a lapos ágazati rendezést (ma csak a helyben ismert részen fut), a
+   Struktúrát és a Síkidomot; hozzá a fejléc-kérdés FOLYTATÁSA hiányzik (ma az 51. gyerek nem kérhető). Ami nem monoton
+   (időrend, saját pont, növekvő), az csak a helyben ismert részből megy; az idő-összegző a szerző órája miatt nem jó.
+   Mellék-leletek: a felületen nincs fő menü (`foOldal.js`); a Struktúra letöltése nyers `fetch` (Bearer — a kapu nem
+   fogadja); a prototípus Síkidomja NEM felfüggesztett (2026-08-03 óta újraépült, működik). ✅ **D101 (Csaba: „minden
+   javaslatodat elfogadom”) — M1–M6 mind (A):** M1 a közös bejáró + a fejléc folytatása (előtte mérés) · M2 a nem monoton
+   rendezések a helyben ismert részből, véglegesen · M3 az értesítés a részvételi szeletekből (a tudatpont a figyelés
+   eszköze; helyi postafiók) · M4 a Keresés most a helyi aljára, a kereső-réteg utána külön pillér · M5 bájtra változatlan
+   átvétel · M6 a fő menü a modálokkal együtt. 🚧 **Az építés sorrendje:** ① az I. csoport → ② a bejáró → ③ Struktúra →
+   ④ Síkidom → ⑤ Keresés → ⑥ az értesítés-réteg → ⑦ a kereső-réteg.
+   ✅ **① KÉSZ (2026-10-11)** — a fázis-2 terv D101-e, elágazás 105–111: „X ága alatt van-e?” egy helyen (`agHelyzete`) ·
+   a Tudatpontok (a saját láncból, ág-szűrve, a hiányzó felmenőt elkéri) · a kategória és a gondolattípus a lapról (a
+   `FormData` a lapon JSON-ra fordul, az ikon a feltöltés lenyomat-címe) · a Rendezés a kártya menüjéből (ág-szűrt lapos
+   pakli, a szigorú (b) alatt kimondja a lista határát) · a fő menü (`foMenu.js`) · a koinós többlet a modálok alján
+   (`koinoModalok.js` — a prototípus-metódus KÖRÉ). ⛔ **Egy régi hiba is előkerült:** a küszöbnek a prototípusban két
+   alakja van (medián: `aktualMinimumDontesiIdo`; javaslat: `minimumDontesiIdo`) — 2026-09 óta a lapról jött küszöb nem
+   fordult le (a döntés az alapértéken maradt); javítva, a régi események olvasata változatlan (109.).
+   🔍 **② a bejáró — MÉRVE (74. mérés, `bejaroMeres.js`):** egy friss készüléken a mai menettel egy oldal 80–114 perc, egy
+   200-as Struktúra 6–8 óra — a kérésenkénti késés (a NAT-os tartó ~20 perces kopogtatása) × a sorrend szintjei; NEM a
+   koinó méretétől függ. A kapcsolatonkénti több kérelem nem segít; ha a tartó maga jár be (a legjobb 50, amit tud), egy
+   oldal ~30 perc; egy „mindent” tartó a közelben: 1 kör. ✅ **D102** (Csaba: „minden javaslatodat elfogadom”) — J1 a tartó
+   maga jár be (a `d` helyett) · J2 gyerekszám a fejlécben + 64-es függő-korlát · J4 a célválasztás: aki az ágból a
+   legtöbbet tartja. ✅ **② KÉSZ (2026-10-11):** a fejléc-kérdés `m`/`utan`-nal, egy csökkenő lista szülővel és
+   gyerekszámmal; a kérő bejárója a helyi lista BIZTOS ELŐTAGJA (`pakli.js` `biztosElotag`), a hiányzót mélyen elkéri; a
+   lapos „ágazati” lista kimondja, meddig biztos, és csendben újrakérdez (elágazás 112–118). ✅ **J3 (a második döntés —
+   Csaba: „legyen az (A)”): a KÉRELEM-SOROZAT** — egy kapcsolaton legfeljebb 16 kérelem (a 74. mérés pótlása: egy jól ellátott
+   tartónál az egy kérelem / kapcsolat mindent sorba állított); kész (elágazás 119–121). ✅ **③ KÉSZ (2026-10-11): a
+   Struktúra** — az örökölt `StrukturaModal` (+ `faElrendezes.js`) bájtra; a fa a bejáró sorrendjéből (ágazati pont szerint
+   csökkenően — minden előtagja zárt fa), egy keretig (`STRUKTURA_KERET` = 5000), a lapok egy képből (a kurzor a horgonyt
+   viszi); a kapu a modál nyers `fetch`-éért a `Bearer` jelszót is elfogadja; a megjegyzés kimondja, mire épül a fa
+   (elágazás 122–126). ✅ **④ KÉSZ (2026-10-12): a Síkidom** — a `SikidomModal`, a `SikidomKartyaPanel` és a nyolc segéd
+   bájtra; a program egy szintet ad a bejáró sorrendjéből (`sikidomGyerekek`, `sikidomOslanc` — küszöb, kurzor), a nem
+   tartott síkidom gyerekeit mélyen elkéri, a helyüket az össz-pontból foglalja; a lap csendben újrakérdez (elágazás
+   127–132). ⛔ **Három lelet:** az össz-pont a nem tartott, de ismert saját pontú entitásnál alulszámolt (a bemondás nem
+   számított — egy ág a fele értékén, a bejáró biztos előtagja ettől hibás lehetett; javítva: `osszPontokSzamitasa`
+   `tartott`, 133.) · egy importkör a lapon (a kártya-gyár előre az `index.html`-ben + próba, 134.) · a Síkidom adatlapja
+   „(cím nélkül)” volt — régi prototípus-hiba, a fordítás javítja (135.). ⚠️ A böngészős ellenőrzés a rejtett munkapanel
+   miatt kerülő úton ment (a rajzolás-ütemezőt a próba-fülön pótolva, valódi egérgörgővel nagyítva) — Csaba nézze meg
+   élőben is (a Struktúrát és a Síkidomot). ✅ **⑤ KÉSZ (2026-10-12): a Keresés helyi alja** — a `KeresesModal` bájtra; a
+   program a készüléken ismert entitások címében keres (a két tárból), típusonként korlátosan (a prototípusé: 10 / 50),
+   a legerősebb elöl, ág-szűrve, és kimondja, hogy a hálózati keresés még nincs (elágazás 136–138). ✅ **⑥ KÉSZ
+   (2026-10-13): az értesítés-réteg** — a postafiók a KÉSZÜLÉKEN, két pillanatkép különbségéből (`js/allapot/ertesites.js`:
+   a tartott entitások és javaslataik; az első kép alapvonal; a saját cselekvés és a nem tartott entitás nem jelez), a
+   beállítások öröklődnek (a legközelebbi nyer, aztán a globális), helyi tár (`ertesitesek.json`,
+   `ertesitesiBeallitasok.json`), a felület folyamata számol; a két modál bájtra; a kártyák számlálója él (elágazás
+   139–142). ⛔ **Lelet: a csak küldő út rése (D95/3)** — egy nem tartott gondolat alá írt gyerek születése (és a javaslat
+   az érintetthez) a szülő tartójához soha nem ért el; a `kuldoKulcsai` most a bejelentési helyeket is felajánlja (143.).
+   ✅ **D103 (Csaba: „igen”) — a levél helyett a készülék saját értesítése, KÉSZ:** a prototípus e-mail kapcsolója és üteme
+   a felugró értesítést kapcsolja (Windows: PowerShell; Mac: `osascript`; Linux: `notify-send`; Termux:
+   `termux-notification`; cserélhető: `KOINO_ERTESITO`); azonnal legfeljebb öt + „és még N”, vagy N óránkénti összefoglaló;
+   a felület ÉS az őrjárat számol (zár alatt — zárt lapnál is jelez); elágazás 144–147. 🔍 **⑦ a kereső-réteg —
+   ÁTVIZSGÁLVA** ([`kereso_reteg_atvizsgalas.md`](docs/kereso_reteg_atvizsgalas.md)): ⭐ a lelet — a kereső-réteg
+   ugyanaz a mozdulat, mint a gyökér-darab (D95/4), csak a kulcs a cím egy SZAVÁNAK lenyomata; a bejegyzés maga a létrehozó
+   esemény (aláírt, a címmel — számított, hamisíthatatlan); a darabot a saját tartói tartják és hirdetik (+1 DHT-téma), a
+   szerző a csak küldő úton ajánlja fel, a kérdező több tartót kérdez és egyesít. ⏸️ **Csabánál K1–K6:** K1 hash a
+   meglévő DHT-n (SK7) · K2 egész szavak · K3 láthatósági küszöb (2 tulajdonos, rögzítve — SK10) · K4 a felajánlás a csak
+   küldő úton, kopogtatással · K5 30 napos halványulás, megújítással · K6 előbb a 75. mérés (szimuláció).
+   ✅ **AZ ALSÓ SÁV (Csaba kérése, 2026-10-15 — a telefon + laptop kézi próbája után):** a fő menü és az alap-információk a
+   prototípus helyén, a lap ALJÁN (a `foOldalForm.html` sávja; `foOldal.css` és `FoOldalTortenetKezelo.js` bájtra; a vezérlő
+   `alsoSav.js`) — vissza/előre (Alt+←/→), a név, a szabad tudatpont, a KÉSZÜLÉKEN ismert rész számai (`helyiStatisztika`, a
+   lap horgonyával); a koinós többlet a CSERE: „🔄 2 perce +3 · ⏭ 0:42” (`csere.json` — az őrjárat és a munka írja,
+   `csereAllapot.js`), és ha egy csere újat hozott, a lap magától frissül (`KoinoPakli.kulsoValtozas` — a kiválasztás helyén,
+   nyitott modál alatt vár). A felső sáv kimaradt (minden a menüben), a tér a menüből nyílik. ⛔ Lelet: a fő menü
+   értesítés-számlálója a ⑥ óta 0-t mutatott — javítva. Elágazás 148–152.
+   ⏸️ **Csabánál (D-szintű, a kézi próba lelete):** a telefon nem tüntette el a módosítási egyezményt, pedig levette róla
+   minden pontját — a szigorú (b) alatt a pont levétele után a készülék már nem vállalja a szeletet, ezért a MÁSIK fél
+   későbbi pont-levételét soha nem kapja meg, és a régi pontot látja. Javaslat: (A) kifutás — a pont levétele után még ~24
+   óráig részt vesz a szeletben · (B) egyszeri kérelem a szeletre · (C) csak jelezni a lapon.
+2. **A terep 🅱️ (két mobilnetes telefon)** — amikor meglesznek; előtte a telefon frissítése (lent).
+3. **Az „UTÁNA” lista** (lent).
+
+⏸️ **Kisebb nyitottak ebből a sessionből:** ⚠️ (2026-10-13) a ④ Síkidom bekötés-próbája a teljes sor terhelése alatt egyszer
+bukott: a BEÁLLÍTÓ lépés (az egy szintű gyökér-kérelem a frissen indított `figyel`-nek) nem kapott választ, és a próba a mért
+viselkedésen bukott, az ok kimondása nélkül (magában 3/3 zöld) — a beállító lépés (`gyokerFejlecek`, a D102 próbájában is)
+most legfeljebb kétszer újrapróbál, és ha így sem, a bukás megnevezi (rossz porton mérve) · ⚠️ (2026-10-13) a `csereProba`
+„CSOMAGVESZTÉS MELLETT IS ÁTMEGY (30%)” próbája a teljes sor terhelése alatt egyszer bukott („a másik fél nem válaszol (10000 ms)”
+— a tétlenségi óra); magában 5/5 zöld — ugyanaz a jelenség, mint a lenti lezárás-próbáé: a 10 mp-es óra terhelés alatt;
+MÉRENDŐ (mi hallgat el 10 mp-ig 30% veszteség mellett?), nem hangolandó · ⚠️ (2026-10-11) a `csereProba` „a lezárás NEM dobhatja el az utolsó darabot (5×)” próbája a
+teljes sor terhelése alatt egyszer bukott (a 10 mp-es tétlenségi óra — „a másik fél nem válaszol”); magában 5/5, a `csere`
+témakör egészében 363/363 zöld — a bukásnak meg kell neveznie az okát, mielőtt bárki az időzítéséhez nyúl · egy egyszeri téves „0 új esemény” kiírás a telefonon (helyben nem jön
+elő) · a D71 őrjárat-próba egyszer bukott a teljes sor terhelése alatt (magában 3/3 zöld, a következő teljes soron
+is) · a `koinoPakli.js` csendes újrakérdezését csak böngészőben mértük (node alatt nem futtatható; a program oldalát a
+D100 parancssor-próbája méri, egy végig futó felülettel) · a lap a még meg nem érkezett szöveget üresen mutatja
+(a kiszolgáló kimondja: `szovegHianyzik`; a ház a törzset már elkéri, de a „még nem jött meg” felirat hiányzik).
 
 ---
 
