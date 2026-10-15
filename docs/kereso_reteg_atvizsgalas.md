@@ -166,3 +166,58 @@ protokoll-törés.
 
 ⭐ **A sorrendhez:** a K7 és a K8 a ② (a szó és az index-darab) ELÉ tartozik — a 75. mérés (①) már a választott alakot
 mérje.
+
+## 8. ✅ Csaba döntése (D105, 2026-10-15) — és a K8 előtti kérdés
+
+> Csaba: *„minden javaslatodat elfogadom, »Javaslatom: (A), most tágítsuk, például 48 bitre (ez gyakorlatilag
+> végtelen).« ezt leszámítva, addig, ameddig át nem pontosítjuk, a gyakorlatilag végtelen fogalmat.”*
+
+A K1–K7 a javaslat szerint — az átbeszélés két új szempontjával:
+- **K1 (A)** — hash szerinti elhelyezés a meglévő DHT-n, több tartó, egyesítés.
+- **K2 (C)** 🆕 — minden szó KÉT kulcs alatt: az egész szó és az első négy betűje (a négynél rövidebb szó csak egészében).
+  A kérdés a szóeleje-fiókot (az őrző a címekben a kérdezett szóelejére szűr) és a pontos alak fiókját kérdezi. ⭐ Az ok: a
+  magyar toldalékol — az egész szó szerinti index a „park”-ra a „parkban”-t nem találná, a helyi keresés (szórészlet) igen.
+  Szótár és nyelvtani értelmezés nincs (5.1), a tőváltozás („tér” → „terek”) kimarad. Az index puha állapot (K5): a
+  kulcs-séma később egy átmeneti időszakkal váltható, a koinó magja nélkül.
+- **K3 (A)** 🆕 — a két tulajdonos ellenőrzött TAG; és a nem tag szerző születése a küszöbtől függetlenül sem kerül az
+  indexbe (a kulcs ingyen van, a tudatpont-keret csak a tagot köti — D93/1). A tagság a tagsági csomagból, szerzőnként
+  gyorsítótárazva (a tagsági kísérő gépe — D95/2).
+- **K4 (A)** · **K5 (A)** — 30 nap; a gondolat tartói közül néhány „soros” újít, nem mind · **K6 (A)** — a 75. mérés a 7.
+  szakasz és a fenti szempontok szerint · **K7 (A)**.
+
+### ⏸️ A K8 előtti kérdés: mi a „végtelen” mércéje egy rögzített szélességű számnál?
+
+A „végtelen” ellenőrizhető alakja (CLAUDE.md, 2026-09-26) a NÖVEKEDÉSRŐL szól: egy készülék terhe ne függjön a koinó
+méretétől. A „gyakorlatilag végtelen” két külön állítást mosott össze: *nincs korlát*, és *van, de olyan magasan, hogy a
+valóságban nem érjük el* — az utóbbi egy feltevésen áll a valóságról.
+
+**Kétféle korlát van a kódban.** A *teher-korlát* egy készülék munkáját fogja meg (K = 3 kötés, ≤ 3 cím, 8 raj-tartó,
+20 MB átmeneti tár, a bizonyítékok hossza): ezek a „végtelen” eszközei — ettől NEM nő a teher a koinóval. A *méret-korlát*
+egy szám, ami a koinóval nőne, de rögzített szélességű: ha a koinó kinövi, vagy a teher kezd nőni, vagy a szám nem
+ábrázolható. Ma három ilyen van:
+- a gyökér-darab **16 bites** száma (K8) — a gyökérnél ~16,8 millió legfelső szintű gondolatig, a kereső-indexnél
+  ~3,4 (a K2 (C)-vel ~1,7) millió gondolatig tartana;
+- a tagsági lánc **64-es** mélység-korlátja (`MELYSEG_KORLAT`, D59 — a bizonyíték hosszának őre) — a természetes,
+  logaritmikus mélység (63. mérés: egymillió tagnál ~13, vagyis lépésenként ~2,9-szeres) ~10^29–10^30 tagnál érné el;
+- a kanonikus alak **„biztonságos egész”** határa (2^53 ≈ 9·10^15, `kanonikusAlak.js`, és az összegző fa összegei, az
+  össz-pont bemondása — `osszegzoFa.js`, `osszPont.js`) — egy népszerű ág össz-pontja (legfeljebb e-ember × 10 000 pont)
+  ~900 milliárd e-embernél lépné át.
+
+**A mérce — három lehetőség:**
+- **(A) A belső mérce:** egy méret-korlát se legyen szűkebb, mint a koinó SAJÁT határa — az azonosító-tér: egy entitás
+  neve a 256 bites lenyomata, és ~2^128 entitás fölött két név véletlenül egybeeshet; ennél többet a koinó semmilyen
+  formában nem tud megkülönböztetni. Feltevés nélküli. Ára: a darab-szám ~124 bit (a kulcsba 144 fér — olcsó), a
+  lánc-korlát 64 → ~128 (olcsó), de a 2^53-as egész-határ helyett nagy egészek kellenének a kanonikus alakban (a
+  „legveszélyesebb részlet” — drága, formátum-szintű).
+- **(B) A levezetett mérce, kimondott tartalékkal:** a korlát akkor elég, ha a koinó saját szabályaiból levezetett
+  legnagyobb méret fölött van, rögzített tartalékkal. A szabályok: az e-ember élő, külön ember (D18/1) → legfeljebb az
+  emberiség (~10^10); élő entitás csak ponttal (D14), fejenként 10 000 pont → legfeljebb ~10^14 élő entitás. ×10
+  tartalékkal: a darab-számnak ~46 bit kell (a 48 elég), a 64-es lánc-korlát is (~24 lépés), és a 2^53 is (az utóbbi ~87×
+  az emberiség fölött).
+  Ára: a feltevések (ki az e-ember, mekkora a keret) a mérce részei — ha egy változik, a korlát csendben elfogyhat. (Az
+  IPv4 32 bitje 1981-ben „gyakorlatilag végtelen” volt; 2011-re elfogyott, mert a használatról szóló feltevés változott.)
+- **(C) ⭐ A kettő együtt — ezt javaslom:** a SZABÁLY az (A); ahol a betartása drága, ott (B) szerinti KIMONDOTT kivétel,
+  a levezetett felső mérettel és a tartalékkal, egy helyen leírva. Ma egyetlen kivétel lenne: a 2^53-as egész-határ
+  (~900 milliárd e-emberig pontos). A K8 ezzel: a darab-szám annyi bitet vesz a lenyomatból, amennyi a mélységhez kell,
+  legfeljebb 144-et (amennyi a kulcsba fér) — nem 48-at. A 64-es lánc-korlát az (A) szerint szűk: a felemelése (~128)
+  olcsó, külön lépésként.

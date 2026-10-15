@@ -373,7 +373,8 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 bejáró (D102, 112–121.), a Struktúra (122–126.), a Síkidom (127–135.), a Keresés helyi alja (136–138.) és az értesítés-réteg
 (139–143.), és a készülék saját értesítése (D103, 144–147.) is. ⭐ Csaba kérésére (2026-10-15) az ALSÓ SÁV: a fő menü és
 az infók a prototípus helyén, a csere ideje és az automatikus frissítés a csere után (148–152.); és a kézi próba lelete
-nyomán a kifutás (D104, 153.).
+nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldőlt (D105, 154.) — a K8 (a darab-szám szélessége)
+a „végtelen” mércéjének pontosítására vár; utána a 75. mérés.
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 
@@ -1009,3 +1010,12 @@ nyomán a kifutás (D104, 153.).
     levétele pillanatában elengedte az egyezmény szeletét, a laptop egy perccel későbbi levételéről soha nem értesült, és az
     egyezmény nála életben maradt; az egyszeri utólagos lekérés (B) épp ezt nem javította volna · Claude · `vallalas.js`
     (`KIFUTAS`, `kifuto`), `koino.js` (`kifutasBeallitas`, a `vallalas` kiírása).
+154. **2026-10-15 · a kereső-réteg alakja (D105, Csaba: „minden javaslatodat elfogadom … ezt leszámítva”)** → **hash a
+    meglévő DHT-n, több tartó és egyesítés (K1); minden szó két kulcs alatt — az egész szó és az első négy betűje (K2 (C));
+    csak két ellenőrzött TAG tulajdonos, és nem tag szerző születése egyáltalán nem kerül az indexbe (K3); a felajánlás a
+    csak küldő úton, kopogtatással (K4); 30 napos halványulás, néhány „soros” megújítóval (K5); előbb a 75. mérés (K6); a túl
+    nagy fiók a gondolat lenyomata szerint osztódik, a több szavas kérdés a legritkább szóhoz megy (K7); ⏸️ a darab-szám
+    szélessége (K8) NYITVA, amíg a „végtelen” mércéje pontosodik** · mert a magyar toldalékol (az egész szó a „park”-ra a
+    „parkban”-t nem találná); mert a kulcs ingyen van (a két tulajdonos csak tagként ér valamit); és mert egy szó minden
+    bejegyzése egy fiókba esik — a gyakori szó fiókja a koinóval lineárisan nőne (a „végtelen” próbája) · Claude (az
+    átnézés és az átbeszélés), Csaba (a döntés) · `docs/kereso_reteg_atvizsgalas.md` 7–8. szakasz, a fázis-2 terv D105-e.

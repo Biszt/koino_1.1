@@ -5557,6 +5557,44 @@ pozitív szelet) és a bekötés (`parancssorProba.js`: a terepi eset két kész
 a laptop („mindent”) később; a csere után a gondolat a telefonon is eltűnik) — mindkettő rontással; a bekötés rontása
 (`KOINO_KIFUTAS=0`) pontosan a terepi hibát hozza vissza. Elágazás 153.
 
+### D105. A KERESŐ-RÉTEG ALAKJA (D101 ⑦): HASH A DHT-N, KÉT KULCS SZAVANKÉNT, TAG-TULAJDONOSOK, OSZTÓDÓ FIÓK (2026-10-15, Csaba: „minden javaslatodat elfogadom … ezt leszámítva”)
+
+**Az alap:** a kereső-réteg átvizsgálása ([`kereso_reteg_atvizsgalas.md`](kereso_reteg_atvizsgalas.md), K1–K6, 2026-10-13),
+a 2026-10-15-i átnézés (a 7. szakasz: K7 — a gyakori szavak, K8 — a 16 bites darab-szám, és a K3 ára), és az átbeszélés két
+új szempontja (a K2-nél a magyar toldalékok, a K3-nál a nem tag szerző). ⭐ A kép: a kereső-réteg a gyökér-darab mozdulata
+(D95/4), a kulcs a cím egy szavának lenyomata; a bejegyzés maga a létrehozó esemény (aláírt, a címmel — számított,
+hamisíthatatlan); a fiókot a saját tartói tartják és hirdetik, a szerző felajánlja, a kérdező több tartót kérdez és egyesít.
+
+**Csaba döntései:** *„minden javaslatodat elfogadom, »Javaslatom: (A), most tágítsuk, például 48 bitre (ez gyakorlatilag
+végtelen).« ezt leszámítva, addig, ameddig át nem pontosítjuk, a gyakorlatilag végtelen fogalmat.”*
+- **K1 (A)** — hash szerinti elhelyezés a meglévő DHT-n (a gyökér-darab mintája, vakított téma), a társak a bizalmi
+  hálóból; több tartó, egyesítés — az elhallgatás így elérhetőségi kérdés; zárt koinóban a nem tag a fiók tartalmához nem
+  jut.
+- **K2 (C)** — minden szó két kulcs alatt: az egész szó és az első négy betűje (a négynél rövidebb szó csak egészében); a
+  kérdés a szóeleje-fiókot (az őrző a címekben a kérdezett szóelejére szűr) és a pontos alak fiókját kérdezi. Az ok: a
+  magyar toldalékol (a „park” a „parkban”-t csak így találja; a helyi alj szórészletre keres). Szótár és nyelvtani
+  értelmezés nincs (5.1); a tőváltozás kimarad. ⭐ Az index puha állapot (K5): a kulcs-séma később egy átmeneti időszakkal
+  váltható, a koinó magja nélkül.
+- **K3 (A)** — a hálózati kereső csak a legalább két különböző, ELLENŐRZÖTT TAG tulajdonosú gondolatot adja; rögzített,
+  nem közösségi paraméter (SK10, 5.8); a helyi alj és a létezés nem szűr. ⭐ A nem tag szerző születése a küszöbtől
+  függetlenül sem kerül az indexbe (a kulcs ingyen van, a tudatpont-keret csak a tagot köti — D93/1). A tagság a tagsági
+  csomagból, szerzőnként gyorsítótárazva (a tagsági kísérő gépe — D95/2); a küszöb a felajánlás pillanatáé, a megújítás
+  frissíti.
+- **K4 (A)** — a felajánlás a csak küldő úton: a szerző (és aki a gondolatot tartja) a fiók tartóit a DHT-n megkeresi és
+  bekopogtat (a függő kérelem gépe — D92/1), kézbesítés-nyilvántartással; a tartók egymás közt a cserében egyeztetnek.
+- **K5 (A)** — 30 napos halványulás; a gondolat tartói közül néhány („soros”) újít, amíg a gondolat él — nem mind.
+- **K6 (A)** — előbb a 75. mérés (szimuláció): Zipf-szerű szavak, a fiók osztódása, a tagság-ellenőrzés ára, a kettős
+  kulcs, a megújítás forgalma, a válasz-arány az elérhetőség mellett, a tárolás készülékenként; csak utána építés.
+- **K7 (A)** — a túl nagyra nőtt fiók a gondolat saját lenyomata szerint tovább osztódik (a darabjait más készülékek
+  tartják, a fiók gazdája kimondja); a gyakori szóra minta, a ritkára teljes válasz; a több szavas kérdés a legritkább
+  szava fiókjához megy, és a tartó a többi szóra helyben szűr (a bejegyzés a teljes címet hordozza).
+- ⏸️ **K8 NYITVA** — a darab-szám szélessége a „végtelen” pontos mércéjén múlik, amit Csaba előbb pontosítani akar. A
+  kérdés és a három lehetőség (belső mérce · levezetett mérce kimondott tartalékkal · a kettő együtt — javaslat) az
+  átvizsgálás 8. szakaszában.
+
+**A sorrend:** ① a 75. mérés → ② a szó és az index-darab (a K8 után) → ③ a tartás és a hirdetés → ④ a felajánlás → ⑤ a
+kérdés → ⑥ a halványulás → ⑦ a Keresés modálja a hálózati találatokkal. Elágazás 154.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

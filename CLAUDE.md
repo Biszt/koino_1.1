@@ -57,13 +57,18 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    ([`kereso_reteg_atvizsgalas.md`](docs/kereso_reteg_atvizsgalas.md)): ⭐ a kereső-réteg ugyanaz a mozdulat, mint a
    gyökér-darab (D95/4), csak a kulcs a cím egy SZAVÁNAK lenyomata; a bejegyzés maga a létrehozó esemény (aláírt, a címmel —
    számított, hamisíthatatlan); a darabot a saját tartói tartják és hirdetik (+1 DHT-téma), a szerző a csak küldő úton
-   ajánlja fel, a kérdező több tartót kérdez és egyesít. ⏸️ **Csabánál K1–K6:** K1 hash a meglévő DHT-n (SK7) · K2 egész
-   szavak · K3 láthatósági küszöb (2 tulajdonos, rögzítve — SK10) · K4 a felajánlás a csak küldő úton, kopogtatással · K5 30
-   napos halványulás, megújítással · K6 előbb a 75. mérés (szimuláció). ⛔ **Az átnézés (2026-10-15) az átvizsgálás 7.
-   szakaszába:** **K7** a gyakori szavak — egy szó minden bejegyzése egy darabba esik, a gyakori szó darabja a koinóval
-   lineárisan nő (javaslat: a szó darabja az entitás lenyomatával tovább osztódik; a 75. mérés Zipf-szerű szavakkal) · a
-   **K3 ára**: a két tulajdonos csak tagként ér valamit (a tagságuk is kell a tartónál) · **K8** a gyökér-darab 16 bites
-   mélység-korlátja (~16,8 millió legfelső szintű gondolat fölött a darab nő — most olcsó kitágítani, a ⑦-tel együtt).
+   ajánlja fel, a kérdező több tartót kérdez és egyesít. ⛔ Az átnézés (2026-10-15) a 7. szakaszba hozta a K7-et (a
+   gyakori szavak) és a K8-at (a 16 bites darab-szám). ✅ **D105 (Csaba: „minden javaslatodat elfogadom … ezt leszámítva”,
+   2026-10-15) — a K1–K7 eldőlt** (az átvizsgálás 8. szakasza, elágazás 154.): K1 hash a DHT-n · **K2 (C) minden szó két
+   kulcs alatt — az egész szó és az első négy betűje** (a magyar toldalékol: a „park” így találja a „parkban”-t) · K3 két
+   ellenőrzött TAG tulajdonos, és nem tag szerző születése egyáltalán nem kerül az indexbe · K4 felajánlás kopogtatással ·
+   K5 30 nap, néhány „soros” megújítóval · K6 előbb a 75. mérés · K7 a túl nagy fiók a gondolat lenyomata szerint osztódik,
+   a több szavas kérdés a legritkább szóhoz megy. ⏸️ **A K8 NYITVA — Csaba előbb a „végtelen” mércéjét akarja pontosítani**
+   (*„addig, ameddig át nem pontosítjuk, a gyakorlatilag végtelen fogalmat”*): a kérdés és a három lehetőség (A) belső mérce
+   — semmi ne álljon meg a koinó saját azonosító-tere (~2^128 entitás) előtt · (B) levezetett mérce kimondott tartalékkal
+   (emberiség × 10 000 pont × tartalék) · (C) ⭐ javaslat: a szabály az (A), a drága helyen kimondott (B)-kivétel (ma egy:
+   a kanonikus alak 2^53-as egész-határa, ~900 milliárd e-emberig) — az átvizsgálás 8. szakaszában. ⏭️ Utána: a K8, majd
+   a 75. mérés (szimuláció).
 2. **A terep 🅱️ (két mobilnetes telefon)** — amikor meglesznek; előtte a telefon frissítése (lent).
 3. **Az „UTÁNA” lista** (lent).
 
@@ -183,7 +188,7 @@ D100 parancssor-próbája méri, egy végig futó felülettel) · a lap a még m
   mi hiányzik (függőségi sorrendben), és miről ágaztunk le, miért. **Új elágazásnál ide is írj.**
 - **Induláskor, ha a nagy kép kell:** [`docs/utiterv.md`](docs/utiterv.md) (mit építünk, milyen
   sorrendben, és miért) → [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
-  („HOL TARTUNK" + a D1–D104 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
+  („HOL TARTUNK" + a D1–D105 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
   `szakasz5_terv.md`). A gépezet ábrákon: [`docs/gepezet.md`](docs/gepezet.md).
 - ⚠️ **Új session-váltáskor** a fenti „SESSION-VÁLTÁS" blokkot **cseréld le**, ne fölé írj
   újat — a régit (ha kell) a napló tetejére tedd. *Így maradt 233 KB-os ez a fájl.*
@@ -206,7 +211,7 @@ D100 parancssor-próbája méri, egy végig futó felülettel) · a lap a még m
 
 ⚠️ **Zsákutcák, amiket ne javasolj újra** (mind megmérve): a Duniter-féle távolság-szabály (globális szám) · az „ingyenes elismerés" (D48) · **a gazdaság önmagában nem véd** · a horgony-kör (880 hamis horgony) · ⛔ a *„kevés kapcsolata van, tehát gyanús"* jelzés (31/41/45% téves) · ⛔ **és a `k` tanúsítás + keret vonala** (D44, D51–D53) — **tárgytalan**, a meghívás váltotta ki.
 
-A tervezési döntések (**D1–D104**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
+A tervezési döntések (**D1–D105**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 
