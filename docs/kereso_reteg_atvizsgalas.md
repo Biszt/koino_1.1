@@ -273,3 +273,55 @@ mai, számított címet ismeri — ő ajánlja fel a születést a címet adó j
 - **(B) Csak a születés címe** — egyszerű, de az átnevezett gondolat az új nevén soha nem található meg.
 - **(C) A bejegyzés mellé a döntés bizonyítéka** (a lezárási összegzés — D95/1) — pontos, de drága (60–70 KB döntésenként,
   67. mérés), és csak a nagy szeleteknél van ilyen.
+
+## 11. 🔍 A ③–④ átvizsgálása — a tartás, a hirdetés és a felajánlás (2026-10-16)
+
+> A ② után, építés előtt. A ③ (a tartás és a hirdetés) és a ④ (a felajánlás) összefonódik: amit a tartó tart, azt valaki
+> felajánlotta, és amit a tartók egymás közt egyeztetnek, annak a lejárata is utazik. Négy kérdés D-szintű (L1–L4), Csabáé.
+
+**Ami a kódból kiderült.** (1) A csak küldő út (`osszegzoTartas.js` `sajatKuldo`) ma csak a SAJÁT eseményeimet ajánlja fel
+— a kereső-bejegyzést viszont a gondolat TULAJDONOSA ajánlja fel (K9), aki nem feltétlenül a szerző, és nem egy eseményt,
+hanem egy CSOMAGOT: a születés + a címet adó javaslat (K9) + két tag-tulajdonos pont-eseménye (K3). (2) A gyökér-darab
+(D95/4) születései a tartós tárban élnek (a tömörítés megtartja őket) — de ott csak születések vannak, pont-események nem. Ha
+a kereső-csomag pont-eseményei a tartós tárba kerülnének, a saját állapotom egy NEM tartott gondolatra részleges össz-pontot
+számolna (két tulajdonos pontját látná, a többit nem). (3) A régió tartói a DHT-n a régió témáján találhatják meg egymást, és
+a változást a raj kör (D97/2) viheti körbe — ha a régió kulcsa a raj-jegyzékben szelet-kulcsként szerepel. (4) A K5 (30 napos
+halványulás) és a raj együtt egy rést nyit: ha a tartók egymásnak adják a bejegyzéseket, egy lejárt bejegyzés egy másik
+tartótól visszajöhet — a „temető” (5.7) a hátsó ajtón.
+
+**L1. Hol élnek a bejegyzések a tartónál?**
+- **(A) ⭐ Külön KERESŐ-TÁRBAN — ezt javaslom.** Puha állapot: a koinó állapotába nem számít bele (a csomag pont-eseményei nem
+  torzítják a saját számításomat), korlátos és eldobható (mint az átmeneti tár — B/2), és UGYANAZON A KAPUN át íródik
+  (`esemenyMentese` a tár három műveletével — 3. szabály). A lejárat helyi feljegyzés mellette.
+- **(B) A tartós tárban, megtartási szabállyal** (mint a gyökér-darab születései): a csere bekötése egyszerűbb, de a
+  csomag pont-eseményei a saját állapotomban részleges össz-pontot adnának.
+
+**L2. Hogyan egyeztetnek a régió tartói?**
+- **(A) ⭐ A cserében, a régió kulcsa alatt — ezt javaslom** (a gyökér-darab mintája: a NYITÁS-ban egy rövid jel — becslés
+  +60–100 B egy cserén, mérendő —, a vonal a régió kulcsánál a kereső-tárat olvassa és írja). A régió társait a DHT-n a
+  régió témáján találják meg (a hirdetés — a ③), és a változást a raj kör viszi körbe (a régió kulcsa a raj-jegyzékben). A
+  tartomány-egyeztetés miatt csak a KÜLÖNBSÉG utazik.
+- **(B) A kérelemmel** (a régió egészét kérik egy társtól): a vonalhoz nem kell nyúlni, de minden alkalommal az egész régió
+  utazik (~1000 csomag, ~2–3 MB).
+
+**L3. A halványulás a rajban — hogy ne jöjjön vissza a lejárt bejegyzés**
+- **(A) ⭐ Aláírt megújítás — ezt javaslom.** A tulajdonos 30 naponként egy kis ALÁÍRT megújítást ad a bejegyzéshez (a
+  bejegyzés azonosítója + az idő — nem esemény, a láncát nem növeli; a tábla-bejegyzés mintája). A bejegyzés az utolsó
+  megújítása után 30 nappal lejár — BÁRKINÉL, akármelyik tartótól jött is; a tartók a megújítást a bejegyzéssel együtt adják
+  tovább. A jövőbe dátumozott megújítást (a tartó saját órájához képest több mint egy nap) a tartó elveti. A „soros” (K5)
+  egyben ez az aláíró.
+- **(B) Aláíratlan átvételi idő** (a tartó a saját órája szerint, és a társának is megmondja): egyszerűbb, de egy hazug
+  tartó a végtelenségig életben tarthat egy bejegyzést — a „temető” visszajön.
+- **(C) Nincs raj** (a tulajdonos minden tartónak maga ajánlja fel): nincs rés, de a felajánlás ára a tartók számával
+  szorzódik (~12×).
+
+**L4. A felajánlás útja (④)**
+- **(A) ⭐ A kérelem gépén, egy új fajtával — ezt javaslom** (`FELAJANLAS`): a tulajdonos a régió tartóit a DHT-n keresi és
+  bekopogtat (a függő kérelem gépe — D92/1, K4), és átadja a csomagot (a születés, a címadó javaslat, a két pont-esemény, a
+  megújítás; a tagsági kísérőket a tartó kéri, ha kell — D95/2). A tartó mindent ugyanazon a kapun ellenőriz, és a
+  kereső-tárába teszi; ha a fiók osztódott (K7), ezt kimondja, és a felajánló a darab régiójába viszi.
+- **(B) A csak küldő út kiterjesztése** a mások eseményeire: a csere minden körében utazna egy újabb lista — a „nincs
+  újdonság” csere drágulna, pedig a felajánlás ritka (gondolatonként egyszer, aztán 30 naponként).
+
+⭐ **A sorrend a döntések után:** ③ a kereső-tár, a régió részvétele a cserében és a hirdetés (L1, L2) → ④ a felajánlás és a
+megújítás (L3, L4) → ⑤ a kérdés → ⑥ a halványulás (a lejárat a kereső-tárban — az L3 szerint) → ⑦ a modál.

@@ -73,7 +73,10 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    (NFC, kisbetű, ékezet-összevonás nélkül), a kulcsok (`e:` egész szó, `p:` az első négy jel; ≤ 32 / cím), a szűrő
    (`cimIllik`), a bejegyzés, az osztódás (K7), a régiók (`k` jel, a gyökértől független helyen); a darab-számítás közös a
    gyökérrel (`cimjegyzek.js`); elágazás 156. ⏭️ **③ a tartás és a hirdetés.** ✅ **K9 — a MÓDOSÍTOTT CÍM** (Csaba: „legyen az (A)”;
-   elágazás 157.): a bejegyzés a születés + a címet adó javaslat, a felajánló a tulajdonos, az elfogadást a kérdező ellenőrzi. ⏸️ A
+   elágazás 157.): a bejegyzés a születés + a címet adó javaslat, a felajánló a tulajdonos, az elfogadást a kérdező ellenőrzi. 🔍 **A ③–④ átvizsgálva** (az
+   átvizsgálás 11. szakasza): ⏸️ **Csabánál L1–L4** — L1 külön kereső-tár (puha állapot, ugyanazon a kapun) · L2 a régió
+   tartói a cserében egyeztetnek (a gyökér-darab mintája, NYITÁS-jel) · L3 aláírt megújítás (hogy a lejárt bejegyzés ne
+   jöjjön vissza a rajból) · L4 a felajánlás a kérelem gépén (`FELAJANLAS`). ⏸️ A
    szabály másik következménye: a tagsági lánc 64-es korlátja (állapot-befolyásoló — éles koinó előtt).
 2. **A terep 🅱️ (két mobilnetes telefon)** — amikor meglesznek; előtte a telefon frissítése (lent).
 3. **Az „UTÁNA” lista** (lent).
