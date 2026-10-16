@@ -242,5 +242,34 @@ egy szám, ami a koinóval nőne, de rögzített szélességű: ha a koinó kin�
 - **K4–K5:** a felajánlás ~90 KB gondolatonként (felső becslés); a megújítás „soros” újítóval ~15–17 KB/nap/készülék; a
   legnagyobb állandó tétel a régió hirdetése a DHT-n (~650 KB/nap, mint a gyökér-darabé).
 
-⏭️ **A sorrendből:** ① ✅ · ② a szó és az index-darab (tiszta számítás, a D106 szerinti 144 bites darab-számmal; B = 256,
-T = 512) → ③ a tartás és a hirdetés → ④ a felajánlás (a tagság a háttérben) → ⑤ a kérdés → ⑥ a halványulás → ⑦ a modál.
+⏭️ **A sorrendből:** ① ✅ · ② ✅ a szó és az index-darab (2026-10-16 — `keresoReteg.js`: a szavak, a kulcsok, a szűrő, az
+osztódás, a régiók; a darab-számítás közös a gyökérrel) → ③ a tartás és a hirdetés → ④ a felajánlás (a tagság a
+háttérben; előtte a 10. szakasz kérdése) → ⑤ a kérdés → ⑥ a halványulás → ⑦ a modál.
+
+## 10. ✅ A MÓDOSÍTOTT CÍM — K9 (D105, 2026-10-16): az (A)
+
+> Csaba: *„A módosított címre legyen az (A): a tulajdonos a születést a címet adó javaslattal ajánlja fel, a kérdező a találat után ellenőriz.”*
+
+**A kérdés.** A bejegyzés a gondolat születése (`GondolatLetrehozas` — aláírt, a címmel): a tartó maga ellenőrzi, hogy a
+cím tartalmazza a szót. De a címet egy elfogadott szerkesztési egyezmény (módosítás, egyesítés) átírhatja
+(`szerkesztesiVegrehajtas.js`), és az új cím nem a születésben áll: a módosítási javaslat hordozza (aláírva), az
+ELFOGADÁSA viszont számított (D17) — egyetlen aláírt esemény sem mondja ki, hogy a javaslat nyert.
+
+⭐ **Pontosítás (Csaba kérdésére, 2026-10-16):** a TULAJDONOSOK készülékén a gondolat címe a lezárás után az új — a
+számítás (a szerkesztési végrehajtás) rávezeti az entitásra, mert náluk megvan a döntés minden bemenete (a gondolat és a
+javaslat szelete, a szavazatok). Új esemény nem születik (a tár csak hozzáfűz — a cím a számításból jön). A kérdés tehát nem
+az, hogy KI tudja az új címet — a tulajdonosok tudják —, hanem hogy a kereső TARTÓJA (egy véletlen készülék a szó régiójában,
+ami a gondolat szeletét nem tartja) hogyan ellenőrizze. Kiszámolni nem tudja (ahhoz a döntés összes bemenete kellene),
+csak az aláírásokat látja. ⭐ Ezért illik ide az (A): a felajánló és a 30 naponkénti megújító a tulajdonos (K4–K5), aki a
+mai, számított címet ismeri — ő ajánlja fel a születést a címet adó javaslattal; a régi cím bejegyzését többé nem újítja,
+így az 30 nap alatt elhalványul.
+
+- **(A) ⭐ A bejegyzés a születés + a címet adó javaslat; a tartó az elfogadást NEM ellenőrzi, a kérdező a találat után igen
+  — ezt javaslom.** A tartó ellenőrzi az aláírásokat, hogy a javaslat erre a gondolatra szól, és hogy a (javasolt) cím
+  tartalmazza a szót; a kérdező a találatot elkéri, és a gondolat VALÓDI, számított címével szűr (a kereső a MEGTALÁLÁS
+  rétege, nem dönt semmiről — D105, 5.7). A régi cím a megújításkor kiesik (K5: a tartók a MAI címet újítják, 30 nap). Ára:
+  egy el nem fogadott javaslat címe is felkerülhet, ha valaki felajánlja — a K3 (két tag-tulajdonos) és a kérdező szűrője
+  fogja meg.
+- **(B) Csak a születés címe** — egyszerű, de az átnevezett gondolat az új nevén soha nem található meg.
+- **(C) A bejegyzés mellé a döntés bizonyítéka** (a lezárási összegzés — D95/1) — pontos, de drága (60–70 KB döntésenként,
+  67. mérés), és csak a nagy szeleteknél van ilyen.

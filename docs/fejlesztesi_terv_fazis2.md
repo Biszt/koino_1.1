@@ -5603,6 +5603,31 @@ találatot” 47–72% helyett 91–96%-ban hozza. Az első válasz 1 perces kö
 szerzőinél nagyobb (**4096**); az új tartó első kitöltése (~8,4 MB egymillió gondolatnál) a háttérben jöjjön, a tagsági
 kísérők gépével.
 
+✅ **② A SZÓ ÉS AZ INDEX-DARAB (2026-10-16, `keresoReteg.js`) — a tiszta számítás, hálózat nélkül:** a cím szavai (NFC,
+kisbetű; a betűk, a hozzájuk tartozó jelek és a számjegyek egybefüggő sora; ékezet-összevonás nincs; a hossz jelekben), a
+kulcsok (K2 (C): `e:` az egész szó, `p:` az első négy jel — a háromjeles csak egészében, a négyjeles csak a szóeleje alatt;
+egy cím legfeljebb 32 kulcs, az elejéről), a kérdés fiókjai és a szűrő (`cimIllik`: minden kérdés-szó egy cím-szó ELEJE),
+a bejegyzés (csak a címet viselő `GondolatLetrehozas` — gondolat, kategória, gondolattípus), az osztódás (K7:
+`osztodasMelysege`; a gondolat darabja a SAJÁT lenyomatából, egymásba ágyazva; a darabok helye a fiók nevéből és a
+darabból, egymástól független), a régiók (a gyökér-darab alakja `k` jellel; a készülék a gyökér-darabjától független
+helyen; a mélység becslése a saját régióból, cél 512; a DHT-téma vakított). ⭐ A darab-számítás KÖZÖS a gyökérrel
+(`cimjegyzek.js`: `darabLenyomata`, `lenyomatDarabja`, `darabKulcsa`/`darabKulcsBol` a `g`/`k` jellel, `melysegBecslese`,
+`darabMelysege`, `keszulekDarabjai`, `keszulekDarabKulcsai`) — a gyökér függvényei vékony burkolók, bájtra ugyanazt adják
+(a kiemelés előtti változattal 1500 összevetésben 0 eltérés). Próbák: `keresoProba.js` (10) — négy rontással (szóeleje
+nélkül négy bukik, köztük a tőre keresés; osztódás nélkül a K7; a gyökér sójával a független hely; NFC nélkül a szavak).
+
+Elágazás 156.
+
+✅ **K9 — A MÓDOSÍTOTT CÍM (2026-10-16, Csaba: „A módosított címre legyen az (A): a tulajdonos a születést a címet adó javaslattal ajánlja fel, a kérdező a találat után ellenőriz.”)** A bejegyzés a születés
+(aláírt, a címmel); ha egy elfogadott szerkesztési egyezmény átírja a címet, a tulajdonosok készülékén a cím a lezárás után
+az új (a szerkesztési végrehajtás rávezeti — új esemény nélkül), de a kereső TARTÓJA (egy véletlen készülék a szó régiójában)
+a döntés bemenetei nélkül ezt nem tudja kiszámolni. Ezért: a bejegyzés a születés + a címet adó módosítási javaslat
+(aláírt); a felajánló és a megújító a tulajdonos (K4–K5), aki a mai, számított címet ismeri; a tartó az aláírásokat, a
+javaslat célját (erre a gondolatra szól) és a cím szavát ellenőrzi — az elfogadást nem; a kérdező a találat után a gondolatot
+a tartóitól elkéri, és a valódi címével szűr (a kereső a megtalálás rétege, nem dönt — 5.7). A régi cím bejegyzését a
+tulajdonos többé nem újítja: 30 nap alatt elhalványul. Ára: egy el nem fogadott javaslat címe is felkerülhet, ha valaki
+felajánlja — a K3 (két tag-tulajdonos) és a kérdező szűrője fogja meg. Elágazás 157.
+
 ### D106. A „VÉGTELEN” MÉRCÉJE: A KOINÓ SAJÁT HATÁRA, ÉS A KIMONDOTT KIVÉTEL (2026-10-15, Csaba: „A (C)-t választom”)
 
 **A kérdés** (a D105 K8-a nyomán): Csaba a darab-szám szélessége előtt a „gyakorlatilag végtelen” fogalmát pontosíttatta.

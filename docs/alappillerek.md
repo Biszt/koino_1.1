@@ -375,7 +375,8 @@ bejáró (D102, 112–121.), a Struktúra (122–126.), a Síkidom (127–135.),
 az infók a prototípus helyén, a csere ideje és az automatikus frissítés a csere után (148–152.); és a kézi próba lelete
 nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldőlt (D105, 154.), a „végtelen” mércéje is (D106,
 155.: a koinó saját határa — és vele a K8, a 144 bites darab-szám); ✅ a 75. mérés (2026-10-16): a D105 alakja kiállja
-(a K7 nélkül a gyakori szó fiókja a koinóval nő, vele nem; a K2 (C) kétszer annyi találat). ⏭️ ② a szó és az index-darab.
+(a K7 nélkül a gyakori szó fiókja a koinóval nő, vele nem; a K2 (C) kétszer annyi találat); ✅ ② a szó és az index-darab
+(156.). ⏭️ ③ a tartás és a hirdetés.
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 
@@ -1029,3 +1030,20 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     (egy készülék munkája) viszont a végtelen eszköze, nem korlát · Csaba (a mérce), Claude (a K8) · a fázis-2 terv D106-a,
     `cimjegyzek.js` (`GYOKER_MAX_MELYSEG`, `gyokerLenyomata`, `gyokerJelOlvasasa`), `vonal.js`, `szeletEgyeztetes.js`,
     `koino.js`. ⏸️ A tagsági lánc 64-es korlátja a szabály szerint szűk — külön lépés (állapot-befolyásoló, D66).
+156. **2026-10-16 · a kereső-réteg tiszta számításai (D105 ②)** → **a szó: NFC + kisbetű, a betűk, jelek és számjegyek
+    egybefüggő sora, ékezet-összevonás nélkül, a hossza jelekben; a kulcs: `e:` + az egész szó (3 és ≥ 5 jel), `p:` + az
+    első négy jel (≥ 4 jel); egy cím legfeljebb 32 kulcs (az elejéről); a szűrő: minden kérdés-szó egy cím-szó eleje; a
+    bejegyzés csak a címet viselő `GondolatLetrehozas`; az osztódó fiók darabja a gondolat SAJÁT lenyomatából (egymásba
+    ágyazva, a fióktól független), a darab helye a fiók nevéből és a darabból; a régió a gyökér-darab alakja `k` jellel, a
+    készülék a gyökér-darabjától független helyen (más só); a darab-számítás KÖZÖS a gyökérrel (`cimjegyzek.js`)** · mert a
+    75. mérés ezt az alakot mérte (K2 (C), K7); a „nincs értelmezés” (5.1) a szótárat és az ékezet-összevonást is kizárja; a
+    kulcs-korlát a felajánlás árát korlátosan tartja (9. szabály); és két egymás mellett élő másolat egyszer eltérne · Claude
+    · `keresoReteg.js`, `cimjegyzek.js`, `keresoProba.js`. A módosított cím: 157.
+157. **2026-10-16 · a módosított cím a keresőben (D105 K9, Csaba: „legyen az (A)”)** → **a bejegyzés a születés + a címet
+    adó módosítási javaslat; a felajánló és a megújító a tulajdonos (ő ismeri a mai, számított címet); a tartó az
+    aláírásokat, a javaslat célját és a cím szavát ellenőrzi, az elfogadást nem; a kérdező a találat után a gondolat valódi
+    címével szűr; a régi cím 30 nap alatt elhalványul** · mert a tulajdonosoknál a cím a lezárás után számítással (új esemény
+    nélkül) változik, a kereső tartója viszont a döntés bemenetei nélkül ezt nem tudja kiszámolni — és a kereső a megtalálás
+    rétege, nem dönt semmiről (5.7); a csak-születés (B) az átnevezett gondolatot az új nevén elrejtené, a döntés
+    bizonyítéka (C) drága · Csaba (a kérdés pontosítása és a döntés), Claude · az átvizsgálás 10. szakasza, a fázis-2 terv
+    D105-e.
