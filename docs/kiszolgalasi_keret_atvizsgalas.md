@@ -140,6 +140,19 @@ ugyanaz). A 76. mérés újra: egy kérés 0,5–0,7 ms 1500 és 125 000 esemén
 a gyorsítótárazott kép ugyanazt adja (`kerelemProba.js`), és a futó tartó képe a tárral együtt avul (`parancssorProba.js`) —
 rontással.
 
+✅ **A KÉRELEM ÚTJA A KERETEN (②–④ a kérelemre, 2026-10-17):** a könyvelés (`js/csere/kiszolgalasiKeret.js` — percenkénti
+vödrök csúszó órában, a kötés csak könyvelődik, a társ ¼, az idegenek ½, a maradék bájt, korlátos jegyzék); a kérő a
+kérelemben a tábla-kulcsát is hozza (`tabla` + `aa` — a kézfogás átiratára aláírva, mint a nyitásban; `udpVonal.js`
+`kerelemTablaja`, `koino.js` `azonossagBeallitasa`); a kiszolgáló (`vonal.js` a KERELEM ágán) minden kérés előtt megkérdezi a
+keretet, utána könyvel (a kapcsolat kiküldött bájtjai), a keret fölött `KESZ` + `kesobb`, a túl nagy törzsből a beférő
+fájlokat adja (`TORZS` + `kesobb`); a továbbadás (`ATVESZEM`) is kérésnek számít; a `kerelem` parancs kimondja a „később”-t.
+A határ a beállításból (alap / „mindent”), a próbákhoz `KOINO_KERET`. Próbák: a könyvelés modul-próbája
+(`kiszolgalasiKeretProba.js`, 10 — hét rontással) és a bekötés (`parancssorProba.js`: egy végig futó tartó szűk kerettel —
+a kötés mindig kap, az idegen harmadikja „később”; rontás: tábla-kulcs nélkül a kötés is idegen, a keret nélkül az idegen is
+kap). ⏭️ **Hátravan:** az idegen CSERE a kereten (az ítélet a nyitás után, a részleges küldés a maradékig, a `KESOBB` üzenet),
+a továbbadott válasz visszavitelének bájtjai, a kérő reakciója (a függő kérelem a „később”-t mondó tartót addig kihagyja,
+és a raj másik tartójához fordul; a lap kimondja), és a beállítás (⑤).
+
 ① A kép gyorsítótára (KK1) — és a 76. mérés újra: a meleg fejléc-kérés a tárral nem nő. → ② A keret könyvelése (a mérő,
 a csúszó ablak, a társ-azonosítás — KK2–KK3; a tábla-kulcs a kérelemben) → ③ a kiszolgálás bekötése (KK4: a kérelem, a
 továbbadás, a törzs, az idegen csere; az elsőbbség) → ④ a „később” a vonalon és a kérőnél (KK6) → ⑤ a beállítás (a

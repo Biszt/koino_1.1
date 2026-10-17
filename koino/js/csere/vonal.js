@@ -444,6 +444,10 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     // megengedett szeleteket kérheti (a koinó születése, a saját és a mi azonosság-szeletünk) — mást nem. ⭐ D102 (J3): az
     // ítélet EGYSZER születik, az első kérelemnél — a sorozat ugyanattól a társtól, ugyanazon a védett résen jön.
     let kapuV = { szabad: true };
+    // ⭐⭐ D109 (KK3): KI KÉR? — a személy (ha bizonyított), és a tábla-kulcsa, ha a kézfogás átiratára tett aláírásával
+    // jött (mint a nyitásban); különben csak a cím. A kiszolgálási keret ebből számol.
+    const kerelemTablaja = elsoUzenet.tabla && typeof elsoUzenet.tabla === 'object' && typeof kezfogas?.ellenoriz === 'function'
+      && kezfogas.ellenoriz(elsoUzenet.tabla, elsoUzenet.aa) ? elsoUzenet.tabla : null;
     if (zartKapu) {
       const ki = bizonyitottSzemely(elsoUzenet.ki);
       kapuV = await kapuItelete({ ki });
@@ -456,7 +460,18 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       if (ki) tarsAzonossaga = ki;
     }
 
-    /** Egy kérelem kiszolgálása (az elsőé és a sorozat többié ugyanígy). @returns {{k, kiszolgalva, tiltva?}} */
+    // ⭐⭐ D109 (KK2, KK4): A KISZOLGÁLÁSI KERET — a hívó adja (`beallitas.kiszolgalasiKeret`: `itelet(tars)` és
+    // `feljegyez(tars + bajt, keres)`); a vonal csak megkérdezi és könyvel, a számokat nem ismeri. Minden kérés előtt az
+    // ítélet; a keret fölött `KESZ` + `kesobb` (KK6 — egy régi kérő üres válasznak látja), utána a kiküldött bájt.
+    const keret = beallitas.kiszolgalasiKeret ?? null;
+    const kerelemTarsa = {
+      szemely: bizonyitottSzemely(elsoUzenet.ki)?.sz ?? null,
+      tabla: typeof kerelemTablaja?.alairo === 'string' ? kerelemTablaja.alairo : null,
+      cim: kapcsolat.remoteAddress ?? null,
+      tag: !!(zartKapu && kapuV.szabad && bizonyitottSzemely(elsoUzenet.ki))
+    };
+
+    /** Egy kérelem kiszolgálása (az elsőé és a sorozat többié ugyanígy). @returns {{k, kiszolgalva, tiltva?, kesobb?}} */
     const egyKerelem = async (uzenet) => {
       const k = kerelemAlakja(uzenet);
       if (zartKapu && !kapuV.szabad) {
@@ -467,6 +482,19 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
         }
         tarsKorlatozva = true;
       }
+      let maradekBajt = Infinity;
+      if (keret) {
+        const it = await keret.itelet(kerelemTarsa);
+        if (it && !it.szabad) {
+          kuld({ uzenet: 'KESZ', kesobb: it.kesobb });
+          return { k, kiszolgalva: null, kesobb: it.kesobb };
+        }
+        if (Number.isFinite(it?.maradekBajt)) maradekBajt = it.maradekBajt;
+      }
+      const b0 = kapcsolat.bytesWritten ?? 0;
+      const konyvel = async () => {
+        if (keret) await keret.feljegyez({ ...kerelemTarsa, bajt: (kapcsolat.bytesWritten ?? 0) - b0, keres: 1 });
+      };
       let kiszolgalva = null;
       // ⭐⭐ D92/1 (c): ha NEM tudjuk kiszolgálni, de a kérelem továbbadható (van még ugrás), és vállaljuk, ÁTVESSZÜK —
       // a válasz később, lépésenként jön vissza (`VALASZ`). A kérdező címét nem kapjuk meg, csak azt, akitől jött (D87).
@@ -513,13 +541,17 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       } else if (k?.fajta === 'torzs' && kiszolgalo?.torzs) {
         // ⛔ D84/1: a törzset csak a vállaló adja — a kiszolgáló üres listát mond, ha nem vállalja. ⚠️ És csak azt
         // sorolja fel, ami TÉNYLEG megvan nála: a fájl-hurok az első hiányzónál kilép (a kérő a következőre várna).
-        const lenyomatok = await kiszolgalo.torzs(k);
-        if (!lenyomatok.length && await atvesz()) {
+        // ⭐ D109 (KK6): ha a fájlok a keret maradékát túllépnék, a kiszolgáló a beférőket adja, a többire „később”.
+        const t = await kiszolgalo.torzs(k, { maradekBajt });
+        const lenyomatok = Array.isArray(t) ? t : (Array.isArray(t?.lenyomatok) ? t.lenyomatok : []);
+        const torzsKesobb = !Array.isArray(t) && Number.isInteger(t?.kesobb) ? t.kesobb : null;
+        if (!lenyomatok.length && !torzsKesobb && await atvesz()) {
           console.log('parbeszed - törzs átvéve továbbadásra', { az: k.az });
           kuld({ uzenet: 'KESZ' });
+          await konyvel();
           return { k, kiszolgalva: 'atvett' };
         }
-        kuld({ uzenet: 'TORZS', kulcs: k.kulcs, lenyomatok });
+        kuld({ uzenet: 'TORZS', kulcs: k.kulcs, lenyomatok, ...(torzsKesobb ? { kesobb: torzsKesobb } : {}) });
         const kovetkezo = await sor.kovetkezo();
         if (kovetkezo.uzenet === 'FAJLKEREK' && lenyomatok.length && beallitas.fajlOlvas) {
           const szabad = new Set(lenyomatok);
@@ -530,6 +562,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       }
       // ⚠️ Amit nem tudunk vagy nem akarunk kiszolgálni, arra is KESZ megy (a kérő ne várjon a tétlenségi óráig).
       if (kiszolgalva !== 'torzs') kuld({ uzenet: 'KESZ' });
+      await konyvel();
       return { k, kiszolgalva };
     };
 
@@ -553,7 +586,8 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     console.log('parbeszed - VÉGE (kérelem kiszolgálva)', { fajta: elso.k?.fajta ?? null, kulcs: elso.k?.kulcs ?? null,
       kiszolgalva: elso.kiszolgalva, sorozat: sorozat.length });
     return { ...eredmeny(), kerelemKiszolgalva: kiNyom(elso), szeletKiszolgalva: elso.kiszolgalva === 'szelet' ? elso.k.kulcs : null,
-      ...(sorozat.length > 1 ? { kerelmekKiszolgalva: sorozat.map(kiNyom) } : {}) };
+      ...(sorozat.length > 1 ? { kerelmekKiszolgalva: sorozat.map(kiNyom) } : {}),
+      ...(sorozat.some((x) => x.kesobb) ? { kerelemKesobb: Math.max(...sorozat.map((x) => x.kesobb ?? 0)) } : {}) };
   }
 
   // ===== ⭐⭐ D92/1 (c): A VÁLASZ VISSZAÚTJA — egy továbbadott kérelem válasza, lépésenként (D87) =====
@@ -1507,14 +1541,20 @@ export async function szeletKapcsolaton(tar, koino, kapcsolat, entitas, tovabb =
   // ⭐ D93/3: a személyünk (`azonossag.ki` — a rés-réteg írja alá a kézfogás átiratára) — a zárt koinó kapujának.
   kapcsolat.write(JSON.stringify({ uzenet: 'KERELEM', koino, fajta: 'szelet', kulcs: entitas,
     ...(tovabb.az ? { az: tovabb.az, htl: tovabb.htl } : {}),
-    ...(azonossag.ki ? { ki: azonossag.ki } : {}) }) + '\n');
+    ...(azonossag.ki ? { ki: azonossag.ki } : {}),
+    ...(azonossag.tabla ? { tabla: azonossag.tabla.kulcs, aa: azonossag.tabla.aa } : {}) }) + '\n');
 
   const erkezett = [];
   let atvette = false;
   let tiltva = false;
+  let kesobb = null;
   for (;;) {
     const uzenet = await sor.kovetkezo();
-    if (uzenet.uzenet === 'KESZ') { tiltva = uzenet.tiltva === 'zart'; break; }
+    if (uzenet.uzenet === 'KESZ') {
+      tiltva = uzenet.tiltva === 'zart';
+      kesobb = Number.isInteger(uzenet.kesobb) && uzenet.kesobb > 0 ? uzenet.kesobb : null;
+      break;
+    }
     // ⭐ D93/3: a társ nem tud ellenőrizni minket — a tagsági csomagunkkal felelünk.
     if (uzenet.uzenet === 'KELL') { kapcsolat.write(JSON.stringify(await tagsagValasz(azonossag)) + '\n'); continue; }
     if (uzenet.uzenet === 'ESEMENY') erkezett.push(uzenet.esemeny);
@@ -1531,6 +1571,7 @@ export async function szeletKapcsolaton(tar, koino, kapcsolat, entitas, tovabb =
     entitas,
     atvette,
     ...(tiltva ? { tiltva: true } : {}),
+    ...(kesobb ? { kesobb } : {}),
     ...(tar ? {} : { esemenyek: erkezett }),
     kapott: erkezett.length,
     uj: beolvasztva.uj,
@@ -1562,7 +1603,8 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
   kuld({ uzenet: 'KERELEM', koino, fajta: kerelem.fajta, kulcs: kerelem.kulcs, n: kerelem.n, m: kerelem.m === true,
     ...(kerelem.utan ? { utan: kerelem.utan } : {}), ...(beallitas.sorozat ? { sorozat: true } : {}),
     ...(kerelem.az ? { az: kerelem.az, htl: kerelem.htl } : {}),
-    ...(beallitas.ki ? { ki: beallitas.ki } : {}) });
+    ...(beallitas.ki ? { ki: beallitas.ki } : {}),
+    ...(beallitas.tabla ? { tabla: beallitas.tabla.kulcs, aa: beallitas.tabla.aa } : {}) });
   // A NYITAS-t (és bármi mást) átlépjük, amíg a válasz meg nem jön. ⭐ D93/3: a KELL-re a tagsági csomagunk megy.
   let u;
   for (;;) {
@@ -1576,7 +1618,11 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
     for (;;) { const v = await sor.kovetkezo(); if (v.uzenet === 'KESZ') break; }
     return { kiszolgalta: false, atvette: true, ...bajt() };
   }
-  if (u.uzenet === 'KESZ') return { kiszolgalta: false, ...(u.tiltva === 'zart' ? { tiltva: true } : {}), ...bajt() };
+  if (u.uzenet === 'KESZ') {
+    // ⭐ D109 (KK6): a tartó kerete most nem enged — a kérő ennyi ideig máshoz forduljon.
+    const kesobb = Number.isInteger(u.kesobb) && u.kesobb > 0 ? u.kesobb : null;
+    return { kiszolgalta: false, ...(u.tiltva === 'zart' ? { tiltva: true } : {}), ...(kesobb ? { kesobb } : {}), ...bajt() };
+  }
 
   if (u.uzenet === 'FEJLECEK') {
     const valasz = u.valasz;
@@ -1602,7 +1648,9 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
     }
   }
   try { kuld({ uzenet: 'KESZ' }); } catch { /* zárt */ }
-  return { kiszolgalta: true, lenyomatok, fajlok, ...bajt() };
+  // ⭐ D109 (KK6): ha a tartó a keret miatt csak a fájlok egy részét adta, a többit később.
+  const torzsKesobb = Number.isInteger(u.kesobb) && u.kesobb > 0 ? u.kesobb : null;
+  return { kiszolgalta: true, lenyomatok, fajlok, ...(torzsKesobb ? { kesobb: torzsKesobb } : {}), ...bajt() };
 }
 
 /**
@@ -1618,6 +1666,7 @@ export async function kerelemSorozatKapcsolaton(kapcsolat, koino, kerelmek, beal
   for (const k of lista) {
     const r = await kerelemKapcsolaton(kapcsolat, koino, k, { ...beallitas, sor, sorozat: lista.length > 1 });
     eredmenyek.push(r);
+    // (a „később” után a sorozat megy tovább: a tartó a többire is röviden „később”-t mond, a kérő mindet megjegyzi)
     if (r.tiltva) break;
   }
   if (lista.length > 1 && !eredmenyek.at(-1)?.tiltva) {

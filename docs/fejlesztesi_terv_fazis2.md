@@ -5767,6 +5767,11 @@ változás-számlálója, a vállalás és a bemondások szerint, ≤ 60 mp; a f
 ÖSSZEFÉSÜLÉSSEL (a lapos gyökér egy nagy koinóban minden kérésnél a teljes koinót a kupacba tette). A 76. mérés újra: egy
 kérés 0,5–0,7 ms a tár méretétől függetlenül. Elágazás 161.
 
+✅ **A KÉRELEM ÚTJA A KERETEN (2026-10-17):** a könyvelés (`kiszolgalasiKeret.js`), a kérő tábla-kulcsa a kérelemben (KK3), az
+ítélet és a könyvelés a kiszolgáló KERELEM-ágán (a sorozat minden tagjára, a továbbadásra is), a „később” (`KESZ` + `kesobb`
+— egy régi kérő üres válasznak látja), a részleges törzs (a keret maradékáig), és a `kerelem` parancs kimondja. Elágazás 162.
+⏭️ Hátravan: az idegen csere a kereten, a kérő reakciója, a beállítás.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

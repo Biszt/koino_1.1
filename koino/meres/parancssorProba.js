@@ -2887,6 +2887,55 @@ proba('⭐⭐ D109 (KK1): a kiszolgáló képe a tárral együtt avul — a fut�
 });
 
 // ===================================
+// ⭐⭐ D109 (KK2–KK6): A KISZOLGÁLÁSI KERET — a kötés mindig kap, az idegen a keret fölött „később”-t
+// ===================================
+//
+// Egy VÉGIG FUTÓ tartó (a keret a folyamat memóriájában él) szűk kerettel (`KOINO_KERET` = óránként 8 kérés → egy társ
+// legfeljebb 2-t, az idegenek együtt 4-et vihetnek). B előtte cserélt vele — a KÖTÉSE (a tábla-kulcsa a kötés-jegyzékben);
+// C idegen. B négy fejléc-kérelme mind átmegy (a kötés nem kerül a keret alá — D108); C harmadikja „később”-t kap, és a
+// parancs ezt kimondja (nem „nem tartja”). ⭐ Ez a kérelembe tett tábla-kulcsot is méri (KK3): e nélkül a tartó B-t sem
+// ismerné fel. Rontás: a kérelem tábla-kulcs nélkül → B is idegen → a harmadikja „később” → bukik; a keret nélkül C
+// harmadikja is átmegy → bukik.
+proba('⭐⭐ D109: a kiszolgálási keret — a kötés mindig kap, az idegen a keret fölött „később”-t, és a parancs kimondja', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const c = await ujKeszulek();
+  const port = 7460;
+  let figyelo = null;
+  try {
+    await fut(a, 'koino', 'Keret', 'próba', 'nyilt');
+    await fut(a, 'gondolat', 'ELSO');
+    // B cserél A-val → a kötése lesz (mindkét oldalon a tábla-kulcs alatt)
+    await fut(b, 'tars', '127.0.0.1', String(port), 'A');
+    await csereKor(a, b, port);
+    // A végig futó tartó, szűk kerettel
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)],
+      { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', KOINO_KERET: '100000000,8' }, stdio: 'ignore' });
+    await varj(1500);
+    const kerdez = (ki) => fut(ki, 'kerelem', 'fejlecek', 'gyoker', '127.0.0.1', String(port)).catch((h) => String(h?.message ?? h));
+    const bKi = [];
+    for (let i = 0; i < 4; i++) bKi.push(tiszta(await kerdez(b)));
+    const cKi = [];
+    for (let i = 0; i < 3; i++) cKi.push(tiszta(await kerdez(c)));
+    const kapott = (x) => /FEJLÉCEK: a gyökér/.test(x) && /ELSO/.test(x);
+    const ki = {
+      kotes: bKi.every(kapott),
+      idegenElso: kapott(cKi[0]) && kapott(cKi[1]),
+      idegenKesobb: !kapott(cKi[2]) && /A tartó most nem szolgál ki/.test(cKi[2]) && /mp múlva/.test(cKi[2])
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  kiszolgálási keret — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
+        + JSON.stringify({ b: bKi.map((x) => x.slice(0, 80)), c: cKi.map((x) => x.slice(0, 120)) }) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    if (figyelo) figyelo.kill();
+    await varj(1000);
+    for (const m of [a, b, c]) await rm(m, { recursive: true, force: true });
+  }
+});
+
+// ===================================
 // ⭐⭐ D104 (Csaba, 2026-10-15): A KIFUTÁS A CSERÉBEN — a terepi eset, két készüléken
 // ===================================
 //

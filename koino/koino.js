@@ -264,6 +264,11 @@ import {
   SOROZAT_KORLAT
 } from './js/csere/kerelem.js';
 import { reszfaKarbantarto, osszPontokSzamitasa } from './js/allapot/osszPont.js';
+// ⭐⭐ D109 (KK2–KK5): a kiszolgálási keret könyvelése (mennyit dolgoztam másoknak az utóbbi órában, kinek)
+import {
+  ujKeret, keretHatara, keretFeljegyzes, keretItelete, keretAllasa, tarsKulcsa, tarsOsztalya, KERET_ALAP, KERET_MINDENT,
+  KESOBB_MIN
+} from './js/csere/kiszolgalasiKeret.js';
 import { GYOKER_KULCS } from './js/csere/szeletEgyeztetes.js';
 // ⭐ D89/1: a kézfogás hitelesítése — a tábla-kulcs aláírja a kézfogás átiratát.
 import { kezfogasAlairasa, szemelyesKezfogasAlairasa } from './js/csere/titkositas.js';
@@ -2189,6 +2194,62 @@ async function valaszFogadasa(v, honnan) {
 
 /** ⭐ A kérelem-kiszolgáló: a fejlécek (mintákkal) és a törzs — a `parbeszed` hívja. */
 // ===================================
+// ⭐⭐ D109 (KK2–KK6): A KISZOLGÁLÁSI KERET — folyamatonként egy
+// ===================================
+//
+// A valódi védelem a kiszolgálónál van (D108): minden kérés előtt az ítélet (`keretItelete`), utána a könyvelés (a kiküldött
+// bájt és egy kérés). A határ a beállításból: „alap” 20 MB + 600 kérés, „mindent” 100 MB + 3000 óránként (KK5); a próbák a
+// környezetből szűkíthetik (`KOINO_KERET` = „bájt,kérés”). Az osztály (KK4): a KÖTÉSEM (a tábla-kulcsa a kötés-jegyzékemben
+// — a saját cserém, nem kerül a keret alá), egy bizonyított TAG (zárt koinóban), különben IDEGEN.
+
+let kiszolgalasiKeretPeldany = null;
+const keretKiirva = new Map();      // társ → mikor írtuk ki utoljára, hogy „később” (a napló ne teljen meg)
+
+async function kiszolgalasiKeretHatara() {
+  const k = String(process.env.KOINO_KERET ?? '').split(',').map((x) => Number.parseInt(x, 10));
+  if (k.length === 2 && k.every((x) => Number.isInteger(x) && x > 0)) return { bajt: k[0], keres: k[1] };
+  return (await kiszolgalasBeallitas()).mindent ? KERET_MINDENT : KERET_ALAP;
+}
+
+async function kiszolgalasiKeretem() {
+  const hatar = await kiszolgalasiKeretHatara();
+  if (!kiszolgalasiKeretPeldany) kiszolgalasiKeretPeldany = ujKeret(hatar);
+  else keretHatara(kiszolgalasiKeretPeldany, hatar);
+  return kiszolgalasiKeretPeldany;
+}
+
+/** A társ osztálya a keretben: a kötésem (a tábla-kulcsa alapján), egy bizonyított tag, vagy idegen. */
+async function keretOsztalya({ tabla = null, tag = false }) {
+  if (tabla) {
+    try { if ((await kotesTarolo().olvas()).some((k) => k.alairo === tabla)) return 'kotes'; } catch { /* nincs jegyzék */ }
+  }
+  return tarsOsztalya({ tag });
+}
+
+/** A vonalnak (`parbeszed` — `beallitas.kiszolgalasiKeret`): az ítélet és a könyvelés. A vonal a számokat nem ismeri. */
+function kiszolgalasiKeretKapcsolo() {
+  return {
+    async itelet(t) {
+      const keret = await kiszolgalasiKeretem();
+      const tars = tarsKulcsa(t);
+      const osztaly = await keretOsztalya(t);
+      const it = keretItelete(keret, { tars, osztaly });
+      if (!it.szabad && Date.now() - (keretKiirva.get(tars) ?? 0) > 10 * 60 * 1000) {
+        keretKiirva.set(tars, Date.now());
+        while (keretKiirva.size > 256) keretKiirva.delete(keretKiirva.keys().next().value);
+        kiir(SZIN.halvany + '  ⏸ ' + ora() + ' a kiszolgálási keret most nem enged (' + it.ok + ', ' + osztaly + ') — „később”, '
+          + it.kesobb + ' mp' + SZIN.vege);
+      }
+      return { ...it, tars, osztaly };
+    },
+    async feljegyez(t) {
+      const keret = await kiszolgalasiKeretem();
+      keretFeljegyzes(keret, { tars: tarsKulcsa(t), osztaly: await keretOsztalya(t), bajt: t.bajt ?? 0, keres: t.keres ?? 0 });
+    }
+  };
+}
+
+// ===================================
 // ⭐⭐ D109 (KK1): A KISZOLGÁLÓ KÉPE — egy kérés ára ne nőjön a tárral
 // ===================================
 //
@@ -2266,16 +2327,26 @@ function kerelemKiszolgaloja() {
       kiir(SZIN.halvany + '  ↪ ' + ora() + ' kérelmet vettem át továbbadásra (' + k.fajta + ' ' + k.kulcs.slice(0, 8) + '…)' + SZIN.vege);
       return true;
     },
-    async torzs(k) {
+    async torzs(k, { maradekBajt = Infinity } = {}) {
       const { allapot } = await kiszolgaloKepe();
       const v = await sajatVallalasa(allapot);
       if (!v.szeletek.has(k.kulcs)) return [];
       const blob = fajlBlobTarolo(KOINO);
       const ki = [];
+      // ⭐ D109 (KK6): a fájlok a keret maradékáig (a base64 miatt a fájl ~4/3-a utazik) — a többire „később”.
+      let osszeg = 0;
+      let kimaradt = false;
       for (const l of await torzsLenyomatai(allapot.entitasok.get(k.kulcs), (x) => blob.olvas(x))) {
-        if (await blob.van(l)) ki.push(l);
+        if (!(await blob.van(l))) continue;
+        if (Number.isFinite(maradekBajt)) {
+          const bajtok = await blob.olvas(l);
+          const ara = Math.ceil((bajtok?.length ?? 0) * 4 / 3) + 200;
+          if (osszeg + ara > maradekBajt) { kimaradt = true; continue; }
+          osszeg += ara;
+        }
+        ki.push(l);
       }
-      return ki;
+      return kimaradt ? { lenyomatok: ki, kesobb: KESOBB_MIN } : ki;
     }
   };
 }
@@ -2685,7 +2756,11 @@ async function sajatTagsagiCsomagja() {
  */
 async function azonossagBeallitasa() {
   const h = await sajatHorgonyom();
+  // ⭐ D109 (KK3): a tábla-kulcs is — a kérelemben a kiszolgáló ebből tudja, hogy a kötése vagyok-e (a kiszolgálási kerethez).
+  const tabla = await tablaKulcsBiztositasa();
   return {
+    tablaKulcs: nyilvanosResz(tabla),
+    tablaAlairo: (atirat) => kezfogasAlairasa(tabla, atirat),
     szemelyesAlairo: (atirat) => ({ sz: szerzo, ...(h ? { h } : {}),
       a: szemelyesKezfogasAlairasa(szemelyesJwk, KOINO, atirat) }),
     tagsagiCsomag: sajatTagsagiCsomagja,
@@ -2854,6 +2929,8 @@ function resMunka(allapot, halo, tars) {
       dhtGepek: allapot.hirdetendoDhtGepek,
       // ⭐⭐ D92: a kérelem (fejlécek, törzs) kiszolgálása — ha a társ ezzel nyit; és a továbbadott kérelem válasza.
       kerelemKiszolgalo: kerelemKiszolgaloja(),
+      // ⭐⭐ D109: a kiszolgálási keret (az ítélet és a könyvelés kérésenként).
+      kiszolgalasiKeret: kiszolgalasiKeretKapcsolo(),
       valaszFogado: valaszFogadasa,
       fajlKerelem: fajlok.kerelem,
       fajlValasz: async (kertek) => {
@@ -4750,6 +4827,13 @@ try {
       const siker = kor.eredmenyek.find((e) => e.ok && e.eredmeny?.kiszolgalta);
       for (const e of kor.eredmenyek) if (!e.ok) kiir(SZIN.halvany + '  · ' + e.cel.cim + ' ' + e.cel.port + ' — ' + e.hiba + SZIN.vege);
       if (!siker) {
+        // ⭐ D109 (KK6): a tartó kerete most nem enged — ezt kimondja (nem „nem tartja”).
+        const kesobb = kor.eredmenyek.find((e) => e.ok && e.eredmeny?.kesobb);
+        if (kesobb) {
+          kiir(SZIN.halvany + '⏸ A tartó most nem szolgál ki (a kiszolgálási kerete betelt) — próbáld újra '
+            + kesobb.eredmeny.kesobb + ' mp múlva, vagy egy másik tartónál.' + SZIN.vege);
+          break;
+        }
         kiir(SZIN.nem + 'Senki nem szolgálta ki a kérelmet' + SZIN.vege + SZIN.halvany
           + ' (nem érhető el, vagy nem tartja — kívülről a kettő nem különböztethető meg).' + SZIN.vege);
         break;

@@ -405,6 +405,14 @@ async function vedettResre(halo, tarsCim, tarsPort, beallitas) {
  * ⭐⭐ D93/3: ÉS A SZEMÉLY — a hívó adja a személyes aláírót (`szemelyesAlairo(atirat) → { sz, h, a }`: a szerző, a
  * horgony és az aláírás az átiratra, a koinóval együtt), a társét itt ellenőrizzük (`kiEllenoriz`).
  */
+/**
+ * ⭐ D109 (KK3): a kérő tábla-kulcsa a kérelemben — a nyilvános része és az aláírása a kézfogás átiratára (mint a nyitásban:
+ * `tabla` + `aa`). A kiszolgáló ebből tudja, ki kér (a kötése-e) — a kiszolgálási kerethez. Null, ha nincs tábla-kulcsunk.
+ */
+function kerelemTablaja(beallitas, h) {
+  return beallitas.tablaKulcs && typeof h.alairas === 'string' ? { kulcs: beallitas.tablaKulcs, aa: h.alairas } : null;
+}
+
 function kezfogasHitelesitese(res, beallitas, koino = null) {
   return {
     alairas: typeof beallitas.tablaAlairo === 'function' ? beallitas.tablaAlairo(res.atirat) : null,
@@ -1474,8 +1482,9 @@ export async function szeletUdpResen(halo, tarsCim, tarsPort, tar, koino, entita
   });
   try {
     // ⭐ D93/3: a személyünk (a kézfogás átiratára aláírva) és a tagsági csomagunk — a zárt koinó kapujának.
+    const h = kezfogasHitelesitese(res, beallitas, koino);
     const eredmeny = await szeletKapcsolaton(tar, koino, kapcsolat, entitas, beallitas.tovabb ?? {},
-      { ki: kezfogasHitelesitese(res, beallitas, koino).ki, tagsagiCsomag: beallitas.tagsagiCsomag });
+      { ki: h.ki, tabla: kerelemTablaja(beallitas, h), tagsagiCsomag: beallitas.tagsagiCsomag });
     // ⚠️ Előbb kiürítés — a kérésünk nyugtája még úton lehet (ugyanaz az ok, mint a cserénél).
     await kapcsolat.kiurites();
     console.log('szeletUdpResen - VÉGE', eredmeny);
@@ -1501,8 +1510,9 @@ export async function kerelemUdpResen(halo, tarsCim, tarsPort, koino, kerelem, b
     kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
   });
   try {
+    const h = kezfogasHitelesitese(res, beallitas, koino);
     const eredmeny = await kerelemKapcsolaton(kapcsolat, koino, kerelem,
-      { ...beallitas, ki: kezfogasHitelesitese(res, beallitas, koino).ki });
+      { ...beallitas, ki: h.ki, tabla: kerelemTablaja(beallitas, h) });
     await kapcsolat.kiurites();
     console.log('kerelemUdpResen - VÉGE', { fajta: kerelem.fajta, kiszolgalta: eredmeny.kiszolgalta });
     return eredmeny;
@@ -1526,8 +1536,9 @@ export async function kerelemSorozatUdpResen(halo, tarsCim, tarsPort, koino, ker
     kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
   });
   try {
+    const h = kezfogasHitelesitese(res, beallitas, koino);
     const eredmenyek = await kerelemSorozatKapcsolaton(kapcsolat, koino, kerelmek,
-      { ...beallitas, ki: kezfogasHitelesitese(res, beallitas, koino).ki });
+      { ...beallitas, ki: h.ki, tabla: kerelemTablaja(beallitas, h) });
     await kapcsolat.kiurites();
     console.log('kerelemSorozatUdpResen - VÉGE', { kiszolgalta: eredmenyek.filter((r) => r.kiszolgalta).length });
     return eredmenyek;

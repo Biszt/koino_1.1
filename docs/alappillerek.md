@@ -1078,3 +1078,13 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     minden kérésnél a koinó minden legfelső gondolatát a kupacba tette; a 60 mp a döntések időfüggése miatt (egy lejárt
     határidő a képet is elavítja); a többi hívót nem érinti, hogy a változás kicsi maradjon · Claude · `koino.js`
     (`kiszolgaloKepe`), `kerelem.js` (`fejlecKepe`, `fejlecekValasza`), `atmenetiTar.js` (`valtozas`).
+162. **2026-10-17 · a kérelem útja a kiszolgálási kereten (D109 ②–④, a kérelemre)** → **a könyvelés percenkénti vödrökben,
+    csúszó órában, folyamatonként a memóriában (`kiszolgalasiKeret.js`); a társ a személy / a KÉRELEMBE tett tábla-kulcs (a
+    kézfogás átiratára aláírva — `tabla` + `aa`) / a cím IP-je; a kötés (a tábla-kulcsa a kötés-jegyzékben) csak
+    könyvelődik; a kiszolgáló minden kérés előtt kérdez, utána a kapcsolat kiküldött bájtjait könyveli; a keret fölött
+    `KESZ` + `kesobb` (kompatibilis), a túl nagy törzsből a beférő fájlok (a base64 miatt ~4/3), a többire „később”; a
+    továbbadás (`ATVESZEM`) is kérés; a próbák `KOINO_KERET`-tel szűkítenek** · mert a kérelemben a kiszolgáló eddig nem
+    tudta, ki kér (a tábla-kulcs csak a cserében jött) — a kötés így nem lett volna felismerhető; a memóriabeli könyvelést
+    egy kérő nem tudja nullázni (a MI folyamatunkat nem indíthatja újra); a kapcsolat bájtszámlálója a valódi kimenő
+    forgalmat méri (a titkosítás és a fájl-szeletek is benne) · Claude · `kiszolgalasiKeret.js`, `vonal.js`, `udpVonal.js`,
+    `koino.js` (`kiszolgalasiKeretKapcsolo`, `azonossagBeallitasa`, a törzs).
