@@ -274,7 +274,9 @@ mai, számított címet ismeri — ő ajánlja fel a születést a címet adó j
 - **(C) A bejegyzés mellé a döntés bizonyítéka** (a lezárási összegzés — D95/1) — pontos, de drága (60–70 KB döntésenként,
   67. mérés), és csak a nagy szeleteknél van ilyen.
 
-## 11. 🔍 A ③–④ átvizsgálása — a tartás, a hirdetés és a felajánlás (2026-10-16)
+## 11. ✅ A ③–④ átvizsgálása — a tartás, a hirdetés és a felajánlás (2026-10-16) — D107: mind (A)
+
+> Csaba: *„Az L1–L4 javaslataidat elfogadom, mehet a ③.”*
 
 > A ② után, építés előtt. A ③ (a tartás és a hirdetés) és a ④ (a felajánlás) összefonódik: amit a tartó tart, azt valaki
 > felajánlotta, és amit a tartók egymás közt egyeztetnek, annak a lejárata is utazik. Négy kérdés D-szintű (L1–L4), Csabáé.

@@ -5684,6 +5684,29 @@ lépcső szúrópróbájának útja) az (A) szerint szűk: a természetes lánc 
 hosszabb), de ⚠️ állapotot befolyásoló állandó (D66 — a tagság a döntés bemenete): éles koinó előtt kell megtenni. Elágazás
 155.
 
+### D107. A KERESŐ-RÉTEG TARTÁSA, HIRDETÉSE ÉS FELAJÁNLÁSA — L1–L4 (2026-10-16, Csaba: „Az L1–L4 javaslataidat elfogadom, mehet a ③.”)
+
+**Az alap:** a ③–④ átvizsgálása ([`kereso_reteg_atvizsgalas.md`](kereso_reteg_atvizsgalas.md) 11. szakasz). A kódból: a csak
+küldő út csak a saját eseményeket ajánlja fel, a kereső-bejegyzés viszont a TULAJDONOS csomagja (a születés + a címadó
+javaslat — K9 — + két tag-tulajdonos pont-eseménye — K3); a csomag pont-eseményei a tartós tárban a saját állapotot torzítanák;
+a K5 és a raj együtt rést nyit (a lejárt bejegyzés egy másik tartótól visszajöhet).
+
+**Csaba döntései — mind (A):**
+- **L1 — külön KERESŐ-TÁR:** puha állapot, a koinó állapotába nem számít bele; korlátos és eldobható (mint az átmeneti tár
+  — B/2); ugyanazon a kapun íródik (`esemenyMentese` a tár három műveletével — 3. szabály).
+- **L2 — a régió tartói a CSERÉBEN egyeztetnek, a régió kulcsa alatt** (a gyökér-darab mintája — D95/4): a NYITÁS-ban egy
+  rövid jel, a vonal a régió kulcsánál a kereső-tárat olvassa és írja; a társakat a DHT-n a régió témáján találják meg, a
+  változást a raj kör viszi körbe (D97/2); csak a különbség utazik.
+- **L3 — ALÁÍRT MEGÚJÍTÁS:** a tulajdonos 30 naponként egy kis aláírt megújítást ad (a bejegyzés + az idő — nem esemény, a
+  láncát nem növeli); a bejegyzés az utolsó megújítása után 30 nappal BÁRKINÉL lejár; a tartók a megújítást a bejegyzéssel
+  adják tovább; a jövőbe dátumozottat (a tartó órájához képest > 1 nap) a tartó elveti.
+- **L4 — a felajánlás a KÉRELEM GÉPÉN, új fajtával (`FELAJANLAS`):** a tulajdonos a régió tartóit a DHT-n keresi és
+  bekopogtat (D92/1), átadja a csomagot; a tartó ugyanazon a kapun ellenőriz, a kereső-tárába tesz; ha a fiók osztódott (K7),
+  kimondja, és a felajánló a darab régiójába viszi.
+
+**A sorrend:** ③ a kereső-tár, a régió a cserében, a hirdetés és a raj (L1, L2) → ④ a felajánlás és a megújítás (L3, L4) →
+⑤ a kérdés → ⑥ a halványulás → ⑦ a modál.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem
