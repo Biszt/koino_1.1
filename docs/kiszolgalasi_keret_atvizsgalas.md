@@ -89,7 +89,7 @@ törzsnél számít igazán.
 ⭐ A „végtelen” próbája: minden keret időablakra szól, és egy kérés ára (KK1 után) korlátos — egy készülék kiszolgálási
 terhe nem nő a koinó méretével.
 
-## 6. A kérdések — javaslattal (D-szintűek, Csabáéi)
+## 6. ✅ A kérdések — D109 (Csaba, 2026-10-17: „minden javaslatodat elfogadom, mehetünk tovább.”): mind (A)
 
 **KK1. A kérés ára — a kép gyorsítótárban?**
 - **(A) ⭐ Igen, ez a keret előfeltétele — ezt javaslom.** A kép (az állapot, a döntések, az össz-pontok, a gyerek-jegyzék) a

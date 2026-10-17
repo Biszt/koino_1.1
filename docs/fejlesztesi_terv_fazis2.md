@@ -5737,6 +5737,30 @@ vele túl terhelni a készülékeket.”*
    mert a ma élő kérelem-utat is védi, és a kereső-réteg ④ (felajánlás) és ⑤ (kérdés) is erre épül → a kereső-réteg ③–⑦
    → a felderítés panelje és ütemezője.
 
+### D109. A KISZOLGÁLÁSI KERET — KK1–KK6 (2026-10-17, Csaba: „minden javaslatodat elfogadom, mehetünk tovább.”)
+
+**Az alap:** a kiszolgálási keret átvizsgálása ([`kiszolgalasi_keret_atvizsgalas.md`](kiszolgalasi_keret_atvizsgalas.md))
+és a 76. mérés: a válaszok kicsik és korlátosak, kivéve a törzset (≤ 128 MB / kérés) és a nagy szeletet (≤ 2,1 MB); ⛔ a
+számítás viszont a tárral nő (minden fejléc-kérelem a teljes állapotot újraszámolja — egy „mindent” tartónál 125 000
+eseménynél ~1,1 s CPU kérésenként).
+
+**Csaba döntései — mind (A):**
+- **KK1 — a kérés ára korlátos:** a kiszolgáló a képét (az állapot, a döntések, az össz-pontok, a gyerek-jegyzék) a tár
+  állása, az átmeneti tár változata és a vállalás szerint gyorsítótárban tartja, legfeljebb ~60 mp-ig — a keret előfeltétele.
+- **KK2 — két mérce:** a kimenő bájt és a kérések száma, csúszó óránként (helyi feljegyzés).
+- **KK3 — a társ:** zárt koinóban a személy (a `ki`), egyébként a tábla-kulcs (a kérelembe is bekerül — a kérő vele is
+  aláírja a kézfogás átiratát), végső esetben a cím; a közös keret a sok-azonosságos kerülőút ellen.
+- **KK4 — ami alá tartozik:** minden, amit másnak teszek (a kérelem mindhárom fajtája a kísérőkkel, a továbbadás, a
+  fájl-randevú törzse, a csere azzal, aki nem a kötésem); a kötéseimmel folytatott csere nem.
+- **KK5 — a számok (kiindulás, a panelen állítható):** „alap” készülék óránként 20 MB és 600 kérés, egy társ legfeljebb a
+  negyede, az idegenek együtt legfeljebb a fele; „mindent” készülék 100 MB és 3000 kérés.
+- **KK6 — a „később”:** a kérelemnél `KESZ` + `kesobb` (kompatibilis), a cserénél `KESOBB`; a kérő addig attól a tartótól
+  nem kér, a raj másik tartójához fordul; a lap kimondja; a túl nagy törzs-válaszból a beférő fájlok mennek, a többire
+  „később”.
+
+**A sorrend:** ① a kép gyorsítótára (KK1) és a 76. mérés újra → ② a keret könyvelése (KK2–KK3, a tábla-kulcs a kérelemben)
+→ ③ a kiszolgálás bekötése (KK4, az elsőbbség) → ④ a „később” a vonalon és a kérőnél (KK6) → ⑤ a beállítás.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

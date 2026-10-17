@@ -1061,3 +1061,11 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     felderítés** · mert egy ágat ma csak tudatponttal lehet tartósan látni, a tudatpont viszont prioritás; a frissen tartás a
     felderített ágnál nem kell (Csaba); és amit a kiszolgáló nem ellenőriz, az csak illemtan — ma időbeli keret nincs, és a
     kereső-réteg ④–⑤ új kéréseket hoz a tartókhoz · Csaba (az ötlet és a döntések), Claude · a fázis-2 terv D108-a.
+160. **2026-10-17 · a kiszolgálási keret (D109, Csaba: „minden javaslatodat elfogadom”)** → **KK1 a kiszolgáló képe
+    gyorsítótárban (a tár állása, az átmeneti változata, a vállalás szerint, ≤ ~60 mp) · KK2 két mérce: a kimenő bájt és a
+    kérésszám, csúszó óránként · KK3 a társ: a személy / a tábla-kulcs (a kérelembe is) / a cím · KK4 minden, amit másnak
+    teszek, a kötéseimmel folytatott cserét kivéve · KK5 alap 20 MB + 600 kérés / óra (társ ≤ ¼, idegenek ≤ ½), „mindent” 100 MB
+    + 3000 · KK6 a „később” (`KESZ` + `kesobb`, `KESOBB`)** · mert a 76. mérés szerint a válaszok kicsik, de a törzs MB-okat
+    vihet, és a számítás a tárral nő (egy „mindent” tartónál 125 000 eseménynél ~1,1 s / kérés) — a kérésszám csak akkor
+    mérce, ha egy kérés ára korlátos; a csak címre épülő társ a NAT-portváltással összemosódik; az idegen csere egy új
+    kulccsal újra és újra lehúzhatná a koinót · Csaba, Claude · `kiszolgalasi_keret_atvizsgalas.md`, a fázis-2 terv D109-e.
