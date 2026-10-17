@@ -5707,6 +5707,36 @@ a K5 és a raj együtt rést nyit (a lejárt bejegyzés egy másik tartótól vi
 **A sorrend:** ③ a kereső-tár, a régió a cserében, a hirdetés és a raj (L1, L2) → ④ a felajánlás és a megújítás (L3, L4) →
 ⑤ a kérdés → ⑥ a halványulás → ⑦ a modál.
 
+### D108. A FELDERÍTÉS ÉS A KISZOLGÁLÁSI KERET (2026-10-17, Csaba: „1. igen 2. igen 3. (A)”)
+
+**A kérdés (Csaba ötlete, 2026-10-17):** *„jelenleg az értesítések beállítása kezeli a kérelmeket, igaz? Arra gondoltam,
+hogy inkább egy új rendszernek kéne kezelnie, és ez a felderítés lenne, ahol egy jó pár mindent be lehet állítani. pl.
+melyik ágat milyen mélyen derítse fel, vagy hogy csak a fejléc, vagy body-t is, hány MB-ig szedheti össze az adatokat,
+stb.”* ⚠️ A pontosítás: ma NEM az értesítés kér — a kérelmeket a lap nézetei indítják, ha hiányt látnak (a pakli, a
+Struktúra, a Síkidom, a Keresés, a Tudatpontok — `lapHianyzoinakElkerese`), és a `kerelem` / `hozd` parancs; az
+értesítés-réteg csak a tartott rész két pillanatképét veti össze. ⭐ A rés, amit az ötlet betöltene: egy ágat ma csak
+tudatponttal lehet tartósan látni — a tudatpont viszont prioritás, nyilvános és korlátos. Csaba kiegészítése: *„felderített,
+de tudatpont nélküli gondolatokat nem kell frissen tartani. viszont tényleg korlátoznunk kell valahogy, hogy ne lehessen
+vele túl terhelni a készülékeket.”*
+
+**A döntések:**
+1. ✅ **A FELDERÍTÉS ALAKJA:** egyszeri PILLANATKÉP — a készülék egyszer elhozza a beállított ágat (melyik ág, milyen mélyen,
+   szintenként a legjobb N az össz-pont szerint, csak a fejléc vagy a törzs is, hány MB-ig, körönként hány kérés), és nem
+   tartja frissen; az átmeneti tárba kerül, SAJÁT kerettel (egy böngészés ne söpörje ki), és idővel eldobható; nem vesz részt a
+   cserében, és nem ad értesítést. ⭐ A tudatpont marad a KÖVETÉS eszköze (a D101 M3 nem változik): ami pontos, az friss, és
+   arról jön értesítés. Az újrafelderítés egy új pillanatkép. A beállítások helyi feljegyzések, nem események; a végrehajtó az
+   őrjárat a meglévő kérelem-géppel (a legjobb-először bejáró — D102).
+2. ✅ **A KORLÁT KÉT OLDALA:** a kérő beállításai (és a felső határaik) a SAJÁT készüléket védik (tár, mobiladat); ⭐ a
+   valódi védelem a KISZOLGÁLÓNÁL van — amit a kiszolgáló nem ellenőriz, az csak illemtan (egy mohó vagy átírt program a
+   kérő oldali korlátot nem tartja be). A KISZOLGÁLÁSI KERET: egy közös keret időegységenként (a panelen állítható), egy
+   társ legfeljebb a részét kapja (a tábla-kulcs ingyen van — a közös keret a sok-azonosságos kerülőút ellen), elsőbbség (a
+   saját cserém nem kerül a keret alá → a kötéseim és az ismert tagok → az idegenek), a keret fölött „később” (nem hiba: a
+   kérő később vagy egy másik tartónál próbálja). A számok mérés után. Ma csak kérésenkénti korlátok vannak (50 fejléc,
+   4000 esemény, 64 fájl × 2 MB, 16 kérés / kapcsolat, társanként egy munka, ablakonként 3 új bekopogó) — időbeli keret nincs.
+3. ✅ **A SORREND — (A):** előbb a kiszolgálási keret (átvizsgálás + mérés: mennyibe kerül kiszolgálni egy-egy kéréstípust),
+   mert a ma élő kérelem-utat is védi, és a kereső-réteg ④ (felajánlás) és ⑤ (kérdés) is erre épül → a kereső-réteg ③–⑦
+   → a felderítés panelje és ütemezője.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

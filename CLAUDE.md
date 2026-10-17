@@ -77,7 +77,11 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    átvizsgálás 11. szakasza): ⏸️ **Csabánál L1–L4** — L1 külön kereső-tár (puha állapot, ugyanazon a kapun) · L2 a régió
    tartói a cserében egyeztetnek (a gyökér-darab mintája, NYITÁS-jel) · L3 aláírt megújítás (hogy a lejárt bejegyzés ne
    jöjjön vissza a rajból) · L4 a felajánlás a kérelem gépén (`FELAJANLAS`). ✅ **D107** (Csaba: „Az L1–L4 javaslataidat elfogadom, mehet a ③.”): mind (A).
-   ⏭️ **③ következik** (a döntés rögzítve, kód még nincs): a kereső-tár, a régió a cserében, a hirdetés és a raj. ⏸️ A
+   ✅ **D108** (Csaba, 2026-10-17: „1. igen 2. igen 3. (A)”) — Csaba ötlete, a **FELDERÍTÉS** (egy beállítható ág egyszeri
+   pillanatképe: mélység, szélesség, fejléc/törzs, MB-keret; nem frissül, értesítést nem ad — a tudatpont marad a követés
+   eszköze), és a **KISZOLGÁLÁSI KERET** (a valódi védelem a kiszolgálónál: közös és társankénti időkeret, elsőbbség, a keret
+   fölött „később”). ⭐ **A sorrend (A): előbb a kiszolgálási keret** (átvizsgálás + mérés) **→ a kereső-réteg ③–⑦ → a
+   felderítés.** ⏸️ A
    szabály másik következménye: a tagsági lánc 64-es korlátja (állapot-befolyásoló — éles koinó előtt).
 2. **A terep 🅱️ (két mobilnetes telefon)** — amikor meglesznek; előtte a telefon frissítése (lent).
 3. **Az „UTÁNA” lista** (lent).
@@ -198,7 +202,7 @@ D100 parancssor-próbája méri, egy végig futó felülettel) · a lap a még m
   mi hiányzik (függőségi sorrendben), és miről ágaztunk le, miért. **Új elágazásnál ide is írj.**
 - **Induláskor, ha a nagy kép kell:** [`docs/utiterv.md`](docs/utiterv.md) (mit építünk, milyen
   sorrendben, és miért) → [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
-  („HOL TARTUNK" + a D1–D107 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
+  („HOL TARTUNK" + a D1–D108 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
   `szakasz5_terv.md`). A gépezet ábrákon: [`docs/gepezet.md`](docs/gepezet.md).
 - ⚠️ **Új session-váltáskor** a fenti „SESSION-VÁLTÁS" blokkot **cseréld le**, ne fölé írj
   újat — a régit (ha kell) a napló tetejére tedd. *Így maradt 233 KB-os ez a fájl.*
@@ -221,7 +225,7 @@ D100 parancssor-próbája méri, egy végig futó felülettel) · a lap a még m
 
 ⚠️ **Zsákutcák, amiket ne javasolj újra** (mind megmérve): a Duniter-féle távolság-szabály (globális szám) · az „ingyenes elismerés" (D48) · **a gazdaság önmagában nem véd** · a horgony-kör (880 hamis horgony) · ⛔ a *„kevés kapcsolata van, tehát gyanús"* jelzés (31/41/45% téves) · ⛔ **és a `k` tanúsítás + keret vonala** (D44, D51–D53) — **tárgytalan**, a meghívás váltotta ki.
 
-A tervezési döntések (**D1–D107**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
+A tervezési döntések (**D1–D108**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 

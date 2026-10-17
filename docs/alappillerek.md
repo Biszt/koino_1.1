@@ -1047,3 +1047,17 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     rétege, nem dönt semmiről (5.7); a csak-születés (B) az átnevezett gondolatot az új nevén elrejtené, a döntés
     bizonyítéka (C) drága · Csaba (a kérdés pontosítása és a döntés), Claude · az átvizsgálás 10. szakasza, a fázis-2 terv
     D105-e.
+158. **2026-10-16 · a kereső-réteg tartása, hirdetése és felajánlása (D107, Csaba: „Az L1–L4 javaslataidat elfogadom, mehet
+    a ③.”)** → **L1 külön kereső-tár (puha állapot, ugyanazon a kapun) · L2 a régió tartói a cserében egyeztetnek, a régió
+    kulcsa alatt (a gyökér-darab mintája) · L3 aláírt megújítás (30 nap, bárkinél lejár) · L4 a felajánlás a kérelem gépén
+    (`FELAJANLAS`)** · mert a csomag pont-eseményei a tartós tárban a saját állapotot torzítanák, a kérelem-alapú régió-egyeztetés
+    mindig az egész régiót vinné, az aláíratlan átvételi idővel egy hazug tartó örökké élve tarthatna egy bejegyzést, a csak
+    küldő út kiterjesztése a „nincs újdonság” cserét drágítaná · Csaba, Claude · az átvizsgálás 11. szakasza, a fázis-2 terv
+    D107-e.
+159. **2026-10-17 · a felderítés és a kiszolgálási keret (D108, Csaba: „1. igen 2. igen 3. (A)”)** → **a felderítés egyszeri
+    pillanatkép (nem frissül, az átmeneti tárban saját kerettel, értesítést nem ad; a tudatpont marad a követés eszköze); a
+    korlát két oldala: a kérő beállításai a saját készüléket védik, a valódi védelem a kiszolgálónál van (közös és társankénti
+    időkeret, elsőbbség, a keret fölött „később”); a sorrend: előbb a kiszolgálási keret, aztán a kereső-réteg ③–⑦, aztán a
+    felderítés** · mert egy ágat ma csak tudatponttal lehet tartósan látni, a tudatpont viszont prioritás; a frissen tartás a
+    felderített ágnál nem kell (Csaba); és amit a kiszolgáló nem ellenőriz, az csak illemtan — ma időbeli keret nincs, és a
+    kereső-réteg ④–⑤ új kéréseket hoz a tartókhoz · Csaba (az ötlet és a döntések), Claude · a fázis-2 terv D108-a.
