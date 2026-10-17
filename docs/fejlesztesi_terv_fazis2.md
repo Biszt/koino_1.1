@@ -5712,6 +5712,11 @@ osztódás, a csomag, a megújítás), az azonosító a tartalom lenyomata, a cs
 a kézi út a `kereso` parancsban (`felajanl`, `behoz`, `kivisz`). Az építés alakja és a K10 kérdése (az új készülék mélysége —
 a gyökér-darabot is érinti): a kereső-átvizsgálás 12. szakasza. Elágazás 166.
 
+✅ **③b–③c MEGÉPÜLT (2026-10-17) — a ③ kész:** a régió a cserében (a NYITÁS `kd` jele, a legsekélyebb közös eltérő régió, a
+bejegyzés-azonosítók tartomány-egyeztetése, a `BEJEGYZES` átadás, a fogadó helye és kapuja), a régió témájának hirdetése, a
+régió-társak a DHT-ról a kör céljai közé, és a régió a rajban. Elágazás 167–168. ⏭️ A ④ (a felajánlás, a megújítás) — előtte
+a K10.
+
 ### D108. A FELDERÍTÉS ÉS A KISZOLGÁLÁSI KERET (2026-10-17, Csaba: „1. igen 2. igen 3. (A)”)
 
 **A kérdés (Csaba ötlete, 2026-10-17):** *„jelenleg az értesítések beállítása kezeli a kérelmeket, igaz? Arra gondoltam,

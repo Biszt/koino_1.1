@@ -60,6 +60,10 @@ import { rendezettHalmaz, halmazLenyomata } from '../esemeny/halmaz.js';
 import {
   gyokerDarabBol, gyokerDarabKulcsai, gyokerJelSzovege, gyokerJelOlvasasa, GYOKER_MAX_MELYSEG
 } from './cimjegyzek.js';
+// ⭐⭐ D107 L2 (a kereső-réteg ③b): a kereső-régiók a cserében — a kulcsok és a hely (tiszta számítás), a befogadás a
+// kereső-tár kapuján (`keresoTar.js` — ugyanaz az `esemenyMentese`, 3. szabály).
+import { keresoRegioKulcsai, keresoRegioBol, bejegyzesHelye, regiobaEsik } from './keresoReteg.js';
+import { bejegyzesAlakja, bejegyzesBefogadasa } from '../tar/keresoTar.js';
 import {
   valtozottKulcsok, valtozottAlakja, valtozottUnio, kivulLenyomat, uParjai, parokAlakja, uOsztalyozasa,
   emlekezetFeljegyzes, VALTOZOTT_KORLAT
@@ -257,9 +261,31 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   const sajatDarabKulcsok = gyokerMelyseg === null ? [] : gyokerDarabKulcsai(tablaKulcsElore.alairo, gyokerMelyseg);
   const sajatDarabSet = new Set(sajatDarabKulcsok);
   const hivoReszvesz = beallitas.reszvesz ?? (() => true);
+
+  // ===== ⭐⭐ D107 L2: A KERESŐ-RÉGIÓK (a kereső-réteg ③b — a gyökér-darab mintája) =====
+  //
+  // Ha a hívó kereső-tárat és mélységet ad, a régióim (a tábla-aláíróm helyén, a mélységem ±1 szintjén — `keresoReteg.js`)
+  // a NYITÁS `kd` jelében mennek a rövid lenyomatukkal; a társ a kulcsaikat a tábla-aláírómból számolja, és a legsekélyebb
+  // KÖZÖS eltérő régió kerül egyeztetésre. A régió halmaza BEJEGYZÉS-azonosítókból áll (a kereső-tárból — nem esemény), az
+  // átadás `BEJEGYZES` üzenettel megy, a fogadó csak a közös régióba eső bejegyzést veszi fel, a kereső-tár kapuján.
+  // ⛔ A nyitó lenyomatba nem kerülnek (mint a gyökér-darabok): különben két különböző régiójú készülék „nincs újdonság”
+  // cseréje is végigfutná az első szintet.
+  const keresoTar = beallitas.keresoTar && typeof beallitas.keresoTar.regioHalmaza === 'function' ? beallitas.keresoTar : null;
+  const keresoMelyseg = keresoTar && Number.isInteger(beallitas.keresoMelyseg) && beallitas.keresoMelyseg >= 0
+    && beallitas.keresoMelyseg <= GYOKER_MAX_MELYSEG && typeof tablaKulcsElore?.alairo === 'string'
+    ? beallitas.keresoMelyseg : null;
+  const sajatRegioKulcsok = keresoMelyseg === null ? [] : keresoRegioKulcsai(tablaKulcsElore.alairo, keresoMelyseg);
+  const sajatRegioSet = new Set(sajatRegioKulcsok);
+  /** Egy régió halmaza (rendezett bejegyzés-azonosítók). */
+  const regioHalmazOf = (k) => {
+    const r = keresoRegioBol(k);
+    return r && keresoTar ? keresoTar.regioHalmaza(r.melyseg, r.darab) : [];
+  };
+
   // A gyökér-darabban a saját darabjaim döntenek; a teljes gyökér pedig, ha darabonként megy, egészében nem cserélődik.
-  // ⭐ D96: a koinó születésének (esemény-)kulcsában mindenki részt vesz.
-  const reszvesz = (k) => (k === KOINO_SZULETES_KULCS ? true : gyokerDarabBol(k) ? sajatDarabSet.has(k)
+  // ⭐ D96: a koinó születésének (esemény-)kulcsában mindenki részt vesz. ⭐ D107 L2: a kereső-régióban a saját régióim.
+  const reszvesz = (k) => (k === KOINO_SZULETES_KULCS ? true : keresoRegioBol(k) ? sajatRegioSet.has(k)
+    : gyokerDarabBol(k) ? sajatDarabSet.has(k)
     : (k === GYOKER_KULCS && sajatDarabSet.size ? false : hivoReszvesz(k)));
 
   // ===== ⭐ D96: A KOINÓ SZÜLETÉSE MINT ESEMÉNY — a párok közt mindig, a halmaza egyedül az esemény =====
@@ -274,6 +300,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     return szuletesPar ? rendezettHalmaz([...p, szuletesPar]) : p;
   };
   const halmazOf = async (k) => (k === KOINO_SZULETES_KULCS ? (szuletesEsemeny ? [szuletesEsemeny.azonosito] : [])
+    : keresoRegioBol(k) ? regioHalmazOf(k)
     : egyeztetesiHalmaz(tar, koino, k));
   const esemenyekOf = async (k) => (k === KOINO_SZULETES_KULCS ? (szuletesEsemeny ? [szuletesEsemeny] : [])
     : egyeztetettEsemenyek(tar, koino, k));
@@ -320,11 +347,13 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let tagsagEredmeny = null;        // ⭐ D95/2: a tagsági kísérők köre (a hívóé)
   let kezbesitve = [];              // ⭐ D95/3: a saját eseményeim, amiket egy tartó átvett vagy már tudott (a hívóé)
   let lancEredmeny = null;          // ⭐ D98/2–3: a lánc-kör eredménye (a hívóé)
+  let ujBejegyzesek = 0, kuldottBejegyzesek = 0;   // ⭐ D107 L2: a kereső-régió bejegyzései (felvett · elküldött)
 
   const eredmeny = () => ({
     korok: 1, uj, kuldott, reszletesAllasok: 0, masKoino, kivulrolIgyLatszom, kapottUdpCimek,
     kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek, ujAzonositok, kapottRaj,
-    tarsKorlatozva, tarsAzonossaga, osszegzesEredmeny, tagsagEredmeny, kezbesitve, lancEredmeny
+    tarsKorlatozva, tarsAzonossaga, osszegzesEredmeny, tagsagEredmeny, kezbesitve, lancEredmeny,
+    ...(ujBejegyzesek || kuldottBejegyzesek ? { ujBejegyzesek, kuldottBejegyzesek } : {})
   });
 
   // ===== ⭐⭐ D93/3: A ZÁRT KOINÓ KAPUJA — a hívóé (`beallitas.zartKapu`), a vonal semmit nem tud a tagságról =====
@@ -385,6 +414,16 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     for (const k of sajatDarabKulcsok) l.push((await szeletPar(tar, koino, k))?.slice(44, 55) ?? null);
     sajatGyd = { m: gyokerMelyseg, l, szoveg: gyokerJelSzovege(gyokerMelyseg, l) };
   }
+  // ⭐⭐ D107 L2: a kereső-régióim rövid lenyomata — ugyanaz az alak, mint a `gyd` (`m:l1:l2:l3`; az üres régióé üres).
+  let sajatKd = null;
+  if (sajatRegioKulcsok.length) {
+    const l = [];
+    for (const k of sajatRegioKulcsok) {
+      const h = regioHalmazOf(k);
+      l.push(h.length ? (await halmazLenyomata(h)).slice(0, 11) : null);
+    }
+    sajatKd = { m: keresoMelyseg, l, szoveg: gyokerJelSzovege(keresoMelyseg, l) };
+  }
   // ⭐ D95/2: van-e FÜGGŐ tagság-kérdésem (akinek a tagságát a szeleteimben nem tudom)? Ha igen, a tagsági kör akkor is
   // lemegy, ha a szeletek egyeznek — a társnál lehet meg a csomag. ⚠️ Csak egy jel a nyitásban (1 bájt), ha van.
   let sajatTk = false;
@@ -420,6 +459,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     ...(sajatKerelem ? { fajlKerek: sajatKerelem } : {}),
     ...(sajatTk ? { tk: 1 } : {}),
     ...(sajatGyd ? { gyd: sajatGyd.szoveg } : {}),
+    ...(sajatKd ? { kd: sajatKd.szoveg } : {}),
     ...(sajatNaplo ? { pv: sajatNaplo.v } : {})
   });
 
@@ -700,6 +740,16 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       // mélyebbek is; ha eltér, elég azt egyeztetni (a mélyebbek benne vannak). A kulcsok mélység szerint jönnek.
       const i = sajatDarabKulcsok.findIndex((k) => oveL.has(k));
       if (i >= 0 && oveL.get(sajatDarabKulcsok[i]) !== sajatGyd.l[i]) elteroDarabok.push(sajatDarabKulcsok[i]);
+    }
+  }
+  // ⭐⭐ D107 L2: ugyanígy a kereső-régiók — a legsekélyebb közös régió, ha eltér (mindkét fél ugyanazt számolja).
+  const elteroRegiok = [];
+  {
+    const g = gyokerJelOlvasasa(oveNyitas.kd);
+    if (sajatKd && typeof kapottTablaKulcs?.alairo === 'string' && g) {
+      const oveL = new Map(keresoRegioKulcsai(kapottTablaKulcs.alairo, g.melyseg).map((k, i) => [k, g.lenyomatok[i] ?? null]));
+      const i = sajatRegioKulcsok.findIndex((k) => oveL.has(k));
+      if (i >= 0 && oveL.get(sajatRegioKulcsok[i]) !== sajatKd.l[i]) elteroRegiok.push(sajatRegioKulcsok[i]);
     }
   }
 
@@ -1036,7 +1086,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     catch (hiba) { console.warn('parbeszed - a társankénti emlékezet nem írható', { ok: hiba.message }); }
   };
 
-  if (nyitoOve === nyitoSajat && !elteroDarabok.length) {
+  if (nyitoOve === nyitoSajat && !elteroDarabok.length && !elteroRegiok.length) {
     // ⭐ Ugyanazt tudjuk minden közös szeletről — a hétköznapi eset, egyetlen nyitás-csere.
     // ⭐ D95/2: ha bármelyik félnek függő tagság-kérdése van (a nyitás jele), a tagsági kör ekkor is lemegy.
     if (sajatTk || oveNyitas.tk === 1) await tagsagKor([]);
@@ -1132,6 +1182,9 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // ⭐ D95/4: a közös, eltérő gyökér-darabok — mindkét fél ugyanazokat adja hozzá (a korlátozott társnál a részvételi
   // lépés kimondja, hogy kimaradnak, így a két fél nem csúszik el).
   for (const k of elteroDarabok) mindketten.add(k);
+  // ⭐ D107 L2: a közös, eltérő kereső-régió is (a korlátozott társnál — zárt koinó, nem tag — a részvétel kimondja, hogy
+  // kimarad: a kereső-index tartalma sem jár a nem tagnak).
+  for (const k of elteroRegiok) mindketten.add(k);
   const csakNalam = new Set([...sajatLelet.nalam, ...kulcsLista(oveLelet.nalad)].filter(korlatonBelul));
   const csakNala = new Set([...sajatLelet.nalad, ...kulcsLista(oveLelet.nalam)].filter(korlatonBelul));
 
@@ -1199,11 +1252,22 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   //
   // ⭐ Amit a MÁSIKNAK hiányzónak találtam, azt küldöm; a csak nálam lévő szeletet egészben
   // (a születéseivel); amit MAGAMNAK hiányzónak találtam, azt kérem.
+  // ⭐⭐ D107 L2: a kereső-régiók halmaza BEJEGYZÉS-azonosítókból áll — azokat `BEJEGYZES` viszi (a kereső-tárból), nem ESEMENY.
+  const regioIdk = new Set();
+  for (const k of egyeztetendo) if (keresoRegioBol(k) && halmazok.has(k)) for (const a of halmazok.get(k)) regioIdk.add(a);
+  const bejegyzesKuldese = (a) => {
+    const b = keresoTar?.bejegyzes(a);
+    if (!b || !keretbeFer(b)) return;
+    kuld({ uzenet: 'BEJEGYZES', bejegyzes: b });
+    kuldottBejegyzesek++;
+  };
   const kuldesre = new Map();
   for (const k of kuldendoSzeletek) {
     for (const e of await esemenyekOf(k)) kuldesre.set(e.azonosito, e);
   }
+  const bejegyzesKuldesre = [];
   for (const a of kellNeki) {
+    if (regioIdk.has(a)) { bejegyzesKuldesre.push(a); continue; }
     const e = await tar.esemeny(a);
     if (e) kuldesre.set(a, e);
   }
@@ -1213,14 +1277,17 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     kuld({ uzenet: 'ESEMENY', esemeny: e });
     atadva++;
   }
+  for (const a of bejegyzesKuldesre) bejegyzesKuldese(a);
   kuld({ uzenet: 'KEREK', azonositok: [...kellNekem].sort() });
   kuldott += atadva;
 
   const erkezett = [];
+  const erkezettBejegyzesek = [];
   let oveKerese = null;
   for (;;) {
     const uzenet = await sor.kovetkezo();
     if (uzenet.uzenet === 'KEREK') { oveKerese = uzenet; break; }
+    if (uzenet.uzenet === 'BEJEGYZES') { erkezettBejegyzesek.push(uzenet.bejegyzes); continue; }
     if (uzenet.uzenet !== 'ESEMENY') throw new Error('Váratlan üzenet az átadás közben: ' + uzenet.uzenet);
     erkezett.push(uzenet.esemeny);
   }
@@ -1233,6 +1300,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let valaszolt = 0;
   for (const a of kertek) {
     if (typeof a !== 'string' || !adhatok.has(a)) continue;
+    if (regioIdk.has(a)) { bejegyzesKuldese(a); continue; }
     const e = await tar.esemeny(a);
     if (e && keretbeFer(e)) { kuld({ uzenet: 'ESEMENY', esemeny: e }); valaszolt++; }
   }
@@ -1242,8 +1310,24 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   for (;;) {
     const uzenet = await sor.kovetkezo();
     if (uzenet.uzenet === 'KESZ') break;
+    if (uzenet.uzenet === 'BEJEGYZES') { erkezettBejegyzesek.push(uzenet.bejegyzes); continue; }
     if (uzenet.uzenet !== 'ESEMENY') throw new Error('Váratlan üzenet az átadás közben: ' + uzenet.uzenet);
     erkezett.push(uzenet.esemeny);
+  }
+
+  // ----- ⭐⭐ D107 L2: A KERESŐ-RÉGIÓ BEFOGADÁSA — csak az egyeztetett közös régióba eső bejegyzés, a kereső-tár kapuján -----
+  // ⛔ A hazug társ a régió halmazába akármit beírhat: a helyet MI számoljuk (a bejegyzés fiókjából, gondolatából,
+  // osztódásából), és a csomag minden eseménye az `esemenyMentese`-n megy át (3. szabály). A kereső-tár a tartós tárat nem
+  // érinti (L1).
+  if (erkezettBejegyzesek.length && keresoTar) {
+    const regiok = egyeztetendo.map((k) => keresoRegioBol(k)).filter(Boolean);
+    for (const nyers of erkezettBejegyzesek.slice(0, KULCS_KORLAT)) {
+      const b = bejegyzesAlakja(nyers);
+      if (!b) continue;
+      const h = bejegyzesHelye(b.k, b.g, b.s);
+      if (!regiok.some((r) => regiobaEsik(h, r.melyseg, r.darab))) continue;
+      if ((await bejegyzesBefogadasa(keresoTar, b)).uj) ujBejegyzesek++;
+    }
   }
 
   // ----- A BEOLVASZTÁS: ugyanaz a kapu, mint a saját műveleteinknél -----

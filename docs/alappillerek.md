@@ -1123,3 +1123,24 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     ugyanazt tartsa; egy ellenőrizetlen megújítás a lejáratot tolhatná ki (L3); a tagság (K3) a tagsági kísérők gépével a
     ④-ben jön · Claude · `keresoTar.js`, `koino.js` (`keresoRegioim`, `sajatBejegyzesek`, a `kereso` parancs),
     `keresoTarProba.js`, `parancssorProba.js`.
+167. **2026-10-17 · a kereső-régió a cserében (a kereső-réteg ③b — D107 L2)** → **a gyökér-darab mintája: a NYITÁS `kd` jele
+    (`m:l1:l2:l3`, a régióim halmazának 11 jeles lenyomata — az üres régióé üres), a társ a kulcsokat a tábla-aláírómból
+    számolja, a legsekélyebb KÖZÖS eltérő régió kerül az eltérők közé (a nyitó lenyomatba nem); a régió halmaza a
+    kereső-tár bejegyzés-azonosítói, az átadás `BEJEGYZES` üzenettel (a keret maradékáig — D109); a fogadó a helyet MAGA
+    számolja, és csak az egyeztetett közös régióba esőt veszi fel, a kereső-tár kapuján; a zárt koinó nem tagjával a
+    régió kimarad (a részvétel kimondja); jel nélküli társnál nincs régió (a csere nem csúszik el)** · mert a régió
+    tartóinak a különbséget kell cserélniük (a tartomány-egyeztetés), és a „nincs újdonság” csere nem drágulhat (a jel
+    +11–46 B nyitásonként, számolva); egy hazug társ a régió halmazába akármit beírhat, ezért a hely és a kapu a fogadóé ·
+    Claude · `vonal.js`, `koino.js` (`resMunka`: `keresoTar`, `keresoMelyseg`, a kereső-tár `frissit`-je),
+    `keresoRegioProba.js`, `parancssorProba.js`.
+168. **2026-10-17 · a régió tartói a DHT-n és a rajban (a kereső-réteg ③c)** → **a készülék a kereső-régiója témáját is
+    hirdeti (`keresoRegioTemaja`, vakított, a gyökér-darab mellé — `sajatHirdetendoTemak`); a címjegyzék-körben megnézi, ki
+    hirdeti még (legfeljebb 4 cím), és azokat 30 percre a kör céljai közé veszi (mint a kopogtatókat); a raj a régió
+    kulcsát is vállalja (a `RESZVETEL`-ben), a társat a régió kulcsa alatt tartónak jegyzi, és ha a csere új bejegyzést
+    hozott, a régiót „változott”-nak jelöli (a raj kör a többi tartót is felkeresi); a raj kör szeletei közé a régióim is
+    bekerülnek** · mert a régió tartói egymásról csak így tudnak (a DHT témája a régió neve), és mindkét fél megtalálja a
+    másikat, tehát a buliban egymásra kopognak (D33) — kopogtató pár ezért nem kell; a raj teszi, hogy a változás a régió
+    minden tartójához eljusson (D97/2); ⛔ a régió-társak a KOPOGTATÓK UTÁN kerülnek a célok közé — mérve (a teljes sor, a
+    D92/1 kopogtatás-próba): előbb jöttek, és egy kérő, aki a régiónak is tartója, már ismertnek látszott, így a „kérő vár
+    rám” jelzés elmaradt · Claude · `koino.js` (`sajatHirdetendoTemak`, `cimjegyzekKor`, `REGIO_TARS_KORLAT`, a raj,
+    `rajKorCeljaim`), `parancssorProba.js`.

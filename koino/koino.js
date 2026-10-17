@@ -160,7 +160,9 @@ import {
 } from './js/csere/fuggoKerelmek.js';
 import { atmenetiTarNyitasa, ketTarBemenete, ketTarNezet } from './js/tar/atmenetiTar.js';
 import { keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesekEpitese, KERESO_KORLAT } from './js/tar/keresoTar.js';
-import { keszulekKeresoHelye, keresoMelysegBecslese, keresoRegioKulcsai, keresoRegioBol } from './js/csere/keresoReteg.js';
+import {
+  keszulekKeresoHelye, keresoMelysegBecslese, keresoRegioKulcsai, keresoRegioBol, keresoRegioTemaja, sajatKeresoRegioi
+} from './js/csere/keresoReteg.js';
 import {
   koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
   javaslatLetrehozasa, szavazas, allasfoglalas, TUDATPONT_KERET,
@@ -1125,11 +1127,14 @@ async function sajatHirdetendoTemak() {
   const vallalt = [...v.pontok.entries()].filter(([, p]) => p > 0).sort((a, b) => b[1] - a[1]).map(([k]) => k);
   const gy = await gyokerMelysegem();
   const { szeletHirdetes } = await cimjegyzekBeallitas();
-  return {
-    temak: hirdetendoTemak({ koino: KOINO, alairo: tablaKulcs.alairoNyilvanos, legfelsoDarab: gy.becsles,
-      melyseg: gy.melyseg, vallaltSzeletek: vallalt, szeletHirdetes }),
-    legfelso: gy.becsles, melyseg: gy.melyseg, szeletHirdetes
-  };
+  const temak = hirdetendoTemak({ koino: KOINO, alairo: tablaKulcs.alairoNyilvanos, legfelsoDarab: gy.becsles,
+    melyseg: gy.melyseg, vallaltSzeletek: vallalt, szeletHirdetes });
+  // ⭐⭐ D107 L2 (a kereső-réteg ③c): a kereső-régióm témája is — a régió tartói ezen találják meg egymást (és a ④-ben a
+  // felajánló is). Vakított, mint a többi (a koinó a só — D91).
+  const kr = await keresoRegioim();
+  const [kd] = sajatKeresoRegioi(tablaKulcs.alairoNyilvanos, kr.melyseg, 1);
+  temak.push({ fajta: 'kereso', kulcs: kr.melyseg + ':' + kd.toString(16), tema: keresoRegioTemaja(KOINO, kr.melyseg, kd) });
+  return { temak, legfelso: gy.becsles, melyseg: gy.melyseg, szeletHirdetes };
 }
 
 /** Hirdetés most — a megadott (külső) porttal. */
@@ -1161,6 +1166,9 @@ function kopogtatoTemaBuffer(k) {
  * kérelmeim kopogtató témáin az ÚJRA-BEJELENTÉS (a háló 30–60 perc alatt felejt — 58. mérés).
  * @returns {Promise<{eredmeny: Array, kopogtatok: Array<{cim: string, port: number}>, bejelentve: number, forgalom: Object}>}
  */
+/** ⭐ D107 L2 (③c): egy címjegyzék-körben legfeljebb ennyi régió-társat veszünk a kör céljai közé. */
+const REGIO_TARS_KORLAT = 4;
+
 async function cimjegyzekKor(port) {
   const { temak } = await sajatHirdetendoTemak();
   const tablaKulcs = await tablaKulcsBiztositasa();
@@ -1176,6 +1184,13 @@ async function cimjegyzekKor(port) {
       const k = await kliens.tarsakKeresese(f.tema);
       for (const t of k.tarsak) kopogtatok.set(t.cim + ':' + t.port, { cim: t.cim, port: t.port });
     }
+    // ⭐⭐ D107 L2 (③c): a régióm TÖBBI TARTÓJA — a régió témáján (név nélküli címek; a kör céljai közé kerülnek, mint a
+    // kopogtatók). Mindkét fél megtalálja a másikat, ezért a buliban egymásra kopognak (D33) — kopogtató pár nem kell.
+    const regioTarsak = new Map();
+    for (const t of temak.filter((x) => x.fajta === 'kereso')) {
+      const k = await kliens.tarsakKeresese(t.tema);
+      for (const x of k.tarsak.slice(0, REGIO_TARS_KORLAT)) regioTarsak.set(x.cim + ':' + x.port, { cim: x.cim, port: x.port });
+    }
     let bejelentve = 0;
     const bejelentett = [];
     for (const k of fuggoKopogtatok(await kerelmekOlvasasa())) {
@@ -1184,7 +1199,8 @@ async function cimjegyzekKor(port) {
       if (be.tarolta > 0) bejelentve++;
     }
     await dhtIsmertekMentese(kliens);
-    return { eredmeny, kopogtatok: [...kopogtatok.values()], bejelentve, bejelentett, forgalom: kliens.forgalom() };
+    return { eredmeny, kopogtatok: [...kopogtatok.values()], regioTarsak: [...regioTarsak.values()], bejelentve, bejelentett,
+      forgalom: kliens.forgalom() };
   } finally {
     kliens.bezar();
   }
@@ -1513,7 +1529,9 @@ async function rajKorCeljaim(res) {
   }
   res.rajKor.sajatUtolso = utolso;
   const sajatAlairo = res.sajatTablaKulcs?.alairo ?? null;
-  return rajKorCeljai(res.rajKor, { szeletek: reszvetel, jegyzek: await szeletJegyzekTarolo().olvas(),
+  // ⭐ D107 L2 (③c): a kereső-régióim is a raj kör szeletei közé (a forgatás és a változott régió tartói).
+  const szeletek = new Set([...reszvetel, ...(await keresoRegioim()).regiok.map((r) => r.kulcs)]);
+  return rajKorCeljai(res.rajKor, { szeletek, jegyzek: await szeletJegyzekTarolo().olvas(),
     kizart: (c) => !!sajatAlairo && c.alairo === sajatAlairo });
 }
 
@@ -3069,6 +3087,12 @@ function resMunka(allapot, halo, tars) {
     const rajVallalas = await sajatVallalasa(null);
     const rajJegyzek = await szeletJegyzekTarolo().olvas();
     const uzenetMeres = process.env.KOINO_UZENETMERES === '1' ? new Map() : null;
+    // ⭐⭐ D107 L2 (a kereső-réteg ③b): a kereső-régióim a cserében — a kereső-tárat más folyamat is írhatja (a kézi
+    // `kereso behoz`), ezért előbb beolvassuk, amit azóta hozzáfűztek.
+    await keresoTar.frissit();
+    const keresoRegioimMost = await keresoRegioim();
+    const keresoMelysegem = keresoRegioimMost.melyseg;
+    const keresoKulcsaim = new Set(keresoRegioimMost.regiok.map((r) => r.kulcs));
     let csere;
     try {
     csere = await csereUdpResen(halo, tars.cim, tars.port, tar, KOINO, {
@@ -3079,7 +3103,8 @@ function resMunka(allapot, halo, tars) {
       // ⭐⭐ D95/2: a szerzők tagsági kísérői.
       ...tagsagBeallitasai(),
       raj: (kulcsok) => {
-        const vallal = kulcsok.filter((k) => rajVallalas.szeletek.has(k));
+        // ⭐ D107 L2 (③c): a kereső-régióimat is vállalom (a társ tartónak jegyez — a raj kör ebből keres fel).
+        const vallal = kulcsok.filter((k) => rajVallalas.szeletek.has(k) || keresoKulcsaim.has(k));
         return { vallal, tippek: rajAjanlat(rajJegyzek, vallal) };
       },
       udpCimek: allapot.frissUdp,
@@ -3094,6 +3119,9 @@ function resMunka(allapot, halo, tars) {
       kerelemKiszolgalo: kerelemKiszolgaloja(),
       // ⭐⭐ D109: a kiszolgálási keret (az ítélet és a könyvelés kérésenként).
       kiszolgalasiKeret: kiszolgalasiKeretKapcsolo(),
+      // ⭐⭐ D107 L2: a kereső-régióim (a NYITÁS `kd` jele, a régió egyeztetése, a `BEJEGYZES` átadás).
+      keresoTar,
+      keresoMelyseg: keresoMelysegem,
       valaszFogado: valaszFogadasa,
       fajlKerelem: fajlok.kerelem,
       fajlValasz: async (kertek) => {
@@ -3161,6 +3189,12 @@ function resMunka(allapot, halo, tars) {
     await csereAllapota().modosit((a) => csereFeljegyzese(a, { uj: alap.uj, kuldott: alap.kuldott, most: Date.now() }));
     // ⭐ D109 (KK4): a csere is kiszolgálás — a kiküldött bájtok a társ osztálya szerint könyvelődnek (a kötés csak könyvelődik).
     await kiszolgalasiKeretKapcsolo().feljegyez({ tabla: alairo, cim: tars.cim, bajt: csere.bajtKuldott ?? 0, keres: 1 });
+    if (csere.ujBejegyzesek) {
+      kiir(SZIN.halvany + '  🔍 ' + ora() + ' ' + csere.ujBejegyzesek + ' új kereső-bejegyzés a régiómba (' + tars.cim + ':'
+        + tars.port + ')' + SZIN.vege);
+      // ⭐ D97/2: a régióm VÁLTOZOTT — a raj kör a régió többi tartóját is sorra felkeresi.
+      if (allapot.rajKor) valtozottFeljegyzese(allapot.rajKor, [...keresoKulcsaim]);
+    }
     if (csere.keretMiattKimaradt) {
       kiir(SZIN.halvany + '  ⏸ ' + ora() + ' ' + csere.keretMiattKimaradt + ' eseményt a kiszolgálási keret miatt most nem küldtem'
         + ' (a következő csere folytatja)' + SZIN.vege);
@@ -3204,7 +3238,7 @@ function resMunka(allapot, halo, tars) {
       let j = await szeletJegyzekTarolo().olvas();
       let valtozott = false;
       for (const k of csere.kapottRaj.vallal) {
-        if (rajVallalas.szeletek.has(k) || atmenetiKulcsok.has(k)) {
+        if (rajVallalas.szeletek.has(k) || atmenetiKulcsok.has(k) || keresoKulcsaim.has(k)) {
           j = szeletCimMegjegyzese(j, k, tars.cim, tars.port, Date.now(), tarsAlairo);
           valtozott = true;
         }
@@ -3887,8 +3921,8 @@ try {
       for (const g of r.regiok) {
         kiir('    ' + g.melyseg + ':' + g.darab.toString(16) + ' — ' + keresoTar.regioHalmaza(g.melyseg, g.darab).length + ' bejegyzés');
       }
-      kiir(SZIN.halvany + '  ⏸ a régió tartói a cserében még nem egyeztetnek (③b); a felajánlás ma a kézi úton megy'
-        + ' (kereso felajanl → kereso behoz)' + SZIN.vege);
+      kiir(SZIN.halvany + '  a régió tartói a cserében egyeztetnek (a közös régiójukat); ⏸ a felajánlás ma a kézi úton megy'
+        + ' (kereso felajanl → kereso behoz), a hirdetés és a raj a ③c-ben' + SZIN.vege);
       break;
     }
 
@@ -5806,6 +5840,20 @@ try {
                 kiir(SZIN.halvany + '  🚪 ' + ora() + ' kopogtatás: ' + (ujKopogtato ? ujKopogtato + ' kérő vár rám' : '')
                   + (ujKopogtato && h.bejelentve ? ' · ' : '') + (h.bejelentve ? h.bejelentve + ' tartónál jelentkeztem' : '')
                   + SZIN.vege);
+              }
+              // ⭐ D107 L2 (③c): a régióm többi tartója ugyanígy a kör céljai közé (a csere a közös régiót egyezteti).
+              // ⛔ A kopogtatók UTÁN (mérve — a D92/1 kopogtatás-próba): ha előbb jön, egy kérő, aki a régiómnak is
+              // tartója, már ismertnek látszik, és a „kérő vár rám” jelzés elmarad.
+              let ujRegioTars = 0;
+              for (const k of h.regioTarsak ?? []) {
+                const kulcs = k.cim + ':' + k.port;
+                if (kulcs === sajat || ((/^127\./.test(k.cim) || k.cim === '::1') && k.port === port)) continue;
+                if (!res.kopogtatok.has(kulcs)) ujRegioTars++;
+                res.kopogtatok.set(kulcs, { cim: k.cim, port: k.port, lejar: Date.now() + KOPOGTATO_ELEVULES });
+              }
+              if (ujRegioTars) {
+                kiir(SZIN.halvany + '  🔍 ' + ora() + ' a kereső-régióm ' + ujRegioTars + ' további tartója a DHT-n — a kör'
+                  + ' céljai közé' + SZIN.vege);
               }
             })
             .catch((hiba) => {

@@ -365,6 +365,20 @@ magától); a régióm témáján a DHT-n talált címek a kör céljai közé, 
 
 ✅ **③a KÉSZ (2026-10-17):** `js/tar/keresoTar.js` (a bejegyzés alakja, azonosítója, tartalma, az építő, a tár — korlátos, tömöríthető, más folyamat írását a `frissit` olvassa), a `koino.js` `kereso` parancsa (`felajanl` — a gondolataim bejegyzései a főkönyv nyertes pont-eseményeivel, a mai címmel —, `behoz`, `kivisz`). Próbák: `keresoTarProba.js` (11, mind rontással) és a kézi út parancssor-próbája (négy készüléken: felajánlás → behozatal → továbbadás → behozatal, a hamis fájl a kapun bukik, a kereső-tár a koinó állapotába nem számít — három rontással). Elágazás 166.
 
+✅ **③b KÉSZ (2026-10-17) — a régió a cserében:** a NYITÁS `kd` jele, a legsekélyebb közös eltérő régió, a halmaz a
+bejegyzés-azonosítókon, a `BEJEGYZES` átadás, a fogadó a helyet maga számolja és a kapun vesz fel (`vonal.js`); a `koino.js`
+a kereső-tárat és a mélységet adja a cserének. Próbák: `keresoRegioProba.js` (7, valódi UDP-résen — mind rontással; a
+közös régió határát két védvonal fogja: a halmaz és a fogadó) és egy valódi `figyel` + `csere` kör (D kereső-tárába átjön,
+a tartós tára üres marad). A „nincs újdonság” csere ára: a jel +11–46 B nyitásonként (számolva). Elágazás 167.
+
+✅ **③c KÉSZ (2026-10-17) — a hirdetés és a raj:** a régió témája a hirdetett témák közt; a címjegyzék-körben a régió többi
+hirdetője (≤ 4) a kör céljai közé kerül; a raj a régió kulcsát is vállalja és jegyzi, a változott régiót a raj kör viszi
+körbe. Próba: két őrjárat egy hamis DHT-n, társ-felvétel nélkül — D a régió témáján megtalálja C-t, és az öt bejegyzés
+átjön; a raj-jegyzékben C a régió kulcsa alatt (két rontással). Elágazás 168.
+
+⏭️ **A ③ kész. Következik a ④** (a felajánlás a kérelem gépén — `FELAJANLAS`, L4 — és az aláírt megújítás, L3); előtte a
+K10 döntése (az új készülék mélysége), mert a felajánló a mély témán keresi a tartókat.
+
 ### ⏸️ K10. Honnan tudja egy ÚJ készülék a mélységet? — Csabáé
 
 **A rés.** A mélységet (a gyökér-darabét és a kereső-régióét is) a készülék a SAJÁT darabjából becsüli: a darabjában ismert
