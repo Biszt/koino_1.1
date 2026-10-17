@@ -19,7 +19,7 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ### ▶️ SESSION-VÁLTÁS (2026-10-15) — A KÖVETKEZŐ SESSION INNEN INDUL
 
-**Az állapot:** **1128 önpróba** (51 próba-fájl; a legutóbbi teljes soron mind zöld — 2026-10-16, a ⑦ ② után) · 299 fájl / 5559,1 KB (⚠️ CR nélkül mérve —
+**Az állapot:** **1128 önpróba** (51 próba-fájl; a legutóbbi teljes soron mind zöld — 2026-10-16, a ⑦ ② után) · 300 fájl / 5571,1 KB (⚠️ CR nélkül mérve —
 lásd a 6. szabályt) · 0 npm-csomag · minden pusholva. ⏸️ **A telefon a D103-as kódon** (`c038f59`, 2026-10-14) — a következő
 frissítése a terepi teszteléskor jön (a parancs lent, *„Ami nyitva maradt"*).
 
@@ -81,7 +81,14 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    pillanatképe: mélység, szélesség, fejléc/törzs, MB-keret; nem frissül, értesítést nem ad — a tudatpont marad a követés
    eszköze), és a **KISZOLGÁLÁSI KERET** (a valódi védelem a kiszolgálónál: közös és társankénti időkeret, elsőbbség, a keret
    fölött „később”). ⭐ **A sorrend (A): előbb a kiszolgálási keret** (átvizsgálás + mérés) **→ a kereső-réteg ③–⑦ → a
-   felderítés.** ⏸️ A
+   felderítés.** 🔍 **A kiszolgálási keret ÁTVIZSGÁLVA** ([`kiszolgalasi_keret_atvizsgalas.md`](docs/kiszolgalasi_keret_atvizsgalas.md),
+   76. mérés — `kiszolgalasMeres.js`): ⭐ a válaszok kicsik és korlátosak (fejlécek ~35–45 KB, egy szelet ~1,6 KB), kivéve a
+   törzset (≤ 128 MB / kérés) és a nagy szeletet (≤ 2,1 MB); ⛔ de a SZÁMÍTÁS a tárral nő — minden fejléc-kérelem a teljes
+   állapotot újraszámolja (gyorsítótár nélkül), egy „mindent” tartónál 125 000 eseménynél ~1,1 s CPU kérésenként. ⏸️
+   **Csabánál KK1–KK6:** KK1 a kép gyorsítótárban (a keret előfeltétele) · KK2 két mérce: bájt és kérésszám, csúszó óra ·
+   KK3 a társ: a személy / a tábla-kulcs a kérelemben / a cím · KK4 minden, amit másnak teszek, a kötéseimmel folytatott
+   cserét kivéve · KK5 alap: 20 MB + 600 kérés / óra (társ ≤ ¼, idegenek ≤ ½), „mindent”: 100 MB + 3000 · KK6 a „később”:
+   `KESZ` + `kesobb` (kompatibilis), a cserénél `KESOBB`. ⏸️ A
    szabály másik következménye: a tagsági lánc 64-es korlátja (állapot-befolyásoló — éles koinó előtt).
 2. **A terep 🅱️ (két mobilnetes telefon)** — amikor meglesznek; előtte a telefon frissítése (lent).
 3. **Az „UTÁNA” lista** (lent).
@@ -177,7 +184,7 @@ D100 parancssor-próbája méri, egy végig futó felülettel) · a lap a még m
   minden kérdéshez újraindított folyamat mindent frissen lát, és elrejti, amit közben egy MÁSIK folyamat írt — a ház
   bekötés-próbája így nem vette észre, hogy a futó felület nem látja az őrjárat hozta választ.
 - ⛔ **Előbb a mérés, aztán az építés** — a mérések jegyzőkönyve:
-  [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) (számozott, 1–75.).
+  [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) (számozott, 1–76.).
 
 #### ⏸️ Régebbi nyitott döntések (mind Csabáé — részletek a naplóban)
 
@@ -240,7 +247,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés, terepen — TCP-n 334 bájt volt; ⚠️ D89/1 óta titkosítva +~0,4 KB: kézfogás, csomagonként ~18 B, az aláírás — 57. mérés; D95/4 óta a gyökér-darab jele +76–100 B) · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **299 fájl, 5559,1 KB** — ⚠️ *ebből a `felulet/` 143 fájl / 1575,3 KB (2026-10-15), ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **300 fájl, 5571,1 KB** — ⚠️ *ebből a `felulet/` 143 fájl / 1575,3 KB (2026-10-17), ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -431,6 +438,8 @@ node koino/meres/lancKorMeres.js [n ...]  # ⭐ A LÁNC-KÖR ÁRA (71., D98/2–
                                  # részfa-gyorsítótárral 9–42 ms (nélküle 5000 eseménynél 1,9 s)
 node koino/meres/bejaroMeres.js [N ...]  # ⭐ A LEGJOBB-ELŐSZÖR BEJÁRÓ ÁRA (74., D101/M1, szimuláció): egy friss készüléken egy oldal a mai
                                  # menettel 80–114 perc (a NAT-os késés × a szintek), ha a tartó maga jár be ~30 perc, „mindent” tartóval 1 kör
+node koino/meres/kiszolgalasMeres.js [gondolatok ...]  # ⭐ MENNYIBE KERÜL EGY KÉRÉS KISZOLGÁLÁSA (76., D108): a válaszok kicsik, a
+                                 # törzs ≤ 128 MB; az állapot kérésenként újraszámolva a tárral nő (125 000 eseménynél ~1,1 s)
 node koino/meres/keresoMeres.js [N ...] [--prozai] [--B=256] [--T=512]  # ⭐ A KERESŐ-RÉTEG ÁRA (75., D105, szimuláció): a gyakori
                                  # szó fiókja osztódás nélkül a koinóval nő (1M gondolatnál ~31 MB), vele ~1,4 MB; a (C) kulcs 91–96% találat
 node koino/meres/reszvetelMeres.js [n ...]  # ⭐ A „NINCS ÚJDONSÁG” CSERE A SZIGORÚ (b) ALATT (68.): saját halmazzal 6–300 KB, csak a közössel 702 B;
@@ -476,7 +485,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés; TCP-n 334 bájt volt). ⚠️ Két készülék között ma körönként akár **négy** is lemegy (két cím × két irány, 43. mérés; a 45. mérés szétszedte: a két tényező független, és terepen egy címen is két csere megy percenként) — egyperces körrel ez társanként ~8 MB/nap, ötperccel ~1,6 MB. ⭐ A címek tényezőjét a D71 (ii) megszüntette (46. mérés: két címen is 1 csere/ablak); az irányokét a (iii) döntés felezné. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 299 fájl, 5559,1 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 300 fájl, 5571,1 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 

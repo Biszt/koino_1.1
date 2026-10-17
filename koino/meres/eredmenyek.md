@@ -5132,3 +5132,35 @@ egész szó. Két paraméter a mérésből: a darab B = 256, és a tartó tagsá
 toldalékok modellből — a tőváltozás, a hangrend kimarad); a „tő-találat” a tő minden toldalékos alakja (a véletlen tövek
 ritkán előtagjai egymásnak — elhanyagolva); a késés a 74. mérés modellje, nem terep; a régiók tartóinak egymás közti
 cseréje (a raj) nincs külön mérve.
+
+## 76. ⭐⭐ MENNYIBE KERÜL EGY KÉRÉS KISZOLGÁLÁSA? (D108 — a kiszolgálási keret előtt, 2026-10-17, a laptopon)
+
+*`kiszolgalasMeres.js` — egy szintetikus koinó a memóriában (120 tag-szerző, a gondolatok egy fában, mindegyiken a szerzője
+pontja és fele eséllyel egy másiké), a kiszolgáló valódi függvényeivel; a beolvasás nincs benne (49. mérés: 100 000 esemény
+~0,4 s). A kérdés: a kiszolgálási keret (D108) mekkora legyen — mennyibe kerül egy-egy kéréstípus, és mennyit kér a
+becsületes használat.*
+
+```
+gondolat / esemény        az állapot   a gyökér fejlécei mélyen (n = 50)      egy szint (melegen)     egy szelet
+                          (ma minden    hidegen      melegen    válasz        idő      válasz          medián / max
+                          fejléc-kérés)
+   500 /   1 486            6,5 ms      45 ms        1,8 ms     34 + 8 KB     3 ms     5 + 12 KB       1,6 / 5,1 KB
+ 2 500 /   6 479           43 ms        48 ms        3,6 ms     35 + 9 KB     7 ms     5 + 8 KB        1,6 / 4,7 KB
+10 000 /  25 172          164 ms        57 ms       18 ms       35 + 7 KB    19 ms     6 + 8 KB        1,6 / 5,2 KB
+50 000 / 124 866          937 ms       184 ms      150 ms       35 + 7 KB   155 ms     7 + 8 KB        1,6 / 6,3 KB
+```
+
+A mai kérésenkénti felső határokból (~550 B/esemény): egy szelet ≈ 2,1 MB (+ a tagsági kísérők ≈ 0,5 MB), egy törzs
+64 × 2 MB = 128 MB; egy 16-os sorozat szeletből ≈ 34 MB, törzsből ≈ 2 GB.
+
+⭐ **A lelet — két külön dolog.** (1) A VÁLASZOK kicsik és korlátosak (a fejlécek ~35–45 KB, egy szint ~13–19 KB, egy szelet
+~1,6 KB) — kivéve a törzset és a nagy szeletet: ott a MB-ok. (2) ⛔ A SZÁMÍTÁS a tárral nő: minden fejléc-kérelem a teljes
+állapotot újraszámolja (`kepetKeszit`, gyorsítótár nélkül — ~7,5 µs eseményenként), és a válasz maga is a teljes
+entitás-halmazon számol össz-pontot és gyerek-jegyzéket. Egy „alap” készüléknél a tár kicsi; egy „mindent” tartónál 125 000
+eseménynél ~1,1 s CPU kérésenként (+ a beolvasás) — a „végtelen” megsértése a kiszolgáló oldalán, és egy mohó kérő ezzel
+terheli legjobban, nem a bájtokkal. ⭐ A becsületes használat ehhez képest kicsi: egy pakli-navigáció egy új készüléken
+~50–100 KB (képek nélkül), egy felderítés (3 szint × legjobb 10) ~0,5 MB a szövegekkel. A döntési kérdések (KK1–KK6):
+[`kiszolgalasi_keret_atvizsgalas.md`](../../docs/kiszolgalasi_keret_atvizsgalas.md).
+
+⚠️ A határai: a koinó szintetikus (egyenletes szerzők, egy-két pont gondolatonként, javaslatok nélkül — a döntés-számítás
+itt olcsó); a beolvasás és a vonal (titkosítás, UDP) nincs benne; a képek mérete a koinótól függ.
