@@ -5707,6 +5707,11 @@ a K5 és a raj együtt rést nyit (a lejárt bejegyzés egy másik tartótól vi
 **A sorrend:** ③ a kereső-tár, a régió a cserében, a hirdetés és a raj (L1, L2) → ④ a felajánlás és a megújítás (L3, L4) →
 ⑤ a kérdés → ⑥ a halványulás → ⑦ a modál.
 
+✅ **③a MEGÉPÜLT (2026-10-17):** a kereső-tár (`keresoTar.js`) — a BEJEGYZÉS az egység (egy gondolat egy fiókban: a fiók, az
+osztódás, a csomag, a megújítás), az azonosító a tartalom lenyomata, a csomag a kapun, fiókonként a frissebb, korlátos (16 MB);
+a kézi út a `kereso` parancsban (`felajanl`, `behoz`, `kivisz`). Az építés alakja és a K10 kérdése (az új készülék mélysége —
+a gyökér-darabot is érinti): a kereső-átvizsgálás 12. szakasza. Elágazás 166.
+
 ### D108. A FELDERÍTÉS ÉS A KISZOLGÁLÁSI KERET (2026-10-17, Csaba: „1. igen 2. igen 3. (A)”)
 
 **A kérdés (Csaba ötlete, 2026-10-17):** *„jelenleg az értesítések beállítása kezeli a kérelmeket, igaz? Arra gondoltam,

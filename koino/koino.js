@@ -159,6 +159,8 @@ import {
   fuggoCelok, fuggoKopogtatok
 } from './js/csere/fuggoKerelmek.js';
 import { atmenetiTarNyitasa, ketTarBemenete, ketTarNezet } from './js/tar/atmenetiTar.js';
+import { keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesekEpitese, KERESO_KORLAT } from './js/tar/keresoTar.js';
+import { keszulekKeresoHelye, keresoMelysegBecslese, keresoRegioKulcsai, keresoRegioBol } from './js/csere/keresoReteg.js';
 import {
   koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
   javaslatLetrehozasa, szavazas, allasfoglalas, TUDATPONT_KERET,
@@ -396,6 +398,9 @@ async function koinoTaraNyitasa(koino) {
 const tar = await koinoTaraNyitasa(KOINO);
 // ⭐⭐ B/2 (D75): AZ ÁTMENETI TÁR — amit csak láttam (a `hozd` válasza): eldobható, a legrégebben megnézett megy.
 const atmeneti = await atmenetiTarNyitasa(KOINO, join(alapHely(), KOINO));
+// ⭐⭐ D107 L1 (a kereső-réteg ③): A KERESŐ-TÁR — a régióm bejegyzései; puha állapot, a koinó állapotába NEM számít
+// (a csomagok pont-eseményei más gondolatokról szólnak — `keresoTar.js`).
+const keresoTar = await keresoTarNyitasa(KOINO, join(alapHely(), KOINO));
 
 /**
  * ⭐ Az ÁTMENETI tár mint cél (a `hozd`, a függő szelet-kérelem): ami a TARTÓS táramban már megvan (pl. a szelettel jött
@@ -407,6 +412,60 @@ const atmenetiCel = {
   sorszamSzerint: (sz, n) => atmeneti.sorszamSzerint(sz, n),
   hozzafuz: (e) => atmeneti.hozzafuz(e)
 };
+
+// ===================================
+// ⭐⭐ A KERESŐ-RÉTEG ③ — a régióim és a saját bejegyzéseim
+// ===================================
+
+/**
+ * ⭐ A kereső-régióim: a mélység a nálam lévő bejegyzések helyéből (a gyökér-darab mintája — `keresoMelysegBecslese`), a
+ * régiók a tábla-aláíróm helyén, a mélység ±1 szintjén (`keresoReteg.js`). ⏸️ K10: egy új készülék mélysége így 0 — a
+ * kereső-átvizsgálás 12. szakasza (Csabáé).
+ */
+async function keresoRegioim() {
+  const alairo = (await tablaKulcsBiztositasa()).alairoNyilvanos;
+  const { melyseg, becsles } = keresoMelysegBecslese(keresoTar.helyek(), keszulekKeresoHelye(alairo));
+  const kulcsok = keresoRegioKulcsai(alairo, melyseg);
+  return { melyseg, becsles, regiok: kulcsok.map((kulcs) => ({ kulcs, ...keresoRegioBol(kulcs) })) };
+}
+
+/**
+ * ⭐ A felajánlás KÉZI útja (4. szabály — a ④ automatikus felajánlása előtt): a gondolataim bejegyzései (ahol nekem is
+ * pontom van), ha legalább két tulajdonosuk van (K3). A pont-események a NYERTESEK (az állapot főkönyvéből — a szabály-réteg
+ * csak a tag pontját számolja, D93/1), a cím a MAI cím: ha egy elfogadott javaslat adta, a javaslattal együtt (K9); ha a mai
+ * címet adó javaslatot nem találom, a gondolat kimarad (amit nem tudok igazolni, azt nem ajánlom fel).
+ * @returns {Promise<Array<Object>>}
+ */
+async function sajatBejegyzesek(allapot) {
+  const v = await sajatVallalasa(allapot);
+  const pontjai = new Map();               // entitás → a nyertes pont-események azonosítói
+  for (const [kulcs, az] of allapot.pontEsemenyek ?? []) {
+    const ent = kulcs.slice(kulcs.lastIndexOf('|') + 1);
+    if (!pontjai.has(ent)) pontjai.set(ent, []);
+    pontjai.get(ent).push(az);
+  }
+  const esemenyIde = async (az) => (await tar.esemeny(az)) ?? (await atmeneti.esemeny(az));
+  const ki = [];
+  for (const [g, p] of v.pontok) {
+    if (!(p > 0)) continue;
+    const szuletes = await esemenyIde(g);
+    if (szuletes?.tipus !== 'GondolatLetrehozas') continue;
+    const pontEsemenyek = [];
+    for (const az of pontjai.get(g) ?? []) {
+      const e = await esemenyIde(az);
+      if (e) pontEsemenyek.push(e);
+    }
+    let javaslat = null;
+    const maiCim = allapot.entitasok.get(g)?.cim;
+    if (typeof maiCim === 'string' && maiCim !== szuletes.adat?.cim) {
+      javaslat = (await tar.bejelentesek(g)).find((e) => e.tipus === 'Javaslat' && Array.isArray(e.adat?.erintettek)
+        && e.adat.erintettek.some((x) => x?.entitas === g && x?.valtozas?.cim === maiCim)) ?? null;
+      if (!javaslat) continue;
+    }
+    ki.push(...bejegyzesekEpitese({ szuletes, javaslat, pontEsemenyek }));
+  }
+  return ki;
+}
 
 /**
  * ⭐ B/1 (D75, D86, D90): A VÁLLALÁSOM — mely szeleteket tartom tartósan (a saját láncomból: a tudatpontos
@@ -3769,6 +3828,67 @@ try {
       } else {
         kiir(SZIN.halvany + 'Nincs tömörítés: ' + r.ok + SZIN.vege);
       }
+      break;
+    }
+
+    case 'kereso': {
+      // ===== ⭐⭐ A KERESŐ-TÁR (D107 L1 — a kereső-réteg ③): mit tartok a régióimban, és a kézi út (4. szabály) =====
+      //
+      // `kereso` — a régióim és a bejegyzéseim · `kereso felajanl <fájl>` — a gondolataim bejegyzései fájlba (a ④ előtt ez a
+      // felajánlás útja) · `kereso behoz <fájl>` — bejegyzések fájlból, UGYANAZON A KAPUN · `kereso kivisz <fájl>` — a
+      // kereső-táram fájlba (egy másik tartónak — a ③b cseréjének kézi párja).
+      const al = ervek[0] ?? '';
+      const fajlNeve = ervek[1];
+      const sorokba = (lista) => lista.map((b) => JSON.stringify(b) + '\n').join('');
+      if (al === 'kivisz') {
+        if (!fajlNeve) throw new Error('Hova írjam? node koino/koino.js kereso kivisz <fájl>');
+        const lista = keresoTar.bejegyzesek();
+        await writeFile(fajlNeve, sorokba(lista), 'utf8');
+        kiir('Kivittem a kereső-táram ' + lista.length + ' bejegyzését: ' + fajlNeve);
+        break;
+      }
+      if (al === 'felajanl') {
+        if (!fajlNeve) throw new Error('Hova írjam? node koino/koino.js kereso felajanl <fájl>');
+        const { allapot } = await kepetKeszit();
+        const lista = await sajatBejegyzesek(allapot);
+        await writeFile(fajlNeve, sorokba(lista), 'utf8');
+        kiir('A gondolataim ' + lista.length + ' bejegyzése (a legalább két tulajdonosúaké, a cím minden kulcsa alatt): '
+          + fajlNeve + SZIN.halvany + ' — a kereső tartói `kereso behoz`-zal veszik fel' + SZIN.vege);
+        break;
+      }
+      if (al === 'behoz') {
+        if (!fajlNeve) throw new Error('Honnan hozzam? node koino/koino.js kereso behoz <fájl>');
+        const sorok = (await readFile(fajlNeve, 'utf8')).split('\n').filter((x) => x.trim());
+        let uj = 0, megvolt = 0;
+        const elutasitva = [];
+        for (const [i, sor] of sorok.entries()) {
+          let b;
+          try { b = JSON.parse(sor); } catch { elutasitva.push({ sor: i + 1, ok: 'nem értelmezhető' }); continue; }
+          const r = await bejegyzesBefogadasa(keresoTar, b);
+          if (r.uj) uj++;
+          else if (r.azonosito) megvolt++;
+          else elutasitva.push({ sor: i + 1, ok: r.ok });
+        }
+        kiir('Behozva a kereső-tárba: ' + fajlNeve);
+        kiir('  ' + SZIN.jo + uj + ' új bejegyzés' + SZIN.vege + ' · ' + megvolt + ' már megvolt (vagy van frissebb) · '
+          + sorok.length + ' sor a fájlban');
+        if (elutasitva.length) {
+          kiir(SZIN.nem + '  ' + elutasitva.length + ' bejegyzés ELUTASÍTVA:' + SZIN.vege);
+          for (const el of elutasitva.slice(0, 5)) kiir(SZIN.halvany + '    ' + el.sor + '. sor: ' + el.ok + SZIN.vege);
+        }
+        break;
+      }
+      if (al) throw new Error('Mit tegyek? node koino/koino.js kereso [felajanl <fájl> | behoz <fájl> | kivisz <fájl>]');
+      const r = await keresoRegioim();
+      const kb = (x) => (x / 1024).toFixed(1).replace('.', ',') + ' KB';
+      kiir(SZIN.vastag + 'KERESŐ-TÁR: ' + keresoTar.darab() + ' bejegyzés, ' + kb(keresoTar.meret()) + SZIN.vege + SZIN.halvany
+        + ' (a korlát ' + Math.round(KERESO_KORLAT / 1024 / 1024) + ' MB; puha állapot — a koinó állapotába nem számít)' + SZIN.vege);
+      kiir('  a régióim (' + r.melyseg + '. mélység; a becslés ~' + r.becsles + ' bejegyzés a koinóban):');
+      for (const g of r.regiok) {
+        kiir('    ' + g.melyseg + ':' + g.darab.toString(16) + ' — ' + keresoTar.regioHalmaza(g.melyseg, g.darab).length + ' bejegyzés');
+      }
+      kiir(SZIN.halvany + '  ⏸ a régió tartói a cserében még nem egyeztetnek (③b); a felajánlás ma a kézi úton megy'
+        + ' (kereso felajanl → kereso behoz)' + SZIN.vege);
       break;
     }
 
@@ -7409,6 +7529,7 @@ try {
       kiir('           felszabadit [buli]  (a törölt gondolatokra tett pontod visszavétele)');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik [kulonag]');
       kiir('           kivisz <fájl> [mind|sajat|<azonosító>] · behoz <fájl>   (a KÉZI ÚT)');
+      kiir('           kereso [felajanl <fájl> | behoz <fájl> | kivisz <fájl>]   (a KERESŐ-TÁR — a kereső-réteg ③)');
       kiir('           ter [letrehozva|eloszorLattam|nev] [csokkeno|novekvo]  (A BELÉPŐ TÉR)');
       kiir('           fajlok   (mely képek/fájlok hiányoznak erről a készülékről)');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]   (mind UDP-n)');

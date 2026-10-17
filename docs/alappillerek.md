@@ -1111,3 +1111,15 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     keretet kapott); a vonal a kapu `szabad`-ját vette tagságnak, és nyílt koinóban mindenki szabad (az idegenek fele soha nem
     fogott); a „később”-t kapott kérelem után a munka cserét könyvelt (az alsó sáv, a keret, a D99) · Claude · `koino.js`
     (`keretTarsa`, `tarsKapuja`, `tagsagItelete`, `resMunka`), `vonal.js`, `parancssorProba.js`.
+166. **2026-10-17 · a kereső-tár és a bejegyzés mint egység (a kereső-réteg ③a — D107 L1)** → **a kereső-tár (`keresoTar.js`)
+    BEJEGYZÉSEKET tart (`{ k, s, g, esemenyek, m }` — egy gondolat egy fiókban), nem eseményeket; a bejegyzés azonosítója a
+    tartalmának lenyomata (a fogadó számolja); a csomag minden eseménye a kapun (`esemenyMentese` a kereső-tár három
+    műveletével); a tartalom: a fiók kulcsa a cím kulcsa (a címadó javaslaté, ha van — K9), legalább két különböző tulajdonos
+    pozitív pontja, idegen esemény nincs; fiókonként a FRISSEBB marad (holtversenynél a kisebb azonosító); a megújítás (`m`)
+    a ④-ig nem érvényes; korlátos (16 MB, a legrégebben érkezett megy) és eldobható (tömörítés); a kézi út: `kereso felajanl`
+    (a gondolataim bejegyzései fájlba, a főkönyv nyertes pont-eseményeivel), `kereso behoz`, `kereso kivisz`** · mert egy
+    gondolat több fiókban él ugyanazokkal az eseményekkel (a fiók és az osztódás a bejegyzésé), a megújítás nem esemény, és
+    egy pont-eseményről a fogadó nem tudná, melyik régióba tartozik; a „frissebb marad” teszi, hogy két tartó a különbség után
+    ugyanazt tartsa; egy ellenőrizetlen megújítás a lejáratot tolhatná ki (L3); a tagság (K3) a tagsági kísérők gépével a
+    ④-ben jön · Claude · `keresoTar.js`, `koino.js` (`keresoRegioim`, `sajatBejegyzesek`, a `kereso` parancs),
+    `keresoTarProba.js`, `parancssorProba.js`.

@@ -75,6 +75,7 @@ import kerelem from './kerelemProba.js';
 import tagsag from './tagsagProba.js';
 // ⭐ A vállalás és az átmeneti tár (B/1–B/2, D75) — a kapu, az eldobás, a D14 csak a tartósra.
 import atmeneti from './atmenetiProba.js';
+import keresoTar from './keresoTarProba.js';
 // ⭐ D95/1: a lezárási összegzés — a nagy szeletű érintett döntése az összegző tartónak.
 import lezarasiOsszegzes from './lezarasiOsszegzesProba.js';
 // ⭐ D95/1, D95/3: a két fokú vállalás szerepei a valódi cserén.
@@ -123,6 +124,7 @@ const PROBAK = [
   { nev: 'udpkapu', futtat: udpKapu },
   { nev: 'iro', futtat: iro },
   { nev: 'atmeneti', futtat: atmeneti },
+  { nev: 'keresotar', futtat: keresoTar },
   { nev: 'szovegdarab', futtat: szovegDarab },
   { nev: 'tartomany', futtat: tartomany },
   { nev: 'titkositas', futtat: titkositas },
@@ -163,7 +165,7 @@ const PROBAK = [
 // ⛔ A szűrő PONTOSAN illeszkedik: a régi részszó-szűrő a `tar`-ra a `tarsak`-ot is elindította.
 const CSOPORTOK = {
   // a kanonikus alak, a kulcs, az aláírt esemény és a tár (az íróval)
-  alap: ['kanonikus', 'kulcs', 'esemeny', 'tar', 'iro', 'atmeneti'],
+  alap: ['kanonikus', 'kulcs', 'esemeny', 'tar', 'iro', 'atmeneti', 'keresotar'],
   // események → állapot: entitások, döntéshozatal, szabályok, egyezmények, tagság
   allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'dontesicsomag', 'lezarasiosszegzes', 'osszpont', 'felszabaditas', 'identitas', 'tagsag', 'ertesites'],
   // a felületnek felelő réteg

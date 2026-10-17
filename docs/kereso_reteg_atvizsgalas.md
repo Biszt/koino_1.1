@@ -327,3 +327,60 @@ tartótól visszajöhet — a „temető” (5.7) a hátsó ajtón.
 
 ⭐ **A sorrend a döntések után:** ③ a kereső-tár, a régió részvétele a cserében és a hirdetés (L1, L2) → ④ a felajánlás és a
 megújítás (L3, L4) → ⑤ a kérdés → ⑥ a halványulás (a lejárat a kereső-tárban — az L3 szerint) → ⑦ a modál.
+
+## 12. A ③ építésének alakja (2026-10-17) — és egy rés, ami a gyökér-darabot is érinti (K10, Csabáé)
+
+> A D107 után, építés előtt, a kódból (a vonal, a gyökér-darab, az átmeneti tár). Az alak a megvalósításé (az L1–L2
+> szerint); egy kérdés D-szintű (K10).
+
+**A régió halmazának egysége: a BEJEGYZÉS, nem az esemény.** Egy bejegyzés = egy gondolat EGY fiókban:
+`{ k: a fiók kulcsa, s: az osztódás mélysége, g: a gondolat, esemenyek: [a születés, a címadó javaslat (K9, ha van), a
+pont-események (K3)], m: a megújítás (L3 — a ④-ben) }`. A régió halmazának eleme a bejegyzés AZONOSÍTÓJA — a tartalmának
+lenyomata (a fiók, az osztódás, a gondolat, az események azonosítói, a megújítás). Miért nem az események azonosítói:
+(1) egy gondolat több fiókban él (≤ 32 kulcs) ugyanazokkal az eseményekkel — a fiók és az osztódás a bejegyzésé, nem az
+eseményé, és ettől függ, melyik régióba esik; (2) a megújítás nem esemény (L3), az esemény-halmaz nem látná; (3) a fogadó
+egy pont-eseményről (címe nincs) nem tudná, melyik régióba tartozik. ⭐ A megújított vagy bővült bejegyzés így ÚJ elem: a
+tartó gondolatonként és fiókonként a legfrissebbet tartja, a régi kiesik — a különbség után a két tartó ugyanazt tartja.
+
+**A vonalon (a gyökér-darab mintája — D95/4):** a NYITÁS `kd` jele (`m:l1:l2:l3`, mint a `gyd`; a társ a régióim kulcsait a
+tábla-aláírómból számolja); a legsekélyebb közös eltérő régió az eltérők közé kerül, a tartomány-egyeztetés a
+bejegyzés-azonosítókon fut, az átadás `BEJEGYZES` üzenettel (a teljes bejegyzés, a keret maradékáig — D109). A fogadó a
+KERESŐ-TÁRBA teszi: minden esemény ugyanazon a kapun (`esemenyMentese` a kereső-tár három műveletével — 3. szabály), és a
+bejegyzés alakja ellenőrizve (a `k` a cím kulcsa — a születésé, vagy a javaslaté —, a hely a közös régióba esik, a
+pont-események erre a gondolatra szólnak, pozitívak, különböző szerzőktől). ⏸️ A tagság (K3) a ④-ben, a tagsági kísérők
+gépével (gyorsítótárral — 75. mérés: 4096 szerző).
+
+**A kereső-tár (L1 (A)):** `<koino>/kereso/` — a bejegyzések hozzáfűzhető fájlban, tömörítéssel; korlátos és eldobható
+(ami kívül esik a régióimon — a mélység változott —, és a ⑥-tól a lejárt); a koinó állapotába NEM számít (a csomag
+pont-eseményei nem torzítják a saját számításomat).
+
+**A hirdetés és a társak:** a saját régióm témája (`keresoRegioTemaja`) a hirdetett témák közé (a kopogtató párja
+magától); a régióm témáján a DHT-n talált címek a kör céljai közé, és a csere után a raj-jegyzékben a régió kulcsa alatt
+(a `RESZVETEL` `vallal`-jában); a változott régiót a raj kör viszi körbe (D97/2).
+
+**A kézi út (4. szabály):** `kereso kivisz <fájl>` / `kereso behoz <fájl>` (a bejegyzések, ugyanazon a kapun), és a
+`kereso` parancs (a régióim, hány bejegyzés, mekkora).
+
+**A sorrend:** ③a a kereső-tár, a kézi út és a parancs → ③b a régió a cserében → ③c a hirdetés és a raj.
+
+✅ **③a KÉSZ (2026-10-17):** `js/tar/keresoTar.js` (a bejegyzés alakja, azonosítója, tartalma, az építő, a tár — korlátos, tömöríthető, más folyamat írását a `frissit` olvassa), a `koino.js` `kereso` parancsa (`felajanl` — a gondolataim bejegyzései a főkönyv nyertes pont-eseményeivel, a mai címmel —, `behoz`, `kivisz`). Próbák: `keresoTarProba.js` (11, mind rontással) és a kézi út parancssor-próbája (négy készüléken: felajánlás → behozatal → továbbadás → behozatal, a hamis fájl a kapun bukik, a kereső-tár a koinó állapotába nem számít — három rontással). Elágazás 166.
+
+### ⏸️ K10. Honnan tudja egy ÚJ készülék a mélységet? — Csabáé
+
+**A rés.** A mélységet (a gyökér-darabét és a kereső-régióét is) a készülék a SAJÁT darabjából becsüli: a darabjában ismert
+elemek × 2^mélység (`melysegBecslese`). Egy új (vagy „alap”, kevés vállalású) készülék darabja üres → a becslése 0 → a
+régiói a 0. és az 1. szinten vannak. Egy nagy koinó tartói viszont mélyen (m ~ 10): közös kulcsuk nincs, tehát a cserében
+SOHA nem egyeztetnek — az új készülék a régióját nem tölti fel, a felajánló a mély témán nem találja meg. ⚠️ A gyökér-darabnál
+ugyanez a rés áll (D95/4): egy kis koinóban (m ≤ 1) nem látszik, a próbák ott futnak; egy nagyban egy új „alap” készülék a
+gyökér-darabját a cserében nem kapja meg (a kérelem és a bejáró hozza, de az átmeneti tárba). A 9. szabály kérdése: *ez mit
+csinál egymilliárd e-embernél?* — a darab-elosztás nem indul el.
+
+- **(A) ⭐ A társtól tanul, de csak MÉLYEBBRE, és csak amíg a saját darabja kevés — ezt javaslom.** A NYITÁS jeléből (a `gyd`
+  és a `kd` mélysége) a készülék megjegyzi a társak mélységét; ha a saját becslése a célnál (~256 / 512) jóval kevesebből áll,
+  a mélysége legalább a legalább KÉT különböző társtól látott legnagyobb mélység − 1. Egy hazug társ így legfeljebb
+  mélyebbre tolhat (kevesebbet tartok — a többi tartó fedez, és a saját adatom mélyebben is jó), sekélyebbre nem (az a
+  nagyobb teher lenne); a tanult mélység elévül (egy nap), ha nem erősítik meg. Ugyanaz a szabály a gyökér-darabra és a
+  kereső-régióra (egy helyen). Ára: néhány bájt helyi feljegyzés, a vonalon semmi (a jel már ott van).
+- **(B) A DHT-ből keres:** a készülék a saját helyének témáit több mélységen megkérdezi, és a legmélyebbet veszi, ahol van
+  hirdető. Független a társaktól, de mélységenként egy DHT-keresés (~3 KB), és a hirdetők számából nem következik a mélység.
+- **(C) Marad a mai** (a saját darabból): a rés áll, és a nagy koinóban a darab-elosztás egy új készüléken nem indul el.

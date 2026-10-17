@@ -5151,6 +5151,65 @@ proba('⭐⭐⭐ D72: A SZÖVEG KÜLÖN DARAB — az esemény nem hordozza, a m�
     }
   });
 
+// ===================================
+// ⭐⭐ A KERESŐ-RÉTEG ③a: A KERESŐ-TÁR KÉZI ÚTJA (D107 L1, 4. szabály)
+// ===================================
+//
+// Viselkedést mérünk, négy készüléken: A gondolatán B is tulajdonos (tag — D93/1, különben a pontja nem számít); A
+// `kereso felajanl`-lal fájlba teszi a gondolat bejegyzéseit (a cím minden kulcsa alatt egyet — a „Közös park a faluban”
+// öt kulcsot ad), az egy tulajdonosú gondolatát NEM (K3). C — egy idegen tartó — `kereso behoz`-zal felveszi: a
+// kereső-tárában öt bejegyzés, ⭐ de a koinó-állapotában a gondolat NINCS (L1: a kereső-tár a koinó állapotába nem számít).
+// C `kereso kivisz`-szel továbbadja D-nek, aki szintén ötöt vesz fel; egy hamisított fájlt (a születés címe átírva) D
+// elutasít — a kapun. Rontás: a befogadás a kaput kihagyja → D a hamisat is felveszi → bukik; az építő a tulajdonos-számot
+// nem nézi → az egy tulajdonosú gondolat is felkerül (≠ 5) → bukik; a felajánlás csak a SAJÁT pont-eseményemet viszi
+// (nem a főkönyv nyerteseit) → nincs két tulajdonos → 0 → bukik.
+proba('⭐⭐ A kereső-réteg kézi útja: felajanl → behoz → kivisz → behoz — a hamisat elveti, és a koinó állapotába nem számít', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const c = await ujKeszulek();
+  const d = await ujKeszulek();
+  try {
+    await fut(a, 'koino', 'Kereső', 'próba', 'nyilt');
+    const g = azonosito(await fut(a, 'gondolat', 'Közös park a faluban'), 'Létrejött:');
+    await fut(a, 'gondolat', 'Magányos gondolat');
+    await taggaTesziKeszulek(a, b);
+    await fut(a, 'kivisz', join(a, 'mind.jsonl'), 'mind');
+    await fut(b, 'behoz', join(a, 'mind.jsonl'));
+    await fut(b, 'pont', g, '10');
+    await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
+    await fut(a, 'behoz', join(b, 'sajat.jsonl'));
+    const f3 = join(a, 'felajanlas.jsonl');
+    const felajanl = tiszta(await fut(a, 'kereso', 'felajanl', f3));
+    const cBe = tiszta(await fut(c, 'kereso', 'behoz', f3));
+    const cAll = tiszta(await fut(c, 'kereso'));
+    const cKoino = tiszta(await fut(c));
+    // a hamis: a születés címe átírva (az aláírás már nem illik rá)
+    const hamis = join(c, 'hamis.jsonl');
+    await writeFile(hamis, (await readFile(f3, 'utf8')).replaceAll('Közös park a faluban', 'Hamis park a faluban'), 'utf8');
+    const dHamis = tiszta(await fut(d, 'kereso', 'behoz', hamis));
+    const f5 = join(c, 'tovabb.jsonl');
+    await fut(c, 'kereso', 'kivisz', f5);
+    const dBe = tiszta(await fut(d, 'kereso', 'behoz', f5));
+    const dAll = tiszta(await fut(d, 'kereso'));
+    const ki = {
+      felajanl: /A gondolataim 5 bejegyzése/.test(felajanl),
+      cBe: /5 új bejegyzés/.test(cBe),
+      cAll: /KERESŐ-TÁR: 5 bejegyzés/.test(cAll),
+      cKoino: !/Közös park/.test(cKoino),
+      dHamis: /0 új bejegyzés/.test(dHamis) && /ELUTASÍTVA/.test(dHamis) && /kapun/.test(dHamis),
+      dBe: /5 új bejegyzés/.test(dBe) && /KERESŐ-TÁR: 5 bejegyzés/.test(dAll)
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  kereső kézi út — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
+        + JSON.stringify({ felajanl: felajanl.slice(-200), cBe: cBe.slice(-200), cAll: cAll.slice(0, 200), dHamis: dHamis.slice(-300) })
+        + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const m of [a, b, c, d]) await rm(m, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js
