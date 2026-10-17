@@ -2305,6 +2305,51 @@ proba('⛔⛔ D91: az ELLENSÉGES társ raj-üzenetéből csak az marad, ami az 
     && r.tippek[k1].length === 3 && r.tippek[k1][0].a === 'B'.repeat(43) && r.tippek[k1][1].h === '10.0.0.3';
 });
 
+// ===================================
+// ⭐⭐ D109 (KK4, KK6): A KISZOLGÁLÁSI KERET A CSERÉBEN — a vonalon
+// ===================================
+//
+// A keretet a hívó adja (`kiszolgalasiKeret`: `itelet`, `feljegyez`) — itt egy kitalált keret mondja meg az ítéletet.
+// (1) Ha nem enged: a kiszolgáló a nyitás után a CIMEK helyett `KESOBB`-öt küld, és véget ér (`kesobbMondtam`); a társ a
+// `varj`-ban tisztán kilép — `kod: 'KESOBB'`, a várakozással —, és semmit nem kap. Rontás: a `varj` nem ismeri a
+// `KESOBB`-öt → a társ hibája „Várt üzenet: CIMEK” lesz, `kod` nélkül → bukik.
+proba('⭐⭐ D109 (KK6): a keret fölött a csere a nyitás után tisztán véget ér — a társ `KESOBB`-öt kap, és semmit nem visz', async () => {
+  const anna = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 3));
+  const masik = await ujTar();
+  const keret = { itelet: async () => ({ szabad: false, kesobb: 120 }), feljegyez: async () => {} };
+  let hiba = null;
+  try {
+    await csereDroton(egyik, masik, '127.0.0.1', { egyikBeallitas: { kiszolgalasiKeret: keret } });
+  } catch (h) { hiba = h; }
+  const masikE = await koinoEsemenyei(masik, KOINO);
+  return hiba?.kod === 'KESOBB' && hiba.kesobb === 120 && masikE.length === 0;
+});
+
+// (2) Ha enged, de csak a maradékig: az átadás a maradék bájtig küld, a többit a következő csere hozza (a tartomány-
+// egyeztetés onnan folytatja) — a végén minden átér. Rontás: a maradék nem számít → az első csere mindent visz → bukik.
+proba('⭐⭐ D109 (KK4): az idegennek a csere a keret maradékáig küld — a többit a következő csere hozza, és végül minden átér', async () => {
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 6);
+  const egyik = await ujTar(); await ment(egyik, esemenyek);
+  const masik = await ujTar();
+  const meret = Buffer.byteLength(JSON.stringify({ uzenet: 'ESEMENY', esemeny: esemenyek[0] })) + 40;
+  const konyv = [];
+  const keret = {
+    itelet: async () => ({ szabad: true, kesobb: null, maradekBajt: Math.floor(meret * 2.5) }),
+    feljegyez: async (x) => { konyv.push(x); }
+  };
+  const darabok = [];
+  const kimaradtak = [];
+  for (let i = 0; i < 5 && (darabok.at(-1) ?? 0) < 6; i++) {
+    const r = await csereDroton(egyik, masik, '127.0.0.1', { egyikBeallitas: { kiszolgalasiKeret: keret } });
+    kimaradtak.push(r.keretMiattKimaradt ?? 0);
+    darabok.push((await koinoEsemenyei(masik, KOINO)).length);
+  }
+  return darabok[0] === 2 && kimaradtak[0] === 4 && darabok.at(-1) === 6 && darabok.length === 3
+    && await allasokEgyeznek(egyik, masik, KOINO);
+});
+
 export default async function (csendes) {
   const eredmeny = await futtatas(csendes);
   await takaritas();

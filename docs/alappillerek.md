@@ -1088,3 +1088,26 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     egy kérő nem tudja nullázni (a MI folyamatunkat nem indíthatja újra); a kapcsolat bájtszámlálója a valódi kimenő
     forgalmat méri (a titkosítás és a fájl-szeletek is benne) · Claude · `kiszolgalasiKeret.js`, `vonal.js`, `udpVonal.js`,
     `koino.js` (`kiszolgalasiKeretKapcsolo`, `azonossagBeallitasa`, a törzs).
+163. **2026-10-17 · a csere a kiszolgálási kereten (D109 ③–④, a cserére)** → **az ítélet a nyitás után, a társ tábla-kulcsával;
+    a keret fölött `KESOBB {mp}` a CIMEK helyett, és tiszta vég (a „később” se kötés, se raj, se tanulás — egyik oldalon sem);
+    ha enged, az átadás a maradék bájtig küld, a többit a következő csere hozza (nem részleges `KESOBB`); a sikeres csere
+    kiküldött bájtjai könyvelődnek; a kérő a „később”-t mondót a megadott ideig kihagyja (a kör és a függő kérelem), és az
+    nem sikertelen kísérlet** · mert a csere az út, amin egy új kulccsal érkező „mindent kérő” egy „mindent” tartótól újra és
+    újra lehúzhatná a koinót; a tartomány-egyeztetés a félbehagyott átadást magától folytatja, ezért a maradékig küldés elég
+    (külön folytatás-jel nem kell); a „később” nem bukás — a társ él, csak most nem ad · Claude · `vonal.js`, `koino.js`
+    (`resMunka`, `kesobbTarsak`), `csereProba.js`.
+164. **2026-10-17 · ki a kötés a keretben** → **a kötés-jegyzék három legrendszeresebbje (`kotesek.js` `kotesek`), legalább három
+    találkozással, és az első legalább egy keretnyi (egy óra) ideje (`keretKotesE`)** — a jegyzék bármely tagja HELYETT ·
+    mert a jegyzékben a legutóbbi öt találkozás áll, és egy idegen egyetlen csere után bekerülne (egy kevés társú készüléken
+    azonnal) — onnantól a keret nem fogná; a kor-feltétel a „gyorsan háromszor bekopogó” ellen szól; így legfeljebb három
+    társ cserél keret nélkül, és azok a rendszeresek (D108: a saját cserém) · Claude · `kiszolgalasiKeret.js`, `koino.js`
+    (`keretOsztalya`).
+165. **2026-10-17 · a társ kulcsa és a tag jel EGY helyen (két mért hiba)** → **a keret társ-kulcsa a `keretTarsa`-ból (zárt
+    koinóban a személy — a kérelemben bizonyított, vagy a cserében a tábla-kulcsához megjegyzett —, egyébként a tábla-kulcs,
+    végül a cím); a kapu `tag: true`-t CSAK ellenőrzött tagságnál mond (a tagság ítélete kiemelve: `tagsagItelete`; nyílt
+    koinóban a kérelemben bizonyított személyt a nálam lévő lánca igazolja, és a tag-kérdés hibája nyílt koinót nem zár be); a
+    ki nem szolgált kérelem (tiltott, „később”, ismeretlen) nem csere (`kerelem: true` a vonal válaszában)** · mert a
+    bekötés-próba három hibát mért: nyílt koinóban a kérelem a személy, a csere a tábla-kulcs alatt számolt (ugyanaz a társ két
+    keretet kapott); a vonal a kapu `szabad`-ját vette tagságnak, és nyílt koinóban mindenki szabad (az idegenek fele soha nem
+    fogott); a „később”-t kapott kérelem után a munka cserét könyvelt (az alsó sáv, a keret, a D99) · Claude · `koino.js`
+    (`keretTarsa`, `tarsKapuja`, `tagsagItelete`, `resMunka`), `vonal.js`, `parancssorProba.js`.

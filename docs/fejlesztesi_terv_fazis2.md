@@ -5770,7 +5770,14 @@ kérés 0,5–0,7 ms a tár méretétől függetlenül. Elágazás 161.
 ✅ **A KÉRELEM ÚTJA A KERETEN (2026-10-17):** a könyvelés (`kiszolgalasiKeret.js`), a kérő tábla-kulcsa a kérelemben (KK3), az
 ítélet és a könyvelés a kiszolgáló KERELEM-ágán (a sorozat minden tagjára, a továbbadásra is), a „később” (`KESZ` + `kesobb`
 — egy régi kérő üres válasznak látja), a részleges törzs (a keret maradékáig), és a `kerelem` parancs kimondja. Elágazás 162.
-⏭️ Hátravan: az idegen csere a kereten, a kérő reakciója, a beállítás.
+
+✅ **MEGÉPÜLT (③–⑤, 2026-10-17):** az idegen csere a kereten (a nyitás után `KESOBB` — tiszta vég; ha enged, a maradék bájtig
+küld, a többit a következő csere hozza; a csere is könyvelődik), a kötés a keretben a RENDSZERES társ (a három legrendszeresebb
+közül, ≥ 3 találkozás, az első ≥ 1 órája), a társ kulcsa egy helyen (zárt koinóban a személy, különben a tábla-kulcs), a tag jel
+csak ellenőrzött tagságnál (nyílt koinóban a kérelemben bizonyított személy a lánca szerint), a ki nem szolgált kérelem nem csere,
+a kérő a „később”-t mondót addig kihagyja, és a beállítás (`kiszolgalas keret <MB> <kérés>`; az elmúlt óra a `keret.json`-ből).
+Két hibát a próba mért meg: a kapu `szabad`-ja nem tagság, és a „később”-t kapott kérelem nem csere. Elágazás 163–165.
+⏸️ Maradt: a továbbadott válasz visszavitele nem könyvelődik; a lap a „később”-t a felderítés paneljével mondja ki.
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 

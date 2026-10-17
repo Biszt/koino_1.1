@@ -293,6 +293,14 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   /** A következő üzenet — és ellenőrizzük, hogy azt kaptuk-e, amit vártunk. */
   const varj = async (tipus) => {
     const uzenet = await sor.kovetkezo();
+    // ⭐ D109 (KK6): a társ kiszolgálási kerete most nem enged — a nyitás után a CIMEK helyett ezt küldte. Tiszta vég, nem
+    // hiba: a hívó (`koino.js` `resMunka`) a `kod`-ból tudja, hogy később próbálja (vagy mást).
+    if (uzenet.uzenet === 'KESOBB' && tipus !== 'KESOBB') {
+      const hiba = new Error('A társ most nem szolgál ki (a kiszolgálási kerete betelt)');
+      hiba.kod = 'KESOBB';
+      hiba.kesobb = Number.isInteger(uzenet.mp) && uzenet.mp > 0 ? uzenet.mp : null;
+      throw hiba;
+    }
     if (uzenet.uzenet !== tipus) {
       throw new Error('Várt üzenet: ' + tipus + ', érkezett: ' + uzenet.uzenet);
     }
@@ -468,7 +476,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       szemely: bizonyitottSzemely(elsoUzenet.ki)?.sz ?? null,
       tabla: typeof kerelemTablaja?.alairo === 'string' ? kerelemTablaja.alairo : null,
       cim: kapcsolat.remoteAddress ?? null,
-      tag: !!(zartKapu && kapuV.szabad && bizonyitottSzemely(elsoUzenet.ki))
+      tag: !!(zartKapu && kapuV.szabad && kapuV.tag === true && bizonyitottSzemely(elsoUzenet.ki))
     };
 
     /** Egy kérelem kiszolgálása (az elsőé és a sorozat többié ugyanígy). @returns {{k, kiszolgalva, tiltva?, kesobb?}} */
@@ -569,7 +577,8 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     const elso = await egyKerelem(elsoUzenet);
     if (elso.tiltva) {
       console.log('parbeszed - VÉGE (kérelem: zárt koinó, nem tag)', { fajta: elso.k?.fajta ?? null });
-      return { ...eredmeny(), tarsKorlatozva: true, kerelemKiszolgalva: null, szeletKiszolgalva: null, kerelemTiltva: true };
+      return { ...eredmeny(), kerelem: true, tarsKorlatozva: true, kerelemKiszolgalva: null, szeletKiszolgalva: null,
+        kerelemTiltva: true };
     }
     // ⭐⭐ D102 (J3): A KÉRELEM-SOROZAT — ha a kérő jelezte (`sorozat`), ugyanazon a kapcsolaton további kérelmek jönnek
     // (legfeljebb `SOROZAT_KORLAT`), egyenként kiszolgálva; a `VEGE` (vagy bármi más) zárja. A 74. mérés pótlása: egy jól
@@ -585,7 +594,8 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     const kiNyom = (x) => (x.kiszolgalva ? { fajta: x.kiszolgalva, kulcs: x.k.kulcs } : null);
     console.log('parbeszed - VÉGE (kérelem kiszolgálva)', { fajta: elso.k?.fajta ?? null, kulcs: elso.k?.kulcs ?? null,
       kiszolgalva: elso.kiszolgalva, sorozat: sorozat.length });
-    return { ...eredmeny(), kerelemKiszolgalva: kiNyom(elso), szeletKiszolgalva: elso.kiszolgalva === 'szelet' ? elso.k.kulcs : null,
+    return { ...eredmeny(), kerelem: true, kerelemKiszolgalva: kiNyom(elso),
+      szeletKiszolgalva: elso.kiszolgalva === 'szelet' ? elso.k.kulcs : null,
       ...(sorozat.length > 1 ? { kerelmekKiszolgalva: sorozat.map(kiNyom) } : {}),
       ...(sorozat.some((x) => x.kesobb) ? { kerelemKesobb: Math.max(...sorozat.map((x) => x.kesobb ?? 0)) } : {}) };
   }
@@ -644,6 +654,39 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       && kezfogas.ellenoriz(bemondott, oveNyitas.aa) ? bemondott : null;
   }
   let kapu = await kapuItelete({ tabla: kapottTablaKulcs });
+
+  // ----- ⭐⭐ D109 (KK4, KK6): A KISZOLGÁLÁSI KERET A CSERÉBEN -----
+  //
+  // A csere is kiszolgálás: amit a társnak hiányzónak találok, azt küldöm. A KÖTÉSEM (a tábla-kulcsa a kötés-jegyzékemben —
+  // a saját cserém) nem kerül a keret alá; egy idegen igen — különben egy új tábla-kulccsal érkező „mindent kérő” újra és
+  // újra lehúzhatná egy „mindent” tartótól a koinót. Ha a keret nem enged, a CIMEK helyett `KESOBB` megy, és itt vége (a
+  // társ a `varj`-ban tisztán kilép); ha enged, az átadás legfeljebb a maradék bájtig küld (a többit a következő csere —
+  // a tartomány-egyeztetés onnan folytatja).
+  let kuldesKeret = Infinity;
+  let keretMiattKimaradt = 0;
+  if (beallitas.kiszolgalasiKeret) {
+    const it = await beallitas.kiszolgalasiKeret.itelet({
+      szemely: null,
+      tabla: typeof kapottTablaKulcs?.alairo === 'string' ? kapottTablaKulcs.alairo : null,
+      cim: kapcsolat.remoteAddress ?? null,
+      tag: !!(zartKapu && kapu.szabad && kapu.tag === true)
+    });
+    if (it && !it.szabad) {
+      kuld({ uzenet: 'KESOBB', mp: it.kesobb });
+      console.log('parbeszed - VÉGE (a kiszolgálási keret: később)', { mp: it.kesobb });
+      return { ...eredmeny(), kesobbMondtam: it.kesobb };
+    }
+    if (Number.isFinite(it?.maradekBajt)) kuldesKeret = it.maradekBajt;
+  }
+  let keretbenKuldott = 0;
+  /** Befér-e még ez az esemény a társnak szánt maradékba (a kötésnél és keret nélkül mindig). */
+  const keretbeFer = (e) => {
+    if (!Number.isFinite(kuldesKeret)) return true;
+    const meret = Buffer.byteLength(JSON.stringify({ uzenet: 'ESEMENY', esemeny: e })) + 40;
+    if (keretbenKuldott + meret > kuldesKeret) { keretMiattKimaradt++; return false; }
+    keretbenKuldott += meret;
+    return true;
+  };
 
   // ----- ⭐ D95/4: A KÖZÖS GYÖKÉR-DARABOK KÖZÜL AZ ELTÉRŐK (mindkét fél ugyanazt számolja: a két nyitásból) -----
   const elteroDarabok = [];
@@ -1164,9 +1207,14 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     const e = await tar.esemeny(a);
     if (e) kuldesre.set(a, e);
   }
-  for (const e of kuldesre.values()) kuld({ uzenet: 'ESEMENY', esemeny: e });
+  let atadva = 0;
+  for (const e of kuldesre.values()) {
+    if (!keretbeFer(e)) continue;
+    kuld({ uzenet: 'ESEMENY', esemeny: e });
+    atadva++;
+  }
   kuld({ uzenet: 'KEREK', azonositok: [...kellNekem].sort() });
-  kuldott += kuldesre.size;
+  kuldott += atadva;
 
   const erkezett = [];
   let oveKerese = null;
@@ -1186,7 +1234,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   for (const a of kertek) {
     if (typeof a !== 'string' || !adhatok.has(a)) continue;
     const e = await tar.esemeny(a);
-    if (e) { kuld({ uzenet: 'ESEMENY', esemeny: e }); valaszolt++; }
+    if (e && keretbeFer(e)) { kuld({ uzenet: 'ESEMENY', esemeny: e }); valaszolt++; }
   }
   kuld({ uzenet: 'KESZ' });
   kuldott += valaszolt;
@@ -1222,9 +1270,9 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   await emlekezetIrasa([...mind].filter((k) => enKimaradok.has(k) || oveKimarad.has(k)));
 
   console.log('parbeszed - VÉGE', {
-    uj, kuldott, elteroSzeletek, egyeztetoUzenetek, kimaradt: erkezett.length - atveheto.length
+    uj, kuldott, elteroSzeletek, egyeztetoUzenetek, kimaradt: erkezett.length - atveheto.length, keretMiattKimaradt
   });
-  return eredmeny();
+  return { ...eredmeny(), ...(keretMiattKimaradt ? { keretMiattKimaradt } : {}) };
 }
 
 // ⚠️ ITT ÁLLT 2026-09-26-IG A `figyeloIndulasa` ÉS A `csereVonalon` — a TCP-postaláda és a

@@ -266,8 +266,8 @@ import {
 import { reszfaKarbantarto, osszPontokSzamitasa } from './js/allapot/osszPont.js';
 // ⭐⭐ D109 (KK2–KK5): a kiszolgálási keret könyvelése (mennyit dolgoztam másoknak az utóbbi órában, kinek)
 import {
-  ujKeret, keretHatara, keretFeljegyzes, keretItelete, keretAllasa, tarsKulcsa, tarsOsztalya, KERET_ALAP, KERET_MINDENT,
-  KESOBB_MIN
+  ujKeret, keretHatara, keretFeljegyzes, keretItelete, keretAllasa, tarsKulcsa, tarsOsztalya, keretKotesE, KERET_ALAP,
+  KERET_MINDENT, KESOBB_MIN, KOTES_MIN_KOR
 } from './js/csere/kiszolgalasiKeret.js';
 import { GYOKER_KULCS } from './js/csere/szeletEgyeztetes.js';
 // ⭐ D89/1: a kézfogás hitelesítése — a tábla-kulcs aláírja a kézfogás átiratát.
@@ -2074,6 +2074,14 @@ async function fuggoEredmenyFeldolgozasa(fk, r, tars) {
     const megjott = r.fajlok.filter((x) => x.kesz).length;
     siker = megjott > 0; osszegzes = megjott + ' fájl';
   }
+  if (!siker && r.kesobb) {
+    // ⭐ D109 (KK6): a tartó kiszolgálási kerete most nem enged — nem az ő hibája, és nem elbukott próbálkozás: addig nem
+    // hívjuk, a kérelem a raj másik tartójánál próbálkozik.
+    kesobbFeljegyzese(tars, r.kesobb);
+    kiir(SZIN.halvany + '  ⏸ ' + ora() + ' függő kérelem (' + fk.fajta + ' ' + fk.kulcs.slice(0, 8) + '…) ' + tars.cim + ':'
+      + tars.port + ' — a tartó most nem szolgál ki (a kiszolgálási kerete betelt), ' + r.kesobb + ' mp múlva újra' + SZIN.vege);
+    return uj;
+  }
   if (!siker && r.atvette) {
     // ⭐ A társ nem tartja, de továbbadja — a válasz később, `VALASZ`-ként jön (D87: lépésenként).
     kiir(SZIN.halvany + '  ↪ ' + ora() + ' függő kérelem (' + fk.fajta + ' ' + fk.kulcs.slice(0, 8) + '…) ' + tars.cim + ':'
@@ -2197,6 +2205,22 @@ async function valaszFogadasa(v, honnan) {
 // ⭐⭐ D109 (KK2–KK6): A KISZOLGÁLÁSI KERET — folyamatonként egy
 // ===================================
 //
+// ⭐ KK6, a kérő oldala: aki „később”-t mondott, azt a kör (és a függő kérelem) addig nem hívja — a raj más tartójához
+// fordulunk. Helyi, a memóriában, korlátos.
+const kesobbTarsak = new Map();     // 'cím:port' → meddig ne hívjuk
+function kesobbFeljegyzese(tars, mp) {
+  if (!tars?.cim) return;
+  kesobbTarsak.delete(tars.cim + ':' + tars.port);
+  kesobbTarsak.set(tars.cim + ':' + tars.port, Date.now() + Math.max(KESOBB_MIN, Number.isInteger(mp) ? mp : KESOBB_MIN) * 1000);
+  while (kesobbTarsak.size > 256) kesobbTarsak.delete(kesobbTarsak.keys().next().value);
+}
+function kesobbHivando(cim, port) {
+  const ig = kesobbTarsak.get(cim + ':' + port);
+  if (!ig) return true;
+  if (ig <= Date.now()) { kesobbTarsak.delete(cim + ':' + port); return true; }
+  return false;
+}
+//
 // A valódi védelem a kiszolgálónál van (D108): minden kérés előtt az ítélet (`keretItelete`), utána a könyvelés (a kiküldött
 // bájt és egy kérés). A határ a beállításból: „alap” 20 MB + 600 kérés, „mindent” 100 MB + 3000 óránként (KK5); a próbák a
 // környezetből szűkíthetik (`KOINO_KERET` = „bájt,kérés”). Az osztály (KK4): a KÖTÉSEM (a tábla-kulcsa a kötés-jegyzékemben
@@ -2208,7 +2232,32 @@ const keretKiirva = new Map();      // társ → mikor írtuk ki utoljára, hogy
 async function kiszolgalasiKeretHatara() {
   const k = String(process.env.KOINO_KERET ?? '').split(',').map((x) => Number.parseInt(x, 10));
   if (k.length === 2 && k.every((x) => Number.isInteger(x) && x > 0)) return { bajt: k[0], keres: k[1] };
-  return (await kiszolgalasBeallitas()).mindent ? KERET_MINDENT : KERET_ALAP;
+  const b = await kiszolgalasBeallitas();
+  return b.keret ?? (b.mindent ? KERET_MINDENT : KERET_ALAP);
+}
+
+// ⭐ D109 (⑤): a keret ÁLLÁSA fájlban is (`<koino>/keret.json`) — a keret a kiszolgáló folyamat memóriájában él, a
+// `kiszolgalas` parancs (és később a felderítés panelje) innen látja, mennyit vitt el az elmúlt óra. Minden feljegyzés után,
+// de egyszerre egy írás: ha közben új jött, a futó írás után még egyszer (így a fájl a legutolsót mutatja, és az írások
+// száma a kiszolgált kérésekével korlátos — a keret maga fogja meg).
+const keretFajl = () => join(alapHely(), KOINO, 'keret.json');
+let keretIrasFut = false;
+let keretIrasKell = false;
+async function keretAllasIrasa(keret) {
+  keretIrasKell = true;
+  if (keretIrasFut) return;
+  keretIrasFut = true;
+  try {
+    while (keretIrasKell) {
+      keretIrasKell = false;
+      try {
+        await mkdir(dirname(keretFajl()), { recursive: true });
+        await writeFile(keretFajl(), JSON.stringify({ ...keretAllasa(keret), ido: Date.now(), pid: process.pid }), 'utf8');
+      } catch { /* nem végzetes */ }
+    }
+  } finally {
+    keretIrasFut = false;
+  }
 }
 
 async function kiszolgalasiKeretem() {
@@ -2218,12 +2267,43 @@ async function kiszolgalasiKeretem() {
   return kiszolgalasiKeretPeldany;
 }
 
-/** A társ osztálya a keretben: a kötésem (a tábla-kulcsa alapján), egy bizonyított tag, vagy idegen. */
+/**
+ * A társ osztálya a keretben: a KÖTÉSEM, egy bizonyított tag, vagy idegen. ⛔ A kötés a három LEGRENDSZERESEBB a jegyzékből
+ * (`kotesek.js` `kotesek` — a találkozások száma szerint), nem a jegyzék bármely tagja (abban a legutóbbi öt találkozás
+ * áll — egy idegen egyetlen csere után bekerülne), és csak ha a rendszeresség meg is van (`keretKotesE`: ≥ 3 találkozás,
+ * az első ≥ egy keretnyi ideje). Így legfeljebb három társ cserél keret nélkül, és azok a rendszeresek (D108: a saját
+ * cserém). A próbák a kor-feltételt a környezetből szűkíthetik (`KOINO_KERET_KOTES_KOR`, mp).
+ */
 async function keretOsztalya({ tabla = null, tag = false }) {
   if (tabla) {
-    try { if ((await kotesTarolo().olvas()).some((k) => k.alairo === tabla)) return 'kotes'; } catch { /* nincs jegyzék */ }
+    const k = Number.parseInt(process.env.KOINO_KERET_KOTES_KOR ?? '', 10);
+    const minKor = Number.isInteger(k) && k >= 0 ? k * 1000 : KOTES_MIN_KOR;
+    try {
+      const kotes = kotesLista(await kotesTarolo().olvas()).find((x) => x.alairo === tabla);
+      if (keretKotesE(kotes, { minKor })) return 'kotes';
+    } catch { /* nincs jegyzék */ }
   }
   return tarsOsztalya({ tag });
+}
+
+/**
+ * ⭐ KK3: a társ kulcsa EGY HELYEN (a kérelem és a csere ugyanazt a számlálót kapja): zárt koinóban a SZEMÉLY (a kérelemben
+ * bizonyított, vagy a cserében a tábla-kulcsához megjegyzett — `azonossagok.json`, a zárt kapu tölti), egyébként a
+ * TÁBLA-KULCS, végső esetben a cím. ⚠️ Nyílt koinóban a személyes aláírás nem tagság — ott a tábla-kulcs a kulcs (különben a
+ * kérelem a személy, a csere a tábla-kulcs alatt számolna, és ugyanaz a társ két külön keretet kapna — mérve).
+ */
+async function keretTarsa(t) {
+  const szuletes = await koinoSzuletese();
+  const zart = !!szuletes && szuletes.adat?.zart !== false;
+  let szemely = null;
+  if (zart) {
+    szemely = t.szemely ?? null;
+    if (!szemely && typeof t.tabla === 'string') {
+      const k = (await azonossagokOlvasasa())[t.tabla];
+      if (k && typeof k.sz === 'string') szemely = k.sz;
+    }
+  }
+  return tarsKulcsa({ szemely, tabla: t.tabla ?? null, cim: t.cim ?? null });
 }
 
 /** A vonalnak (`parbeszed` — `beallitas.kiszolgalasiKeret`): az ítélet és a könyvelés. A vonal a számokat nem ismeri. */
@@ -2231,7 +2311,7 @@ function kiszolgalasiKeretKapcsolo() {
   return {
     async itelet(t) {
       const keret = await kiszolgalasiKeretem();
-      const tars = tarsKulcsa(t);
+      const tars = await keretTarsa(t);
       const osztaly = await keretOsztalya(t);
       const it = keretItelete(keret, { tars, osztaly });
       if (!it.szabad && Date.now() - (keretKiirva.get(tars) ?? 0) > 10 * 60 * 1000) {
@@ -2242,9 +2322,10 @@ function kiszolgalasiKeretKapcsolo() {
       }
       return { ...it, tars, osztaly };
     },
-    async feljegyez(t) {
+    async feljegyez(t) { console.log('DEBUGFELJ', JSON.stringify(t), new Error().stack.split('\n').slice(2, 5).join(' | '));
       const keret = await kiszolgalasiKeretem();
-      keretFeljegyzes(keret, { tars: tarsKulcsa(t), osztaly: await keretOsztalya(t), bajt: t.bajt ?? 0, keres: t.keres ?? 0 });
+      keretFeljegyzes(keret, { tars: await keretTarsa(t), osztaly: await keretOsztalya(t), bajt: t.bajt ?? 0, keres: t.keres ?? 0 });
+      await keretAllasIrasa(keret);
     }
   };
 }
@@ -2372,7 +2453,10 @@ const kiszolgalasFajl = () => join(alapHely(), KOINO, 'kiszolgalas.json');
 async function kiszolgalasBeallitas() {
   try {
     const j = JSON.parse(await readFile(kiszolgalasFajl(), 'utf8'));
-    return { mindent: j?.mindent === true };
+    // ⭐ D109 (⑤): a kiszolgálási keret saját határa (ha az e-ember megadta — különben az alap / „mindent” kiinduló száma).
+    const keret = j?.keret && Number.isInteger(j.keret.bajt) && j.keret.bajt > 0 && Number.isInteger(j.keret.keres) && j.keret.keres > 0
+      ? { bajt: j.keret.bajt, keres: j.keret.keres } : null;
+    return { mindent: j?.mindent === true, keret };
   } catch {
     // ⚠️ Ha a készüléken nincs beállítás, a környezet adhat alapértéket (`KOINO_KISZOLGALAS` = mindent | alap) — a
     // parancssor-próbák így futnak a „mindent” (a mai, mindent egyeztető) módban; a szigorú esetek kifejezetten „alap”-pal.
@@ -2700,7 +2784,10 @@ async function koinoSzuletese() {
 
 /**
  * ⭐⭐ A KAPU ÍTÉLETE (a vonal hívja: a nyitás után a tábla-kulccsal, a bizonyítás után a személlyel és a csomaggal).
- * @returns {Promise<{szabad: boolean, kell?: boolean, szeletek?: Array<string>, ok: string}>}
+ * ⭐ D109 (KK5): a `tag` jel CSAK akkor igaz, ha a társ tagságát ellenőriztük — a kiszolgálási keret ebből tesz különbséget
+ * az ismert tag és az idegen között. ⛔ A `szabad` nem tagság: nyílt koinóban mindenki szabad (mérve — a keret így mindenkit
+ * tagnak vett, és az idegenek felének a korlátja soha nem fogott).
+ * @returns {Promise<{szabad: boolean, tag?: boolean, kell?: boolean, szeletek?: Array<string>, ok: string}>}
  */
 async function tarsKapuja({ tabla = null, ki = null, csomag = null } = {}) {
   const szuletes = await koinoSzuletese();
@@ -2708,7 +2795,13 @@ async function tarsKapuja({ tabla = null, ki = null, csomag = null } = {}) {
   // (a tagsági lánca végén van), tehát ilyenkor a készülék vagy még nem tag (a saját belépésén kívül nincs mit adnia),
   // vagy egy születés nélküli, régi koinót tart — azt nem zárhatjuk be utólag úgy, hogy senki ne kaphasson belőle.
   if (!szuletes) return { szabad: true, ok: 'a koinó születése ismeretlen' };
-  if (szuletes.adat?.zart === false) return { szabad: true, ok: 'nyílt koinó' };
+  if (szuletes.adat?.zart === false) {
+    // ⭐ D109 (KK5): nyílt koinóban is ismert tag, akit a kérelemben bizonyított személye és a nálam lévő lánca igazol
+    // (csomagot itt nem kérünk — a kapu nem zár; a cserében személy nincs, ott a tábla-kulcs számít).
+    // ⛔ A tag-kérdés hibája itt nem zárhat be egy nyílt koinót — csak a „tag” jel marad el.
+    const tag = ki ? await tagsagItelete(ki).then((r) => r.igen, () => false) : false;
+    return { szabad: true, ok: 'nyílt koinó', tag };
+  }
   // A társ személye: a most bizonyított, vagy a tábla-kulcsához kötött.
   let szemely = ki;
   if (!szemely && typeof tabla?.alairo === 'string') {
@@ -2719,23 +2812,32 @@ async function tarsKapuja({ tabla = null, ki = null, csomag = null } = {}) {
   const szeletek = [...new Set([szuletes?.azonosito, szemely?.h, sajatH].filter((x) => typeof x === 'string'))];
   if (!szemely) return { szabad: false, kell: true, szeletek, ok: 'ismeretlen társ' };
   if (ki && typeof tabla?.alairo === 'string') await azonossagKotese(tabla.alairo, ki.sz, ki.h ?? null);
-  if (tagEmlek.has(szemely.sz)) return { szabad: true, ok: 'tag' };
-  // Tag-e? A láncát a táramból gyűjtöm (a horgonyától), és ha hozott csomagot, azzal együtt. ⛔ A koinó születése (a
-  // MIÉNK) az első: egy hamis koinó-létrehozás a csomagban így nem ad tagságot; és a szerző horgonyai közül csak az
-  // számít, amit ő maga írt alá (`szerzoTagsaga`) — más horgonyát megnevezni nem elég.
+  const r = await tagsagItelete(szemely, csomag);
+  if (r.igen) return { szabad: true, tag: true, ok: r.ok };
+  // ⭐ Ha csomagot még nem láttunk tőle, kérjük (a következő kör, vagy a kérelemben a `KELL`).
+  return { szabad: false, kell: !csomag, szeletek, ok: r.ok };
+}
+
+/**
+ * Tag-e a társ (a személye, a horgonyával)? A láncát a táramból gyűjtöm (a horgonyától), és ha hozott csomagot, azzal együtt.
+ * ⛔ A koinó születése (a MIÉNK) az első: egy hamis koinó-létrehozás a csomagban így nem ad tagságot; és a szerző horgonyai
+ * közül csak az számít, amit ő maga írt alá (`szerzoTagsaga`) — más horgonyát megnevezni nem elég. Az igazolt tagot
+ * megjegyzi (`tagEmlek`).
+ * @returns {Promise<{igen: boolean, ok: string}>}
+ */
+async function tagsagItelete(szemely, csomag = null) {
+  if (!szemely || typeof szemely.sz !== 'string') return { igen: false, ok: 'nincs személy' };
+  if (tagEmlek.has(szemely.sz)) return { igen: true, ok: 'tag' };
+  const szuletes = await koinoSzuletese();
   const lista = szuletes ? [szuletes] : [];
-  if (szemely.h) lista.push(...await tagsagiEsemenyekGyujtese(tar, KOINO, szemely.h));
+  if (typeof szemely.h === 'string') lista.push(...await tagsagiEsemenyekGyujtese(tar, KOINO, szemely.h));
   if (csomag && csomag.tipus === TAGSAGI_CSOMAG && csomag.szerzo === szemely.sz && csomag.koino === KOINO
     && (await esemenyEllenorzese(csomag)).rendben && (await tagsagiCsomagEllenorzese(csomag)).rendben) {
     lista.push(csomag);
   }
   const r = szerzoTagsaga(tagsagiIndex(lista, KOINO), szemely.sz);
-  if (r.igen) {
-    tagEmlek.set(szemely.sz, true);
-    return { szabad: true, ok: r.ok };
-  }
-  // ⭐ Ha csomagot még nem láttunk tőle, kérjük (a következő kör, vagy a kérelemben a `KELL`).
-  return { szabad: false, kell: !csomag, szeletek, ok: r.ok };
+  if (r.igen) tagEmlek.set(szemely.sz, true);
+  return { igen: !!r.igen, ok: r.ok };
 }
 
 /** A tagsági csomagom a bizonyításhoz — ha tag vagyok és még nincs (vagy rövidebb láncot kaptam), most adom ki. */
@@ -2908,7 +3010,9 @@ function resMunka(allapot, halo, tars) {
     const rajVallalas = await sajatVallalasa(null);
     const rajJegyzek = await szeletJegyzekTarolo().olvas();
     const uzenetMeres = process.env.KOINO_UZENETMERES === '1' ? new Map() : null;
-    const csere = await csereUdpResen(halo, tars.cim, tars.port, tar, KOINO, {
+    let csere;
+    try {
+    csere = await csereUdpResen(halo, tars.cim, tars.port, tar, KOINO, {
       // ⭐⭐ D93/3: a személyem (a kézfogás átiratára), a tagsági csomagom és a zárt koinó kapuja.
       ...await azonossagBeallitasa(),
       // ⭐⭐ D95/1, D95/3: a két fokú vállalás (a nagy szelet összegezve) és a csak küldő részvétel.
@@ -2942,6 +3046,19 @@ function resMunka(allapot, halo, tars) {
       // ⭐ A terepi mérés műszere (`KOINO_UZENETMERES=1`): a SAJÁT kiküldött üzeneteim nyílt bájtjai típusonként.
       ...(uzenetMeres ? { uzenetMeres } : {})
     });
+    } catch (hiba) {
+      // ⭐ D109 (KK6): a társ kiszolgálási kerete most nem enged — nem hiba, és nem találkozás (kötés sem lesz belőle).
+      if (hiba?.kod !== 'KESOBB') throw hiba;
+      kiir(SZIN.halvany + '  ⏸ ' + ora() + ' ' + tars.cim + ':' + tars.port + ' most nem szolgál ki (a kiszolgálási kerete betelt)'
+        + (hiba.kesobb ? ' — ' + hiba.kesobb + ' mp múlva' : '') + SZIN.vege);
+      kesobbFeljegyzese(tars, hiba.kesobb);
+      return { uj: 0, kuldott: 0, korok: 1, bajt: 0, alairo: null, kesobb: hiba.kesobb ?? null };
+    }
+    // ⭐ D109 (KK6): MI mondtunk „később”-t (a kiszolgálási keretünk nem enged) — nem találkozás: se kötés, se raj, se tanulás.
+    if (csere.kesobbMondtam) {
+      return { uj: 0, kuldott: 0, korok: 1, bajt: (csere.bajtKuldott ?? 0) + (csere.bajtKapott ?? 0), alairo: null,
+        kesobbMondtam: csere.kesobbMondtam };
+    }
     const bajt = (csere.bajtKuldott ?? 0) + (csere.bajtKapott ?? 0);
     // ⭐ D95/3: amit egy tartó a csak küldő úton átvett (vagy már tudott), azt többé nem ajánlom fel.
     await kezbesitesFeljegyzese(csere.kezbesitve);
@@ -2964,17 +3081,31 @@ function resMunka(allapot, halo, tars) {
         + ' egy szeletet kért tőlem (' + csere.kuldott + ' esemény)' + SZIN.vege);
       return alap;
     }
-    // ⭐ D92: egy kérelem (fejlécek, törzs) — szintén nem csere.
+    // ⭐ D92: egy kérelem (fejlécek, törzs) — szintén nem csere. ⛔ A ki NEM szolgált kérelem sem (tiltott, „később”, ismeretlen
+    // fajta): mérve — a „később”-t kapott kérelem után a munka cserét könyvelt (az alsó sáv „csere”-ideje, a keret egy
+    // csere-tétele, a D99 ideje).
     if (csere.kerelemKiszolgalva) {
       kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' kérelem: '
         + csere.kerelemKiszolgalva.fajta + ' (' + String(csere.kerelemKiszolgalva.kulcs).slice(0, 8) + '…)' + SZIN.vege);
       return { ...alap, kerelemKiszolgalva: csere.kerelemKiszolgalva };
+    }
+    if (csere.kerelem) {
+      kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' kérelem — nem szolgáltam ki ('
+        + (csere.kerelemTiltva ? 'zárt koinó, nem tag' : csere.kerelemKesobb ? '„később”, a kiszolgálási keret' : 'nincs mit adnom')
+        + ')' + SZIN.vege);
+      return { ...alap, kerelemKiszolgalva: null };
     }
 
     // ⭐ D99: a sikeres csere ideje a társ tábla-aláírója alatt (a kör ebből tudja, hogy ebben a fél körben már beszéltünk).
     if (alairo) utolsoCsereTarssal.set(alairo, Date.now());
     // ⭐ Az alsó sáv (2026-10-15): a lap ebből mondja ki a csere idejét, és ha újat hozott, frissül (a bekopogó cseréje is).
     await csereAllapota().modosit((a) => csereFeljegyzese(a, { uj: alap.uj, kuldott: alap.kuldott, most: Date.now() }));
+    // ⭐ D109 (KK4): a csere is kiszolgálás — a kiküldött bájtok a társ osztálya szerint könyvelődnek (a kötés csak könyvelődik).
+    await kiszolgalasiKeretKapcsolo().feljegyez({ tabla: alairo, cim: tars.cim, bajt: csere.bajtKuldott ?? 0, keres: 1 });
+    if (csere.keretMiattKimaradt) {
+      kiir(SZIN.halvany + '  ⏸ ' + ora() + ' ' + csere.keretMiattKimaradt + ' eseményt a kiszolgálási keret miatt most nem küldtem'
+        + ' (a következő csere folytatja)' + SZIN.vege);
+    }
     kiir(SZIN.jo + '  ✓ ' + ora() + ' csere a résen ' + tars.cim + ':' + tars.port
       + SZIN.vege + SZIN.halvany + ' — ' + alap.uj + ' új esemény, küldtem '
       + alap.kuldott + ' (' + alap.korok + ' kör, '
@@ -3646,17 +3777,46 @@ try {
       // node koino/koino.js kiszolgalas [mindent|alap]
       // ⭐ D95/1: a „mindent” beállítású készülék a nagy szeleteket is EGÉSZÉBEN tartja (ő az önkéntes, aki a többinek
       // összegzi őket); az alap a küszöb fölött összegezve tart.
-      if (ervek[0] === 'mindent' || ervek[0] === 'alap') {
+      // ⭐ D109 (⑤): `kiszolgalas keret <MB> <kérés>` — a kiszolgálási keret óránként (a „mindent” / alap kiinduló száma
+      // helyett); `kiszolgalas keret alap` — vissza a kiinduló számra.
+      const regiBeallitas = await kiszolgalasBeallitas();
+      const iras = async (j) => {
         await mkdir(dirname(kiszolgalasFajl()), { recursive: true });
-        await writeFile(kiszolgalasFajl(), JSON.stringify({ mindent: ervek[0] === 'mindent' }), 'utf8');
+        await writeFile(kiszolgalasFajl(), JSON.stringify(j), 'utf8');
+      };
+      if (ervek[0] === 'mindent' || ervek[0] === 'alap') {
+        await iras({ mindent: ervek[0] === 'mindent', ...(regiBeallitas.keret ? { keret: regiBeallitas.keret } : {}) });
+      } else if (ervek[0] === 'keret') {
+        if (ervek[1] === 'alap') {
+          await iras({ mindent: regiBeallitas.mindent });
+        } else {
+          const mb = Number.parseFloat(String(ervek[1] ?? '').replace(',', '.'));
+          const keres = Number.parseInt(ervek[2] ?? '', 10);
+          if (!(mb > 0) || !(keres > 0)) throw new Error('Mekkora legyen a keret? node koino/koino.js kiszolgalas keret <MB> <kérés> (óránként) — vagy: keret alap');
+          await iras({ mindent: regiBeallitas.mindent, keret: { bajt: Math.round(mb * 1024 * 1024), keres } });
+        }
       } else if (ervek[0]) {
-        throw new Error('Mit állítsak? node koino/koino.js kiszolgalas [mindent|alap]');
+        throw new Error('Mit állítsak? node koino/koino.js kiszolgalas [mindent|alap|keret <MB> <kérés>|keret alap]');
       }
       const b = await kiszolgalasBeallitas();
       kiir('Kiszolgálás: ' + (b.mindent ? SZIN.jo + '„mindent”' + SZIN.vege
         + SZIN.halvany + ' — a nagy szeleteket is egészében tartom, és a lezárt döntéseikről összegzést adok' + SZIN.vege
         : 'alap' + SZIN.halvany + ' — csak abban veszek részt, amit vállalok (a szigorú (b)); a ' + KETFOK.kuszob
           + ' eseménynél nagyobb vállalt szeletet összegezve tartom' + SZIN.vege));
+      const h = await kiszolgalasiKeretHatara();
+      const mbSzoveg = (x) => (x / 1024 / 1024).toFixed(1).replace('.', ',') + ' MB';
+      kiir('A kiszolgálási keret: óránként ' + mbSzoveg(h.bajt) + ' és ' + h.keres + ' kérés' + SZIN.halvany
+        + (b.keret ? ' (saját beállítás)' : ' (a kiinduló szám)') + ' — egy társ legfeljebb a negyedét, az idegenek együtt legfeljebb'
+        + ' a felét vihetik; a kötéseim cseréje nem kerül alá (D109)' + SZIN.vege);
+      try {
+        const a = JSON.parse(await readFile(keretFajl(), 'utf8'));
+        const kor = Math.round((Date.now() - (a.ido ?? 0)) / 60000);
+        kiir(SZIN.halvany + '  az elmúlt órában (' + (kor < 1 ? 'most' : kor + ' perce') + ' írva): mások ' + mbSzoveg(a.osszes?.bajt ?? 0)
+          + ' és ' + (a.osszes?.keres ?? 0) + ' kérés (ebből idegen ' + mbSzoveg(a.idegen?.bajt ?? 0) + ', ' + (a.idegen?.keres ?? 0)
+          + ' kérés) · a kötéseim ' + mbSzoveg(a.kotes?.bajt ?? 0) + ', ' + (a.kotes?.keres ?? 0) + ' kérés' + SZIN.vege);
+      } catch {
+        kiir(SZIN.halvany + '  (még nincs feljegyzés — a kiszolgálást az őrjárat vagy a postaláda könyveli)' + SZIN.vege);
+      }
       break;
     }
 
@@ -5281,6 +5441,8 @@ try {
           kiir(SZIN.halvany + '  · ' + ora() + ' ' + kihagyott + ' társat most nem hívok — ebben a fél körben már cseréltünk, és'
             + ' azóta nincs újdonságom (D99)' + SZIN.vege);
         }
+        // ⭐ D109 (KK6): aki „később”-t mondott (a kiszolgálási kerete betelt), azt addig nem hívjuk.
+        for (let i = celok.length - 1; i >= 0; i--) if (!kesobbHivando(celok[i].hoszt, celok[i].port)) celok.splice(i, 1);
         const udpCelok = celok.filter((c) => {
           // A saját, épp mért külső címünk — pontos pár szerint.
           if (res.sajatKulsoUdp && sajatCimE(c.hoszt, [res.sajatKulsoUdp.cim])

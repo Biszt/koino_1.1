@@ -11,8 +11,8 @@
 //   · a jegyzék korlátos (sok új kulcs sem növeli a végtelenségig — a közös keretben attól még benne van, amit vittek).
 
 import {
-  ujKeret, keretFeljegyzes, keretItelete, keretAllasa, keretHatara, tarsKulcsa, tarsOsztalya,
-  KERET_ALAP, KERET_MINDENT, KERET_ABLAK, TARS_HANYAD, IDEGEN_HANYAD, TARS_JEGYZEK_KORLAT, KESOBB_MIN
+  ujKeret, keretFeljegyzes, keretItelete, keretAllasa, keretHatara, tarsKulcsa, tarsOsztalya, keretKotesE,
+  KERET_ALAP, KERET_MINDENT, KERET_ABLAK, TARS_HANYAD, IDEGEN_HANYAD, TARS_JEGYZEK_KORLAT, KESOBB_MIN, KOTES_MIN_TALALKOZAS
 } from '../js/csere/kiszolgalasiKeret.js';
 
 import { probaGyujtemeny } from './probaFuttato.js';
@@ -104,6 +104,20 @@ proba('A határ cserélhető (a beállítás) — a könyvelés megmarad', () =>
   keretHatara(k, { bajt: 7, keres: 3 });
   const it = keretItelete(k, { tars: 's:b', osztaly: 'tag', most: T0 });
   return k.hatar.bajt === 7 && !it.szabad && keretAllasa(k, T0).osszes.keres === 3;
+});
+
+// ⛔ A kötés a keretben csak a RENDSZERES társ: ≥ 3 találkozás, az első ≥ egy keretnyi ideje — különben egy idegen egy-két
+// csere után (egy kevés társú készüléken) kötés lenne, és a keret nem fogná. Rontás: a találkozások száma vagy a kor nem
+// számít → az új társ is kötés → bukik.
+proba('⛔ A kötés csak a RENDSZERES társ: legalább három találkozás, és az első legalább egy keretnyi ideje', () => {
+  const most = T0 + 10 * KERET_ABLAK;
+  const regi = { talalkozasok: 40, eloszor: T0 };
+  const ujonc = { talalkozasok: 1, eloszor: most - 1000 };
+  const gyors = { talalkozasok: 5, eloszor: most - 60 * 1000 };
+  const harom = { talalkozasok: KOTES_MIN_TALALKOZAS, eloszor: most - KERET_ABLAK };
+  return keretKotesE(regi, { most }) && !keretKotesE(ujonc, { most }) && !keretKotesE(gyors, { most })
+    && keretKotesE(harom, { most }) && !keretKotesE({ talalkozasok: 2, eloszor: T0 }, { most })
+    && !keretKotesE(null, { most }) && keretKotesE(gyors, { most, minKor: 0 });
 });
 
 export default futtatas;

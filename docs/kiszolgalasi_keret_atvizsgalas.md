@@ -149,9 +149,39 @@ fájlokat adja (`TORZS` + `kesobb`); a továbbadás (`ATVESZEM`) is kérésnek s
 A határ a beállításból (alap / „mindent”), a próbákhoz `KOINO_KERET`. Próbák: a könyvelés modul-próbája
 (`kiszolgalasiKeretProba.js`, 10 — hét rontással) és a bekötés (`parancssorProba.js`: egy végig futó tartó szűk kerettel —
 a kötés mindig kap, az idegen harmadikja „később”; rontás: tábla-kulcs nélkül a kötés is idegen, a keret nélkül az idegen is
-kap). ⏭️ **Hátravan:** az idegen CSERE a kereten (az ítélet a nyitás után, a részleges küldés a maradékig, a `KESOBB` üzenet),
-a továbbadott válasz visszavitelének bájtjai, a kérő reakciója (a függő kérelem a „később”-t mondó tartót addig kihagyja,
-és a raj másik tartójához fordul; a lap kimondja), és a beállítás (⑤).
+kap).
+
+✅ **A CSERE A KERETEN, A KÉRŐ REAKCIÓJA ÉS A BEÁLLÍTÁS (③–⑤, 2026-10-17) — a D109 MEGÉPÜLT:**
+- **Az idegen csere** (`vonal.js`, a nyitás után): az ítélet a társ tábla-kulcsával (a nyitásban, a kézfogás átiratára
+  aláírva); a keret fölött a CIMEK helyett `KESOBB {mp}`, és vége (`kesobbMondtam` — se kötés, se raj, se tanulás); ha enged,
+  az átadás legfeljebb a maradék bájtig küld (`keretMiattKimaradt` — a többit a következő csere hozza, a tartomány-egyeztetés
+  onnan folytatja); a sikeres csere kiküldött bájtjai a társ osztálya szerint könyvelődnek (`koino.js` a munka végén).
+- **A kötés a keretben a RENDSZERES társ** (`kiszolgalasiKeret.js` `keretKotesE`): a kötés-jegyzék három legrendszeresebbje
+  közül (`kotesek.js` `kotesek`), legalább három találkozással, és az első legalább egy keretnyi (egy óra) ideje — ⛔ a
+  jegyzékben a legutóbbi öt találkozás áll, és egy idegen egyetlen csere után bekerülne; onnantól a keret nem fogná (a
+  próbák a kor-feltételt `KOINO_KERET_KOTES_KOR`-ral nullázhatják).
+- **A társ kulcsa egy helyen** (`koino.js` `keretTarsa`): zárt koinóban a személy (a kérelemben bizonyított, vagy a
+  cserében a tábla-kulcsához megjegyzett), egyébként a tábla-kulcs, végül a cím — ⛔ mérve: nyílt koinóban a kérelem a
+  személy, a csere a tábla-kulcs alatt számolt, és ugyanaz a társ két külön keretet kapott.
+- **A tag jel** (`koino.js` `tarsKapuja`, `tagsagItelete`): a kapu `tag: true`-t csak ellenőrzött tagságnál mond; nyílt
+  koinóban a kérelemben bizonyított személyt a nálam lévő lánca igazolja (a cserében ott személy nincs). ⛔ Mérve: a vonal a
+  kapu `szabad`-ját vette tagságnak, és nyílt koinóban mindenki szabad — az idegenek felének a korlátja soha nem fogott.
+- **A ki nem szolgált kérelem nem csere** (`vonal.js` `kerelem: true`, `koino.js`): ⛔ mérve — a „később”-t kapott (vagy
+  tiltott) kérelem után a munka cserét könyvelt (az alsó sáv csere-ideje, a keret egy csere-tétele, a D99 ideje).
+- **A kérő** (`koino.js` `kesobbTarsak`): aki „később”-t mondott (cserében vagy függő kérelemben), azt a kör és a függő
+  kérelem a megadott ideig nem hívja (a raj többi tartója megmarad); a „később” nem sikertelen kísérlet. A parancsok
+  kimondják (`kerelem`: „próbáld újra N mp múlva”, `csere`: „most nem szolgál ki”).
+- **A beállítás** (⑤ — `kiszolgalas keret <MB> <kérés>`, `kiszolgalas keret alap`; a `kiszolgalas.json`-ben a „mindent”
+  mellett): a keret óránkénti határa; a `kiszolgalas` parancs kiírja, és az elmúlt órát is — a kiszolgáló folyamat minden
+  feljegyzés után a `<koino>/keret.json`-be írja az állást (egyszerre egy írás; a felderítés panelje is innen olvas majd).
+- **Próbák:** a csere a vonalon (`csereProba.js` — a `KESOBB` tiszta vége, a maradékig küldés és a folytatás), a
+  rendszeres kötés (`kiszolgalasiKeretProba.js`), és a bekötés (`parancssorProba.js`: a keret a SAJÁT beállításból, a kötés
+  mindig kap, az idegen harmadikja és cseréje „később”, a `kiszolgalas` az elmúlt órát a futó tartó feljegyzéséből —
+  „mások 2 kérés, mind idegen, a kötéseim 4”) — mind rontással (a két mért hiba visszahozása is bukik).
+- ⏸️ **Ami maradt:** a továbbadott válasz visszavitele (`VALASZ`) nem könyvelődik (a továbbító a SAJÁT kérőjének viszi vissza,
+  akitől kapta — a kérést a kiszolgáló könyvelte, amikor átvette); a lap a „később”-t még nem mondja ki (a felderítés
+  panelje jön, D108); a `kiszolgalas` az elmúlt órát a legutóbb író folyamatéból mutatja (egy készüléken egy kiszolgáló fut —
+  az őrjárat vagy a postaláda).
 
 ① A kép gyorsítótára (KK1) — és a 76. mérés újra: a meleg fejléc-kérés a tárral nem nő. → ② A keret könyvelése (a mérő,
 a csúszó ablak, a társ-azonosítás — KK2–KK3; a tábla-kulcs a kérelemben) → ③ a kiszolgálás bekötése (KK4: a kérelem, a

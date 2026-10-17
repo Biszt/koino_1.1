@@ -37,6 +37,25 @@ export const KESOBB_MIN = 60;
 export const OSZTALYOK = ['kotes', 'tag', 'idegen'];
 
 /**
+ * ⭐ Ki számít KÖTÉSNEK a keretben (a saját cserém — nem kerül a keret alá)? A kötés-háló rendszeres társa (`kotesek.js`
+ * `kotesek` — a három legrendszeresebb), és ⛔ csak ha a rendszeresség meg is van: legalább `KOTES_MIN_TALALKOZAS`
+ * találkozás, és az első legalább `KOTES_MIN_KOR` (egy keretnyi idő) óta. Különben egy idegen egy-két csere után a három
+ * közé kerülne (egy kevés társú készüléken bármelyik), és onnantól a keret nem fogná. *„Egy véletlen találkozás még nem
+ * kapcsolat; a rendszeresség az.”*
+ */
+export const KOTES_MIN_TALALKOZAS = 3;
+export const KOTES_MIN_KOR = KERET_ABLAK;
+
+/**
+ * @param {Object|null} kotes - a kötés-jegyzék bejegyzése (`talalkozasok`, `eloszor`)
+ * @param {{most?: number, minKor?: number}} [b]
+ */
+export function keretKotesE(kotes, { most = Date.now(), minKor = KOTES_MIN_KOR } = {}) {
+  return !!kotes && (kotes.talalkozasok ?? 0) >= KOTES_MIN_TALALKOZAS && Number.isFinite(kotes.eloszor)
+    && most - kotes.eloszor >= minKor;
+}
+
+/**
  * ⭐ KK3: a társ kulcsa a keretben — a személy (ha bizonyított), különben a tábla-kulcs (ha a kézfogásra tett aláírásával
  * jött), különben a cím IP-je (a port nélkül: a mobil NAT váltja).
  * @param {{szemely?: string|null, tabla?: string|null, cim?: string|null}} b
