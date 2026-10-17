@@ -183,6 +183,44 @@ function sorrendKupac() {
 }
 
 /**
+ * ⭐⭐ D109 (KK1): A FEJLÉC-VÁLASZ KÉPE — amit egy fejléc-válasz a teljes entitás-halmazból számol (az össz-pontok, a
+ * gyerek-jegyzék, és csomópontonként a gyerekek a sorrendben), egyszer, és sok kérésen át újrahasznosíthatóan. A kiszolgáló
+ * a tár állása szerint gyorsítótárban tartja (`koino.js` `kiszolgaloKepe`) — így egy kérés ára a lista hosszával arányos,
+ * nem a tárral (a 76. mérés: e nélkül egy „mindent” tartónál 125 000 eseménynél ~150 ms csak ez, kérésenként). A
+ * csomópontonkénti rendezett lista lustán épül (amelyikhez egy kérés eljut), és a képpel együtt megmarad.
+ * @param {Object} allapot - a válaszoló állapota
+ * @param {Map} osszPontok - `osszPontokSzamitasa` eredménye (a bemondásokkal és a tartott-kérdéssel)
+ * @returns {{osszPontok: Map, gyerekek: Map, gyerekeiOf: Function, rendezett: Function}}
+ */
+export function fejlecKepe(allapot, osszPontok) {
+  const gyerekek = gyerekJegyzek(allapot.entitasok);
+  let gyokerLista = null;
+  const gyerekeiOf = (k) => (k === GYOKER_KULCS
+    ? (gyokerLista ??= [...allapot.entitasok.values()].filter((e) => !e.szulo).map((e) => e.azonosito))
+    : (gyerekek.get(k) ?? []));
+  const memo = new Map();
+  return {
+    osszPontok,
+    gyerekek,
+    gyerekeiOf,
+    /** `k` gyerekei a sorrendben (`elobbJon`), össz-ponttal — csak amelyiknek van. */
+    rendezett(k) {
+      let l = memo.get(k);
+      if (!l) {
+        l = [];
+        for (const az of gyerekeiOf(k)) {
+          const o = osszPontok.get(az);
+          if (o) l.push({ p: o.osszPont, az, o });
+        }
+        l.sort((x, y) => (elobbJon(x, y) ? -1 : elobbJon(y, x) ? 1 : 0));
+        memo.set(k, l);
+      }
+      return l;
+    }
+  };
+}
+
+/**
  * ⭐⭐ A FEJLÉCEK (D92/4, D102): X alatt a legjobb n csomópont a sorrendben (össz-pont szerint csökkenő) — MÉLYEN (`m`) a
  * válaszoló maga jár be legjobb-először: egy csomópont gyerekeit akkor teszi a sorba, ha a szeletét TARTJA (a születések
  * oda vannak bejelentve — különben nem ismeri mind); egyébként csak X gyerekei. A FOLYTATÁS (`utan`): a sorrend `utan`
@@ -203,23 +241,23 @@ function sorrendKupac() {
  * @param {Object} b.karbantarto - `reszfaKarbantarto()`
  * @param {Function} b.esemenyOlvas - async (azonosító) → esemény | null
  * @param {Map} [b.bemondasok] - a nem tartott entitások bemondott össz-pontja
+ * @param {Object} [b.kep] - ⭐ D109 (KK1): a `fejlecKepe` (a kiszolgáló gyorsítótárából) — ha nincs, itt készül (ugyanaz az út)
  * @returns {Promise<{valasz: Object, fak: Map<string, Object>}>}
  */
 export async function fejlecekValasza({ allapot, kulcs, n, m = false, utan = null, tartott = () => true, karbantarto,
-  esemenyOlvas, bemondasok = new Map() }) {
+  esemenyOlvas, bemondasok = new Map(), kep = null }) {
   // ⛔ D101 ④: a nem tartott gyerek össz-pontja a bemondás (akkor is, ha a saját pontjait ismerem).
-  const osszPontok = osszPontokSzamitasa(allapot.entitasok, bemondasok, (az) => tartott(az));
-  const gyerekek = gyerekJegyzek(allapot.entitasok);
+  const k0 = kep ?? fejlecKepe(allapot, osszPontokSzamitasa(allapot.entitasok, bemondasok, (az) => tartott(az)));
+  const { osszPontok, gyerekek, gyerekeiOf } = k0;
   const fak = new Map();
-  const gyokerGyerekei = () => [...allapot.entitasok.values()].filter((e) => !e.szulo).map((e) => e.azonosito);
-  const gyerekeiOf = (k) => (k === GYOKER_KULCS ? gyokerGyerekei() : (gyerekek.get(k) ?? []));
 
+  // ⭐ D109 (KK1): LUSTA ÖSSZEFÉSÜLÉS — csomópontonként csak a következő legjobb gyerek ül a kupacban (a rendezett listájából;
+  // amikor kikerül, a testvére lép a helyére). A sorrend bájtra ugyanaz, mint amikor minden gyerek bekerült, de egy kérés ára
+  // a lista hosszával arányos, nem a csomópont gyerekszámával (a lapos gyökér egy nagy koinóban akár mindent).
   const kupac = sorrendKupac();
   const sorba = (k) => {
-    for (const az of gyerekeiOf(k)) {
-      const o = osszPontok.get(az);
-      if (o) kupac.betesz({ p: o.osszPont, az, o, sz: k === GYOKER_KULCS ? null : k });
-    }
+    const rendezett = k0.rendezett(k);
+    if (rendezett.length) kupac.betesz({ ...rendezett[0], sz: k === GYOKER_KULCS ? null : k, rendezett, i: 0 });
   };
   sorba(kulcs);
 
@@ -227,6 +265,9 @@ export async function fejlecekValasza({ allapot, kulcs, n, m = false, utan = nul
   let lepes = 0;
   while (lista.length < n && kupac.meret() && lepes++ < BEJARAS_LEPES_KORLAT) {
     const x = kupac.kivesz();
+    if (x.i + 1 < x.rendezett.length) {
+      kupac.betesz({ ...x.rendezett[x.i + 1], sz: x.sz, rendezett: x.rendezett, i: x.i + 1 });
+    }
     // ⭐ Mélyen: a tartott csomópont gyerekei is a sorba (a kimaradtak — a folytatás eleje előtt — is, hogy a mélyebbek
     // a helyükre kerüljenek a sorrendben).
     const tartja = tartott(x.az);

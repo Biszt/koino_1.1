@@ -5761,6 +5761,12 @@ eseménynél ~1,1 s CPU kérésenként).
 **A sorrend:** ① a kép gyorsítótára (KK1) és a 76. mérés újra → ② a keret könyvelése (KK2–KK3, a tábla-kulcs a kérelemben)
 → ③ a kiszolgálás bekötése (KK4, az elsőbbség) → ④ a „később” a vonalon és a kérőnél (KK6) → ⑤ a beállítás.
 
+✅ **① MEGÉPÜLT (2026-10-17):** a kiszolgáló képe gyorsítótárban (`koino.js` `kiszolgaloKepe` — a tár állása, az átmeneti tár
+változás-számlálója, a vállalás és a bemondások szerint, ≤ 60 mp; a fejléc- és a törzs-kérelem használja), a fejléc-kép
+(`kerelem.js` `fejlecKepe`: az össz-pontok, a gyerek-jegyzék, a lustán rendezett gyereklisták), és a fejléc-válasz LUSTA
+ÖSSZEFÉSÜLÉSSEL (a lapos gyökér egy nagy koinóban minden kérésnél a teljes koinót a kupacba tette). A 76. mérés újra: egy
+kérés 0,5–0,7 ms a tár méretétől függetlenül. Elágazás 161.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

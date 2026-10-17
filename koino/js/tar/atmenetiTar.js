@@ -62,12 +62,14 @@ export async function atmenetiTarNyitasa(koino, mappa, beallitas = {}) {
   const olvasva = new Map();        // fájlnév → ennyi bájtját olvastuk be (a `frissit` innen folytatja)
   let megnezett = {};
   let latottValtozat = null;        // a `valtozat` jel legutóbb látott tartalma
+  let valtozasSzam = 0;             // ⭐ D109 (KK1): minden felvétel és kivétel lépteti — a kiszolgáló képének gyorsítótár-kulcsa
   let frissitesFut = null;
 
   const felvesz = (e, sorBajt) => {
     if (esemenyek.has(e.azonosito)) return false;
     const k = szelet(e);
     esemenyek.set(e.azonosito, e);
+    valtozasSzam++;
     if (!szeletek.has(k)) szeletek.set(k, { azonositok: new Set(), bajt: 0 });
     const sz = szeletek.get(k);
     sz.azonositok.add(e.azonosito);
@@ -117,6 +119,7 @@ export async function atmenetiTarNyitasa(koino, mappa, beallitas = {}) {
       if (lista.length) sorszamok.set(sk, lista); else sorszamok.delete(sk);
     }
     szeletek.delete(kulcs);
+    valtozasSzam++;
   };
 
   const valtozatJelzese = async () => {
@@ -229,6 +232,8 @@ export async function atmenetiTarNyitasa(koino, mappa, beallitas = {}) {
         megnezve: megnezett[kulcs] ?? null }));
     },
     meret() { return osszBajt(); },
+    /** ⭐ D109 (KK1): a változás-számláló (a memóriabeli tartalomé — a `frissit` után a más folyamatok írását is mutatja). */
+    valtozas() { return valtozasSzam; },
 
     // ----- a megnézés és az eldobás -----
     /** A szelet megnézése (a `hozd`, a felületen megnyitott kártya) — ettől marad tovább. */

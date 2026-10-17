@@ -31,7 +31,7 @@ import {
 } from '../js/csere/fuggoKerelmek.js';
 import {
   tovabbiUgras, UGRAS_MAX, valaszAlakja,
-  kerelemAlakja, fejlecekValasza, mintaKeres, mintakValasza, fejlecekEllenorzese, torzsLenyomatai, FEJLEC_KORLAT,
+  kerelemAlakja, fejlecekValasza, fejlecKepe, mintaKeres, mintakValasza, fejlecekEllenorzese, torzsLenyomatai, FEJLEC_KORLAT,
   elobbJon
 } from '../js/csere/kerelem.js';
 
@@ -145,6 +145,32 @@ proba('⭐⭐ D102: a FOLYTATÁS (`utan`) a sorrend következő elemeit adja —
     // (aki nem ismeri a korábbi szülőt, annál ezek — és láncban a gyerekeik — buknak; a legfelső szintű átmegy)
     && korabbiSzulo > 0 && ismeri.hibas === 0 && nemIsmeri.hibas >= korabbiSzulo
     && nemIsmeri.tetelek.get(v.kicsi)?.rendben === true && nemIsmeri.tetelek.get(v.g2)?.rendben === false;
+});
+
+// ⭐⭐ D109 (KK1): a kiszolgáló a fejléc-válasz képét (az össz-pontok, a gyerek-jegyzék, a rendezett gyereklisták) EGYSZER
+// számolja, és sok kérésen át újrahasznosítja — a válasz bájtra ugyanaz, mint a friss képpel. Mérjük: a gyökér mélyen, egy
+// belső csomópont egy szinten, és a folytatás, egy közös képpel egymás után — mind egyezik a kép nélküli válasszal; a
+// rendezett lista a második kérésnél ugyanaz a példány (nem számolódik újra). Rontás: a lusta összefésülés testvér-léptetése
+// nélkül a mély és a folytatásos válasz megcsonkul (a fenti D102-próbák is buknak).
+proba('⭐⭐ D109 (KK1): a gyorsítótárazott fejléc-kép ugyanazt a választ adja — sok kérésen át, folytatással is', async () => {
+  const v = await vilag();
+  const kep = fejlecKepe(v.allapot, osszPontokSzamitasa(v.allapot.entitasok, new Map(), () => true));
+  const ker = async (kulcs, n, m, utan, k) => (await fejlecekValasza({ allapot: v.allapot, kulcs, n, m, utan,
+    karbantarto: reszfaKarbantarto(), esemenyOlvas: olvaso(v.terkep), kep: k })).valasz;
+  const egyezik = async (kulcs, n, m, utan) => JSON.stringify(await ker(kulcs, n, m, utan, kep))
+    === JSON.stringify(await ker(kulcs, n, m, utan, null));
+  const elso = await ker(GYOKER_KULCS, 3, true, null, kep);
+  const utolso = elso.lista.at(-1);
+  const gyokerLista = kep.rendezett(GYOKER_KULCS);
+  const ki = {
+    melyen: await egyezik(GYOKER_KULCS, 10, true, null),
+    egySzint: await egyezik(v.nagy, 10, false, null),
+    folytatas: await egyezik(GYOKER_KULCS, 10, true, { p: utolso.osszPont, az: utolso.az }),
+    reszlet: await egyezik(GYOKER_KULCS, 2, true, null),
+    ujrahasznos: kep.rendezett(GYOKER_KULCS) === gyokerLista && gyokerLista.length === 2
+  };
+  if (!Object.values(ki).every(Boolean)) console.log('    (KK1 — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ')');
+  return Object.values(ki).every(Boolean);
 });
 
 proba('⭐ D102 (J2): a GYEREKSZÁM csak a tartott csomópontra jár — és mélyen csak a tartott csomópont gyerekei jönnek', async () => {

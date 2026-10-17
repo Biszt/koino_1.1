@@ -1069,3 +1069,12 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     vihet, és a számítás a tárral nő (egy „mindent” tartónál 125 000 eseménynél ~1,1 s / kérés) — a kérésszám csak akkor
     mérce, ha egy kérés ára korlátos; a csak címre épülő társ a NAT-portváltással összemosódik; az idegen csere egy új
     kulccsal újra és újra lehúzhatná a koinót · Csaba, Claude · `kiszolgalasi_keret_atvizsgalas.md`, a fázis-2 terv D109-e.
+161. **2026-10-17 · a kiszolgáló képe és a lusta összefésülés (D109 ①)** → **a kiszolgáló a képét (az állapot, az össz-pontok, a
+    gyerek-jegyzék, a csomópontonként lustán rendezett gyereklisták) a tár állása, az átmeneti tár változás-számlálója, a
+    vállalás és a bemondások szerint gyorsítótárban tartja, legfeljebb 60 mp-ig; a fejléc-válasz csomópontonként csak a
+    következő legjobb gyereket tartja a kupacban (a sorrend bájtra ugyanaz); a gyorsítótár csak a kiszolgálásé (a többi hívó
+    a mai `kepetKeszit`-et kéri)** · mert a 76. mérés szerint minden fejléc-kérelem a teljes állapotot újraszámolta, és a
+    válasz a teljes entitás-halmazon számolt (egy „mindent” tartónál 125 000 eseménynél ~1,1 s / kérés), a lapos gyökér pedig
+    minden kérésnél a koinó minden legfelső gondolatát a kupacba tette; a 60 mp a döntések időfüggése miatt (egy lejárt
+    határidő a képet is elavítja); a többi hívót nem érinti, hogy a változás kicsi maradjon · Claude · `koino.js`
+    (`kiszolgaloKepe`), `kerelem.js` (`fejlecKepe`, `fejlecekValasza`), `atmenetiTar.js` (`valtozas`).

@@ -5164,3 +5164,19 @@ terheli legjobban, nem a bájtokkal. ⭐ A becsületes használat ehhez képest 
 
 ⚠️ A határai: a koinó szintetikus (egyenletes szerzők, egy-két pont gondolatonként, javaslatok nélkül — a döntés-számítás
 itt olcsó); a beolvasás és a vonal (titkosítás, UDP) nincs benne; a képek mérete a koinótól függ.
+
+⭐⭐ **A KK1 UTÁN (D109 ①, 2026-10-17 — ugyanaz a mérés, a kiszolgáló képével):** a kiszolgáló a képét (az állapot, a
+fejléc-kép: az össz-pontok, a gyerek-jegyzék, a csomópontonként lustán rendezett gyereklisták) a tár állása szerint
+gyorsítótárban tartja, és a fejléc-válasz LUSTA ÖSSZEFÉSÜLÉSSEL jár be (csomópontonként csak a következő legjobb gyerek ül a
+kupacban). Egy kérés ára így:
+
+```
+gondolat / esemény        a kép (változásonként egyszer)     egy kérés: a gyökér mélyen   egy szint
+   500 /   1 486              1,4 ms                          1,4 ms                       0,1 ms
+ 2 500 /   6 479              2,6 ms                          0,6 ms                       0,1 ms
+10 000 /  25 172             16,9 ms                          0,5 ms                       0,1 ms
+50 000 / 124 866            131 ms                            0,6 ms                       0,2 ms
+LAPOS (50 000 legfelső szintű): kép nélkül 128 ms / kérés → a képpel 0,7 ms (a kép egyszer 54 ms)
+```
+(+ az állapot újraszámolása, ha a tár változott — változásonként egyszer, nem kérésenként.) ⭐ Egy kérés ára a tárral nem nő:
+a kérésszám (KK2) mérce lehet.

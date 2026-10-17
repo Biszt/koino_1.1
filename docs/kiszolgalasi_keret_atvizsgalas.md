@@ -133,6 +133,13 @@ terhe nem nő a koinó méretével.
 
 ## 7. A sorrend az építésben (a döntések után)
 
+✅ **① KÉSZ (2026-10-17):** a kiszolgáló képe (`koino.js` `kiszolgaloKepe` — a tár állása, az átmeneti tár változás-számlálója
+(`atmenetiTar.js` `valtozas`), a vállalás és a bemondások szerint, ≤ 60 mp), a fejléc-kép (`kerelem.js` `fejlecKepe`) és a
+LUSTA ÖSSZEFÉSÜLÉS a fejléc-válaszban (csomópontonként csak a következő legjobb gyerek ül a kupacban — a sorrend bájtra
+ugyanaz). A 76. mérés újra: egy kérés 0,5–0,7 ms 1500 és 125 000 esemény között (a lapos gyökérnél 128 ms → 0,7 ms). Próbák:
+a gyorsítótárazott kép ugyanazt adja (`kerelemProba.js`), és a futó tartó képe a tárral együtt avul (`parancssorProba.js`) —
+rontással.
+
 ① A kép gyorsítótára (KK1) — és a 76. mérés újra: a meleg fejléc-kérés a tárral nem nő. → ② A keret könyvelése (a mérő,
 a csúszó ablak, a társ-azonosítás — KK2–KK3; a tábla-kulcs a kérelemben) → ③ a kiszolgálás bekötése (KK4: a kérelem, a
 továbbadás, a törzs, az idegen csere; az elsőbbség) → ④ a „később” a vonalon és a kérőnél (KK6) → ⑤ a beállítás (a

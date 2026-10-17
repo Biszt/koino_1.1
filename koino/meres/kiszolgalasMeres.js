@@ -22,11 +22,11 @@ import { performance } from 'node:perf_hooks';
 import { ujEember, tagokkal } from './probaFuttato.js';
 import { allapotSzamitasa } from '../js/allapot/allapotSzamitas.js';
 import { javaslatokSzamitasa } from '../js/allapot/javaslatSzamitas.js';
-import { reszfaKarbantarto } from '../js/allapot/osszPont.js';
+import { reszfaKarbantarto, osszPontokSzamitasa } from '../js/allapot/osszPont.js';
 import { GYOKER_KULCS } from '../js/csere/szeletEgyeztetes.js';
 import { szelet, bejelentesHelyei } from '../js/esemeny/esemeny.js';
 import {
-  fejlecekValasza, mintakValasza, mintaKeres, FEJLEC_KORLAT, SOROZAT_KORLAT, VALASZ_ESEMENY_KORLAT, TORZS_KORLAT,
+  fejlecekValasza, fejlecKepe, mintakValasza, mintaKeres, FEJLEC_KORLAT, SOROZAT_KORLAT, VALASZ_ESEMENY_KORLAT, TORZS_KORLAT,
   BEJARAS_LEPES_KORLAT
 } from '../js/csere/kerelem.js';
 import { FAJL_KORLAT } from '../js/tar/fajlTar.js';
@@ -53,14 +53,14 @@ async function idozit(fn) { const t0 = performance.now(); const r = await fn(); 
  * A koinó: `g` gondolat, ~50 legfelső szintű, a többi egy korábbi alá (a frissebbek felé húzva — mély ágak is vannak);
  * mindegyiken a szerzője pontja, és fele eséllyel egy másik e-emberé is. A szerzők tagok (`tagokkal`).
  */
-async function koinoEpitese(g) {
+async function koinoEpitese(g, lapos = false) {
   const emberek = [];
   for (let i = 0; i < EMBEREK; i++) emberek.push(await ujEember('meres'));
   const es = [];
   const gondolatok = [];
   for (let i = 0; i < g; i++) {
     const ki = emberek[Math.floor(veletlen() * EMBEREK)];
-    const szulo = i < 50 ? null : gondolatok[Math.floor(Math.sqrt(veletlen()) * gondolatok.length)];
+    const szulo = lapos || i < 50 ? null : gondolatok[Math.floor(Math.sqrt(veletlen()) * gondolatok.length)];
     const e = await ki.tesz('GondolatLetrehozas', { cim: 'G' + i, meret: 10, ...(szulo ? { szulo } : {}) });
     es.push(e);
     gondolatok.push(e.azonosito);
@@ -74,9 +74,9 @@ async function koinoEpitese(g) {
 }
 
 /** Egy fejléc-kérés kiszolgálása a mintákkal együtt (a kérdező alap-választásával), a válaszok bájtjával. */
-async function fejlecKeres(allapot, terkep, karbantarto, kulcs, m) {
+async function fejlecKeres(allapot, terkep, karbantarto, kulcs, m, kep = null) {
   const esemenyOlvas = async (az) => terkep.get(az) ?? null;
-  const fej = await idozit(() => fejlecekValasza({ allapot, kulcs, n: FEJLEC_KORLAT, m, karbantarto, esemenyOlvas }));
+  const fej = await idozit(() => fejlecekValasza({ allapot, kulcs, n: FEJLEC_KORLAT, m, karbantarto, esemenyOlvas, kep }));
   const { valasz, fak } = fej.r;
   const kert = mintaKeres(valasz, { kivalasztott: valasz.lista[0]?.az ?? null });
   const minta = await idozit(() => mintakValasza({ fak, kert, esemenyOlvas }));
@@ -115,6 +115,11 @@ for (const g of GONDOLATOK) {
   const gyokerHideg = await fejlecKeres(allapot, terkep, karbantarto, GYOKER_KULCS, true);
   const gyokerMeleg = await fejlecKeres(allapot, terkep, karbantarto, GYOKER_KULCS, true);
   const belsoMeleg = await fejlecKeres(allapot, terkep, karbantarto, belso, false);
+  // ⭐ D109 (KK1): a kiszolgáló képe a gyorsítótárból — a kép egyszer készül (változásonként), a kérések újrahasznosítják.
+  const kepKeszul = await idozit(() => fejlecKepe(allapot, osszPontokSzamitasa(allapot.entitasok, new Map(), () => true)));
+  await fejlecKeres(allapot, terkep, karbantarto, GYOKER_KULCS, true, kepKeszul.r);
+  const gyokerKeppel = await fejlecKeres(allapot, terkep, karbantarto, GYOKER_KULCS, true, kepKeszul.r);
+  const belsoKeppel = await fejlecKeres(allapot, terkep, karbantarto, belso, false, kepKeszul.r);
 
   // ----- A szelet: a saját eseményei + a hozzá bejelentettek (a gyerekek születése) -----
   const szeletBajt = new Map();
@@ -127,6 +132,7 @@ for (const g of GONDOLATOK) {
   const legnagyobb = gondolatSzeletek[gondolatSzeletek.length - 1];
 
   eredmenyek.push({ g, n: esemenyek.length, tEpit: epit.t, atlagBajt, tAllapot, gyokerHideg, gyokerMeleg, belsoMeleg,
+    tKep: kepKeszul.t, gyokerKeppel, belsoKeppel,
     belsoGyerek: gyerekSzam.get(belso) ?? 0, median, legnagyobb });
 
   kiir('— ' + g + ' gondolat, ' + esemenyek.length + ' esemény (felépítés ' + (epit.t / 1000).toFixed(1) + ' s), egy esemény a vonalon átlag '
@@ -138,6 +144,28 @@ for (const g of GONDOLATOK) {
   kiir('   egy belső csomópont (' + (gyerekSzam.get(belso) ?? 0) + ' gyerek) egy szinten, melegen: ' + ms(belsoMeleg.tFej)
     + ' · válasz ' + kb(belsoMeleg.bFej) + ' + minták ' + kb(belsoMeleg.bMinta));
   kiir('   egy gondolat szelete (+ a bejelentett gyerekszületések): medián ' + kb(median) + ', a legnagyobb ' + kb(legnagyobb));
+  kiir('   ⭐ D109 (KK1) a kép gyorsítótárával: a kép (változásonként egyszer) ' + ms(kepKeszul.t) + ' · egy kérés: a gyökér mélyen '
+    + ms(gyokerKeppel.tFej) + ', egy szint ' + ms(belsoKeppel.tFej) + ' (+ minták)');
+  kiir('');
+}
+
+// ===== ⭐ D109 (KK1): a LAPOS koinó — minden gondolat legfelső szintű, a gyökér gyerekszáma maga a koinó =====
+// A lusta összefésülés előtt a gyökér minden gyereke minden kérésnél a kupacba került (a koinóval nőtt); a kép rendezett
+// gyereklistájával a kérés a lista hossza.
+{
+  const g = Math.max(...GONDOLATOK);
+  const { esemenyek } = await koinoEpitese(g, true);
+  const terkep = new Map(esemenyek.map((e) => [e.azonosito, e]));
+  const allapot = allapotSzamitasa(esemenyek);
+  const karbantarto = reszfaKarbantarto();
+  await fejlecKeres(allapot, terkep, karbantarto, GYOKER_KULCS, true);
+  const kepNelkul = await fejlecKeres(allapot, terkep, karbantarto, GYOKER_KULCS, true);
+  const kep = await idozit(() => fejlecKepe(allapot, osszPontokSzamitasa(allapot.entitasok, new Map(), () => true)));
+  await fejlecKeres(allapot, terkep, karbantarto, GYOKER_KULCS, true, kep.r);
+  const keppel = await fejlecKeres(allapot, terkep, karbantarto, GYOKER_KULCS, true, kep.r);
+  kiir('— LAPOS koinó: ' + g + ' legfelső szintű gondolat (' + esemenyek.length + ' esemény) — a gyökér fejlécei mélyen, n = 50, melegen:');
+  kiir('   kép nélkül (minden kérés mindent számol és rendez): ' + ms(kepNelkul.tFej)
+    + ' · a kép gyorsítótárával: ' + ms(keppel.tFej) + ' (a kép egyszer: ' + ms(kep.t) + ')');
   kiir('');
 }
 

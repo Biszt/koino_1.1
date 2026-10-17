@@ -2847,6 +2847,46 @@ proba('⭐⭐ D103: a készülék saját értesítése — az őrjárat számolj
 });
 
 // ===================================
+// ⭐⭐ D109 (KK1): A KISZOLGÁLÓ KÉPE A TÁRRAL EGYÜTT AVUL — egy hosszan futó tartón
+// ===================================
+//
+// A kiszolgáló a képét (az állapot, a fejléc-kép) gyorsítótárban tartja, hogy egy kérés ára ne nőjön a tárral. ⛔ A veszély:
+// a gyorsítótár elavult választ ad. Egy VÉGIG FUTÓ tartó (a `figyel` — D100, elágazás 101: az újraindított folyamat mindent
+// frissen látna) az első kérésre az első gondolatot adja; aztán egy MÁSIK folyamat (a kézi `gondolat` parancs — az író
+// átveszi) egy újat ír; a második kérésre — a 60 mp-es időkorláton belül — az újnak is ott kell lennie. ⭐ Viselkedést mérünk:
+// a kérő kimenetét. Rontás: a gyorsítótár kulcsa a tár állása nélkül → a második válasz a régi (MASODIK nélkül) → bukik.
+proba('⭐⭐ D109 (KK1): a kiszolgáló képe a tárral együtt avul — a futó tartó a második kérésre az új gondolatot is adja', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const port = 7459;
+  let figyelo = null;
+  try {
+    await fut(a, 'koino', 'Kiszolgáló kép', 'próba', 'nyilt');
+    await fut(a, 'gondolat', 'ELSO');
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)],
+      { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: 'ignore' });
+    await varj(1500);
+    const elso = await gyokerFejlecek(b, port, {});
+    await fut(a, 'gondolat', 'MASODIK');                 // egy MÁSIK folyamat ír — az író (a figyel) veszi át
+    const masodik = await gyokerFejlecek(b, port, {});
+    const ki = {
+      elso: elso.rendben && /ELSO/.test(elso.kimenet) && !/MASODIK/.test(elso.kimenet),
+      masodik: masodik.rendben && /ELSO/.test(masodik.kimenet) && /MASODIK/.test(masodik.kimenet)
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  kiszolgáló kép — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
+        + tiszta(masodik.kimenet).slice(0, 600) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    if (figyelo) figyelo.kill();
+    await varj(1000);
+    await rm(a, { recursive: true, force: true });
+    await rm(b, { recursive: true, force: true });
+  }
+});
+
+// ===================================
 // ⭐⭐ D104 (Csaba, 2026-10-15): A KIFUTÁS A CSERÉBEN — a terepi eset, két készüléken
 // ===================================
 //

@@ -260,10 +260,10 @@ import {
 } from './js/csere/udpVonal.js';
 // ⭐⭐ D92: a kérelem (az alapkérdések) és az össz-pont.
 import {
-  fejlecekValasza, mintakValasza, mintaKeres, fejlecekEllenorzese, torzsLenyomatai, kerelemAlakja, tovabbiUgras, UGRAS_MAX,
+  fejlecekValasza, fejlecKepe, mintakValasza, mintaKeres, fejlecekEllenorzese, torzsLenyomatai, kerelemAlakja, tovabbiUgras, UGRAS_MAX,
   SOROZAT_KORLAT
 } from './js/csere/kerelem.js';
-import { reszfaKarbantarto } from './js/allapot/osszPont.js';
+import { reszfaKarbantarto, osszPontokSzamitasa } from './js/allapot/osszPont.js';
 import { GYOKER_KULCS } from './js/csere/szeletEgyeztetes.js';
 // ⭐ D89/1: a kézfogás hitelesítése — a tábla-kulcs aláírja a kézfogás átiratát.
 import { kezfogasAlairasa, szemelyesKezfogasAlairasa } from './js/csere/titkositas.js';
@@ -2188,6 +2188,53 @@ async function valaszFogadasa(v, honnan) {
 }
 
 /** ⭐ A kérelem-kiszolgáló: a fejlécek (mintákkal) és a törzs — a `parbeszed` hívja. */
+// ===================================
+// ⭐⭐ D109 (KK1): A KISZOLGÁLÓ KÉPE — egy kérés ára ne nőjön a tárral
+// ===================================
+//
+// A 76. mérés: minden fejléc-kérelem a TELJES állapotot újraszámolta (`kepetKeszit`), és a válasz maga is a teljes
+// entitás-halmazon számolt össz-pontot és gyerek-jegyzéket — egy „mindent” tartónál 125 000 eseménynél ~1,1 s CPU
+// kérésenként. ⭐ Itt egyszer számol: a kép (az állapot, a tartott-kérdés, a bemondások, és a fejléc-válasz képe —
+// `fejlecKepe`) addig él, amíg a tár állása, az átmeneti tár változása, a vállalás és a bemondások nem változnak, és
+// legfeljebb `KISZOLGALO_KEP_ELETTARTAM`-ig (a döntés lezárása idő kérdése — egy lejárt határidő a képet is elavítja).
+// Így egy kérés ára a válasz hosszával arányos; a teljes újraszámolás változásonként egyszer történik, nem kérésenként.
+// ⚠️ Csak a kiszolgálás használja (a kérelem fejléc- és törzs-útja); a többi hívó a mai `kepetKeszit`-et kéri.
+
+const KISZOLGALO_KEP_ELETTARTAM = 60 * 1000;
+let kiszolgaloKepEmlek = null;
+
+/** A bemondások jele (darab, összeg, a legfrissebb idő) — ha egy bemondás változik, a kép is újra készül. */
+function bemondasJele(m) {
+  let osszeg = 0, ido = 0;
+  for (const x of m.values()) { osszeg += x?.osszPont ?? 0; ido = Math.max(ido, x?.ido ?? 0); }
+  return m.size + ':' + osszeg + ':' + ido;
+}
+
+/**
+ * @returns {Promise<{allapot: Object, tartott: Function, bemondasok: Map, fejlec: Object}>}
+ */
+async function kiszolgaloKepe() {
+  await tar.frissit?.();
+  await atmeneti.frissit?.();
+  const a = tar.allas?.() ?? { n: -1, g: -1 };
+  const tartottak = await tartottSzeleteim();
+  const bem = await bemondasok();
+  const jel = a.n + ':' + a.g + '|' + (atmeneti.valtozas?.() ?? -1) + '|' + (tartottak ? tartottak.size : 'm') + '|'
+    + bemondasJele(bem);
+  const most = Date.now();
+  if (kiszolgaloKepEmlek && kiszolgaloKepEmlek.jel === jel && most - kiszolgaloKepEmlek.ido < KISZOLGALO_KEP_ELETTARTAM) {
+    return kiszolgaloKepEmlek;
+  }
+  const { allapot } = await kepetKeszit();
+  // ⭐ A ház (D100): tartom-e az entitást (akkor a gyerekeit teljesen ismerem — az üres lista is válasz). A gyökeret csak
+  // „mindent” módban tartom egészében. ⭐ D102: ugyanez dönti el, hol jár be mélyen a válasz (J1), és kinek mondom be a
+  // gyerekszámát (J2).
+  const tartott = (az) => (az === GYOKER_KULCS ? !tartottak : (tartottak ? tartottak.has(az) : allapot.entitasok.has(az)));
+  const fejlec = fejlecKepe(allapot, osszPontokSzamitasa(allapot.entitasok, bem, (az) => tartott(az)));
+  kiszolgaloKepEmlek = { jel, ido: most, allapot, tartott, bemondasok: bem, fejlec };
+  return kiszolgaloKepEmlek;
+}
+
 function kerelemKiszolgaloja() {
   return {
     /** ⭐ D75/3 (a bekapcsolás): a szelet a két tárból — amit csak láttam (az átmenetiben), azt is kiszolgálom. */
@@ -2200,15 +2247,11 @@ function kerelemKiszolgaloja() {
         { koinoSzuletes: await koinoSzuletese(), szerzoKorlat: 64, korlat: 1024 });
     },
     async fejlecek(k) {
-      const { allapot } = await kepetKeszit();
-      // ⭐ A ház (D100): tartom-e az entitást (akkor a gyerekeit teljesen ismerem — az üres lista is válasz). A gyökeret
-      // csak „mindent” módban tartom egészében. ⭐ D102: ugyanez dönti el, hol jár be mélyen a válasz (J1), és kinek
-      // mondom be a gyerekszámát (J2).
-      const tartottak = await tartottSzeleteim();
-      const tartott = (az) => (az === GYOKER_KULCS ? !tartottak : (tartottak ? tartottak.has(az) : allapot.entitasok.has(az)));
+      // ⭐ D109 (KK1): a kiszolgáló képe a gyorsítótárból (a tartott-kérdés és a fejléc-kép is) — egy kérés ára a lista hossza.
+      const { allapot, tartott, bemondasok: bem, fejlec } = await kiszolgaloKepe();
       const tartja = tartott(k.kulcs);
       const { valasz, fak } = await fejlecekValasza({ allapot, kulcs: k.kulcs, n: k.n, m: k.m === true, utan: k.utan ?? null,
-        tartott, karbantarto: kerelemKarbantarto, esemenyOlvas: esemenyKetTarbol, bemondasok: await bemondasok() });
+        tartott, karbantarto: kerelemKarbantarto, esemenyOlvas: esemenyKetTarbol, bemondasok: bem, kep: fejlec });
       return { valasz, tartja, mintak: (kert, megvan) => mintakValasza({ fak, kert, megvan, esemenyOlvas: esemenyKetTarbol }) };
     },
     /** ⭐ D92/1 (c): átveszem-e továbbadásra? (nem kaptam már meg, a számláló enged, van hely) */
@@ -2224,7 +2267,7 @@ function kerelemKiszolgaloja() {
       return true;
     },
     async torzs(k) {
-      const { allapot } = await kepetKeszit();
+      const { allapot } = await kiszolgaloKepe();
       const v = await sajatVallalasa(allapot);
       if (!v.szeletek.has(k.kulcs)) return [];
       const blob = fajlBlobTarolo(KOINO);
