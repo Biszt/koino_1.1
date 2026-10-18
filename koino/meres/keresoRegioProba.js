@@ -221,6 +221,21 @@ proba('⭐⭐ D110: a csere visszaadja a társ bemondott mélységeit (a gyöké
   return r.a.tarsMelysegei?.k === 5 && r.a.tarsMelysegei?.g === 4 && r.b.tarsMelysegei?.k === 3 && r.b.tarsMelysegei?.g === 2;
 });
 
+// ⭐ D111 (K11): a tartó-tipp a bejegyzéssel együtt utazik a régió tartói közt — az IDEJÉVEL (a társ nem frissítheti fel).
+// Rontás: a `BEJEGYZES` nem viszi a tippet (vagy a fogadó nem jegyzi) → B-nél nincs tipp → bukik.
+proba('⭐ D111: a tartó-tipp a bejegyzéssel együtt átjön a régió tartójához — a régi idejével', async () => {
+  const [tA, tB] = [await ujTablaKulcs(), await ujTablaKulcs()];
+  const ra = await bejegyzesek(1, 'Alma');
+  const kA = await keresoTarral(ra);
+  const kB = await keresoTarral([]);
+  const g = ra[0].g;
+  const tipp = { a: 'T'.repeat(43), t: Date.now() - 60000 };
+  await kA.tippFeljegyzese(g, [tipp]);
+  await csere(await esemenyTarNyitasa(KOINO, await ujMappa()), await esemenyTarNyitasa(KOINO, await ujMappa()), tA, tB, { kA, kB });
+  const nalaB = await kB.tippek(g);
+  return kB.regioHalmaza(0, 0n).length === ra.length && nalaB.length === 1 && nalaB[0].a === tipp.a && nalaB[0].t === tipp.t;
+});
+
 export default async function () {
   const eredmeny = await futtatas();
   for (const m of mappak) await rm(m, { recursive: true, force: true });

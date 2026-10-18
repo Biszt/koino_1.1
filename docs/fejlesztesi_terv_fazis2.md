@@ -5737,7 +5737,7 @@ maga ellenőriz (a tagságot is), a találat az átmeneti tárba; közvetlenül 
 kérdez, a találatok az átmeneti tárból a helyi listában jelennek meg (a `betoltes` jelre a lap újrakérdez); a NAT mögötti
 tartóhoz a kérdés függő kérelemként megy (az őrjárat viszi, a lap figyel). Elágazás 174. ⏸️ **K11 (Csabánál):** a megtalált
 gondolat tartói — a kártya többi része (szöveg, gyerekek) alapbeállítással nem érhető el
-([`kereso_reteg_atvizsgalas.md`](kereso_reteg_atvizsgalas.md) 16. szakasz).
+([`kereso_reteg_atvizsgalas.md`](kereso_reteg_atvizsgalas.md) 16. szakasz). ✅ **D111** (Csaba: „(A) Tartó-tipp”) — megépült.
 
 ### D108. A FELDERÍTÉS ÉS A KISZOLGÁLÁSI KERET (2026-10-17, Csaba: „1. igen 2. igen 3. (A)”)
 
@@ -5833,6 +5833,32 @@ mélység), `fajlTar.js` `melysegTarolo` (`<koino>/melysegek.json`), a vonal vis
 `keresoRegioim` alkalmazza; a `kereso` és a `cimjegyzek` kiírja, ha tanult. Próbák: a modul (8, mind rontással — köztük az
 eredeti „legnagyobb” és a „kevés” feltétel visszahozása), a vonal (a bemondott mélységek), és a bekötés (az üres készülék két
 mélyebb társsal cserél, és a régióját utána a mediánjuk − 1 mélységen tartja). Elágazás 169.
+
+### D111. A MEGTALÁLT GONDOLAT TARTÓI — a K11 (A): a tartó-tipp a találattal (2026-10-18, Csaba: „(A) Tartó-tipp”)
+
+**A rés** (a ⑦ böngészős próbájának lelete — [`kereso_reteg_atvizsgalas.md`](kereso_reteg_atvizsgalas.md) 16. szakasz): a
+keresés a gondolat bejegyzését hozza (a születés, a tulajdonosok pontjai), a kártya megnyílik — de a többi része (a szöveg, a
+gyerekek, a javaslatok) a gondolat SZELETÉNEK tartójától jönne, és egy friss készülék alapbeállítással nem éri el: a raj
+semmit nem tud róla, a szelet DHT-témáját alapból senki nem hirdeti (D91/3), a lap függő kérelmének kopogtatója pedig a
+szelet témájának párja, amit csak a hirdetők figyelnek.
+
+**A döntés (A):** a kereső tartó a bejegyzés mellé megjegyzi, melyik KÉSZÜLÉK ajánlotta fel (a tábla-aláírója — a felajánlás
+kérelme a kézfogás átiratára tett aláírással hozza, tehát ellenőrzött; a felajánló a tulajdonos, aki a szeletet vállalásból
+tartja); a régió tartói közt a `BEJEGYZES` a tippet is viszi (az idejével), a kézi út `{ tipp }` sorokkal. A kérdés válasza
+gondolatonként legfeljebb 2 tippet ad (tábla-aláíró, CÍM NÉLKÜL). A kérdező helyben jegyzi (nem a raj-jegyzékbe), és a
+gondolatra vonatkozó függő kérelem a tipp készülékének KOPOGTATÓ TÉMÁJÁN jelentkezik — a tulajdonos készüléke a
+címjegyzék-körében meglátja, és felém kopog, a NAT mögött is (a D92 fő útja). **Ár:** ~45 bájt találatonként, új DHT-téma
+nincs. **Bizalom:** a hamis tipp elérhetetlenség, nem hamisítás (D6, 3. szabály). **Ami kiderül:** a kérdező megtudja, melyik
+tábla-kulcsot használja a tulajdonosok egyikének készüléke — ugyanazt, amit bárki, aki vele cserél; cím az indexben nem
+utazik. Elvetve: (B) a szelet-hirdetés (témánként ~0,65 MB/nap mindenkinek), (C) a továbbadás a kereső tartón át (a
+magánszféra szempontjából erősebb, de terheli és lassabb), (D) semmi.
+
+✅ **MEGÉPÜLT (2026-10-18):** `keresoTar.js` (a tippek — `tippek`, `tippFeljegyzese`, `tippekAlakja`; gondolatonként ≤ 4,
+≤ 4096 gondolat, 30 nap; külön fájl, `tippek.json`; a tömörítés a gondolat nélkülit eldobja), `kereses.js`
+(`keresesValaszAlakja` — a `tippek`, ≤ 2 / gondolat), `vonal.js` (a felajánlás kiszolgálója a kérelem ellenőrzött
+tábla-kulcsát kapja; a `BEJEGYZES` a tippeket viszi, a fogadó jegyzi), `koino.js` (a kiszolgáló jegyzi és adja; a kérdező
+`tartotippek.json` — 256 gondolat, 7 nap; a `fuggoKerelemFelvetele` a tippet `keszulek` kopogtatóként veszi fel; a lap a
+tippes kérelmet „van kitől”-nek látja; a kézi út a tippeket is viszi; a `kereso keres` kiírja). Elágazás 175.
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 

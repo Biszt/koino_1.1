@@ -93,4 +93,12 @@ proba('Az osztódott fiók mintája különböző darabokból áll; a válasz al
     && v.osztodott === 2 && keresesValaszAlakja({ osztodott: -1 }).osztodott === null;
 });
 
+// ⭐ D111 (K11): a válasz tartó-tippjei. Rontás: a tippek nincsenek szűrve → a hibás kulcs / a harmadik tipp átmegy → bukik.
+proba('⭐ D111: a kérdés válaszának tartó-tippjei — gondolatonként legfeljebb 2 tábla-aláíró, a hibás kiesik', () => {
+  const g = 'G'.repeat(43), a = 'a'.repeat(43), b = 'b'.repeat(43), c = 'c'.repeat(43);
+  const v = keresesValaszAlakja({ talalatok: [], tippek: { [g]: [a, b, c, a], rossz: [a], ['H'.repeat(43)]: ['nem'] } });
+  const ures = keresesValaszAlakja({ tippek: [a] });
+  return JSON.stringify(v.tippek) === JSON.stringify({ [g]: [a, b] }) && JSON.stringify(ures.tippek) === '{}';
+});
+
 export default futtatas;

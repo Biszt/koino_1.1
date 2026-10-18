@@ -5204,7 +5204,7 @@ proba('⭐⭐ A kereső-réteg kézi útja: felajanl → behoz → kivisz → be
     const ki = {
       eFuggo: /KERESŐ-TÁR: 5 bejegyzés \(0 az indexben · 5 függő/.test(eAll),
       felajanl: /A gondolataim 5 bejegyzése/.test(felajanl)
-        && (await readFile(f3, 'utf8')).split('\n').filter((x) => x && !x.startsWith('{"kisero"'))
+        && (await readFile(f3, 'utf8')).split('\n').filter((x) => x && !x.startsWith('{"kisero"') && !x.startsWith('{"tipp"'))
           .every((x) => /"m":\{"szerzo"/.test(x))
         && /[1-9]\d* tagsági kísérővel/.test(felajanl),
       cBe: /5 új bejegyzés/.test(cBe),
@@ -5551,6 +5551,8 @@ proba('⭐⭐ ⑤: a kérdés közvetlenül egy tartónál — a találat ellen�
     const kiseroNelkul = tiszta(await fut(e, 'kereso', 'keres', 'park', '127.0.0.1', String(port)));
     const ki = {
       park: /Közös park a faluban/.test(park) && /1 találat/.test(park),
+      // ⭐ D111: a kézi út a tartó-tippet is viszi (a felajánló saját készüléke) — a kérdező a találattal megkapja
+      kezitipp: /1 tartó-tipp/.test(park),
       iskola: /nincs találat/.test(iskola),
       atmeneti: dAtmeneti.includes(g),
       k3: /nincs találat/.test(kiseroNelkul) && /1 kihagyva: a szerzők tagsága nem ellenőrizhető/.test(kiseroNelkul)
@@ -5742,6 +5744,88 @@ proba('⭐⭐ ⑦b: a NAT mögötti tartó — a kérdést az őrjárat függő 
     return Object.values(ki).every(Boolean);
   } finally {
     for (const f of [fel?.folyamat, od, oc]) if (f) f.kill();
+    halo.bezar();
+    await varj(800);
+    for (const m of [a, b, c, d]) await rm(m, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐⭐ D111 (K11): A MEGTALÁLT GONDOLAT TARTÓJA — a tartó-tipp a találattal, és a kopogtatás
+// ===================================
+//
+// A (tulajdonos) a gondolatát közvetlenül felajánlja C-nek (a régió tartója) — C a kérelem ELLENŐRZÖTT tábla-kulcsából A
+// készülékét tartó-tippként jegyzi. D (friss) a DHT-n talált C-nél keres: a találattal megkapja A tábla-aláíróját (D lemezén:
+// `tartotippek.json`), és a gondolat szeletét CÍM NÉLKÜL kéri (`kerelem szelet <g>`) — a függő kérelem kopogtatója A
+// készülékének témája. D őrjárata ott jelentkezik; A őrjárata (utána indul) a címjegyzék-körében meglátja, felém kopog, és a
+// szeletet kiszolgálja: D átmeneti tárában ott A érték javaslata a gondolatra (amit a bejegyzés nem hozott). Rontás: a
+// kereső tartó nem ad tippet (`KOINO_KERESES_TIPPEK=0`) → D nem tudja, kit kérdezzen → bukik; a függő kérelem a tippet nem
+// használja → bukik.
+proba('⭐⭐ D111: a megtalált gondolat tartója — a tartó-tipp a találattal, és a kopogtatással a gondolat szelete is megjön', async () => {
+  const { hamisHalozat } = await import('./dhtProba.js');
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const c = await ujKeszulek();
+  const d = await ujKeszulek();
+  const halo = await hamisHalozat(12);
+  const PA = 7701, PC = 7702, PD = 7703;
+  const dht = { KOINO_DHT_BELEPOK: halo.belepo(0), KOINO_TUKOR: '127.0.0.1:9' };
+  const orjarat = (hely, port, tobb = {}) => spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(port)],
+    { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...dht, ...tobb }, stdio: ['ignore', 'pipe', 'pipe'] });
+  let oa = null, oc = null, od = null;
+  try {
+    await fut(a, 'koino', 'Tipp', 'próba', 'nyilt');
+    const g = azonosito(await fut(a, 'gondolat', 'Közös park a faluban'), 'Létrejött:');
+    await taggaTesziKeszulek(a, b);
+    await fut(a, 'kivisz', join(a, 'mind.jsonl'), 'mind');
+    const gTeljes = (await readFile(join(a, 'mind.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x))
+      .find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
+    await fut(b, 'behoz', join(a, 'mind.jsonl'));
+    await fut(b, 'pont', g, '10');
+    await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
+    await fut(a, 'behoz', join(b, 'sajat.jsonl'));
+    // a gondolat szeletében egy esemény, amit a bejegyzés NEM hoz: A érték javaslata (küszöbök)
+    await fut(a, 'ertek', g, '51', '0', '3', '3');
+    let cKimenet = '', dKimenet = '', aKimenet = '';
+    oc = orjarat(c, PC);
+    oc.stdout.on('data', (x) => { cKimenet += x; });
+    for (let i = 0; i < 60 && !/címjegyzék:/.test(cKimenet); i++) await varj(250);
+    const felajanlas = tiszta(await fut(a, 'kereso', 'felajanl', '127.0.0.1', String(PC), dht));
+    const aTabla = JSON.parse(await readFile(join(a, 'tabla-kulcs.json'), 'utf8')).alairoNyilvanos;
+    const keres = tiszta(await fut(d, 'kereso', 'keres', 'park', dht));
+    const tippek = await readFile(join(d, 'sajat', 'tartotippek.json'), 'utf8').catch(() => '');
+    await fut(d, 'kerelem', 'szelet', gTeljes, dht);
+    const kerelmek = await readFile(join(d, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '');
+    od = orjarat(d, PD);
+    od.stdout.on('data', (x) => { dKimenet += x; });
+    for (let i = 0; i < 80 && !/jelentkeztem/.test(dKimenet); i++) await varj(250);
+    oa = orjarat(a, PA);
+    oa.stdout.on('data', (x) => { aKimenet += x; });
+    const gyerekNalam = async () => {
+      for (const f of await readdir(join(d, 'sajat', 'atmeneti')).catch(() => [])) {
+        if ((await readFile(join(d, 'sajat', 'atmeneti', f), 'utf8').catch(() => '')).includes('"ErtekJavaslat"')) return true;
+      }
+      return false;
+    };
+    let megjott = false;
+    for (let i = 0; i < 120 && !megjott; i++) { await varj(500); megjott = await gyerekNalam(); }
+    const ki = {
+      felajanlva: /felvett/.test(felajanlas),
+      talalat: /Közös park a faluban/.test(keres) && /tartó-tipp/.test(keres),
+      tipp: tippek.includes(aTabla),
+      kopogtato: kerelmek.includes('"fajta":"keszulek","kulcs":"' + aTabla + '"'),
+      // ⭐ A a SAJÁT kopogtató témáján látta D-t — ez csak a tippből jöhet (a régió-társként való találkozás nem ide jelentkezik)
+      kero: /kérő vár rám/.test(tiszta(aKimenet)),
+      megjott
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  D111 tartó-tipp — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
+        + JSON.stringify({ felajanlas: felajanlas.slice(-200), keres: keres.slice(-300), kerelmek: kerelmek.slice(0, 400),
+          d: tiszta(dKimenet).replace(/\s+/g, ' ').slice(-400), a: tiszta(aKimenet).replace(/\s+/g, ' ').slice(-400) }) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const f of [oa, oc, od]) if (f) f.kill();
     halo.bezar();
     await varj(800);
     for (const m of [a, b, c, d]) await rm(m, { recursive: true, force: true });

@@ -516,7 +516,7 @@ rontással), `kerelemProba.js` (+1: a kérdés a kérelem része — két rontá
 böngészőben néztük meg: a közvetlen esetben az első kérdés üres listát ad, a 2 mp-es újrakérdezés már a két találatot; a
 NAT-os esetben a nyitott ablak magától frissült, amikor az őrjárat a találatokat elhozta. Elágazás 174.
 
-## 16. ⏸️ K11 — a megtalált gondolat tartói (Csabánál, 2026-10-18)
+## 16. ✅ K11 — a megtalált gondolat tartói (D111, 2026-10-18 — Csaba: „(A) Tartó-tipp”)
 
 **A lelet** (a ⑦ böngészős próbájában): a találat egy bejegyzés — a születés (a címmel) és legalább két tulajdonos
 pont-eseménye. A kártya megnyílik (a cím, a tulajdonosok, a pontok), de a többi része — a szöveg (a szöveg-darab), a
@@ -550,3 +550,17 @@ gondolattal, amelynek a tartóit a raj nem ismeri — a keresés teszi gyakoriv�
 
 **A javaslat (A)**, mert a D92 fő útjára (a kopogtatásra) illik, az ára találatonként néhány bájt, és a bizalmi modell nem
 változik; a (C) a magánszféra szempontjából erősebb, de drágább és törékenyebb.
+
+✅ **D111 — az (A) megépült (2026-10-18).** A kereső tartó a felajánlás kérelmének ELLENŐRZÖTT tábla-kulcsát jegyzi a
+gondolat mellé (`keresoTar.js` `tippFeljegyzese` — gondolatonként ≤ 4, 30 nap, külön fájl: a bejegyzés azonosítója a
+tartalmáé); a régió tartói közt a `BEJEGYZES` a tippet az idejével viszi (a társ nem frissítheti fel); a kézi út `{ tipp }`
+sorokkal. A válasz gondolatonként ≤ 2 tippet ad; a kérdező helyben jegyzi (`tartotippek.json` — ⛔ nem a raj-jegyzékbe:
+ott ellenőrzött cseréből jött, címes tartók állnak), és a gondolatra szóló függő kérelem a tipp készülékének kopogtató
+témáján jelentkezik. **Próbák:** a kereső-tár (+1: a legfrissebb elöl, korlátos, az elévült nem jön vissza, másik megnyitás
+is látja, a tömörítés a gondolat nélkülit eldobja — három rontással), a válasz alakja (+1), a régió cseréje (+1: a tipp az
+idejével átjön — két rontással), a kézi út (a ⑤ próbájában — két rontással), és a bekötés: A felajánl C-nek, D a DHT-n
+talált C-nél keres, a gondolat szeletét cím nélkül kéri, A őrjárata a saját kopogtató témáján meglátja D-t, és kiszolgálja
+(D átmeneti tárában A érték javaslata — amit a bejegyzés nem hozott) — öt rontással. ⚠️ **Próba-tanulság:** a „megjött”
+önmagában nem bizonyít — a próbában A és D ugyanabban a kereső-régióban hirdet, így régió-társként is egymásra találnak (a
+„nem használja a tippet” rontás mellett is megjött); a bizonyíték az, hogy A a SAJÁT kopogtató témáján látta D-t („kérő vár
+rám”), ami csak a tippből jöhet. Elágazás 175.

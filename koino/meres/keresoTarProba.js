@@ -19,7 +19,7 @@ import { join } from 'node:path';
 
 import {
   keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesAzonositoja, bejegyzesekEpitese, bejegyzesAlakja, BEJEGYZES_TULAJDONOS_MIN,
-  bejegyzesSzerzoi, FUGGO_HANYAD
+  bejegyzesSzerzoi, FUGGO_HANYAD, TIPP_KORLAT
 } from '../js/tar/keresoTar.js';
 import { cimKulcsai, bejegyzesHelye, regiobaEsik } from '../js/csere/keresoReteg.js';
 import { lenyomatDarabja } from '../js/csere/cimjegyzek.js';
@@ -327,6 +327,39 @@ proba('⛔ ④b: a függők nem szorítják ki a valódiakat — együtt legfelj
   const fuggoMeret = tar.fuggoDarab() * egy;
   return FUGGO_HANYAD === 10 && valodiak.every((id) => tar.bejegyzes(id) !== null) && fuggoMeret <= korlat / FUGGO_HANYAD + egy
     && tar.fuggoDarab() <= 2;
+});
+
+// ⭐ D111 (K11): a TARTÓ-TIPP (melyik készülék ajánlotta fel a gondolatot). Rontás: az elévülés nincs szűrve → a 30 napnál
+// régebbi tipp is visszajön → bukik; a régebbi idő felülírja a frissebbet → bukik; a tömörítés nem dobja a gondolat
+// nélküli tippet → bukik.
+proba('⭐ D111: a TARTÓ-TIPP — a legfrissebb elöl, korlátos, a hibás kiesik, az elévült nem jön vissza; másik megnyitás is látja, a tömörítés a gondolat nélkülit eldobja', async () => {
+  const mappa = await ujMappa();
+  let ora = Date.now();
+  const tar = await keresoTarNyitasa(KOINO, mappa, { most: () => ora });
+  const { szuletes, pontEsemenyek } = await gondolatTulajdonosokkal('Közös park');
+  const [b] = bejegyzesekEpitese({ szuletes, pontEsemenyek });
+  await bejegyzesBefogadasa(tar, b);
+  const g = szuletes.azonosito;
+  const A = (c) => c.repeat(43);
+  await tar.tippFeljegyzese(g, [{ a: A('a'), t: ora - 3000 }, 'hibás', { a: A('b'), t: ora - 1000 }]);
+  await tar.tippFeljegyzese(g, [A('c'), A('d'), A('e')]);
+  const lista = (await tar.tippek(g)).map((x) => x.a);
+  const korlat = lista.length === TIPP_KORLAT && !lista.includes('hibás')
+    && lista.slice(0, 3).sort().join() === [A('c'), A('d'), A('e')].join() && lista[3] === A('b');
+  const masik = await keresoTarNyitasa(KOINO, mappa, { most: () => ora });
+  const lat = (await masik.tippek(g)).length === TIPP_KORLAT;
+  await tar.tippFeljegyzese(g, [{ a: A('c'), t: ora - 99999 }]);
+  const nemRegebbi = (await tar.tippek(g)).find((x) => x.a === A('c'))?.t === ora;
+  ora += MEGUJITAS_ELETTARTAM + 1000;
+  const elevult = (await tar.tippek(g)).length === 0;
+  ora -= MEGUJITAS_ELETTARTAM + 1000;
+  await tar.tippFeljegyzese(A('Z'), [A('f')]);
+  const voltIdegen = (await tar.tippek(A('Z'))).length === 1;
+  await tar.tomorites();
+  const idegenKiesett = (await tar.tippek(A('Z'))).length === 0 && (await tar.tippek(g)).length === TIPP_KORLAT;
+  const ki = { korlat, lat, nemRegebbi, elevult, voltIdegen, idegenKiesett };
+  if (!Object.values(ki).every(Boolean)) console.log('  D111 tipp — ami bukott:', Object.keys(ki).filter((k) => !ki[k]).join(', '));
+  return Object.values(ki).every(Boolean);
 });
 
 export default async function (csendes) {

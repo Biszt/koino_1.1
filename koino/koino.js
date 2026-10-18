@@ -164,7 +164,7 @@ import {
 } from './js/csere/fuggoKerelmek.js';
 import { atmenetiTarNyitasa, ketTarBemenete, ketTarNezet } from './js/tar/atmenetiTar.js';
 import {
-  keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesekEpitese, bejegyzesSzerzoi, bejegyzesAlakja, KERESO_KORLAT
+  keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesekEpitese, bejegyzesSzerzoi, bejegyzesAlakja, KERESO_KORLAT, TIPP_VALASZ
 } from './js/tar/keresoTar.js';
 import { tarsMelysegeFeljegyzese, tanultMelyseg, ervenyesMelyseg, melysegJegyzekAlakja } from './js/csere/melysegTanulas.js';
 import { megujitasKeszitese, csomagTulajdonosai } from './js/tar/keresoMegujitas.js';
@@ -554,9 +554,55 @@ async function keresesValaszFeldolgozasa(kerdes, hely, v) {
     if (!mind) { tagsagNelkul++; continue; }
     const r = await beolvasztas(atmenetiCel, t.b.esemenyek, KOINO);
     if (r.elutasitva?.length) continue;          // egy csomag-esemény nem ment át a kapun — a találat nem áll meg
+    // ⭐ D111 (K11): a tartó-tipp — a felajánló készülék(ek) tábla-aláírója; a gondolat többi részét (szöveg, gyerekek) a
+    // függő kérelem ezen keresztül kéri (a készülék kopogtató témáján — `fuggoKerelemFelvetele`).
+    const tippek = Array.isArray(v.tippek?.[t.g]) ? v.tippek[t.g] : [];
+    if (tippek.length) { t.tippek = tippek; await tartoTippekFeljegyzese(t.g, tippek); }
     jok.push(t);
   }
   return { jok, tagsagNelkul };
+}
+
+// ===================================
+// ⭐⭐ D111 (K11): A KÉRDEZŐ TARTÓ-TIPPJEI — a keresésből jött „ki tartja” (cím nélkül)
+// ===================================
+//
+// A keresés a gondolat bejegyzését hozza (a születés, a tulajdonosok pontjai); a többi részéhez (a szöveg, a gyerekek) a
+// SZELETÉNEK tartója kell, és alapbeállítással semmi nem adja meg (a szelet DHT-hirdetése a D91/3 szerint alapból 0). A
+// kereső tartó ezért a találattal azt is megmondja, melyik KÉSZÜLÉK ajánlotta fel (a tábla-aláírója — a felajánló a
+// tulajdonos, tehát a szeletet vállalásból tartja). Helyi feljegyzés, nem terjed — ⛔ a raj-jegyzékbe NEM kerül (ott a
+// tartók ellenőrzött cseréből állnak, címmel; ez csak tipp: a hamis tipp elérhetetlenség, nem hamisítás — D6).
+const TARTO_TIPP_KORLAT = 256;
+const TARTO_TIPP_ELETTARTAM = 7 * 24 * 3600 * 1000;
+const tartoTippFajl = () => join(alapHely(), KOINO, 'tartotippek.json');
+const TABLA_ALAIRO_MINTA = /^[A-Za-z0-9_-]{43}$/;
+async function tartoTippekOlvasasa() {
+  try {
+    const x = JSON.parse(await readFile(tartoTippFajl(), 'utf8'));
+    return x && typeof x === 'object' && !Array.isArray(x) ? x : {};
+  } catch { return {}; }
+}
+async function tartoTippekFeljegyzese(g, alairok) {
+  const jok = [...new Set(alairok.filter((a) => typeof a === 'string' && TABLA_ALAIRO_MINTA.test(a)))].slice(0, TIPP_VALASZ);
+  if (!jok.length) return;
+  const j = await tartoTippekOlvasasa();
+  const most = Date.now();
+  const regi = Array.isArray(j[g]) ? j[g].filter((x) => x && !jok.includes(x.a)) : [];
+  delete j[g];
+  j[g] = [...jok.map((a) => ({ a, t: most })), ...regi].slice(0, TIPP_VALASZ);
+  const kulcsok = Object.keys(j);
+  for (const k of kulcsok.slice(0, Math.max(0, kulcsok.length - TARTO_TIPP_KORLAT))) delete j[k];
+  try {
+    await mkdir(dirname(tartoTippFajl()), { recursive: true });
+    await writeFile(tartoTippFajl(), JSON.stringify(j), 'utf8');
+  } catch { /* nem végzetes — a tipp csak segít */ }
+}
+/** Egy gondolat (szelet) tartó-tippjei — a friss (7 napnál nem régebbi) tábla-aláírók. */
+async function tartoTippjei(g) {
+  const j = await tartoTippekOlvasasa();
+  const hatar = Date.now() - TARTO_TIPP_ELETTARTAM;
+  return (Array.isArray(j[g]) ? j[g] : []).filter((x) => typeof x?.a === 'string' && TABLA_ALAIRO_MINTA.test(x.a) && x.t > hatar)
+    .map((x) => x.a);
 }
 
 /**
@@ -1958,6 +2004,12 @@ async function fuggoKerelemFelvetele(k, { cimek = null, dht = false } = {}) {
       celok.push({ hoszt: c.hoszt, port: Number(c.port), ...(c.alairo ? { alairo: c.alairo } : {}) });
       if (c.alairo) kopogtatok.push({ fajta: 'keszulek', kulcs: c.alairo });
     }
+    // ⭐ D111 (K11): a keresésből jött TARTÓ-TIPP — a felajánló (tulajdonos) készüléke; címe nincs, a saját kopogtató
+    // témáján jelentkezünk (a D92 fő útja): a címjegyzék-körében meglát, és felém kopog — a NAT mögött is.
+    const sajatTabla = (await tablaKulcsBiztositasa()).alairoNyilvanos;
+    for (const a of await tartoTippjei(k.kulcs)) {
+      if (a !== sajatTabla && !kopogtatok.some((x) => x.fajta === 'keszulek' && x.kulcs === a)) kopogtatok.push({ fajta: 'keszulek', kulcs: a });
+    }
     kopogtatok.push({ fajta: 'szelet', kulcs: k.kulcs });
     if (dht) {
       try {
@@ -2258,7 +2310,8 @@ async function lapHianyzoinakElkerese(hianyzik) {
     && (x.utan?.az ?? null) === (h.utan?.az ?? null)));
   // ⭐ Van-e kitől kérni (egy ismert tartó vagy induló cím)? Ha nincs, a kérelem csak kopogtat (a G témáin) — a lap ezt
   // kimondja, nem ígér „betöltést”, ami egy társ nélküli készüléken soha nem érkezne meg.
-  const celos = fuggok.filter((x) => (x.celok ?? []).length > 0).length;
+  // ⭐ D111: a tartó-tipp (a készülék kopogtató témája) is „kitől” — a tipp készüléke a címjegyzék-körében felém kopog.
+  const celos = fuggok.filter((x) => (x.celok ?? []).length > 0 || (x.kopogtatok ?? []).some((k) => k.fajta === 'keszulek')).length;
   return { kert: kertek.length, fuggo: fuggok.length, celos };
 }
 
@@ -2885,9 +2938,19 @@ function kerelemKiszolgaloja() {
       const cel = Number(process.env.KOINO_KERESO_FIOK_CEL) > 0 ? Number(process.env.KOINO_KERESO_FIOK_CEL) : KERESO_FIOK_CEL;
       const t = osztodasMelysege(meret, cel);
       const kiserok = process.env.KOINO_KERESES_KISEROK === '0' ? [] : await bejegyzesekKiseroi(talalatok);
-      return { talalatok, kiserok: kiserok.slice(0, 1024), meret, osztodott: t > 0 ? k.s + t : null };
+      // ⭐ D111 (K11): gondolatonként a tartó-tippek (a felajánló készülékek tábla-aláírója, cím nélkül) — a kérdező így
+      // éri el a gondolat többi részét. A próbák visszatarthatják (`KOINO_KERESES_TIPPEK=0` — a bekötés rontás-próbája).
+      const tippek = {};
+      if (process.env.KOINO_KERESES_TIPPEK !== '0') {
+        for (const b of talalatok) {
+          if (tippek[b.g]) continue;
+          const t2 = (await keresoTar.tippek(b.g)).slice(0, TIPP_VALASZ).map((x) => x.a);
+          if (t2.length) tippek[b.g] = t2;
+        }
+      }
+      return { talalatok, kiserok: kiserok.slice(0, 1024), meret, osztodott: t > 0 ? k.s + t : null, tippek };
     },
-    async felajanlas(k) {
+    async felajanlas(k, { tabla = null } = {}) {
       await keresoTar.frissit();
       const kr = await keresoRegioim();
       const kiseroBe = (k.kiserok ?? []).filter((e) => e && typeof e === 'object' && e.koino === KOINO
@@ -2895,14 +2958,18 @@ function kerelemKiszolgaloja() {
       if (kiseroBe.length) await beolvasztas(tar, kiseroBe, KOINO);
       let felvett = 0, fuggo = 0, megvolt = 0, elutasitott = 0;
       const helyek = new Map();
+      const gondolatok = new Set();
       for (const nyers of (k.bejegyzesek ?? []).slice(0, FELAJANLAS_KORLAT)) {
         const b = bejegyzesAlakja(nyers);
         if (!b || !regiobaEsoBejegyzes(b, kr.regiok)) { elutasitott++; continue; }
         const r = await bejegyzesBefogadasa(keresoTar, b);
         if (r.uj) { felvett++; if (r.fuggo) fuggo++; } else if (r.azonosito) megvolt++; else { elutasitott++; continue; }
+        gondolatok.add(b.g);
         const hely = bejegyzesHelye(b.k, b.g, b.s);
         helyek.set(b.k + '|' + b.s + '|' + hely, { k: b.k, s: b.s, hely });
       }
+      // ⭐ D111 (K11): a felajánló készüléke (a kérelem ELLENŐRZÖTT tábla-kulcsa) tartó-tipp a gondolatai mellé.
+      if (tabla) for (const g of gondolatok) await keresoTar.tippFeljegyzese(g, [tabla]);
       const cel = Number(process.env.KOINO_KERESO_FIOK_CEL) > 0 ? Number(process.env.KOINO_KERESO_FIOK_CEL) : KERESO_FIOK_CEL;
       const osztodott = [];
       for (const x of helyek.values()) {
@@ -4330,17 +4397,24 @@ try {
       const fajlNeve = ervek[1];
       // ⭐ ④b: a fájl a szerzők TAGSÁGI KÍSÉRŐIT is viszi (`{ kisero: esemény }` sorok — a csomagjuk, vagy a tagsági láncuk,
       // D95/2): a befogadó ezekből ellenőrzi a tagságukat (K3), különben a bejegyzés nála függő maradna.
-      const sorokba = async (lista) => {
+      // ⭐ D111 (K11): és a TARTÓ-TIPPEKET (`{ tipp: { g, t: [{ a, t }] } }` sorok — a felajánlónál a saját készüléke).
+      const sorokba = async (lista, tippForras) => {
         const szerzok = [...new Set(lista.flatMap((b) => bejegyzesSzerzoi(b)))];
         const kiserok = szerzok.length ? await tagsagiKiserok(tar, KOINO, szerzok,
           { koinoSzuletes: await koinoSzuletese(), szerzoKorlat: 256 }) : [];
-        return { szoveg: [...lista.map((b) => JSON.stringify(b)), ...kiserok.map((e) => JSON.stringify({ kisero: e }))]
+        const tippSorok = [];
+        for (const g of new Set(lista.map((b) => b.g))) {
+          const t = await tippForras(g);
+          if (t.length) tippSorok.push(JSON.stringify({ tipp: { g, t } }));
+        }
+        return { szoveg: [...lista.map((b) => JSON.stringify(b)), ...kiserok.map((e) => JSON.stringify({ kisero: e })), ...tippSorok]
           .map((x) => x + '\n').join(''), kiserok: kiserok.length };
       };
+      const sajatTippForras = async () => [{ a: (await tablaKulcsBiztositasa()).alairoNyilvanos, t: Date.now() }];
       if (al === 'kivisz') {
         if (!fajlNeve) throw new Error('Hova írjam? node koino/koino.js kereso kivisz <fájl>');
         const lista = keresoTar.bejegyzesek();
-        const f = await sorokba(lista);
+        const f = await sorokba(lista, (g) => keresoTar.tippek(g));
         await writeFile(fajlNeve, f.szoveg, 'utf8');
         kiir('Kivittem a kereső-táram ' + lista.length + ' bejegyzését (' + f.kiserok + ' tagsági kísérővel): ' + fajlNeve);
         break;
@@ -4401,7 +4475,7 @@ try {
         if (!fajlNeve) throw new Error('Hova írjam? node koino/koino.js kereso felajanl <fájl>');
         const { allapot } = await kepetKeszit();
         const lista = await sajatBejegyzesek(allapot);
-        const f = await sorokba(lista);
+        const f = await sorokba(lista, sajatTippForras);
         await writeFile(fajlNeve, f.szoveg, 'utf8');
         kiir('A gondolataim ' + lista.length + ' bejegyzése (a legalább két tulajdonosúaké, a cím minden kulcsa alatt; ' + f.kiserok
           + ' tagsági kísérővel): ' + fajlNeve + SZIN.halvany + ' — a kereső tartói `kereso behoz`-zal veszik fel' + SZIN.vege);
@@ -4414,10 +4488,12 @@ try {
         const elutasitva = [];
         const bejegyzesek = [];
         const kiserok = [];
+        const tippSorok = [];
         for (const [i, sor] of sorok.entries()) {
           let j;
           try { j = JSON.parse(sor); } catch { elutasitva.push({ sor: i + 1, ok: 'nem értelmezhető' }); continue; }
           if (j && typeof j === 'object' && j.kisero && typeof j.kisero === 'object') kiserok.push(j.kisero);
+          else if (j && typeof j === 'object' && j.tipp && typeof j.tipp === 'object') tippSorok.push(j.tipp);
           else bejegyzesek.push({ sor: i + 1, b: j });
         }
         // ⭐ ④b: előbb a tagsági kísérők — CSAK a lánc-típusú események és a tagsági csomagok, ugyanazon a kapun (a tartós tárba;
@@ -4431,6 +4507,9 @@ try {
           else elutasitva.push({ sor: x.sor, ok: r.ok });
         }
         const emelt = await keresoTar.fuggokFrissitese();
+        // ⭐ D111: a tartó-tippek — csak a nálam lévő gondolatokhoz (puha, ellenőrizetlen tipp).
+        const nalam = new Set(keresoTar.bejegyzesek().map((b) => b.g));
+        for (const t of tippSorok.slice(0, 4096)) if (typeof t.g === 'string' && nalam.has(t.g)) await keresoTar.tippFeljegyzese(t.g, t.t);
         kiir('Behozva a kereső-tárba: ' + fajlNeve);
         kiir('  ' + SZIN.jo + uj + ' új bejegyzés' + SZIN.vege + ' · ' + megvolt + ' már megvolt (vagy van frissebb) · '
           + kiserok.length + ' tagsági kísérő (' + k.uj + ' új esemény) · ' + sorok.length + ' sor a fájlban');
@@ -4452,7 +4531,8 @@ try {
         kiir(SZIN.vastag + 'KERESÉS a hálózaton: „' + kerdes + '”' + SZIN.vege + SZIN.halvany + ' — ' + r.kerdezett + ' tartót kérdeztem, '
           + r.valaszolt + ' válaszolt' + (r.minta ? ' · a fiók osztódott: a válasz MINTA (K7)' : '') + SZIN.vege);
         for (const t of r.talalatok) {
-          kiir('  ' + rovidAzonosito(t.g) + '  ' + t.cim + (t.cimForrasa === 'javaslat' ? SZIN.halvany + '  (javasolt cím — K9)' + SZIN.vege : ''));
+          kiir('  ' + rovidAzonosito(t.g) + '  ' + t.cim + (t.cimForrasa === 'javaslat' ? SZIN.halvany + '  (javasolt cím — K9)' + SZIN.vege : '')
+            + (t.tippek?.length ? SZIN.halvany + '  · ' + t.tippek.length + ' tartó-tipp (a részletei a kopogtatással jönnek)' + SZIN.vege : ''));
         }
         kiir((r.talalatok.length ? SZIN.jo + r.talalatok.length + ' találat' + SZIN.vege : SZIN.halvany + 'nincs találat' + SZIN.vege)
           + (r.tagsagNelkul ? SZIN.halvany + ' · ' + r.tagsagNelkul + ' kihagyva: a szerzők tagsága nem ellenőrizhető (K3)' + SZIN.vege : '')

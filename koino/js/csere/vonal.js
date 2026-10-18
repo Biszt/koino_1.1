@@ -599,8 +599,9 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       } else if (k?.fajta === 'felajanlas' && kiszolgalo?.felajanlas) {
         // ⭐⭐ D107 L4 (④c): A FELAJÁNLÁS — a tulajdonos a régióm tartójaként nekem adja a bejegyzéseit; a kiszolgáló a
         // kereső-tár kapuján veszi fel (a hely a régióimba esik, a csomag a kapun, a megújítás és a tagság ellenőrizve), és
-        // megmondja, mi OSZTÓDOTT (K7). A vonal csak továbbadja.
-        const v = await kiszolgalo.felajanlas(k);
+        // megmondja, mi OSZTÓDOTT (K7). A vonal csak továbbadja. ⭐ D111 (K11): a felajánló ELLENŐRZÖTT tábla-kulcsát is
+        // (a kézfogás átiratára tett aláírásából) — a kiszolgáló tartó-tippként jegyzi a gondolatai mellé.
+        const v = await kiszolgalo.felajanlas(k, { tabla: kerelemTarsa.tabla });
         kuld({ uzenet: 'FELAJANLASVALASZ', ...felajanlasValaszAlakja(v) });
         kiszolgalva = 'felajanlas';
       } else if (k?.fajta === 'torzs' && kiszolgalo?.torzs) {
@@ -1281,10 +1282,12 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // ⭐⭐ D107 L2: a kereső-régiók halmaza BEJEGYZÉS-azonosítókból áll — azokat `BEJEGYZES` viszi (a kereső-tárból), nem ESEMENY.
   const regioIdk = new Set();
   for (const k of egyeztetendo) if (keresoRegioBol(k) && halmazok.has(k)) for (const a of halmazok.get(k)) regioIdk.add(a);
-  const bejegyzesKuldese = (a) => {
+  // ⭐ D111 (K11): a bejegyzéssel a gondolat tartó-tippjei is mennek (az idejükkel — a régió társa nem frissítheti fel őket).
+  const bejegyzesKuldese = async (a) => {
     const b = keresoTar?.bejegyzes(a);
     if (!b || !keretbeFer(b)) return;
-    kuld({ uzenet: 'BEJEGYZES', bejegyzes: b });
+    const t = keresoTar.tippek ? await keresoTar.tippek(b.g) : [];
+    kuld({ uzenet: 'BEJEGYZES', bejegyzes: b, ...(t.length ? { t } : {}) });
     kuldottBejegyzesek++;
   };
   const kuldesre = new Map();
@@ -1303,7 +1306,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     kuld({ uzenet: 'ESEMENY', esemeny: e });
     atadva++;
   }
-  for (const a of bejegyzesKuldesre) bejegyzesKuldese(a);
+  for (const a of bejegyzesKuldesre) await bejegyzesKuldese(a);
   kuld({ uzenet: 'KEREK', azonositok: [...kellNekem].sort() });
   kuldott += atadva;
 
@@ -1313,7 +1316,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   for (;;) {
     const uzenet = await sor.kovetkezo();
     if (uzenet.uzenet === 'KEREK') { oveKerese = uzenet; break; }
-    if (uzenet.uzenet === 'BEJEGYZES') { erkezettBejegyzesek.push(uzenet.bejegyzes); continue; }
+    if (uzenet.uzenet === 'BEJEGYZES') { erkezettBejegyzesek.push({ b: uzenet.bejegyzes, t: uzenet.t }); continue; }
     if (uzenet.uzenet !== 'ESEMENY') throw new Error('Váratlan üzenet az átadás közben: ' + uzenet.uzenet);
     erkezett.push(uzenet.esemeny);
   }
@@ -1326,7 +1329,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let valaszolt = 0;
   for (const a of kertek) {
     if (typeof a !== 'string' || !adhatok.has(a)) continue;
-    if (regioIdk.has(a)) { bejegyzesKuldese(a); continue; }
+    if (regioIdk.has(a)) { await bejegyzesKuldese(a); continue; }
     const e = await tar.esemeny(a);
     if (e && keretbeFer(e)) { kuld({ uzenet: 'ESEMENY', esemeny: e }); valaszolt++; }
   }
@@ -1336,7 +1339,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   for (;;) {
     const uzenet = await sor.kovetkezo();
     if (uzenet.uzenet === 'KESZ') break;
-    if (uzenet.uzenet === 'BEJEGYZES') { erkezettBejegyzesek.push(uzenet.bejegyzes); continue; }
+    if (uzenet.uzenet === 'BEJEGYZES') { erkezettBejegyzesek.push({ b: uzenet.bejegyzes, t: uzenet.t }); continue; }
     if (uzenet.uzenet !== 'ESEMENY') throw new Error('Váratlan üzenet az átadás közben: ' + uzenet.uzenet);
     erkezett.push(uzenet.esemeny);
   }
@@ -1347,12 +1350,15 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // érinti (L1).
   if (erkezettBejegyzesek.length && keresoTar) {
     const regiok = egyeztetendo.map((k) => keresoRegioBol(k)).filter(Boolean);
-    for (const nyers of erkezettBejegyzesek.slice(0, KULCS_KORLAT)) {
-      const b = bejegyzesAlakja(nyers);
+    for (const x of erkezettBejegyzesek.slice(0, KULCS_KORLAT)) {
+      const b = bejegyzesAlakja(x.b);
       if (!b) continue;
       const h = bejegyzesHelye(b.k, b.g, b.s);
       if (!regiok.some((r) => regiobaEsik(h, r.melyseg, r.darab))) continue;
-      if ((await bejegyzesBefogadasa(keresoTar, b)).uj) ujBejegyzesek++;
+      const r = await bejegyzesBefogadasa(keresoTar, b);
+      if (r.uj) ujBejegyzesek++;
+      // ⭐ D111: a tipp csak a befogadott (vagy már meglévő, érvényes) bejegyzés gondolatához — puha, ellenőrizetlen tipp.
+      if (r.azonosito && x.t && keresoTar.tippFeljegyzese) await keresoTar.tippFeljegyzese(b.g, x.t);
     }
   }
 

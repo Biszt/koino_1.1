@@ -22,7 +22,7 @@
 // Használják: koino.js (a kiszolgáló `kereses`-e, a `kereso keres` parancs), a próbák (`keresesProba.js`).
 
 import { kerdesFiokjai, cimIllik, fiokHelye, fiokDarabja } from './keresoReteg.js';
-import { bejegyzesAlakja, bejegyzesTartalma } from '../tar/keresoTar.js';
+import { bejegyzesAlakja, bejegyzesTartalma, TIPP_VALASZ } from '../tar/keresoTar.js';
 
 /** Egy válaszban legfeljebb ennyi találat (a tartó a legfrissebbeket adja). */
 export const KERESES_TALALAT_KORLAT = 50;
@@ -87,13 +87,26 @@ export function helyTalalatai(bejegyzesek, { kerdes, n = KERESES_TALALAT_KORLAT,
   return illok.slice(0, Math.min(n, KERESES_TALALAT_KORLAT)).map((x) => x.b);
 }
 
-/** A kérdés-válasz alakja (a kérdezőnél — a találatokat külön ellenőrzi). */
+/**
+ * A kérdés-válasz alakja (a kérdezőnél — a találatokat külön ellenőrzi). ⭐ D111 (K11): a `tippek` — gondolatonként
+ * legfeljebb `TIPP_VALASZ` tábla-aláíró (cím nélkül), legfeljebb a találatok számáig; a hibás kiesik.
+ */
 export function keresesValaszAlakja(u) {
+  const tippek = {};
+  const MINTA = /^[A-Za-z0-9_-]{43}$/;
+  if (u?.tippek && typeof u.tippek === 'object' && !Array.isArray(u.tippek)) {
+    for (const [g, lista] of Object.entries(u.tippek).slice(0, KERESES_TALALAT_KORLAT)) {
+      if (!MINTA.test(g) || !Array.isArray(lista)) continue;
+      const jo = [...new Set(lista.filter((a) => typeof a === 'string' && MINTA.test(a)))].slice(0, TIPP_VALASZ);
+      if (jo.length) tippek[g] = jo;
+    }
+  }
   return {
     talalatok: (Array.isArray(u?.talalatok) ? u.talalatok : []).slice(0, KERESES_TALALAT_KORLAT),
     kiserok: Array.isArray(u?.kiserok) ? u.kiserok.slice(0, 1024) : [],
     meret: Number.isInteger(u?.meret) && u.meret >= 0 ? u.meret : 0,
-    osztodott: Number.isInteger(u?.osztodott) && u.osztodott > 0 && u.osztodott <= 144 ? u.osztodott : null
+    osztodott: Number.isInteger(u?.osztodott) && u.osztodott > 0 && u.osztodott <= 144 ? u.osztodott : null,
+    tippek
   };
 }
 

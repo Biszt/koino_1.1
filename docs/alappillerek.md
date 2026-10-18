@@ -1220,3 +1220,13 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     újrakérdezés), a próbák. ⏸️ **Ami a ⑦-tel láthatóvá vált — K11:** a megtalált gondolat kártyája a születést és a
     tulajdonosok pontjait mutatja; a többi részéhez (szöveg, gyerekek) a TARTÓIT kellene elérni, és erre alapból nincs út (a
     szelet DHT-hirdetése a D91/3 szerint alapból ki van kapcsolva) — az átvizsgálás 16. szakasza, Csabánál.
+175. **2026-10-18 · a megtalált gondolat tartói (D111 — a K11 (A))** → **a tartó-tipp a találattal: a kereső tartó a
+    felajánlás kérelmének ELLENŐRZÖTT tábla-kulcsát a gondolat mellé jegyzi (≤ 4, 30 nap, külön fájl — a bejegyzés
+    azonosítója a tartalmáé), a régió tartói közt a `BEJEGYZES` az idejével viszi, a kézi út `{ tipp }` sorokkal; a válasz
+    gondolatonként ≤ 2 tippet ad (cím nélkül); a kérdező helyben jegyzi — NEM a raj-jegyzékbe —, és a gondolatra szóló függő
+    kérelem a tipp készülékének kopogtató témáján jelentkezik** · mert a szelet DHT-hirdetése (B) mindenkinek drága volna
+    (D91/3), a továbbadás (C) a kereső tartót terhelné; a raj-jegyzék ellenőrzött, címes tartókat tart — egy ellenőrizetlen
+    tipp onnan a `RESZVETEL`-lel tovább is terjedne · Csaba: „(A) Tartó-tipp” · `keresoTar.js` (`tippek`,
+    `tippFeljegyzese`), `kereses.js` (`keresesValaszAlakja`), `vonal.js`, `koino.js` (`tartoTippekFeljegyzese`,
+    `tartoTippjei`, a `fuggoKerelemFelvetele` kopogtatója), a próbák (⚠️ a bekötés-próba a kopogtató témán való
+    megjelenést méri, mert a régió-társság a „megjött”-et a tipp nélkül is hozta).

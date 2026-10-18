@@ -40,7 +40,7 @@ import { rendezettHalmaz } from '../esemeny/halmaz.js';
 import { esemenyMentese } from './esemenyTar.js';
 import { cimKulcsai, bejegyzesHelye, regiobaEsik, KERESHETO_TIPUSOK } from '../csere/keresoReteg.js';
 // ⭐ D107 L3 (④a): az aláírt megújítás és a lejárat — `keresoMegujitas.js`.
-import { megujitasEllenorzese, bejegyzesIdeje, lejartE } from './keresoMegujitas.js';
+import { megujitasEllenorzese, bejegyzesIdeje, lejartE, MEGUJITAS_ELETTARTAM } from './keresoMegujitas.js';
 import { DARAB_MAX_MELYSEG } from '../csere/cimjegyzek.js';
 
 // ===================================
@@ -58,6 +58,31 @@ export const BEJEGYZES_TULAJDONOS_MIN = 2;
 
 /** ⭐ ④b: a FÜGGŐ (még nem ellenőrzött tagságú) bejegyzések együtt legfeljebb a korlát ennyied részét foglalhatják. */
 export const FUGGO_HANYAD = 10;
+
+/**
+ * ⭐ D111 (K11): a TARTÓ-TIPP — melyik KÉSZÜLÉK (tábla-aláíró) ajánlotta fel egy gondolat bejegyzéseit (a felajánló a
+ * tulajdonos, tehát a gondolat szeletét vállalásból tartja). Gondolatonként legfeljebb ennyi (a legfrissebbek)…
+ */
+export const TIPP_KORLAT = 4;
+/** …legfeljebb ennyi gondolatnál (a legrégebben frissített esik ki)… */
+export const TIPP_GONDOLAT_KORLAT = 4096;
+/** …és a kérdés válasza találatonként ennyit ad. */
+export const TIPP_VALASZ = 2;
+const TIPP_FAJL = 'tippek.json';
+const TIPP_MINTA = /^[A-Za-z0-9_-]{43}$/;
+
+/** Egy tipp-lista alakja: `[{ a: tábla-aláíró, t: idő }]` (a szöveg magában a „most”-tal), a hibás kiesik, korlátos. */
+export function tippekAlakja(lista, most = Date.now()) {
+  const ki = [];
+  for (const x of Array.isArray(lista) ? lista : [lista]) {
+    const a = typeof x === 'string' ? x : x?.a;
+    if (typeof a !== 'string' || !TIPP_MINTA.test(a) || ki.some((y) => y.a === a)) continue;
+    const t = typeof x === 'object' && Number.isFinite(x?.t) ? Math.min(x.t, most) : most;
+    ki.push({ a, t });
+    if (ki.length >= TIPP_KORLAT) break;
+  }
+  return ki;
+}
 
 /** A bejegyzés szerzői, akiknek tagnak kell lenniük (K3): a születés szerzője és a csomag pont-eseményeinek szerzői. */
 export function bejegyzesSzerzoi(b) {
@@ -229,6 +254,35 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
     return mind;
   };
   await mkdir(hely, { recursive: true });
+
+  // ⭐ D111 (K11): a TARTÓ-TIPPEK — gondolat → [{ a, t }] (a legfrissebb elöl). Puha, helyi tipp: senki nem kezeskedik érte (a
+  // hamis tipp elérhetetlenség, nem hamisítás — D6). Külön fájl (a bejegyzés azonosítója a tartalmáé, a tipp nem része); a
+  // más folyamat írását a fájl módosítási ideje mutatja. A tipp 30 nap után elévül (mint a bejegyzés — L3).
+  const tippFajl = join(hely, TIPP_FAJL);
+  let tippMap = new Map();
+  let tippIdo;
+  const tippekBetoltese = async () => {
+    let m;
+    try { m = (await stat(tippFajl)).mtimeMs; } catch { m = null; }
+    if (m === tippIdo) return;
+    tippIdo = m;
+    tippMap = new Map();
+    if (m === null) return;
+    try {
+      const nyers = JSON.parse(await readFile(tippFajl, 'utf8'));
+      for (const [g, lista] of Object.entries(nyers && typeof nyers === 'object' ? nyers : {})) {
+        const jo = azonositoAlaku(g) ? tippekAlakja(lista, most()) : [];
+        if (jo.length) tippMap.set(g, jo);
+      }
+    } catch { tippMap = new Map(); }
+  };
+  const tippekIrasa = async () => {
+    while (tippMap.size > TIPP_GONDOLAT_KORLAT) tippMap.delete(tippMap.keys().next().value);
+    const ideiglenes = tippFajl + '.' + process.pid + '.uj';
+    await writeFile(ideiglenes, JSON.stringify(Object.fromEntries(tippMap)), 'utf8');
+    await rename(ideiglenes, tippFajl);
+    try { tippIdo = (await stat(tippFajl)).mtimeMs; } catch { tippIdo = null; }
+  };
 
   const rekordok = new Map();       // azonosító → { b, hely, frissesseg, bajt, erkezett, f } (f: függő — ④b)
   const helyek = new Map();         // 'g|k|s' → azonosító (fiókonként a frissebb)
@@ -405,12 +459,12 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
       const t = most();
       return [...rekordok.values()].filter((r) => !r.f && regiobaEsik(r.hely, melyseg, darab) && !lejartE(r.b, t)).map((r) => r.b);
     },
-    /** ⭐ ④c (K7): hány INDEXELT (nem függő, nem lejárt) bejegyzés áll egy helyen — a fiók (vagy darabja) mérete nálam. */
     /** ⭐ A kereső-réteg ⑤: egy hely INDEXELT (nem függő, nem lejárt) bejegyzései — a kérdés válaszához. */
     helyBejegyzesei(hely) {
       const t = most();
       return [...rekordok.values()].filter((r) => !r.f && r.hely === hely && !lejartE(r.b, t)).map((r) => r.b);
     },
+    /** ⭐ ④c (K7): hány INDEXELT (nem függő, nem lejárt) bejegyzés áll egy helyen — a fiók (vagy darabja) mérete nálam. */
     helyMerete(hely) {
       const t = most();
       let n = 0;
@@ -435,6 +489,40 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
       return db;
     },
 
+    /**
+     * ⭐ D111 (K11): egy gondolat TARTÓ-TIPPJEI — `[{ a, t }]`, a legfrissebb elöl, az elévültek (30 nap) nélkül.
+     * @param {string} g
+     */
+    async tippek(g) {
+      await tippekBetoltese();
+      const hatar = most() - MEGUJITAS_ELETTARTAM;
+      return (tippMap.get(g) ?? []).filter((x) => x.t > hatar).map((x) => ({ ...x }));
+    },
+    /**
+     * ⭐ D111 (K11): tippek feljegyzése egy gondolathoz — a felajánló készüléke (a kérelem ellenőrzött tábla-kulcsából), a
+     * régió társától kapott tipp (az idejével), vagy a kézi út. A régiek közül ugyanaz a készülék a frissebb idővel marad.
+     * @param {string} g
+     * @param {Array<string|{a: string, t?: number}>|string} lista
+     * @returns {Promise<boolean>} változott-e
+     */
+    async tippFeljegyzese(g, lista) {
+      if (!azonositoAlaku(g)) return false;
+      const ujak = tippekAlakja(lista, most());
+      if (!ujak.length) return false;
+      await tippekBetoltese();
+      const egyben = new Map();
+      for (const x of [...(tippMap.get(g) ?? []), ...ujak]) {
+        const regi = egyben.get(x.a);
+        if (!regi || regi.t < x.t) egyben.set(x.a, x);
+      }
+      const lista2 = [...egyben.values()].sort((x, y) => y.t - x.t).slice(0, TIPP_KORLAT);
+      if (JSON.stringify(lista2) === JSON.stringify(tippMap.get(g) ?? [])) return false;
+      tippMap.delete(g);
+      tippMap.set(g, lista2);
+      await tippekIrasa();
+      return true;
+    },
+
     /** A változás jele (a vonal párjainak gyorsítótára ebből tudja, hogy újra kell számolni). */
     valtozat() { return valtozasSzam; },
     darab() { return rekordok.size; },
@@ -451,6 +539,18 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
         if (lejartE(r.b, t) || !megtart(r.b, r.hely)) { kivesz(id); db++; }
       }
       if (db) await fajlUjrairasa();
+      // ⭐ D111: a tipp csak a nálam lévő gondolatokhoz kell (és az elévült kiesik).
+      await tippekBetoltese();
+      const gondolatok = new Set([...rekordok.values()].map((r) => r.b.g));
+      const hatar = t - MEGUJITAS_ELETTARTAM;
+      let tippValtozott = false;
+      for (const [g, lista] of [...tippMap.entries()]) {
+        const marad = gondolatok.has(g) ? lista.filter((x) => x.t > hatar) : [];
+        if (marad.length === lista.length) continue;
+        tippValtozott = true;
+        if (marad.length) tippMap.set(g, marad); else tippMap.delete(g);
+      }
+      if (tippValtozott) await tippekIrasa();
       return db;
     },
 
