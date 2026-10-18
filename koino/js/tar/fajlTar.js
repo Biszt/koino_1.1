@@ -1260,6 +1260,29 @@ export function csereAllapotTarolo(koino, hely = alapHely(), alak = (x) => x) {
 }
 
 /**
+ * ⭐ D110: a TANULT MÉLYSÉG helyi jegyzéke (`<koino>/melysegek.json`): a társak bemondott mélysége (a gyökér-darabé és a
+ * kereső-régióé) a tábla-aláírójuk alatt, időbélyeggel. Az alak és a korlát a `melysegTanulas.js`-é; helyi feljegyzés, nem
+ * esemény, nem terjed.
+ * @param {string} koino
+ * @param {string} [hely]
+ */
+export function melysegTarolo(koino, hely = alapHely()) {
+  const fajl = join(hely, koino, 'melysegek.json');
+  return {
+    fajl,
+    async olvas() {
+      try { return JSON.parse(await readFile(fajl, 'utf8')); } catch { return null; }
+    },
+    async ir(jegyzek) {
+      await mkdir(dirname(fajl), { recursive: true });
+      const ideiglenes = fajl + '.' + process.pid + '.uj';
+      await writeFile(ideiglenes, JSON.stringify(jegyzek), 'utf8');
+      await rename(ideiglenes, fajl);
+    }
+  };
+}
+
+/**
  * ⭐ D98/2–3: a LÁNC-ELLENŐRZÉS helyi tára (`<koino>/lancellenorzes.json`): szerzőnként a legutóbb ellenőrzött napló-gyökér
  * és az ellenőrzött események, és a társak bemondott szerzői kulcsa (a tábla-aláírójuk alatt). A korlátokat a hívó vágja
  * (`lancEllenorzes.js` `lancJegyzekVagasa`). Helyi feljegyzés, nem esemény, nem terjed.

@@ -1144,3 +1144,11 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     D92/1 kopogtatás-próba): előbb jöttek, és egy kérő, aki a régiónak is tartója, már ismertnek látszott, így a „kérő vár
     rám” jelzés elmaradt · Claude · `koino.js` (`sajatHirdetendoTemak`, `cimjegyzekKor`, `REGIO_TARS_KORLAT`, a raj,
     `rajKorCeljaim`), `parancssorProba.js`.
+169. **2026-10-18 · a tanult mélység (D110 — a K10 (A2))** → **a gyökér-darab és a kereső-régió mélysége legalább a friss
+    (≤ 1 nap) társak bemondott mélységének ALSÓ mediánja − 1 (legalább két különböző, hitelesített tábla-kulcsú társtól), csak
+    mélyebbre; a bemondás a NYITÁS jeléből (`gyd`, `kd` — a vonal visszaadja, a `koino.js` a tábla-aláíró alatt jegyzi,
+    `melysegek.json`); egy helyen (`melysegTanulas.js`)** — a K10 (A) „legnagyobb, és csak amíg a saját darab kevés” szabálya
+    HELYETT · mert a „kevés” feltétel egy hosszan offline készüléket beragasztott volna (a régi, sekély darabja „teli”), a
+    „legnagyobb” pedig két összebeszélt társnak engedett volna; a mélyre tolás ára csak a kisebb tartás, ezért az irány „csak
+    mélyebbre” · Csaba, Claude · `melysegTanulas.js`, `fajlTar.js` (`melysegTarolo`), `vonal.js` (`tarsMelysegei`), `koino.js`
+    (`tanultMelysegem`, `gyokerMelysegTanulva`, `keresoRegioim`), a fázis-2 terv D110-e.

@@ -379,7 +379,11 @@ körbe. Próba: két őrjárat egy hamis DHT-n, társ-felvétel nélkül — D a
 ⏭️ **A ③ kész. Következik a ④** (a felajánlás a kérelem gépén — `FELAJANLAS`, L4 — és az aláírt megújítás, L3); előtte a
 K10 döntése (az új készülék mélysége), mert a felajánló a mély témán keresi a tartókat.
 
-### ⏸️ K10. Honnan tudja egy ÚJ készülék a mélységet? — Csabáé
+### ✅ K10. Honnan tudja egy ÚJ készülék a mélységet? — D110 (Csaba, 2026-10-18): az (A2)
+
+> Csaba: *„rendben. elfogadom a javaslatodat, mehetünk tovább”* — és a pontosításra (az (A) „csak amíg kevés” feltétele egy
+> hosszan offline készüléket beragasztana): *„(A2) Medián”*. A friss társak mélységének alsó mediánja − 1, legalább két
+> társtól, csak mélyebbre, egy nap után elévül; a „kevés” feltétel elmarad. Megépült — a fázis-2 terv D110-e, elágazás 169.
 
 **A rés.** A mélységet (a gyökér-darabét és a kereső-régióét is) a készülék a SAJÁT darabjából becsüli: a darabjában ismert
 elemek × 2^mélység (`melysegBecslese`). Egy új (vagy „alap”, kevés vállalású) készülék darabja üres → a becslése 0 → a
@@ -398,3 +402,38 @@ csinál egymilliárd e-embernél?* — a darab-elosztás nem indul el.
 - **(B) A DHT-ből keres:** a készülék a saját helyének témáit több mélységen megkérdezi, és a legmélyebbet veszi, ahol van
   hirdető. Független a társaktól, de mélységenként egy DHT-keresés (~3 KB), és a hirdetők számából nem következik a mélység.
 - **(C) Marad a mai** (a saját darabból): a rés áll, és a nagy koinóban a darab-elosztás egy új készüléken nem indul el.
+
+## 13. A ④ építésének alakja (2026-10-18) — a megújítás, a tagság, a felajánlás
+
+> A D110 után, építés előtt, a kódból. Az alak a megvalósításé — az L3, L4, K3, K5, K7 döntésein belül; új D-szintű kérdés
+> nem merült fel.
+
+**④a — az aláírt megújítás (L3) és a lejárat (a ⑥ magja).** A megújítás egy kis aláírt állítás, nem esemény (a láncot nem
+növeli): `m = { szerzo, ido, alairas }` — az aláírás a gondolatra és a csomag eseményeinek azonosítóira szól az idővel
+(`{ koino, g, e, ido }`), a fiók és az osztódás NÉLKÜL: egy aláírás a gondolat minden fiók-bejegyzését megújítja (egy cím
+≤ 32 kulcs — nem 32 aláírás). Az aláíró a csomag egyik TULAJDONOSA (egy pont-esemény szerzője), a személyes kulcsával. A
+tartó elveti: a nem tulajdonos aláírását, a hamisat, és a saját órájához képest egy napnál jövőbelit. ⭐ A lejárat BÁRKINÉL
+ugyanaz: a megújítás ideje (vagy, ha nincs, a csomag legfrissebb eseménye) + 30 nap — a lejárt bejegyzés a kereső-tárból a
+tömörítéskor kiesik, és a cserében nem jön vissza (a társnál is lejárt). A megújított bejegyzés új elem (az azonosítója a
+megújítást is fedi), fiókonként a frissebb marad. **A soros (K5):** a csomag tulajdonosai közül az újít, akit a gondolat és a
+30 napos időszak lenyomata a sorban elsőnek tesz — ha az időszak 25. napjáig nem látszik megújítás, a következő is. A
+megújító a MAI csomagot építi újra (a mai címmel, a mai nyertes pont-eseményekkel — K9).
+
+**④b — a tagság (K3).** A bejegyzés csak akkor kerül az INDEXBE (a kérdés csak ilyet ad vissza), ha a születés szerzője és a
+két tulajdonos ellenőrzött tag. Amíg nem tudjuk, a bejegyzés FÜGGŐ: a kereső-tárban egy korlátos részben (a korlát ~tizede),
+és ha a hely kell, előbb a függő megy — így a nem tag (ingyen kulcsú) szerzők nem szoríthatják ki a valódiakat. A tagság a
+tagsági kísérők gépével jön (D95/2): az új bejegyzések szerzői a függő tagság-kérdések közé kerülnek, a csere tagsági köre
+elhozza a csomagjukat; a tartó szerzőnként jegyzi az ellenőrzött tagokat (75. mérés: 4096). A régió cseréjében a társ a
+függőt is megkapja (ő maga ellenőriz).
+
+**④c — a felajánlás (L4).** A kérelem gépén, új fajtával: `KERELEM { fajta: 'felajanlas', bejegyzesek }` → a tartó a
+kereső-tár kapuján veszi fel (ugyanaz, mint a cserében: a hely a régióiba esik, a csomag a kapun, a megújítás ellenőrizve), és
+megmondja: hányat vett fel, és mely fiók OSZTÓDOTT (K7 — a fiók a nálam lévő része meghaladja a 256-ot → `{ k, s }`); a
+felajánló az osztódott fiókot a darab régiójába viszi újra (`bejegyzesHelye(k, g, s)`), és az osztódást megjegyzi. A
+felajánló a tulajdonos: a gondolatai bejegyzéseit (a kézi út építője) a fiók helye szerint régiókba osztja (a mélység a
+`keresoRegioim` szerint — D110-zel), a régió témáján a DHT-n keres tartót, és függő kérelmet vesz fel (a kopogtatás: a
+régió témájának párja). Egy régióban EGY tartó elég — a régió többi tartójához a ③b viszi. Mikor: új gondolatnál (ha már két
+tag-tulajdonos van), a cím változásakor, és a soros megújításkor; a felajánlások jegyzéke helyi (`felajanlasok.json`). A
+kiszolgálási keret (D109) a felajánlást is méri (kérés).
+
+**A sorrend:** ④a (a megújítás és a lejárat) → ④b (a tagság) → ④c (a felajánlás). Utána ⑤ a kérdés, ⑦ a modál.

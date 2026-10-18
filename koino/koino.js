@@ -110,6 +110,8 @@ import {
   emlekezetTarolo,
   // ⭐ D98/2–3: a lánc-ellenőrzés helyi tára.
   lancEllenorzesTarolo,
+  // ⭐ D110: a társaktól tanult mélység helyi jegyzéke.
+  melysegTarolo,
   // ⭐ D101 ⑥: a postafiók és az értesítési beállítások helyi tára
   ertesitesTarolo,
   // ⭐ Az alsó sáv (2026-10-15): a csere állapota a lapnak
@@ -160,6 +162,7 @@ import {
 } from './js/csere/fuggoKerelmek.js';
 import { atmenetiTarNyitasa, ketTarBemenete, ketTarNezet } from './js/tar/atmenetiTar.js';
 import { keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesekEpitese, KERESO_KORLAT } from './js/tar/keresoTar.js';
+import { tarsMelysegeFeljegyzese, tanultMelyseg, ervenyesMelyseg, melysegJegyzekAlakja } from './js/csere/melysegTanulas.js';
 import {
   keszulekKeresoHelye, keresoMelysegBecslese, keresoRegioKulcsai, keresoRegioBol, keresoRegioTemaja, sajatKeresoRegioi
 } from './js/csere/keresoReteg.js';
@@ -426,9 +429,32 @@ const atmenetiCel = {
  */
 async function keresoRegioim() {
   const alairo = (await tablaKulcsBiztositasa()).alairoNyilvanos;
-  const { melyseg, becsles } = keresoMelysegBecslese(keresoTar.helyek(), keszulekKeresoHelye(alairo));
+  const cel = Number(process.env.KOINO_KERESO_REGIO_CEL) > 0 ? Number(process.env.KOINO_KERESO_REGIO_CEL) : undefined;
+  const { melyseg: sajat, becsles } = keresoMelysegBecslese(keresoTar.helyek(), keszulekKeresoHelye(alairo), cel);
+  // ⭐⭐ D110: a társaktól tanult mélység — csak mélyebbre (a friss társak mediánja − 1).
+  const tanult = await tanultMelysegem('k');
+  const melyseg = ervenyesMelyseg(sajat, tanult);
   const kulcsok = keresoRegioKulcsai(alairo, melyseg);
-  return { melyseg, becsles, regiok: kulcsok.map((kulcs) => ({ kulcs, ...keresoRegioBol(kulcs) })) };
+  return { melyseg, sajat, tanult, becsles, regiok: kulcsok.map((kulcs) => ({ kulcs, ...keresoRegioBol(kulcs) })) };
+}
+
+// ===================================
+// ⭐⭐ D110: A TANULT MÉLYSÉG — a társak bemondásából (`melysegTanulas.js`)
+// ===================================
+
+/** A tanult mélység egy fajtára (`g` a gyökér-darab, `k` a kereső-régió) — vagy null. */
+async function tanultMelysegem(fajta) {
+  return tanultMelyseg(melysegJegyzekAlakja(await melysegTarolo(KOINO).olvas()), { fajta });
+}
+
+/** Egy társ bemondott mélységeinek feljegyzése (a csere után — a tábla-aláírója alatt). */
+async function tarsMelysegeiFeljegyzese(alairo, m) {
+  if (typeof alairo !== 'string' || !m) return;
+  const t = melysegTarolo(KOINO);
+  let j = melysegJegyzekAlakja(await t.olvas());
+  if (Number.isInteger(m.g)) j = tarsMelysegeFeljegyzese(j, { fajta: 'g', tars: alairo, melyseg: m.g });
+  if (Number.isInteger(m.k)) j = tarsMelysegeFeljegyzese(j, { fajta: 'k', tars: alairo, melyseg: m.k });
+  try { await t.ir(j); } catch { /* nem végzetes */ }
 }
 
 /**
@@ -1093,12 +1119,23 @@ let gyokerBecslesEmlek = null;
 async function gyokerMelysegem() {
   const alairo = (await tablaKulcsBiztositasa()).alairoNyilvanos;
   const valtozat = tar.szeletValtozata('') + '|' + alairo;
-  if (gyokerBecslesEmlek?.valtozat === valtozat) return gyokerBecslesEmlek.b;
+  if (gyokerBecslesEmlek?.valtozat === valtozat) return gyokerMelysegTanulva(gyokerBecslesEmlek.b);
   const szuletesek = (await tar.bejelentesek('')).filter((e) => e.koino === KOINO).map((e) => gyokerLenyomata(e.azonosito));
   const { melyseg, becsles } = gyokerMelysegBecslese(szuletesek, gyokerLenyomata('keszulek|' + alairo), GYOKER_CEL);
   const b = { melyseg, becsles, alairo, darabok: new Set(gyokerDarabKulcsai(alairo, melyseg)) };
   gyokerBecslesEmlek = { valtozat, b };
-  return b;
+  return gyokerMelysegTanulva(b);
+}
+
+/**
+ * ⭐⭐ D110: a gyökér-darab mélysége a társaktól tanulva is — csak mélyebbre. A saját becslés gyorsítótárban (a gyökér
+ * változata szerint), a tanult a jegyzékből (egy kis fájl).
+ */
+async function gyokerMelysegTanulva(b) {
+  const tanult = await tanultMelysegem('g');
+  const melyseg = ervenyesMelyseg(b.melyseg, tanult);
+  if (melyseg === b.melyseg) return { ...b, sajat: b.melyseg, tanult };
+  return { ...b, melyseg, sajat: b.melyseg, tanult, darabok: new Set(gyokerDarabKulcsai(b.alairo, melyseg)) };
 }
 
 /**
@@ -1134,7 +1171,7 @@ async function sajatHirdetendoTemak() {
   const kr = await keresoRegioim();
   const [kd] = sajatKeresoRegioi(tablaKulcs.alairoNyilvanos, kr.melyseg, 1);
   temak.push({ fajta: 'kereso', kulcs: kr.melyseg + ':' + kd.toString(16), tema: keresoRegioTemaja(KOINO, kr.melyseg, kd) });
-  return { temak, legfelso: gy.becsles, melyseg: gy.melyseg, szeletHirdetes };
+  return { temak, legfelso: gy.becsles, melyseg: gy.melyseg, sajatMelyseg: gy.sajat, tanultMelyseg: gy.tanult, szeletHirdetes };
 }
 
 /** Hirdetés most — a megadott (külső) porttal. */
@@ -3141,6 +3178,10 @@ function resMunka(allapot, halo, tars) {
       kesobbFeljegyzese(tars, hiba.kesobb);
       return { uj: 0, kuldott: 0, korok: 1, bajt: 0, alairo: null, kesobb: hiba.kesobb ?? null };
     }
+    // ⭐⭐ D110: a társ bemondott mélységei (a NYITÁS jeleiből — hitelesített tábla-kulccsal) a tanult mélységhez.
+    if (csere.tarsMelysegei && ervenyesTablaKulcs(csere.kapottTablaKulcs)) {
+      await tarsMelysegeiFeljegyzese(csere.kapottTablaKulcs.alairo, csere.tarsMelysegei);
+    }
     // ⭐ D109 (KK6): MI mondtunk „később”-t (a kiszolgálási keretünk nem enged) — nem találkozás: se kötés, se raj, se tanulás.
     if (csere.kesobbMondtam) {
       return { uj: 0, kuldott: 0, korok: 1, bajt: (csere.bajtKuldott ?? 0) + (csere.bajtKapott ?? 0), alairo: null,
@@ -3917,7 +3958,9 @@ try {
       const kb = (x) => (x / 1024).toFixed(1).replace('.', ',') + ' KB';
       kiir(SZIN.vastag + 'KERESŐ-TÁR: ' + keresoTar.darab() + ' bejegyzés, ' + kb(keresoTar.meret()) + SZIN.vege + SZIN.halvany
         + ' (a korlát ' + Math.round(KERESO_KORLAT / 1024 / 1024) + ' MB; puha állapot — a koinó állapotába nem számít)' + SZIN.vege);
-      kiir('  a régióim (' + r.melyseg + '. mélység; a becslés ~' + r.becsles + ' bejegyzés a koinóban):');
+      kiir('  a régióim (' + r.melyseg + '. mélység' + (r.tanult && r.melyseg > r.sajat
+        ? ' — a társaimtól tanulva (' + r.tanult.tarsak + ' friss társ mediánja ' + r.tanult.median + '; a saját becslésem '
+          + r.sajat + ')' : '') + '; a saját becslés ~' + r.becsles + ' bejegyzés a koinóban):');
       for (const g of r.regiok) {
         kiir('    ' + g.melyseg + ':' + g.darab.toString(16) + ' — ' + keresoTar.regioHalmaza(g.melyseg, g.darab).length + ' bejegyzés');
       }
@@ -5047,10 +5090,12 @@ try {
       }
       if (mit) throw new Error('Ismeretlen: cimjegyzek ' + mit
         + '\n  node koino/koino.js cimjegyzek [hirdet [port] | keres <azonosító> | gyoker [darab] | hirdetes <n>]');
-      const { temak, legfelso, melyseg: gyM, szeletHirdetes } = await sajatHirdetendoTemak();
+      const { temak, legfelso, melyseg: gyM, sajatMelyseg: gyS, tanultMelyseg: gyT, szeletHirdetes } = await sajatHirdetendoTemak();
       kiir(SZIN.vastag + 'CÍMJEGYZÉK (D91)' + SZIN.vege + SZIN.halvany + '  — a fő út a fa és a raj; ez a DHT-rész'
         + SZIN.vege);
-      kiir('  legfelső szintű gondolatok (becslés a darabomból — D95/4): ' + legfelso + ' → a gyökér-darab mélysége: ' + gyM);
+      kiir('  legfelső szintű gondolatok (becslés a darabomból — D95/4): ' + legfelso + ' → a gyökér-darab mélysége: ' + gyM
+        + (gyT && gyM > gyS ? ' (a társaimtól tanulva — D110: ' + gyT.tarsak + ' friss társ mediánja ' + gyT.median
+          + '; a saját becslésem ' + gyS + ')' : ''));
       kiir('  szeletenkénti hirdetés (helyi beállítás): ' + szeletHirdetes);
       kiir('  amit ' + Math.round(HIRDETES_KOZ / 60000) + ' percenként hirdetek (az őrjárat):');
       for (const t of temak) {

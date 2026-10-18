@@ -198,6 +198,17 @@ proba('⭐ ha csak az egyik fél tart régiót, a csere nem csúszik el, és ré
   return !r.a.ujBejegyzesek && !r.b.ujBejegyzesek && r.a.egyeztetoUzenetek === 0;
 });
 
+// ⭐⭐ D110: a vonal a társ bemondott mélységeit (a NYITÁS `gyd` és `kd` jelének első tagja) visszaadja — a hívó ebből
+// tanul. Rontás: a vonal nem adja vissza → bukik.
+proba('⭐⭐ D110: a csere visszaadja a társ bemondott mélységeit (a gyökér-darabé és a kereső-régióé) — a hívó ebből tanul', async () => {
+  const [tA, tB] = [await ujTablaKulcs(), await ujTablaKulcs()];
+  const kA = await keresoTarral([]);
+  const kB = await keresoTarral([]);
+  const r = await csere(await esemenyTarNyitasa(KOINO, await ujMappa()), await esemenyTarNyitasa(KOINO, await ujMappa()),
+    tA, tB, { kA, kB, mA: 3, mB: 5, a: { gyokerMelyseg: 2 }, b: { gyokerMelyseg: 4 } });
+  return r.a.tarsMelysegei?.k === 5 && r.a.tarsMelysegei?.g === 4 && r.b.tarsMelysegei?.k === 3 && r.b.tarsMelysegei?.g === 2;
+});
+
 export default async function () {
   const eredmeny = await futtatas();
   for (const m of mappak) await rm(m, { recursive: true, force: true });

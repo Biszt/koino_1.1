@@ -5789,6 +5789,29 @@ a kérő a „később”-t mondót addig kihagyja, és a beállítás (`kiszolg
 Két hibát a próba mért meg: a kapu `szabad`-ja nem tagság, és a „később”-t kapott kérelem nem csere. Elágazás 163–165.
 ⏸️ Maradt: a továbbadott válasz visszavitele nem könyvelődik; a lap a „később”-t a felderítés paneljével mondja ki.
 
+### D110. A TANULT MÉLYSÉG — a K10 (A2) (2026-10-18, Csaba: „rendben. elfogadom a javaslatodat, mehetünk tovább” → a pontosításra: „(A2) Medián”)
+
+**A rés:** a mélységet (a gyökér-darabét és a kereső-régióét is) minden készülék a SAJÁT darabjából becsüli; egy új (vagy
+hosszan offline) készülék darabja üres vagy elavult, a becslése sekély, és egy nagy koinó mély tartóival nincs közös kulcsa —
+a cserében soha nem egyeztetnek, a felajánló a mély témán nem találja meg. A gyökér-darabnál ugyanez a rés állt (D95/4).
+
+**A döntés (A2):** a készülék a társai bemondott mélységét (a NYITÁS `gyd` / `kd` jelének első tagja — a vonalon semmi nem
+drágul) a tábla-aláírójuk alatt feljegyzi, és a mélysége legalább a FRISS (egy napnál újabb) társak mélységének ALSÓ
+mediánja − 1, ha legalább két különböző társ mondta; CSAK MÉLYEBBRE (a saját becslés nagyobbja marad); egy nap után elévül.
+Ugyanaz a szabály a gyökér-darabra és a kereső-régióra, egy helyen (`melysegTanulas.js`).
+
+⛔ **Az elvetett feltétel** (a K10 (A) eredeti szövege: „csak amíg a saját darabja kevés”): a pontosításkor kiderült, hogy egy
+régen jól szinkronban lévő, aztán hónapokig offline készüléket beragaszt — a darabja a régi, sekély mélység szerint „teli”,
+tehát nem tanulna, és a megnőtt koinó mély tartóival soha többé nem egyeztetne. A hazug társ ellen a MEDIÁN véd (a friss
+társaim többsége kell, nem kettő); a mélyre tolás ára amúgy is csak az, hogy kevesebbet tartok (a többi tartó fedez).
+
+✅ **MEGÉPÜLT (2026-10-18):** `js/csere/melysegTanulas.js` (a jegyzék alakja, a feljegyzés, a tanult mélység, az érvényes
+mélység), `fajlTar.js` `melysegTarolo` (`<koino>/melysegek.json`), a vonal visszaadja a társ bemondott mélységeit
+(`tarsMelysegei` — csak hitelesített tábla-kulccsal), a `koino.js` a csere után feljegyzi, és a `gyokerMelysegem` és a
+`keresoRegioim` alkalmazza; a `kereso` és a `cimjegyzek` kiírja, ha tanult. Próbák: a modul (8, mind rontással — köztük az
+eredeti „legnagyobb” és a „kevés” feltétel visszahozása), a vonal (a bemondott mélységek), és a bekötés (az üres készülék két
+mélyebb társsal cserél, és a régióját utána a mediánjuk − 1 mélységen tartja). Elágazás 169.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

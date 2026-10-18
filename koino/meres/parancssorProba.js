@@ -5322,6 +5322,61 @@ proba('⭐⭐ ③c: a régió tartói a DHT-n találják meg egymást — társ-
   }
 });
 
+// ===================================
+// ⭐⭐ D110: A TANULT MÉLYSÉG — az üres készülék a társaitól tanulja a kereső-régió mélységét
+// ===================================
+//
+// A régió célméretét a próba lekicsinyíti (`KOINO_KERESO_REGIO_CEL` = 1), így néhány bejegyzés is mély régiót ad. C1 és C2
+// kereső-tárában ugyanazok a bejegyzések (a kézi úton) — a saját becslésük szerint mélyen vannak; D üres (a saját becslése
+// 0). D cserél C1-gyel és C2-vel: a NYITÁS `kd` jeléből feljegyzi a mélységüket, és a régióját ezután a két friss társ
+// ALSÓ mediánja − 1 mélységen tartja — a `kereso` kiírja (ugyanaz a függvény adja a cserének és a hirdetésnek). Rontás: a
+// `koino.js` a bemondott mélységet nem jegyzi fel → D 0-n marad → bukik.
+proba('⭐⭐ D110: az üres készülék a társaitól tanulja a kereső-régió mélységét — a két friss társ mediánja − 1', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const c1 = await ujKeszulek();
+  const c2 = await ujKeszulek();
+  const d = await ujKeszulek();
+  const cel = { KOINO_KERESO_REGIO_CEL: '1' };
+  const port = 7686;
+  try {
+    await fut(a, 'koino', 'Mélység', 'próba', 'nyilt');
+    const g1 = azonosito(await fut(a, 'gondolat', 'Közös park a faluban'), 'Létrejött:');
+    const g2 = azonosito(await fut(a, 'gondolat', 'Iskolaudvar fásítása tavasszal'), 'Létrejött:');
+    await taggaTesziKeszulek(a, b);
+    await fut(a, 'kivisz', join(a, 'mind.jsonl'), 'mind');
+    await fut(b, 'behoz', join(a, 'mind.jsonl'));
+    await fut(b, 'pont', g1, '10');
+    await fut(b, 'pont', g2, '10');
+    await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
+    await fut(a, 'behoz', join(b, 'sajat.jsonl'));
+    const f = join(a, 'felajanlas.jsonl');
+    await fut(a, 'kereso', 'felajanl', f);
+    await fut(c1, 'kereso', 'behoz', f);
+    await fut(c2, 'kereso', 'behoz', f);
+    const melyseg = (x) => Number((tiszta(x).match(/a régióim \((\d+)\. mélység/) ?? [])[1]);
+    const m1 = melyseg(await fut(c1, 'kereso', cel));
+    const m2 = melyseg(await fut(c2, 'kereso', cel));
+    const vart = Math.max(0, Math.min(m1, m2) - 1);
+    if (!(vart >= 1)) throw new Error('a véletlen nem adott elég mély társat: ' + m1 + ', ' + m2);
+    const elotte = melyseg(await fut(d, 'kereso', cel));
+    await csereKor(c1, d, port, cel);
+    await csereKor(c2, d, port, cel);
+    const utana = tiszta(await fut(d, 'kereso', cel));
+    const ki = {
+      elotte: elotte === 0,
+      tanult: melyseg(utana) === vart && /a társaimtól tanulva \(2 friss társ/.test(utana)
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  D110 tanult mélység — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
+        + JSON.stringify({ m1, m2, vart, elotte, utana: utana.slice(0, 300) }) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const m of [a, b, c1, c2, d]) await rm(m, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

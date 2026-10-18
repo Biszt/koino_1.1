@@ -348,12 +348,14 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let kezbesitve = [];              // ⭐ D95/3: a saját eseményeim, amiket egy tartó átvett vagy már tudott (a hívóé)
   let lancEredmeny = null;          // ⭐ D98/2–3: a lánc-kör eredménye (a hívóé)
   let ujBejegyzesek = 0, kuldottBejegyzesek = 0;   // ⭐ D107 L2: a kereső-régió bejegyzései (felvett · elküldött)
+  let tarsMelysegei = null;         // ⭐ D110: a társ bemondott mélységei a NYITÁS jeleiből (a hívó tanul belőlük)
 
   const eredmeny = () => ({
     korok: 1, uj, kuldott, reszletesAllasok: 0, masKoino, kivulrolIgyLatszom, kapottUdpCimek,
     kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek, ujAzonositok, kapottRaj,
     tarsKorlatozva, tarsAzonossaga, osszegzesEredmeny, tagsagEredmeny, kezbesitve, lancEredmeny,
-    ...(ujBejegyzesek || kuldottBejegyzesek ? { ujBejegyzesek, kuldottBejegyzesek } : {})
+    ...(ujBejegyzesek || kuldottBejegyzesek ? { ujBejegyzesek, kuldottBejegyzesek } : {}),
+    ...(tarsMelysegei ? { tarsMelysegei } : {})
   });
 
   // ===== ⭐⭐ D93/3: A ZÁRT KOINÓ KAPUJA — a hívóé (`beallitas.zartKapu`), a vonal semmit nem tud a tagságról =====
@@ -743,6 +745,15 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     }
   }
   // ⭐⭐ D107 L2: ugyanígy a kereső-régiók — a legsekélyebb közös régió, ha eltér (mindkét fél ugyanazt számolja).
+  // ⭐⭐ D110: a társ bemondott mélységei (a gyökér-darab és a kereső-régió jelének első tagja) — csak hitelesített
+  // tábla-kulccsal (a hívó a tábla-aláírója alatt jegyzi; egy névtelen bemondás nem tanít). A vonal csak továbbadja.
+  if (typeof kapottTablaKulcs?.alairo === 'string') {
+    const gm = gyokerJelOlvasasa(oveNyitas.gyd)?.melyseg;
+    const km = gyokerJelOlvasasa(oveNyitas.kd)?.melyseg;
+    if (Number.isInteger(gm) || Number.isInteger(km)) {
+      tarsMelysegei = { g: Number.isInteger(gm) ? gm : null, k: Number.isInteger(km) ? km : null };
+    }
+  }
   const elteroRegiok = [];
   {
     const g = gyokerJelOlvasasa(oveNyitas.kd);
