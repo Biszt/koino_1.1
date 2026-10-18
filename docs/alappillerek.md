@@ -1230,3 +1230,12 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     `tippFeljegyzese`), `kereses.js` (`keresesValaszAlakja`), `vonal.js`, `koino.js` (`tartoTippekFeljegyzese`,
     `tartoTippjei`, a `fuggoKerelemFelvetele` kopogtatója), a próbák (⚠️ a bekötés-próba a kopogtató témán való
     megjelenést méri, mert a régió-társság a „megjött”-et a tipp nélkül is hozta).
+176. **2026-10-18 · a fájl-tár kerete (D112 ① — F3 (A), a felderítés alatt)** → **a nem vállalt törzs (szöveg-darab, fájl)
+    a fájl-tárban ÁTMENETI: ami nem védett (a vállalt entitások törzse — a pont, a saját létrehozás, a vállalás —, a
+    profil-darabok, a 24 óránál frissebb), az együtt ≤ 50 MB, fölötte a legrégebben érintett megy; a „mindent” készülék
+    mindent tart; a takarítás ritkítva az őrjáratban és a törzs-kérelem után, a `tomorit` kényszeríti; a felület a
+    megmutatott fájlt megérinti** · mert a fájl-tár eddig korlátlan volt (a lap törzs-kérelmei is örökre hagyták a nem
+    vállalt törzset), és a törzses felderítés erre épül (az alappillér elve); a védettséget a takarításkor számoljuk, nem
+    az íráskor jelöljük — a törzs több úton jön (a csere randevúja, a kérelem, a kézi út) · Csaba: F2 + F3 (A) ·
+    `fajlTar.js` (`allapot`, `erintes`, `torol`, `fajlTakaritasTerve`), `fajlIgeny.js` (`vallaltE`), `koino.js`
+    (`fajlTarTakaritasa`), a próbák.

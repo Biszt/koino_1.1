@@ -115,7 +115,9 @@ import {
   // ⭐ D101 ⑥: a postafiók és az értesítési beállítások helyi tára
   ertesitesTarolo,
   // ⭐ Az alsó sáv (2026-10-15): a csere állapota a lapnak
-  csereAllapotTarolo
+  csereAllapotTarolo,
+  // ⭐ D112 ① (F3): a fájl-tár kerete — a nem vállalt törzs átmeneti
+  FAJL_ATMENETI_KORLAT, FAJL_FRISS, fajlTakaritasTerve
 } from './js/tar/fajlTar.js';
 // ⭐ Az alsó sáv (2026-10-15): mikor cserélt utoljára a készülék, és mikor jön a következő kör (helyi feljegyzés)
 import { csereAllapotAlakja, korKezdete, korVege, csereFeljegyzese, csereAllapotKepe } from './js/csere/csereAllapot.js';
@@ -1077,6 +1079,43 @@ function szovegKepeiKeresre(blob) {
     }
     return kellenek;
   };
+}
+
+// ===================================
+// ⭐⭐ D112 ① (F3): A FÁJL-TÁR KERETE — a nem vállalt törzs (szöveg-darab, fájl) átmeneti
+// ===================================
+//
+// A törzs a fájl-tárba kerül (a csere randevúja, a törzs-kérelem — a lap, később a felderítés), és eddig ott is maradt,
+// akkor is, ha az entitást nem vállalom. Most: ami nem VÉDETT — a vállalt entitások törzse (a pont, a saját létrehozás, a
+// vállalás kifutása — `fajlIgenyek` `vallaltLenyomatok`), a profil-darabok, és a friss (`FAJL_FRISS`) —, az együtt
+// legfeljebb `FAJL_ATMENETI_KORLAT`; fölötte a legrégebben érintett megy (a felület a megmutatott fájlt megérinti). A
+// „mindent” készülék (D83/2) mindent tart. A tartalom-címzés miatt bármikor újra elhozható. Ritkítva fut
+// (`FAJL_TAKARITAS_KOZ`): az őrjárat körében és a törzs-kérelem után; a `tomorit` kényszeríti. A próbák:
+// `KOINO_FAJL_ATMENETI` (bájt), `KOINO_FAJL_FRISS` (ms).
+const FAJL_TAKARITAS_KOZ = 10 * 60 * 1000;
+let utolsoFajlTakaritas = 0;
+const kornyezetSzam = (nev, alap) => (process.env[nev] !== undefined && Number(process.env[nev]) >= 0 ? Number(process.env[nev]) : alap);
+
+/** @returns {Promise<null|{torolt: number, felszabadult: number, atmenetiMeret: number, mindent?: boolean, terv?: Object}>} */
+async function fajlTarTakaritasa({ kenyszer = false, proba = false } = {}) {
+  if (!kenyszer && Date.now() - utolsoFajlTakaritas < FAJL_TAKARITAS_KOZ) return null;
+  utolsoFajlTakaritas = Date.now();
+  if ((await kiszolgalasBeallitas()).mindent) return { torolt: 0, felszabadult: 0, atmenetiMeret: 0, mindent: true };
+  const blob = fajlBlobTarolo(KOINO);
+  const { allapot, javaslatok, esemenyek } = await kepetKeszit();
+  const vallalas = await sajatVallalasa(allapot);
+  const { vallaltLenyomatok } = await fajlIgenyek(allapot, (l) => blob.van(l), {
+    szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob),
+    vallaltE: (e) => !!e && ((e.hozzajarulok?.get(szerzo)?.pont ?? 0) > 0 || e.szerzo === szerzo || vallalas.szeletek.has(e.azonosito))
+  });
+  const vedett = new Set(vallaltLenyomatok);
+  for (const e of esemenyek ?? []) if (e?.tipus === 'Profil' && typeof e.adat?.lenyomat === 'string') vedett.add(e.adat.lenyomat);
+  const terv = fajlTakaritasTerve(await blob.allapot(), { vedett,
+    korlat: kornyezetSzam('KOINO_FAJL_ATMENETI', FAJL_ATMENETI_KORLAT), friss: kornyezetSzam('KOINO_FAJL_FRISS', FAJL_FRISS) });
+  if (proba) return { torolt: 0, felszabadult: terv.felszabadul, atmenetiMeret: terv.atmenetiMeret, terv };
+  let torolt = 0;
+  for (const l of terv.torlendo) if (await blob.torol(l)) torolt++;
+  return { torolt, felszabadult: terv.felszabadul, atmenetiMeret: terv.atmenetiMeret };
 }
 
 async function fajlResz() {
@@ -2586,6 +2625,8 @@ async function fuggoEredmenyFeldolgozasa(fk, r, tars) {
   } else if (fk.fajta === 'torzs' && r.kiszolgalta) {
     const megjott = r.fajlok.filter((x) => x.kesz).length;
     siker = megjott > 0; osszegzes = megjott + ' fájl';
+    // ⭐ D112 ①: a nem vállalt törzs a fájl-tár keretén belül (ritkítva; a most érkezett friss, nem megy).
+    try { await fajlTarTakaritasa(); } catch { /* a takarítás hibája nem dönti el a kérelmet */ }
   } else if (fk.fajta === 'kereses' && r.kiszolgalta && r.kereses) {
     // ⭐ A kereső-réteg ⑦b: ugyanaz az ellenőrzés, mint a közvetlen kérdésnél (a kísérők a kapun, a tagság, az átmeneti tár);
     // az osztódott fiók mintáját újabb függő kérelemként (a mélyebb hely régiójának párján) kérem.
@@ -4384,6 +4425,16 @@ try {
       } else {
         kiir(SZIN.halvany + 'Nincs tömörítés: ' + r.ok + SZIN.vege);
       }
+      // ⭐ D112 ① (F3): és a fájl-tár kerete — a nem vállalt törzs (a legrégebben érintett) a keret fölött kiesik.
+      const ft = await fajlTarTakaritasa({ kenyszer: true, proba: ervek[0] === 'proba' });
+      if (ft?.mindent) kiir(SZIN.halvany + 'Fájl-tár: a „mindent” készülék mindent tart.' + SZIN.vege);
+      else if (ft) {
+        kiir('Fájl-tár: a nem vállalt törzs ' + adatMennyiseg({ bajtKuldott: ft.atmenetiMeret }) + ' (a keret '
+          + adatMennyiseg({ bajtKuldott: kornyezetSzam('KOINO_FAJL_ATMENETI', FAJL_ATMENETI_KORLAT) }) + ')'
+          + (ervek[0] === 'proba' ? ' — ' + ft.terv.torlendo.length + ' fájl esne ki'
+            : ft.torolt ? ' — ' + SZIN.jo + ft.torolt + ' fájl kiesett' + SZIN.vege + ' (' + adatMennyiseg({ bajtKuldott: ft.felszabadult })
+              + ', újra elhozható)' : ''));
+      }
       break;
     }
 
@@ -5802,6 +5853,8 @@ try {
             + (r.fajlok.some((f) => f.megvolt) ? ' (ebből ' + r.fajlok.filter((f) => f.megvolt).length + ' már megvolt)' : '')
             + SZIN.vege);
         }
+        // ⭐ D112 ①: a nem vállalt törzs a fájl-tár keretén belül (a most érkezett friss, nem megy).
+        try { await fajlTarTakaritasa(); } catch { /* nem dönti el a kérelmet */ }
         break;
       }
 
@@ -6546,6 +6599,12 @@ try {
             const kt = await keresoTarTomoritese();
             if (kt) kiir(SZIN.halvany + '  🗜 ' + ora() + ' kereső-tár: ' + kt + ' bejegyzés kiesett (lejárt, vagy a régióimon kívül)' + SZIN.vege);
           }
+          // ⭐ D112 ① (F3): a fájl-tár kerete (ritkítva — `FAJL_TAKARITAS_KOZ`).
+          try {
+            const ft = await fajlTarTakaritasa();
+            if (ft?.torolt) kiir(SZIN.halvany + '  🗜 ' + ora() + ' fájl-tár: ' + ft.torolt + ' nem vállalt fájl kiesett ('
+              + adatMennyiseg({ bajtKuldott: ft.felszabadult }) + ' — újra elhozható)' + SZIN.vege);
+          } catch (hiba) { console.warn('a fájl-tár takarítása most nem ment', { ok: hiba.message }); }
           // ⭐ D103: a postafiók és a készülék saját értesítése (zárt lapnál is — a felülettel zár alatt váltják egymást).
           try {
             const e = await orjaratErtesitesei();
@@ -7979,6 +8038,8 @@ try {
           if (!bajtok) {
             return { allapot: 404, adat: { hiba: 'ezt a fájlt nem ismeri ez a készülék' } };
           }
+          // ⭐ D112 ① (F3): a megmutatott fájl megérintése — a fájl-tár keretében a legrégebben érintett megy előbb.
+          await fajlBlobTarolo(KOINO).erintes(decodeURIComponent(lenyomat));
 
           // ⛔ A típus a BÁJTOKBÓL, nem a kérésből — lásd `fajlTipus`.
           return { nyers: Buffer.from(bajtok), tipus: fajlTipus(bajtok) };

@@ -5832,6 +5832,52 @@ proba('⭐⭐ D111: a megtalált gondolat tartója — a tartó-tipp a találatt
   }
 });
 
+// ===================================
+// ⭐⭐ D112 ① (F3): A FÁJL-TÁR KERETE — a nem vállalt törzs kiesik, a vállalt (a saját) marad
+// ===================================
+//
+// A gondolatot ír szöveggel (a szöveg külön darab a fájl-tárban — D72); B (tag) a kézi úton behozza (a darab is jön), és a
+// saját gondolatát is szöveggel írja. B nem vállalja A gondolatát (nincs rajta pontja, nem ő hozta létre). `tomorit` a
+// kerettel (`KOINO_FAJL_ATMENETI=0`, `KOINO_FAJL_FRISS=0`): A darabja B fájl-tárából kiesik, B sajátja marad; a második
+// futás már nem töröl. Rontás: a védettség nincs nézve → B sajátja is kiesik → bukik; a `tomorit` nem takarít → A darabja
+// marad → bukik.
+proba('⭐⭐ D112 ①: a fájl-tár kerete — a nem vállalt törzs a keret fölött kiesik, a vállalt (a saját) marad', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const blobok = async (hely) => (await readdir(join(hely, 'sajat', 'fajlok')).catch(() => [])).filter((n) => /^[A-Za-z0-9_-]{43}$/.test(n));
+  try {
+    await fut(a, 'koino', 'Fájl', 'próba', 'nyilt');
+    await fut(a, 'gondolat', 'Az A gondolata', 'Ez az A szövege, ami külön darabként él.');
+    const aDarab = await blobok(a);
+    await taggaTesziKeszulek(a, b);
+    await fut(a, 'kivisz', join(a, 'mind.jsonl'), 'mind');
+    await fut(b, 'behoz', join(a, 'mind.jsonl'));
+    const bElott = await blobok(b);
+    await fut(b, 'gondolat', 'A B gondolata', 'Ez a B saját szövege.');
+    const bSajat = (await blobok(b)).filter((n) => !bElott.includes(n));
+    const keret = { KOINO_FAJL_ATMENETI: '0', KOINO_FAJL_FRISS: '0', KOINO_KISZOLGALAS: 'alap' };
+    const proba1 = tiszta(await fut(b, 'tomorit', 'proba', keret));
+    const kozben = await blobok(b);
+    const tom = tiszta(await fut(b, 'tomorit', keret));
+    const utana = await blobok(b);
+    const masodik = tiszta(await fut(b, 'tomorit', keret));
+    const ki = {
+      elotte: aDarab.length === 1 && bElott.includes(aDarab[0]) && bSajat.length === 1,
+      proba: /1 fájl esne ki/.test(proba1) && kozben.includes(aDarab[0]),
+      kiesett: !utana.includes(aDarab[0]) && /1 fájl kiesett/.test(tom),
+      sajatMarad: utana.includes(bSajat[0]),
+      masodikNemTorol: !/fájl kiesett/.test(masodik)
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  D112 ① fájl-tár — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
+        + JSON.stringify({ aDarab, bElott, bSajat, utana, proba1: proba1.slice(-200), tom: tom.slice(-200), masodik: masodik.slice(-200) }) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const m of [a, b]) await rm(m, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

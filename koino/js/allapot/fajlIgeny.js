@@ -107,7 +107,9 @@ export async function fajlIgenyek(allapot, megvanE, beallitas = {}) {
       hivatkozasok.set(lenyomat, { entitasok: [azonosito], vallaltam });
     }
   };
-  const vallaltamE = (entitas) => (en ? (entitas?.hozzajarulok.get(en)?.pont ?? 0) > 0 : false);
+  // ⭐ D112 ① (a fájl-tár kerete): a hívó tágabb „vállalt”-at is adhat (a saját létrehozás, a vállalás kifutása).
+  const vallaltamE = typeof beallitas.vallaltE === 'function' ? beallitas.vallaltE
+    : (entitas) => (en ? (entitas?.hozzajarulok.get(en)?.pont ?? 0) > 0 : false);
 
   // ⭐ D72 (2026-09-26): a SZÖVEG-DARAB képei csak a darab megérkezése UTÁN ismerhetők meg
   // (ahogy a képek maguk is egy bulival később jönnek, mint az események). Ha a hívó ad

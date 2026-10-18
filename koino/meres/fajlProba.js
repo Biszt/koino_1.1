@@ -14,7 +14,7 @@ import { mkdtemp, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { fajlBlobTarolo, fajlTipus, FAJL_KORLAT } from '../js/tar/fajlTar.js';
+import { fajlBlobTarolo, fajlTipus, FAJL_KORLAT, fajlTakaritasTerve } from '../js/tar/fajlTar.js';
 import { bajtLenyomat } from '../js/esemeny/kanonikusAlak.js';
 
 import { probaGyujtemeny } from './probaFuttato.js';
@@ -200,6 +200,43 @@ proba('⛔⛔ HTML-t nem szolgálunk ki `text/html`-ként — ez XSS lenne a saj
 
 proba('⛔ Az ÜRES fájl sem lesz semmiféle képtípus', async () => {
   return fajlTipus(new Uint8Array(0)) === 'application/octet-stream';
+});
+
+// ===================================
+// ⭐⭐ D112 ① (F3): A FÁJL-TÁR KERETE — a nem vállalt törzs átmeneti
+// ===================================
+
+// Rontás: a védettség nincs nézve → a védett is kiesik → bukik; a friss nincs nézve → bukik; a sorrend fordított (a
+// legújabb előbb) → bukik.
+proba('⭐ D112 ①: a fájl-tár takarításának terve — a védett és a friss marad, a nem vállalt a keret fölött a legrégebben érintettől', () => {
+  const M = 1000, most = 10_000_000;
+  const f = (n, ido, meret = M) => ({ lenyomat: n.repeat(43), meret, ido });
+  const fajlok = [f('d', 4000), f('a', 1000), f('c', 3000), f('b', 2000), f('v', 500), f('u', most - 10)];
+  const vedett = new Set(['v'.repeat(43)]);
+  const t = fajlTakaritasTerve(fajlok, { vedett, korlat: 2 * M + 1, most, friss: 100 });
+  // a nem védett: a, b, c, d, u (5000 B); a keret 2001 → három megy: a, b, c (a legrégebben érintettek); u friss, v védett
+  return t.torlendo.join() === ['a', 'b', 'c'].map((x) => x.repeat(43)).join() && t.atmenetiMeret === 2 * M
+    && t.felszabadul === 3 * M && fajlTakaritasTerve(fajlok, { vedett, korlat: 10 * M, most, friss: 100 }).torlendo.length === 0
+    // ⭐ nulla kerettel minden nem védett mehetne — a friss (u) és a védett (v) akkor is marad
+    && fajlTakaritasTerve(fajlok, { vedett, korlat: 0, most, friss: 100 }).torlendo.join()
+      === ['a', 'b', 'c', 'd'].map((x) => x.repeat(43)).join();
+});
+
+// A fájl-tár új műveletei. Rontás: az érintés nem frissíti az időt → a sorrendben nem lép előre → bukik.
+proba('⭐ D112 ①: a fájl-tár listája méretekkel és időkkel, az érintés előre viszi, a törlés kiveszi', async () => {
+  const { tar } = await ujTar();
+  const x = await tar.ir(new TextEncoder().encode('első'));
+  await new Promise((r) => setTimeout(r, 40));
+  const y = await tar.ir(new TextEncoder().encode('második'));
+  const elotte = await tar.allapot();
+  const ix = elotte.find((z) => z.lenyomat === x.lenyomat);
+  const iy = elotte.find((z) => z.lenyomat === y.lenyomat);
+  await new Promise((r) => setTimeout(r, 40));
+  await tar.erintes(x.lenyomat);
+  const utana = (await tar.allapot()).find((z) => z.lenyomat === x.lenyomat);
+  const torolve = await tar.torol(y.lenyomat);
+  return elotte.length === 2 && ix.meret === x.meret && ix.ido <= iy.ido && utana.ido > iy.ido && torolve
+    && !(await tar.van(y.lenyomat)) && (await tar.van(x.lenyomat));
 });
 
 export default futtatas;

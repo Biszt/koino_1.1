@@ -28,7 +28,7 @@
 // ⚠️ A `rename` 2026-09-15-ig a részleges fájl lezárásához kellett; azóta a szeleteket
 // ÖSSZEFŰZVE írjuk ki (D68 / 6.). ⭐ A D73 óta újra kell: a mutató pillanatképe átnevezéssel
 // kerül a helyére, egyszerre egészben.
-import { mkdir, readFile, appendFile, writeFile, readdir, access, rm, stat, open, rename } from 'node:fs/promises';
+import { mkdir, readFile, appendFile, writeFile, readdir, access, rm, stat, open, rename, utimes } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 
 import { szelet, bejelentesHelyei } from '../esemeny/esemeny.js';
@@ -1676,8 +1676,68 @@ export function fajlBlobTarolo(koino, hely = alapHely()) {
         if (hiba.code === 'ENOENT') return [];
         throw hiba;
       }
+    },
+
+    // ===================================
+    // ⭐⭐ D112 ① (F3): A FÁJL-TÁR KERETE — a nem vállalt törzs átmeneti
+    // ===================================
+
+    /**
+     * A kész fájlok a méretükkel és az utolsó érintésük idejével (a módosítási idő — a felület a megnézettet megérinti).
+     * A részleges fájl nincs benne (az külön mappában áll). @returns {Promise<Array<{lenyomat, meret, ido}>>}
+     */
+    async allapot() {
+      const ki = [];
+      for (const n of await this.lista()) {
+        try {
+          const s = await stat(join(mappa, n));
+          ki.push({ lenyomat: n, meret: s.size, ido: s.mtimeMs });
+        } catch { /* közben eltűnt */ }
+      }
+      return ki;
+    },
+
+    /** ⭐ Megérintés (a felület megmutatta): a kiszorításnál a legrégebben érintett megy előbb. */
+    async erintes(lenyomat) {
+      const most = new Date();
+      try { await utimes(utja(lenyomat), most, most); } catch { /* nincs meg — nincs mit érinteni */ }
+    },
+
+    /** Egy kész fájl törlése (csak a takarítás hívja — a tartalom-címzés miatt bármikor újra elhozható). */
+    async torol(lenyomat) {
+      try { await rm(utja(lenyomat), { force: true }); return true; } catch { return false; }
     }
   };
+}
+
+/** ⭐ D112 ① (F3): a NEM VÁLLALT törzs (szöveg-darab, fájl) kerete a fájl-tárban — fölötte a legrégebben érintett megy. */
+export const FAJL_ATMENETI_KORLAT = 50 * 1024 * 1024;
+/** A friss fájl (ennél újabb) nem megy — egy feltöltés a gondolat létrehozása előtt, egy éppen érkező törzs, a kifutás. */
+export const FAJL_FRISS = 24 * 3600 * 1000;
+
+/**
+ * ⭐ D112 ① (F3): A FÁJL-TÁR TAKARÍTÁSÁNAK TERVE (tiszta számítás): a védett (a vállalt entitások törzse, a profil-darabok,
+ * a rögzítettek) és a friss fájl marad; a többi (a NEM VÁLLALT törzs) együtt legfeljebb `korlat` bájt — fölötte a
+ * legrégebben érintett megy előbb. ⭐ Ugyanaz az elv, mint az átmeneti tárnál (D75): amit csak láttam, az eldobható, és a
+ * tartalom-címzés miatt bármikor újra elhozható.
+ * @param {Array<{lenyomat: string, meret: number, ido: number}>} fajlok
+ * @param {{vedett: Set<string>, korlat?: number, most?: number, friss?: number}} b
+ * @returns {{torlendo: string[], atmenetiMeret: number, felszabadul: number}}
+ */
+export function fajlTakaritasTerve(fajlok, { vedett, korlat = FAJL_ATMENETI_KORLAT, most = Date.now(), friss = FAJL_FRISS }) {
+  const atmeneti = (fajlok ?? []).filter((f) => f && !vedett.has(f.lenyomat));
+  let atmenetiMeret = atmeneti.reduce((s, f) => s + (f.meret ?? 0), 0);
+  const torlendo = [];
+  let felszabadul = 0;
+  const jeloltek = atmeneti.filter((f) => !(most - f.ido < friss))
+    .sort((a, b) => a.ido - b.ido || (a.lenyomat < b.lenyomat ? -1 : 1));
+  for (const f of jeloltek) {
+    if (atmenetiMeret <= korlat) break;
+    torlendo.push(f.lenyomat);
+    atmenetiMeret -= f.meret;
+    felszabadul += f.meret;
+  }
+  return { torlendo, atmenetiMeret, felszabadul };
 }
 
 /**

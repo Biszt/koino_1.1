@@ -5771,7 +5771,7 @@ vele túl terhelni a készülékeket.”*
 
 🔍 **A FELDERÍTÉS ÁTVIZSGÁLVA (2026-10-18)** — [`felderites_atvizsgalas.md`](felderites_atvizsgalas.md), a **77. mérés**
 (`bejaroMeres.js --felderites`) és a 74. mérés javítása (a G és a H kettőzött csomópontokat számolt; a D102 döntései
-állnak, az abszolút idők rosszabbak). ⛔ Lelet: a fájl-tár nem korlátos. ⏸️ Csabánál F1–F6.
+állnak, az abszolút idők rosszabbak). ⛔ Lelet: a fájl-tár nem korlátos. ✅ **D112** (Csaba: F1–F6 mind (A)) — lent.
 
 ### D109. A KISZOLGÁLÁSI KERET — KK1–KK6 (2026-10-17, Csaba: „minden javaslatodat elfogadom, mehetünk tovább.”)
 
@@ -5863,6 +5863,34 @@ magánszféra szempontjából erősebb, de terheli és lassabb), (D) semmi.
 tábla-kulcsát kapja; a `BEJEGYZES` a tippeket viszi, a fogadó jegyzi), `koino.js` (a kiszolgáló jegyzi és adja; a kérdező
 `tartotippek.json` — 256 gondolat, 7 nap; a `fuggoKerelemFelvetele` a tippet `keszulek` kopogtatóként veszi fel; a lap a
 tippes kérelmet „van kitől”-nek látja; a kézi út a tippeket is viszi; a `kereso keres` kiírja). Elágazás 175.
+
+### D112. A FELDERÍTÉS — F1–F6 (2026-10-18, Csaba: mind (A))
+
+**Amiből jött:** a felderítés átvizsgálása ([`felderites_atvizsgalas.md`](felderites_atvizsgalas.md)) és a 77. mérés (egy
+friss készüléken a mai menettel K = 200 fejléce 2,5–4,3 óra, a törzse +1–1,5 óra; „mindent” tartóval percek), és a lelet:
+a fájl-tár nem korlátos.
+
+1. **F1 (A) — a szélesség: összesen K, legjobb-először** (és legfeljebb d szint, ha adott) — a Struktúra sorrendje; mindig
+   összefüggő részfa, és a tartó saját bejárása adja.
+2. **F2 + F3 (A) — előbb a fájl-tár kerete, aztán a rögzítés az átmeneti tárban:** a nem vállalt törzs a fájl-tárban
+   átmeneti (kiszorítható, saját keret); a felderítés szeletei, törzse, össz-pontjai és fejléc-tudása RÖGZÍTVE az átmeneti
+   tárban (a böngészés nem söpri ki; a rögzítettekre külön keret; a nézetek változatlanul a két tárból olvasnak).
+3. **F4 + F6 (A) — az alapértékek:** K = 200 (≤ 2000), d nincs (≤ 64), csak fejléc (a törzs bekapcsolható), 20 MB (≤ 500),
+   körönként 4 kérés (≤ 16), egyszerre ≤ 8 felderítés, összesen ≤ 1 GB, 30 nap után eldobható; a lap interaktív kérései
+   mindig előbb mennek; a kiszolgálónál nincs „háttér” jel (a keret véd).
+4. **F5 (A) — a felület:** a kártya menüjéből indul (a koinós többlet egy pontot fűz a prototípus menüjéhez — körülírva), a
+   felderítések listája (állás, újrafelderítés, törlés) a fő menüben, a rögzített kártyán egy jel („pillanatkép, 3 napja”);
+   a parancssorban `felderites`.
+
+**Az építési sor:** ① a fájl-tár kerete → ② a rögzítés → ③ a jegyzék és az ütemező az őrjáratban (+ a parancs) → ④ a
+törzs-fázis → ⑤ a felület.
+
+✅ **① MEGÉPÜLT (2026-10-18) — a fájl-tár kerete:** `fajlTar.js` (`allapot`, `erintes`, `torol`; a tiszta terv:
+`fajlTakaritasTerve` — a védett és a friss marad, a nem vállalt együtt ≤ `FAJL_ATMENETI_KORLAT` = 50 MB, fölötte a
+legrégebben érintett megy; `FAJL_FRISS` = 24 óra), `fajlIgeny.js` (a hívó tágabb „vállalt”-at adhat: `vallaltE`),
+`koino.js` (`fajlTarTakaritasa`: a védett a vállalt entitások törzse — a pont, a saját létrehozás, a vállalás —, és a
+profil-darabok; a „mindent” készülék mindent tart; ritkítva az őrjáratban és a törzs-kérelem után, a `tomorit [proba]`
+kényszeríti; a felület a megmutatott fájlt megérinti; a próbák: `KOINO_FAJL_ATMENETI`, `KOINO_FAJL_FRISS`). Elágazás 176.
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 

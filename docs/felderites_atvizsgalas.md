@@ -113,9 +113,18 @@ rögzítésnek ezekre is ki kell terjednie (különben a pillanatkép kártyái 
 interaktív kérései (a pakli, a Struktúra) mindig előbb mennek — ezt javaslom; a kiszolgálónál nincs külön „háttér” jel (amit
 a kiszolgáló nem ellenőrizhet, az illemtan — D108/2; a keret véd).
 
+✅ **D112 (2026-10-18, Csaba: F1–F6 mind (A))** — a döntés a fázis-2 tervben.
+
 ## 6. A javasolt építési sor
 
 ① a fájl-tár kerete (F3 — alappillér, a lapot is érinti) → ② a rögzítés az átmeneti tárban (a szeletek, a törzs, az
 össz-pontok és a fejléc-tudás — F2) → ③ a felderítés jegyzéke és ütemezője az őrjáratban (a Struktúra bejárója a háttérben,
 a beállítások határaival — F1, F4, F6) + a parancs → ④ a törzs-fázis → ⑤ a felület (F5). Mindegyik rontás-próbával, a
 bekötés parancssor-próbával (egy végig futó őrjárattal).
+
+✅ **① KÉSZ (2026-10-18) — a fájl-tár kerete:** a nem vállalt törzs (ami nem a vállalt entitások törzse, nem profil-darab
+és nem friss) együtt legfeljebb 50 MB; fölötte a legrégebben érintett megy (a felület a megmutatottat megérinti); a
+„mindent” készülék mindent tart; az őrjárat és a törzs-kérelem ritkítva takarít, a `tomorit [proba]` kényszeríti. Próbák: a
+terv és a fájl-tár új műveletei (`fajlProba.js` +2 — négy rontással; egy próba-gyengeség megerősítve: a friss-védelem
+rontása elsőre nem bukott, mert a friss fájl a sorrendben amúgy is utolsó volt — a nulla keretes eset fogja meg), és a
+bekötés (`tomorit` a kerettel: a másik gondolatának darabja kiesik, a saját marad — két rontással). Elágazás 176.
