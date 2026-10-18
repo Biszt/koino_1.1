@@ -22,7 +22,7 @@ export const KOPOGTATO_KORLAT = 12;
 export const FUGGO_ELEVULES = 2 * 60 * 60 * 1000;
 
 const KULCS_MINTA = /^[A-Za-z0-9_-]{43}$/;
-const FAJTAK = new Set(['fejlecek', 'torzs', 'szelet', 'felajanlas']);
+const FAJTAK = new Set(['fejlecek', 'torzs', 'szelet', 'felajanlas', 'kereses']);
 
 /** Üres nyilvántartás. */
 export function ujNyilvantartas() {
@@ -42,6 +42,17 @@ function kopogtatoAlakja(k) {
   return { fajta: k.fajta, kulcs: k.kulcs };
 }
 
+/**
+ * ⭐ A kereső-réteg ⑦: a kérdés helye és szövege (`ker`: a fiók, az osztódás, a darab, a kérdés — ugyanazok a határok, mint a
+ * kérelem alakjában, `kerelem.js`), vagy null. Egy régióban több kérdés is függhet: a kérdés is a kérelem része.
+ */
+function kerAlakja(k) {
+  return k && typeof k === 'object' && typeof k.k === 'string' && /^[ep]:[\p{L}\p{M}\p{N}]{1,64}$/u.test(k.k)
+    && Number.isInteger(k.s) && k.s >= 0 && k.s <= 144 && typeof k.darab === 'string' && /^[0-9a-f]{1,40}$/.test(k.darab)
+    && typeof k.kerdes === 'string' && k.kerdes.trim() && k.kerdes.length <= 200
+    ? { k: k.k, s: k.s, darab: k.darab, kerdes: k.kerdes } : null;
+}
+
 /** ⭐ D102: a folytatás alakja (`utan`: az utolsó össz-pont és azonosító), vagy null. */
 function utanAlakja(u) {
   return u && typeof u === 'object' && Number.isSafeInteger(u.p) && u.p >= 0 && typeof u.az === 'string' && KULCS_MINTA.test(u.az)
@@ -54,15 +65,19 @@ function kerelemAlakja(x) {
   const kopogtatok = (Array.isArray(x.kopogtatok) ? x.kopogtatok : []).map(kopogtatoAlakja).filter(Boolean)
     .slice(0, KOPOGTATO_KORLAT);
   const utan = utanAlakja(x.utan);
+  const ker = x.fajta === 'kereses' ? kerAlakja(x.ker) : null;
+  if (x.fajta === 'kereses' && !ker) return null;
   // ⭐ D102: `m` (mélyen — a válaszoló maga jár be) és a folytatás a régi `d` helyett.
   return { az: x.az, fajta: x.fajta, kulcs: x.kulcs, n: Number.isInteger(x.n) ? x.n : 20, m: x.m === true,
-    ...(utan ? { utan } : {}),
+    ...(utan ? { utan } : {}), ...(ker ? { ker } : {}),
     ido: Number.isFinite(x.ido) ? x.ido : 0, probalt: Number.isInteger(x.probalt) ? x.probalt : 0, celok, kopogtatok };
 }
 
-/** Ugyanaz a kérelem-e (fajta + kulcs + a folytatás helye) — egy folytatás KÜLÖN kérelem. */
-function ugyanaz(x, fajta, kulcs, utan) {
-  return x.fajta === fajta && x.kulcs === kulcs && (x.utan?.az ?? null) === (utan?.az ?? null) && (x.utan?.p ?? null) === (utan?.p ?? null);
+/** Ugyanaz a kérelem-e (fajta + kulcs + a folytatás helye + a kérdés) — egy folytatás, egy másik kérdés KÜLÖN kérelem. */
+const kerKulcs = (k) => (k ? k.k + '|' + k.s + '|' + k.darab + '|' + k.kerdes : null);
+function ugyanaz(x, fajta, kulcs, utan, ker = null) {
+  return x.fajta === fajta && x.kulcs === kulcs && (x.utan?.az ?? null) === (utan?.az ?? null) && (x.utan?.p ?? null) === (utan?.p ?? null)
+    && kerKulcs(x.ker) === kerKulcs(ker);
 }
 
 /** Egy (lemezről olvasott) nyilvántartás alakja — a hibás bejegyzés kiesik, a lista korlátos. */
@@ -79,10 +94,11 @@ export function nyilvantartasAlakja(x) {
  * bejegyzés). A korlát fölött a legrégebbi függő kiesik — kimondva a kész naplóban (`kiszorult`).
  * @returns {{nyilvantartas: Object, az: string, uj: boolean}}
  */
-export function kerelemFelvetele(ny, { fajta, kulcs, n = 20, m = false, utan = null, celok = [], kopogtatok = [] }, most, azonosito) {
+export function kerelemFelvetele(ny, { fajta, kulcs, n = 20, m = false, utan = null, ker = null, celok = [], kopogtatok = [] }, most, azonosito) {
   const alap = nyilvantartasAlakja(ny);
   const utanJo = utanAlakja(utan);
-  const meglevo = alap.fuggo.find((x) => ugyanaz(x, fajta, kulcs, utanJo));
+  const kerJo = kerAlakja(ker);
+  const meglevo = alap.fuggo.find((x) => ugyanaz(x, fajta, kulcs, utanJo, kerJo));
   if (meglevo) {
     const celKulcs = (c) => c.hoszt + ':' + c.port;
     const lattuk = new Set(meglevo.celok.map(celKulcs));
@@ -94,8 +110,8 @@ export function kerelemFelvetele(ny, { fajta, kulcs, n = 20, m = false, utan = n
     meglevo.kopogtatok = meglevo.kopogtatok.slice(0, KOPOGTATO_KORLAT);
     return { nyilvantartas: alap, az: meglevo.az, uj: false };
   }
-  const uj = kerelemAlakja({ az: azonosito, fajta, kulcs, n, m, ...(utanJo ? { utan: utanJo } : {}), ido: most, probalt: 0,
-    celok, kopogtatok });
+  const uj = kerelemAlakja({ az: azonosito, fajta, kulcs, n, m, ...(utanJo ? { utan: utanJo } : {}), ...(kerJo ? { ker: kerJo } : {}),
+    ido: most, probalt: 0, celok, kopogtatok });
   if (!uj) throw new Error('hibás kérelem: ' + fajta + ' ' + kulcs);
   alap.fuggo.push(uj);
   while (alap.fuggo.length > FUGGO_KORLAT) {
@@ -165,7 +181,7 @@ export function kerelemLezarasa(ny, az, eredmeny, most) {
   if (!x) return alap;
   alap.fuggo = alap.fuggo.filter((f) => f.az !== az);
   // ⭐ D102: a folytatás helye is (a „nemrég kész” szűrő ebből tudja, hogy a folytatás MÁS kérelem).
-  alap.kesz.push({ az, fajta: x.fajta, kulcs: x.kulcs, ...(x.utan ? { utan: x.utan } : {}), ido: most,
+  alap.kesz.push({ az, fajta: x.fajta, kulcs: x.kulcs, ...(x.utan ? { utan: x.utan } : {}), ...(x.ker ? { ker: x.ker } : {}), ido: most,
     eredmeny: String(eredmeny).slice(0, 200) });
   alap.kesz = alap.kesz.slice(-KESZ_KORLAT);
   return alap;

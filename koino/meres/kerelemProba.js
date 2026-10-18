@@ -484,6 +484,30 @@ proba('a függő kérelem felvétele — ugyanaz (fajta + kulcs) nem lesz kétsz
     && f[0].kopogtatok.length === 2 && fuggoCelok(r.nyilvantartas).length === 2 && fuggoKopogtatok(r.nyilvantartas).length === 2;
 });
 
+// ⭐ A kereső-réteg ⑦b: a kérdés függő kérelemként — egy régióban több kérdés is függhet, a kérdés is a kérelem része.
+// Rontás: az azonosság a kérdést nem nézi → a két kérdés összeolvad → bukik; a kérdés alakja nincs ellenőrizve → a hibás
+// is felvehető → bukik.
+proba('⭐ ⑦b: a KÉRDÉS függő kérelemként — a kérdés a kérelem része (két kérdés egy régióban külön), a hibás kérdés nem vehető fel', () => {
+  const regio = keresoRegioKulcsa(2, 1);
+  const ker = (kerdes, k = 'p:park') => ({ k, s: 0, darab: '0', kerdes });
+  let r = kerelemFelvetele(ujNyilvantartas(), { fajta: 'kereses', kulcs: regio, ker: ker('park'),
+    celok: [{ hoszt: '10.0.0.1', port: 7373 }], kopogtatok: [{ fajta: 'kereso', kulcs: '2:1' }] }, 1000, 'k1');
+  r = kerelemFelvetele(r.nyilvantartas, { fajta: 'kereses', kulcs: regio, ker: ker('park iskola'), celok: [] }, 1001, 'k2');
+  const ketto = r.nyilvantartas.fuggo.length === 2;
+  r = kerelemFelvetele(r.nyilvantartas, { fajta: 'kereses', kulcs: regio, ker: ker('park'),
+    celok: [{ hoszt: '10.0.0.2', port: 7373 }] }, 1002, 'k3');
+  const osszeolvadt = !r.uj && r.az === 'k1' && r.nyilvantartas.fuggo.length === 2
+    && r.nyilvantartas.fuggo.find((x) => x.az === 'k1').celok.length === 2;
+  // a lemezről olvasva is megvan a kérdés, és a lezárás a kész naplóba viszi
+  const lemezrol = nyilvantartasAlakja(JSON.parse(JSON.stringify(r.nyilvantartas)));
+  const lezarva = kerelemLezarasa(lemezrol, 'k1', 'megjött: 2 találat', 2000);
+  const hibas = [ker(''), ker('park', 'park'), { k: 'p:park', s: 0, darab: 'xyz', kerdes: 'park' }, null].every((k) => {
+    try { kerelemFelvetele(ujNyilvantartas(), { fajta: 'kereses', kulcs: regio, ker: k }, 1, 'h'); return false; } catch { return true; }
+  });
+  return ketto && osszeolvadt && lemezrol.fuggo.find((x) => x.az === 'k2')?.ker?.kerdes === 'park iskola'
+    && lezarva.kesz.at(-1).ker?.kerdes === 'park' && lezarva.fuggo.length === 1 && hibas;
+});
+
 proba('a korlát fölött a legrégebbi függő kiesik — és a kész naplóban kimondja (`kiszorult`)', () => {
   let ny = ujNyilvantartas();
   for (let i = 0; i <= FUGGO_KORLAT; i++) {

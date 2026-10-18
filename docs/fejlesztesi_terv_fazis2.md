@@ -5733,6 +5733,12 @@ teljes, az osztódottból minta), a kérelem `kereses` fajtája, a tartó a telj
 maga ellenőriz (a tagságot is), a találat az átmeneti tárba; közvetlenül vagy a DHT-n talált tartónál. A ⑥ (a halványulás) a
 ④a-val megépült. Elágazás 173. ⏭️ A ⑦ (a Keresés ablaka a hálózati találatokkal).
 
+✅ **⑦ MEGÉPÜLT (2026-10-18) — a kereső-réteg kész:** a Keresés ablaka a hálózati találatokkal — a felület a háttérben
+kérdez, a találatok az átmeneti tárból a helyi listában jelennek meg (a `betoltes` jelre a lap újrakérdez); a NAT mögötti
+tartóhoz a kérdés függő kérelemként megy (az őrjárat viszi, a lap figyel). Elágazás 174. ⏸️ **K11 (Csabánál):** a megtalált
+gondolat tartói — a kártya többi része (szöveg, gyerekek) alapbeállítással nem érhető el
+([`kereso_reteg_atvizsgalas.md`](kereso_reteg_atvizsgalas.md) 16. szakasz).
+
 ### D108. A FELDERÍTÉS ÉS A KISZOLGÁLÁSI KERET (2026-10-17, Csaba: „1. igen 2. igen 3. (A)”)
 
 **A kérdés (Csaba ötlete, 2026-10-17):** *„jelenleg az értesítések beállítása kezeli a kérelmeket, igaz? Arra gondoltam,

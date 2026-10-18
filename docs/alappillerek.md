@@ -1205,3 +1205,18 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     kérdés függő kérelemként (az őrjárat viszi) a ⑦-tel jön (a felület várja meg a választ) · Claude · `kereses.js`,
     `kerelem.js` (`kereses` fajta), `vonal.js` (`KERESESVALASZ`), `keresoTar.js` (`helyBejegyzesei`), `koino.js` (a
     kiszolgáló, `kereses`, `keresesValaszFeldolgozasa`, a `kereso keres` parancs), a próbák.
+174. **2026-10-18 · a Keresés ablaka a hálózati találatokkal (a kereső-réteg ⑦)** → **a felület a helyi találatokkal
+    azonnal felel, és a HÁTTÉRBEN elindítja a hálózati kérdést (kérdésenként egyszerre egyet; a kész eredmény két percig
+    él); a találatok az átmeneti tárba kerülnek, így a lap újrakérdezésére (a `betoltes` jel) a HELYI listában jelennek meg —
+    a modál bájtra változatlan rajzolója rajzolja őket; a megjegyzés kimondja az állást (keresem · nem találtam tartót · N
+    tartót kérdeztem, egy sem felelt · N találat jött). ⑦b: ha a DHT-n talált tartók közül egy sem felel (NAT mögött), a
+    kérdés FÜGGŐ KÉRELEM lesz — a kérdés is a kérelem része (`fuggoKerelmek.js` `ker`: két kérdés egy régióban külön) —, a
+    célok a tartók, a kopogtató a régió témájának párja; az őrjárat munkája futtatja (ugyanaz az ellenőrzés; az osztódott
+    fiók mintája újabb függő kérelem), a lap egyre ritkábban figyel (2 → 30 mp, ~17 percig), és amíg a kérdés függ, nem
+    kérdezünk újra; ha az őrjárat nem fut, kimondja** · mert a lap nem várhat a hálózatra (a tartók felkutatása és a kopogás
+    másodpercek, a NAT mögötti tartó válasza percek), és a lap csak rajzol (7. szabály) — a hálózati munka a programé ·
+    Claude · `koino.js` (`halozatiKereses`, `keresesFuggoFelvetele`, `keresesFuggoAllasa`, a megjegyzés, a függő munka
+    `kereses` ága; a sorozat csak a fejléc- és a törzs-kérelemé), `fuggoKerelmek.js` (`ker`), `koinoModalok.js` (az
+    újrakérdezés), a próbák. ⏸️ **Ami a ⑦-tel láthatóvá vált — K11:** a megtalált gondolat kártyája a születést és a
+    tulajdonosok pontjait mutatja; a többi részéhez (szöveg, gyerekek) a TARTÓIT kellene elérni, és erre alapból nincs út (a
+    szelet DHT-hirdetése a D91/3 szerint alapból ki van kapcsolva) — az átvizsgálás 16. szakasza, Csabánál.

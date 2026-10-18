@@ -563,14 +563,15 @@ async function keresesValaszFeldolgozasa(kerdes, hely, v) {
  * ⭐⭐ A KÉRDÉS: a terv szerint (a leghosszabb szótól) helyről helyre; egy hely tartóit a DHT-n keresem (a régió témáján — a
  * mélységem a D110 szerint), vagy ha a hívó címet ad, ott kérdezek. Egy nem osztódott fiók válasza teljes — ott megállok; az
  * osztódott fiókból mintát kérek (`OSZTOTT_MINTA` darab), és a következő szóra lépek. ⭐ K9: ha a gondolatot ismerem, a
- * valódi, számított címével is szűrök. ⚠️ A NAT mögötti tartóhoz a kérdés közvetlenül nem jut el (a függő kérelem útja a
- * felületé lesz — ⑦); itt a közvetlen és a DHT-n talált, elérhető tartó.
- * @returns {Promise<{talalatok: Array, kerdezett: number, valaszolt: number, minta: boolean, tagsagNelkul: number}>}
+ * valódi, számított címével is szűrök. ⭐ A kereső-réteg ⑦b: a NAT mögötti tartóhoz a kérdés közvetlenül nem jut el — ha a
+ * DHT-n talált tartók közül egy sem felelt, és a hívó kéri (`fuggo` — a felület), a kérdés FÜGGŐ KÉRELEM lesz (a célok a
+ * tartók, a kopogtató a régió témájának párja): az őrjárat viszi tovább, a találat az átmeneti tárba jön.
+ * @returns {Promise<{talalatok: Array, kerdezett: number, valaszolt: number, minta: boolean, tagsagNelkul: number, fuggoben: number}>}
  */
-async function kereses(kerdes, { cim = null, port = null } = {}) {
+async function kereses(kerdes, { cim = null, port = null, fuggo = false } = {}) {
   const terv = kerdesTerve(kerdes);
   const talalatok = new Map();
-  let kerdezett = 0, valaszolt = 0, minta = false, tagsagNelkul = 0;
+  let kerdezett = 0, valaszolt = 0, minta = false, tagsagNelkul = 0, fuggoben = 0;
   const melyseg = (await keresoRegioim()).melyseg;
   const sajatGep = await sajatOsszesCim();
   const kp = await kapuPortja();
@@ -608,6 +609,11 @@ async function kereses(kerdes, { cim = null, port = null } = {}) {
       for (const t of f.jok) { const regi = talalatok.get(t.g); if (!regi || regi.frissesseg < t.frissesseg) talalatok.set(t.g, t); }
       elso ??= e.eredmeny.kereses;
     }
+    if (!elso && fuggo && !cim) {
+      await keresesFuggoFelvetele({ k: szo.kulcs, s, darab: darab.toString(16), kerdes }, melyseg,
+        celok.map((c) => ({ hoszt: c.cim, port: Number(c.port) })));
+      fuggoben++;
+    }
     return elso;
   };
   for (const szo of terv) {
@@ -623,7 +629,76 @@ async function kereses(kerdes, { cim = null, port = null } = {}) {
     const valodi = allapot.entitasok.get(t.g)?.cim;
     return typeof valodi !== 'string' || cimIllik(valodi, kerdes);
   }).sort((a, b) => b.frissesseg - a.frissesseg);
-  return { talalatok: ki, kerdezett, valaszolt, minta, tagsagNelkul };
+  return { talalatok: ki, kerdezett, valaszolt, minta, tagsagNelkul, fuggoben };
+}
+
+/**
+ * ⭐ A kereső-réteg ⑦b: egy kérdés-hely FÜGGŐ KÉRELEMKÉNT (a kérdés is a kérelem része — `fuggoKerelmek.js` `ker`): a célok
+ * a régió DHT-n talált tartói (ha vannak), a kopogtató a régió témájának párja — a tartó a címjegyzék-körében ott látja,
+ * hogy kérnek tőle, és felém kopog (a NAT mögött is). ⛔ Önmagunkat nem kérdezzük.
+ */
+async function keresesFuggoFelvetele(ker, melyseg, celok = []) {
+  const hely = kerdesHelye(ker.k, ker.s, BigInt('0x' + ker.darab));
+  const regioDarab = lenyomatDarabja(hely, melyseg);
+  const sajatGep = await sajatOsszesCim();
+  const kp = await kapuPortja();
+  const r = kerelemFelvetele(await kerelmekOlvasasa(), { fajta: 'kereses', kulcs: keresoRegioKulcsa(melyseg, regioDarab), ker,
+    n: KERESES_TALALAT_KORLAT, celok: celok.filter((c) => !(sajatCimE(c.hoszt, sajatGep) && Number(c.port) === kp)),
+    kopogtatok: [{ fajta: 'kereso', kulcs: melyseg + ':' + regioDarab.toString(16) }] }, Date.now(), randomUUID());
+  await kerelmekIrasa(r.nyilvantartas);
+  return r;
+}
+
+/**
+ * ⭐ A kereső-réteg ⑦b: egy kérdés állása a függő kérelmekben — hány hely függ még, és a `ota` óta lezártakból hány találat
+ * jött (a kész napló összegzéséből). @returns {Promise<{fuggo: number, megjott: number, talalat: number}>}
+ */
+async function keresesFuggoAllasa(kerdes, ota = 0) {
+  const ny = await kerelmekOlvasasa();
+  const fuggo = (ny?.fuggo ?? []).filter((x) => x.fajta === 'kereses' && x.ker?.kerdes === kerdes).length;
+  let megjott = 0, talalat = 0;
+  for (const x of ny?.kesz ?? []) {
+    if (x.fajta !== 'kereses' || x.ker?.kerdes !== kerdes || (x.ido ?? 0) < ota) continue;
+    const m = /^megjött: (\d+) találat/.exec(String(x.eredmeny));
+    if (m) { megjott++; talalat += Number(m[1]); }
+  }
+  return { fuggo, megjott, talalat };
+}
+
+// ===================================
+// ⭐⭐ A KERESŐ-RÉTEG ⑦: A HÁLÓZATI KERESÉS A FELÜLETNEK — a háttérben
+// ===================================
+//
+// A lap nem várhat a hálózatra (a tartók felkutatása és a kérdés másodpercek): a `/api/kereses` a helyi találatokkal azonnal
+// felel, és a háttérben elindítja a hálózati kérdést (kérdésenként egyszerre egyet; a kész eredmény két percig él). A
+// találatok az átmeneti tárba kerülnek (`keresesValaszFeldolgozasa`), így a lap következő kérdésére a HELYI listában is ott
+// vannak — a modál bájtra változatlan rajzolója rajzolja ki őket, külön kód nélkül. A `betoltes` jel szól a lapnak, hogy
+// kérdezzen újra (`koinoModalok.js`).
+
+const halozatiKeresesek = new Map();      // a normalizált kérdés → { kulcs, fut, kesz, kezdet, ido, eredmeny, hiba }
+const HALOZATI_KERESES_ELETTARTAM = 2 * 60 * 1000;
+
+/** A kérdés normalizált alakja (a háttérbeli keresés és a függő kérelmek kulcsa) — null, ha nincs mit keresni. */
+function halozatiKerdes(q) {
+  const kulcs = String(q ?? '').normalize('NFC').toLowerCase().trim().replace(/\s+/g, ' ');
+  return kulcs && kerdesTerve(kulcs).length ? kulcs : null;
+}
+
+async function halozatiKereses(q) {
+  const kulcs = halozatiKerdes(q);
+  if (!kulcs) return null;
+  let x = halozatiKeresesek.get(kulcs);
+  if (x && (x.fut || Date.now() - x.ido < HALOZATI_KERESES_ELETTARTAM)) return x;
+  // ⭐ ⑦b: amíg a kérdés függő kérelemként az őrjáratnál van, nem kérdezünk újra (az viszi tovább).
+  if (x && (await keresesFuggoAllasa(kulcs)).fuggo > 0) return x;
+  if (halozatiKeresesek.get(kulcs)?.fut) return halozatiKeresesek.get(kulcs);
+  x = { kulcs, fut: true, kesz: false, kezdet: Date.now(), ido: Date.now(), eredmeny: null, hiba: null };
+  halozatiKeresesek.delete(kulcs);
+  halozatiKeresesek.set(kulcs, x);
+  while (halozatiKeresesek.size > 64) halozatiKeresesek.delete(halozatiKeresesek.keys().next().value);
+  kereses(kulcs, { fuggo: true }).then((r) => { x.eredmeny = r; }).catch((h) => { x.hiba = h.message; })
+    .finally(() => { x.fut = false; x.kesz = true; x.ido = Date.now(); });
+  return x;
 }
 
 const felajanlasFajl = () => join(alapHely(), KOINO, 'felajanlasok.json');
@@ -1980,12 +2055,34 @@ function sikidomMegjegyzes(r, allas) {
 }
 
 /**
- * ⭐ D101 ⑤: a Keresés megjegyzése — hol kerestem (a készüléken ismert entitások címében), és hogy a hálózati keresés még
- * nincs; ág-szűrésnél, hánynál nem tudom eldönteni, hogy az ágban van-e (D19, M2). Üres kérdésre nincs mit mondani.
+ * ⭐ D101 ⑤: a Keresés megjegyzése — hol kerestem (a készüléken ismert entitások címében); ⭐ a kereső-réteg ⑦: a hálózati
+ * keresés állása (`h` — fut, kész: hány tartót kérdeztem, hány felelt, hány találat jött) és a NAT mögötti tartókhoz függő
+ * kérelemként ment kérdés (`fa` — `keresesFuggoAllasa`; és hogy az őrjárat fut-e, ami viszi); ág-szűrésnél, hánynál nem
+ * tudom eldönteni, hogy az ágban van-e (D19, M2). Üres kérdésre nincs mit mondani.
  */
-function keresesMegjegyzes(r, keres) {
-  if (r.ismert === 0 && !r.talalatok.length && r.nemEldontheto === 0) return null;
-  const reszek = ['A keresés a készülékeden ismert ' + r.ismert + ' entitás címében keresett — a hálózati keresés még nincs.'];
+function keresesMegjegyzes(r, keres, h = null, fa = null, orjaratFut = true) {
+  if (r.ismert === 0 && !r.talalatok.length && r.nemEldontheto === 0 && !h) return null;
+  const reszek = ['A keresés a készülékeden ismert ' + r.ismert + ' entitás címében keresett' + (h ? '' : '.')];
+  // ⭐ A kereső-réteg ⑦: a hálózati keresés állása (a háttérben fut; a találatai az átmeneti tárba, onnan a helyi listába).
+  if (h?.fut) reszek[0] += ' — és a hálózaton is keresem (a kereső-réteg)…';
+  else if (h?.kesz) {
+    const e = h.eredmeny;
+    if (h.hiba || !e) reszek[0] += '; a hálózati keresés most nem sikerült' + (h.hiba ? ': ' + h.hiba : '') + '.';
+    else if (!e.kerdezett) reszek[0] += '; a hálózaton most nem találtam a kérdéshez tartót (a régió tartói nem hirdetnek).';
+    else if (!e.valaszolt) reszek[0] += '; a hálózaton ' + e.kerdezett + ' tartót kérdeztem, egy sem válaszolt (NAT mögött lehetnek).';
+    else {
+      reszek[0] += '; a hálózatról ' + e.talalatok.length + ' találat jött (a kereső-réteg, ' + e.valaszolt + ' tartótól'
+        + (e.minta ? '; a szó nagyon gyakori — a válasz minta' : '') + ').';
+      if (e.tagsagNelkul) reszek.push(e.tagsagNelkul + ' hálózati találatot kihagytam: a szerzők tagsága nem ellenőrizhető.');
+    }
+    // ⭐ ⑦b: a NAT mögötti tartókhoz a kérdés függő kérelemként ment (az őrjárat viszi tovább).
+    if (fa?.megjott) reszek.push('Az őrjárat a NAT mögötti tartóktól ' + fa.talalat + ' találatot hozott.');
+    if (fa?.fuggo) {
+      reszek.push(orjaratFut
+        ? 'A kérdést az őrjárat viszi tovább a NAT mögötti tartókhoz (' + fa.fuggo + ' hely) — a válasz percek múlva is jöhet; ez az ablak addig figyel.'
+        : 'A kérdés a NAT mögötti tartókhoz függő kérelemként vár (' + fa.fuggo + ' hely) — de az őrjárat nem fut, így most nem megy tovább.');
+    }
+  }
   if (r.nemEldontheto > 0) {
     reszek.push(r.nemEldontheto + ' találatról nem tudom eldönteni, ebben az ágban van-e (egy felmenője nincs meg)'
       + (keres.fuggo > 0 ? ' — elkértem.' : '.'));
@@ -2401,6 +2498,10 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
       ? await kerelemUdpResen(halo, tars.cim, tars.port, KOINO,
         { fajta: 'felajanlas', kulcs: fk.kulcs, bejegyzesek: felajanlott, kiserok: await bejegyzesekKiseroi(felajanlott) },
         { ...await azonossagBeallitasa() })
+      // ⭐ A kereső-réteg ⑦b: a kérdés a NAT mögötti tartóhoz (a hely és a kérdés a függő kérelemből).
+      : fk.fajta === 'kereses'
+      ? await kerelemUdpResen(halo, tars.cim, tars.port, KOINO,
+        { fajta: 'kereses', kulcs: fk.kulcs, ...fk.ker, n: KERESES_TALALAT_KORLAT }, { ...await azonossagBeallitasa() })
       : await kerelemUdpResen(halo, tars.cim, tars.port, KOINO, k, {
         ...await azonossagBeallitasa(),
         mintaValaszto: (valasz) => mintaKeres(valasz),
@@ -2432,6 +2533,19 @@ async function fuggoEredmenyFeldolgozasa(fk, r, tars) {
   } else if (fk.fajta === 'torzs' && r.kiszolgalta) {
     const megjott = r.fajlok.filter((x) => x.kesz).length;
     siker = megjott > 0; osszegzes = megjott + ' fájl';
+  } else if (fk.fajta === 'kereses' && r.kiszolgalta && r.kereses) {
+    // ⭐ A kereső-réteg ⑦b: ugyanaz az ellenőrzés, mint a közvetlen kérdésnél (a kísérők a kapun, a tagság, az átmeneti tár);
+    // az osztódott fiók mintáját újabb függő kérelemként (a mélyebb hely régiójának párján) kérem.
+    const ker = fk.ker;
+    const f = await keresesValaszFeldolgozasa(ker.kerdes, kerdesHelye(ker.k, ker.s, BigInt('0x' + ker.darab)), r.kereses);
+    if (r.kereses.osztodott > ker.s) {
+      const melyseg = (await keresoRegioim()).melyseg;
+      for (const d of osztottMinta(r.kereses.osztodott, () => randomInt(0, 2 ** 31) / 2 ** 31)) {
+        await keresesFuggoFelvetele({ k: ker.k, s: r.kereses.osztodott, darab: d.toString(16), kerdes: ker.kerdes }, melyseg);
+      }
+    }
+    siker = true;
+    osszegzes = f.jok.length + ' találat' + (f.tagsagNelkul ? ' (' + f.tagsagNelkul + ' kihagyva: a tagság nem ellenőrizhető)' : '');
   } else if (fk.fajta === 'felajanlas' && r.kiszolgalta && r.felajanlas) {
     // ⭐ D107 L4 (④c): a tartó felvette (vagy már tudta) — feljegyzem; az osztódott fiókot a mélyebb darab régiójába viszem.
     await felajanlasEredmenye(r.felajanlott ?? [], r.felajanlas);
@@ -3399,9 +3513,9 @@ function resMunka(allapot, halo, tars) {
       // ⭐ D102 (J4): a társ azt viszi, amelyiknek a céllistáján ő áll a legelöl (a már próbáltakat kihagyva).
       let fk = tarshozIllo(ny, tars.cim, tars.port, (x) => !nemProbalt(x));
       // ⭐ D102 (J3): ha több fejléc- vagy törzs-kérelem is hozzá szól, egy SOROZATBAN megy (egy kapcsolaton).
-      if (fk && fk.fajta !== 'szelet' && fk.fajta !== 'felajanlas') {
-        const sorozat = tarshozIllok(ny, tars.cim, tars.port,
-          (x) => !nemProbalt(x) || x.fajta === 'szelet' || x.fajta === 'felajanlas', SOROZAT_KORLAT);
+      const sorozatba = (x) => x.fajta === 'fejlecek' || x.fajta === 'torzs';
+      if (fk && sorozatba(fk)) {
+        const sorozat = tarshozIllok(ny, tars.cim, tars.port, (x) => !nemProbalt(x) || !sorozatba(x), SOROZAT_KORLAT);
         if (sorozat.length > 1) return await fuggoKerelemSorozatMunkaja(allapot, halo, tars, sorozat);
       }
       // ⭐ A ház (D100): a „miközben kopogtatunk” pontosan — a kérelem egy kopogtató témáján TÉNYLEG jelentkeztünk (az
@@ -7813,6 +7927,12 @@ try {
         // kereső-réteg) még nincs; ág-szűrésnél a hiányzó felmenőt elkéri (D19, M2).
         if (utvonal === '/api/kereses') {
           const limit = parseInt(kereses.get('limit'), 10);
+          // ⭐ A kereső-réteg ⑦: a hálózati keresés a háttérben (kérdésenként egyszerre egy); a találatai az átmeneti tárba
+          // kerülnek, így a lap újrakérdezésére (a `betoltes` jel) a helyi listában is ott vannak.
+          const halozat = sajatKoino ? await halozatiKereses(kereses.get('q')) : null;
+          // ⭐ ⑦b: a kérdés függő kérelmei (a NAT mögötti tartókhoz — az őrjárat viszi): amíg függnek, a lap figyel.
+          const fa = halozat && !halozat.fut ? await keresesFuggoAllasa(halozat.kulcs, halozat.kezdet) : null;
+          const orjaratFut = fa?.fuggo ? csereAllapotKepe(await csereAllapota(KOINO).olvas(), Date.now()).orjarat.fut : true;
           const r = await keresesHelyben(olvasoTar, KOINO, {
             q: kereses.get('q') ?? '',
             tipusok: (kereses.get('tipusok') ?? '').split(',').map((t) => t.trim()).filter(Boolean),
@@ -7824,7 +7944,8 @@ try {
           const keres = sajatKoino && r.hianyzik.length ? await lapHianyzoinakElkerese(r.hianyzik)
             : { kert: 0, fuggo: 0, celos: 0 };
           return { adat: { talalatok: r.talalatok, ismert: r.ismert, nemEldontheto: r.nemEldontheto,
-            betoltes: keres.fuggo > 0, koinoMegjegyzes: keresesMegjegyzes(r, keres) } };
+            betoltes: keres.fuggo > 0 || !!halozat?.fut || (fa?.fuggo > 0 && orjaratFut),
+            koinoMegjegyzes: keresesMegjegyzes(r, keres, halozat, fa, orjaratFut) } };
         }
 
         // ⭐ EGY entitás szövege (5.3). A lista szándékosan nem hozza (9. szabály), ezért

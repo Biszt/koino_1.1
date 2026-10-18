@@ -35,6 +35,8 @@ const utolsoMegjegyzes = new Map();
 // ⭐ D101 ④: a Síkidom gyerek-kéréseinek `betoltes` jele, szülőnként (a gyökér szintje: 'vilag' — a modál jele).
 const SIKIDOM_VILAG = 'vilag';
 const sikidomBetoltes = new Map();
+// ⭐ A kereső-réteg ⑦: a Keresés `betoltes` jele — melyik kérdésre fut még a hálózati keresés (a lap újrakérdez); null: semmire.
+let keresesBetoltes = null;
 
 document.addEventListener('koino:megjegyzes', (e) => {
   const { utvonal, szoveg, betoltes } = e.detail ?? {};
@@ -42,6 +44,7 @@ document.addEventListener('koino:megjegyzes', (e) => {
   const [ut, kerdes = ''] = utvonal.split('?');
   // ⭐ Az útvonal a kérdőjel előtti rész — a modál ugyanazt az útvonalat kérdezi más paraméterekkel is.
   utolsoMegjegyzes.set(ut, typeof szoveg === 'string' && szoveg ? szoveg : null);
+  if (ut === 'kereses') keresesBetoltes = betoltes === true ? (new URLSearchParams(kerdes).get('q') ?? '').trim() : null;
   if (ut === 'sikidom/gyerekek') {
     sikidomBetoltes.set(new URLSearchParams(kerdes).get('szulo') || SIKIDOM_VILAG, betoltes === true);
   }
@@ -186,12 +189,27 @@ koruleIr(SikidomModal, '_osLancFelfuzese', function () {
 // ⭐ A KERESÉS (D101 ⑤)
 // ===================================
 //
-// A helyi alja (M4): a program a készüléken ismert entitások címében keres, és kimondja, hogy a hálózati keresés (a
-// kereső-réteg) még nincs; ág-szűrésnél azt is, hánynál nem tudja eldönteni, hogy az ágban van-e. A lap a találati lista alá
-// írja — a keresés UTÁN (üres mezőnél nincs keresés, és a régi megjegyzés sem marad ott).
+// A helyi alja (M4): a program a készüléken ismert entitások címében keres, és (a kereső-réteg ⑦ óta) a háttérben a hálózaton
+// is — a megjegyzés kimondja az állását; ág-szűrésnél azt is, hánynál nem tudja eldönteni, hogy az ágban van-e. A lap a
+// találati lista alá írja — a keresés UTÁN (üres mezőnél nincs keresés, és a régi megjegyzés sem marad ott).
 koruleIr(KeresesModal, '_kereses', function () {
-  const ures = !(document.getElementById('kereses-mezo')?.value ?? '').trim();
-  megjegyzesKirajzolasa(document.getElementById('kereses-lista'), ures ? null : megjegyzes('kereses'));
+  const mezo = document.getElementById('kereses-mezo');
+  const kerdes = (mezo?.value ?? '').trim();
+  megjegyzesKirajzolasa(document.getElementById('kereses-lista'), !kerdes ? null : megjegyzes('kereses'));
+  // ⭐ A kereső-réteg ⑦: amíg a hálózati keresés fut, vagy a kérdés a NAT mögötti tartókhoz függő kérelemként vár (a program
+  // `betoltes`-t mond), újrakérdezünk — a hálózati találatok az átmeneti tárba kerülnek, így a helyi listában jelennek meg (a
+  // modál saját rajzolójával). Két másodperccel kezdve, egyre ritkábban (legfeljebb fél percenként), összesen ~17 percig
+  // (a függő kérelem válasza percek múlva jön); csak ha a mező még ugyanazt kérdezi (és a modál nyitva van).
+  clearTimeout(this._koinoHalozatOra);
+  if (!kerdes || keresesBetoltes !== kerdes) { this._koinoHalozatProba = 0; return; }
+  this._koinoHalozatProba = (this._koinoHalozatProba ?? 0) + 1;
+  if (this._koinoHalozatProba > 40) return;
+  const varakozas = Math.min(2000 * 1.5 ** (this._koinoHalozatProba - 1), 30000);
+  this._koinoHalozatOra = setTimeout(() => {
+    const most = document.getElementById('kereses-mezo');
+    if (!most || most.value.trim() !== kerdes || !most.isConnected) return;
+    this._kereses();
+  }, varakozas);
 });
 
 // ===================================

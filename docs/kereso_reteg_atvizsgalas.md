@@ -488,3 +488,65 @@ tartónál) — öt rontással. Elágazás 173.
 **⑥ a halványulás** a ④a-val megépült (a lejárat bárkinél ugyanaz, a lejárt a tömörítéskor kiesik, a rajból sem jön vissza).
 ⏭️ **Hátravan a ⑦:** a Keresés ablaka a hálózati találatokkal (a helyi alja után a hálózatiak; a NAT mögötti tartóhoz a függő
 kérelem útja).
+
+## 15. ✅ A ⑦ — a Keresés ablaka a hálózati találatokkal (2026-10-18)
+
+> Az ⑤ után. A D101 ⑤ helyi alja (a modál bájtra a prototípusé) a hálózati találatokkal; új D-szintű kérdés a megépítésben
+> nem merült fel — a ⑦ egy hiányt tett láthatóvá (16. szakasz).
+
+**⑦a — a háttérben.** A lap nem várhat a hálózatra: a `/api/kereses` a helyi találatokkal azonnal felel, és a háttérben
+elindítja a hálózati kérdést (`koino.js` `halozatiKereses` — kérdésenként egyszerre egyet, a kész eredmény két percig él,
+legfeljebb 64 kérdés). A találatok az ÁTMENETI tárba kerülnek (az ⑤ útja), így a lap következő kérdésére a HELYI listában
+vannak — a modál saját rajzolója rajzolja őket, külön kód nélkül. A `betoltes` jel szól a lapnak (`koinoModalok.js`: a
+`koino:megjegyzes` eseményből — csak ha ugyanarra a kérdésre szól), és a megjegyzés kimondja az állást: *„— és a hálózaton is
+keresem…”* · *„nem találtam a kérdéshez tartót”* · *„N tartót kérdeztem, egy sem válaszolt (NAT mögött lehetnek)”* · *„a
+hálózatról N találat jött (… tartótól; ha a szó nagyon gyakori, a válasz minta)”*, és ha a tagság miatt kimaradt valami.
+
+**⑦b — a NAT mögötti tartó.** Ha a DHT-n talált tartók közül egy sem felel, a kérdés FÜGGŐ KÉRELEM lesz
+(`keresesFuggoFelvetele`): a célok a tartók, a kopogtató a régió témájának párja (a tartó a címjegyzék-körében ott látja,
+hogy kérnek tőle, és felém kopog), és a kérdés a kérelem része (`fuggoKerelmek.js` `ker` — egy régióban több kérdés is
+függhet). Az őrjárat munkája futtatja (ugyanaz az ellenőrzés, mint a közvetlen kérdésnél; az osztódott fiók mintája újabb
+függő kérelem a mélyebb hely régiójának párján). A lap egyre ritkábban figyel (2 mp-cel kezdve, legfeljebb fél percenként,
+~17 percig), és amíg a kérdés függ, a felület nem kérdez újra; a megjegyzés kimondja, hogy az őrjárat viszi tovább — vagy
+hogy nem fut, és így most nem megy tovább —, és amit hozott (*„Az őrjárat a NAT mögötti tartóktól N találatot hozott.”*).
+
+**Próbák:** két bekötés-próba egy VÉGIG FUTÓ felülettel a hamis DHT-n (⑦a: a háttérben, a találat a helyi listában — három
+rontással; ⑦b: C hirdet, leáll, D keres → függő kérelem → C újraindul → D őrjárata elviszi, a felület mutatja — négy
+rontással), `kerelemProba.js` (+1: a kérdés a kérelem része — két rontással). A lap oldalát (az újrakérdezés) a beépített
+böngészőben néztük meg: a közvetlen esetben az első kérdés üres listát ad, a 2 mp-es újrakérdezés már a két találatot; a
+NAT-os esetben a nyitott ablak magától frissült, amikor az őrjárat a találatokat elhozta. Elágazás 174.
+
+## 16. ⏸️ K11 — a megtalált gondolat tartói (Csabánál, 2026-10-18)
+
+**A lelet** (a ⑦ böngészős próbájában): a találat egy bejegyzés — a születés (a címmel) és legalább két tulajdonos
+pont-eseménye. A kártya megnyílik (a cím, a tulajdonosok, a pontok), de a többi része — a szöveg (a szöveg-darab), a
+gyerekek, a javaslatok — a gondolat SZELETÉNEK tartójától jönne, és egy friss készülék ma nem éri el: a raj-jegyzéke semmit
+nem tud róla; a szelet DHT-témáját csak az hirdeti, aki ezt beállította (`cimjegyzek hirdetes <n>` — a D91/3 szerint
+**alapból 0**, mert egy telefonon 100 szelet ~65 MB/nap volna); a lap függő kérelmének kopogtatója a szelet témájának párja,
+amit csak a hirdetők figyelnek. A felület ki is mondja: *„a hiányzó részek tartóit még keresem (nincs ismert társ, aki
+tartaná őket)”*. Vagyis alapbeállítással a kereső-réteg megtalálja a gondolatot, de a részleteihez csak szerencsével jut el
+(ha a készülék később egy tartójával cserél). ⚠️ Ez nem csak a keresés kérdése: a `hozd` és a lap is ugyanígy jár egy olyan
+gondolattal, amelynek a tartóit a raj nem ismeri — a keresés teszi gyakorivá.
+
+**A lehetőségek:**
+
+- **(A) ⭐ A tartó-tipp a találattal — ezt javaslom.** A kereső tartó a bejegyzés mellé megjegyzi, melyik KÉSZÜLÉK ajánlotta
+  fel (a tábla-aláírója — a felajánlás kérelme ma is hozza, D109; a felajánló a gondolat tulajdonosa, tehát a szeletét
+  vállalásból tartja), a régió tartói közt a `BEJEGYZES` is viszi (csak tippként). A válasz találatonként legfeljebb 2 tippet
+  ad (tábla-aláíró, CÍM NÉLKÜL). A kérdező a raj-jegyzékébe írja a gondolat szelete alá, és a lap függő kérelme így
+  `keszulek` kopogtatót kap: a tulajdonos készüléke a címjegyzék-körében a saját kopogtató témáját figyeli, meglát, és felém
+  kopog — a NAT mögött is (a D92 fő útja). **Ár:** ~45 bájt találatonként, új DHT-téma nincs. **Bizalom:** a hamis tipp
+  elérhetetlenség, nem hamisítás (D6, 3. szabály). **Ami kiderül:** a kérdező megtudja, hogy a tulajdonosok egyikének
+  készüléke a T tábla-kulcsot használja (személy ↔ készülék) — ugyanazt, amit bárki megtud, aki vele cserél; cím az indexben
+  nem utazik. Mindkét tulajdonos felajánl, tehát két tipp van; ha egy készülék eltűnik, a következő felajánlás frissít.
+- **(B) A kereső-indexben lévő gondolataim szeletének hirdetése** a DHT-n (a meglévő `hozd`-út találja meg a tartót): a
+  kérdezőnek a legegyszerűbb, de témánként ~0,65 MB/nap MINDENKINEK — 10 gondolatnál ~6,5 MB/nap; a D91/3 épp ezt kapcsolta ki
+  (legfeljebb néhány gondolatra korlátozva enyhíthető).
+- **(C) A kereső tartó továbbadja** (D92/1 (c)): a kérdező a szeletet a kereső tartótól kéri, aki a felajánlóhoz továbbítja
+  (a kopogtató témáján), és a választ `VALASZ`-ként hozza vissza. A címek egyik irányban sem derülnek ki (D87), de a kereső
+  tartó kerete terhelődik, neki is elérhetőnek kell maradnia a visszaútig, és lassabb.
+- **(D) Semmi:** a keresés a kártyát adja (cím, tulajdonosok, pontok), a részletek csak akkor, ha a készülék máshonnan
+  eléri a tartót. A keresés így alapbeállítással félkarú marad.
+
+**A javaslat (A)**, mert a D92 fő útjára (a kopogtatásra) illik, az ára találatonként néhány bájt, és a bizalmi modell nem
+változik; a (C) a magánszféra szempontjából erősebb, de drágább és törékenyebb.

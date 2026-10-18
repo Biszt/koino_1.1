@@ -3319,7 +3319,8 @@ proba('⭐ A KERESÉS megtalálja az entitást — és a találat-szám FELÜLR�
   let kiszolgalo = null;
   try {
     await fut(hely, 'koino', 'Próba koinó');
-    kiszolgalo = await feluletet(hely, 7488);
+    // ⭐ A kereső-réteg ⑦ óta a felület a háttérben a hálózaton is keres — itt DHT nélkül (a próba a helyi alját méri).
+    kiszolgalo = await feluletet(hely, 7488, { KOINO_DHT_BELEPOK: 'nincs' });
     const { hiv } = kiszolgalo;
 
     // ⚠️ Több entitás, mint a korlát — különben a próba VAK lenne (ugyanaz a tanulság,
@@ -5601,6 +5602,146 @@ proba('⭐⭐ ⑤: a kérdés a DHT-n talált tartónál — cím nélkül, a r�
     return ki.park;
   } finally {
     if (oc) oc.kill();
+    halo.bezar();
+    await varj(800);
+    for (const m of [a, b, c, d]) await rm(m, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐⭐ A KERESŐ-RÉTEG ⑦: A HÁLÓZATI KERESÉS A FELÜLETEN — a háttérben, a találat a helyi listában
+// ===================================
+//
+// Egy VÉGIG FUTÓ felület (D100: ami hosszan fut, azt hosszan futó folyamattal mérjük) a hamis DHT-n: C őrjárata a kereső-régiója
+// tartója (a kézi úton kapott bejegyzésekkel), D friss készülék a felülettel. D `/api/kereses?q=park` kérdésére a program
+// azonnal felel a helyi (üres) listával, kimondja, hogy a hálózaton is keres (`betoltes`), és a háttérben megkérdezi C-t; a
+// lap újrakérdezésére a találat („Közös park a faluban”) a helyi listában van (az átmeneti tárból), és a megjegyzés kimondja,
+// hogy a hálózatról jött. Rontás: az API nem indítja a hálózati keresést → nincs találat → bukik.
+proba('⭐⭐ ⑦: a felület a hálózaton is keres — a háttérben, és a találat a helyi listában jelenik meg', async () => {
+  const { hamisHalozat } = await import('./dhtProba.js');
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const c = await ujKeszulek();
+  const d = await ujKeszulek();
+  const halo = await hamisHalozat(12);
+  const PC = 7696, PD = 7697;
+  const dht = { KOINO_DHT_BELEPOK: halo.belepo(0), KOINO_TUKOR: '127.0.0.1:9' };
+  let oc = null, fel = null;
+  try {
+    await fut(a, 'koino', 'Kérdés', 'próba', 'nyilt');
+    const g = azonosito(await fut(a, 'gondolat', 'Közös park a faluban'), 'Létrejött:');
+    await taggaTesziKeszulek(a, b);
+    await fut(a, 'kivisz', join(a, 'mind.jsonl'), 'mind');
+    await fut(b, 'behoz', join(a, 'mind.jsonl'));
+    await fut(b, 'pont', g, '10');
+    await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
+    await fut(a, 'behoz', join(b, 'sajat.jsonl'));
+    await fut(a, 'kereso', 'felajanl', join(a, 'f.jsonl'));
+    await fut(c, 'kereso', 'behoz', join(a, 'f.jsonl'));
+    let cKimenet = '';
+    oc = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(PC)],
+      { env: { ...process.env, KOINO_ADAT: c, KOINO_NAPLO: '', ...dht }, stdio: ['ignore', 'pipe', 'pipe'] });
+    oc.stdout.on('data', (x) => { cKimenet += x; });
+    for (let i = 0; i < 60 && !/címjegyzék:/.test(cKimenet); i++) await varj(250);
+    fel = await feluletet(d, PD, dht);
+    const elso = await fel.hiv('/api/kereses?q=park');
+    let utolso = elso;
+    for (let i = 0; i < 60 && utolso.adat.betoltes; i++) {
+      await varj(1000);
+      utolso = await fel.hiv('/api/kereses?q=park');
+    }
+    const ki = {
+      elso: elso.allapot === 200 && elso.adat.betoltes === true && /a hálózaton is keresem/.test(elso.adat.koinoMegjegyzes ?? ''),
+      talalat: JSON.stringify(utolso.adat.talalatok).includes('Közös park a faluban'),
+      megjegyzes: /a hálózatról 1 találat jött/.test(utolso.adat.koinoMegjegyzes ?? '') && utolso.adat.betoltes === false
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  ⑦ hálózati keresés — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
+        + JSON.stringify({ elso: elso.adat.koinoMegjegyzes, utolso: utolso.adat.koinoMegjegyzes,
+          talalatok: JSON.stringify(utolso.adat.talalatok).slice(0, 300) }) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    if (fel) fel.folyamat.kill();
+    if (oc) oc.kill();
+    halo.bezar();
+    await varj(800);
+    for (const m of [a, b, c, d]) await rm(m, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐⭐ A KERESŐ-RÉTEG ⑦b: A NAT MÖGÖTTI TARTÓ — a kérdést az őrjárat viszi tovább (függő kérelem)
+// ===================================
+//
+// C (a régió tartója) hirdet a hamis DHT-n, aztán LEÁLL (a hirdetése a DHT-n marad — mint egy NAT mögötti tartó, akit
+// közvetlenül nem érünk el). D felülete keres: a DHT C címét adja, de C nem felel → a kérdés FÜGGŐ KÉRELEM lesz (D lemezén:
+// `kerelmek.json`), a megjegyzés kimondja, hogy az őrjárat viszi tovább, és a lap figyel (`betoltes`). C újraindul; D
+// őrjárata a függő kérelem célját (C) megkopogtatja, a munka a kérdést futtatja, és a találat D átmeneti tárába kerül — a
+// futó felület a következő kérdésre a helyi listában mutatja, a megjegyzés kimondja, hogy az őrjárat hozta. Rontás: a
+// kérdező nem vesz fel függő kérelmet → a felület nem figyel, és a találat nem jön meg → bukik; a munka a kérdést nem
+// futtatja → nincs találat → bukik.
+proba('⭐⭐ ⑦b: a NAT mögötti tartó — a kérdést az őrjárat függő kérelemként viszi tovább, a találat a felületen megjelenik', async () => {
+  const { hamisHalozat } = await import('./dhtProba.js');
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const c = await ujKeszulek();
+  const d = await ujKeszulek();
+  const halo = await hamisHalozat(12);
+  const PC = 7698, PD = 7699, PF = 7700;
+  const dht = { KOINO_DHT_BELEPOK: halo.belepo(0), KOINO_TUKOR: '127.0.0.1:9' };
+  const orjarat = (hely, port) => spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(port)],
+    { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...dht }, stdio: ['ignore', 'pipe', 'pipe'] });
+  let oc = null, od = null, fel = null;
+  try {
+    await fut(a, 'koino', 'Kérdés', 'próba', 'nyilt');
+    const g = azonosito(await fut(a, 'gondolat', 'Közös park a faluban'), 'Létrejött:');
+    await taggaTesziKeszulek(a, b);
+    await fut(a, 'kivisz', join(a, 'mind.jsonl'), 'mind');
+    await fut(b, 'behoz', join(a, 'mind.jsonl'));
+    await fut(b, 'pont', g, '10');
+    await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
+    await fut(a, 'behoz', join(b, 'sajat.jsonl'));
+    await fut(a, 'kereso', 'felajanl', join(a, 'f.jsonl'));
+    await fut(c, 'kereso', 'behoz', join(a, 'f.jsonl'));
+    let cKimenet = '', dKimenet = '';
+    oc = orjarat(c, PC);
+    oc.stdout.on('data', (x) => { cKimenet += x; });
+    for (let i = 0; i < 60 && !/címjegyzék:/.test(cKimenet); i++) await varj(250);
+    oc.kill();
+    oc = null;
+    await varj(800);
+    od = orjarat(d, PD);
+    od.stdout.on('data', (x) => { dKimenet += x; });
+    fel = await feluletet(d, PF, dht);
+    let elso = await fel.hiv('/api/kereses?q=park');
+    for (let i = 0; i < 60 && elso.adat.betoltes && /a hálózaton is keresem/.test(elso.adat.koinoMegjegyzes ?? ''); i++) {
+      await varj(1000);
+      elso = await fel.hiv('/api/kereses?q=park');
+    }
+    const kerelmek = await readFile(join(d, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '');
+    // C újraindul — D őrjárata a függő kérelmet elviszi neki
+    oc = orjarat(c, PC);
+    let utolso = elso;
+    for (let i = 0; i < 90 && !JSON.stringify(utolso.adat.talalatok).includes('Közös park a faluban'); i++) {
+      await varj(1000);
+      utolso = await fel.hiv('/api/kereses?q=park');
+    }
+    const ki = {
+      fuggo: /"fajta":\s*"kereses"/.test(kerelmek) && /"kerdes":\s*"park"/.test(kerelmek),
+      figyel: elso.adat.betoltes === true && /az őrjárat viszi tovább/.test(elso.adat.koinoMegjegyzes ?? ''),
+      talalat: JSON.stringify(utolso.adat.talalatok).includes('Közös park a faluban'),
+      megjegyzes: /Az őrjárat a NAT mögötti tartóktól 1 találatot hozott/.test(utolso.adat.koinoMegjegyzes ?? '')
+        && utolso.adat.betoltes === false
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  ⑦b NAT mögötti tartó — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
+        + JSON.stringify({ elso: elso.adat.koinoMegjegyzes, utolso: utolso.adat.koinoMegjegyzes, kerelmek: kerelmek.slice(0, 300),
+          d: tiszta(dKimenet).replace(/\s+/g, ' ').slice(-500) }) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const f of [fel?.folyamat, od, oc]) if (f) f.kill();
     halo.bezar();
     await varj(800);
     for (const m of [a, b, c, d]) await rm(m, { recursive: true, force: true });
