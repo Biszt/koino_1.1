@@ -22,6 +22,8 @@ export const KOPOGTATO_KORLAT = 12;
 export const FUGGO_ELEVULES = 2 * 60 * 60 * 1000;
 
 const KULCS_MINTA = /^[A-Za-z0-9_-]{43}$/;
+/** ⭐ D112 ③ (F6): a háttér-kérés ennyivel hátrébb áll a rangsorban (több, mint a célok száma — minden előtér előtte). */
+const HATTER_RANG = 1000;
 const FAJTAK = new Set(['fejlecek', 'torzs', 'szelet', 'felajanlas', 'kereses']);
 
 /** Üres nyilvántartás. */
@@ -68,8 +70,9 @@ function kerelemAlakja(x) {
   const ker = x.fajta === 'kereses' ? kerAlakja(x.ker) : null;
   if (x.fajta === 'kereses' && !ker) return null;
   // ⭐ D102: `m` (mélyen — a válaszoló maga jár be) és a folytatás a régi `d` helyett.
+  // ⭐ D112 ③ (F6): `hatter` — a felderítés kérése; egy társnál a lap (az előtér) kérései előbb mennek.
   return { az: x.az, fajta: x.fajta, kulcs: x.kulcs, n: Number.isInteger(x.n) ? x.n : 20, m: x.m === true,
-    ...(utan ? { utan } : {}), ...(ker ? { ker } : {}),
+    ...(utan ? { utan } : {}), ...(ker ? { ker } : {}), ...(x.hatter === true ? { hatter: true } : {}),
     ido: Number.isFinite(x.ido) ? x.ido : 0, probalt: Number.isInteger(x.probalt) ? x.probalt : 0, celok, kopogtatok };
 }
 
@@ -94,7 +97,8 @@ export function nyilvantartasAlakja(x) {
  * bejegyzés). A korlát fölött a legrégebbi függő kiesik — kimondva a kész naplóban (`kiszorult`).
  * @returns {{nyilvantartas: Object, az: string, uj: boolean}}
  */
-export function kerelemFelvetele(ny, { fajta, kulcs, n = 20, m = false, utan = null, ker = null, celok = [], kopogtatok = [] }, most, azonosito) {
+export function kerelemFelvetele(ny, { fajta, kulcs, n = 20, m = false, utan = null, ker = null, hatter = false, celok = [],
+  kopogtatok = [] }, most, azonosito) {
   const alap = nyilvantartasAlakja(ny);
   const utanJo = utanAlakja(utan);
   const kerJo = kerAlakja(ker);
@@ -108,10 +112,12 @@ export function kerelemFelvetele(ny, { fajta, kulcs, n = 20, m = false, utan = n
     const lattukK = new Set(meglevo.kopogtatok.map(kk));
     for (const k of kopogtatok.map(kopogtatoAlakja).filter(Boolean)) if (!lattukK.has(kk(k))) { meglevo.kopogtatok.push(k); lattukK.add(kk(k)); }
     meglevo.kopogtatok = meglevo.kopogtatok.slice(0, KOPOGTATO_KORLAT);
+    // ⭐ D112 ③: ha az előtér (a lap) is kéri, már nem háttér-kérés.
+    if (!hatter) delete meglevo.hatter;
     return { nyilvantartas: alap, az: meglevo.az, uj: false };
   }
   const uj = kerelemAlakja({ az: azonosito, fajta, kulcs, n, m, ...(utanJo ? { utan: utanJo } : {}), ...(kerJo ? { ker: kerJo } : {}),
-    ido: most, probalt: 0, celok, kopogtatok });
+    ...(hatter ? { hatter: true } : {}), ido: most, probalt: 0, celok, kopogtatok });
   if (!uj) throw new Error('hibás kérelem: ' + fajta + ' ' + kulcs);
   alap.fuggo.push(uj);
   while (alap.fuggo.length > FUGGO_KORLAT) {
@@ -145,12 +151,14 @@ export function tarshozIllo(ny, cim, port, kiveve = () => false) {
   const alap = nyilvantartasAlakja(ny);
   // ⭐ D102 (J4): a kérelmek céljai RANG szerint állnak (elöl az, aki az ágból a legtöbbet tartja) — egy társ azt viszi,
   // amelyiknek a listáján ő áll a legelöl; holtversenyben a legrégebbit.
+  // ⭐ D112 ③ (F6): a háttér-kérés (a felderítés) rangja az előtér után — egy társnál a lap kérései előbb mennek.
   const legjobb = (illik) => {
     let ki = null, rang = Infinity;
     for (const x of alap.fuggo) {
       if (kiveve(x)) continue;
       const i = x.celok.findIndex(illik);
-      if (i >= 0 && i < rang) { ki = x; rang = i; }
+      const r = i + (x.hatter ? HATTER_RANG : 0);
+      if (i >= 0 && r < rang) { ki = x; rang = r; }
     }
     return ki;
   };
@@ -168,6 +176,7 @@ export function tarshozIllok(ny, cim, port, kiveve = () => false, korlat = 16) {
     .filter((x) => !kiveve(x))
     .map((x, sorrend) => ({ x, rang: x.celok.findIndex(illik), sorrend }))
     .filter((y) => y.rang >= 0)
+    .map((y) => ({ ...y, rang: y.rang + (y.x.hatter ? HATTER_RANG : 0) }))
     .sort((a, b) => a.rang - b.rang || a.sorrend - b.sorrend)
     .map((y) => y.x);
   const pontos = rangos((c) => c.hoszt === cim && c.port === Number(port));

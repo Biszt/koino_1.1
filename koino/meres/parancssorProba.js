@@ -2072,9 +2072,18 @@ async function feluletet(hely, port, kornyezet = {}) {
   });
 
   // A jelszót a kiírt címből olvassuk ki — ugyanúgy, ahogy egy ember tenné.
+  // ⚠️ (2026-10-19) A teljes sor terhelése alatt egyszer nem írt ki semmit 15 mp alatt (a ⑦b próbája; magában zöld) — a
+  // bukás most megnevezi magát: a hibakimenet (stderr), a kilépési kód és az eltelt idő is benne van.
   let kimenet = '';
+  let hibaKimenet = '';
+  let kilepett = null;
+  const indult = Date.now();
+  folyamat.stderr.on('data', (d) => { hibaKimenet += d; });
+  folyamat.on('exit', (kod) => { kilepett = kod; });
   const kulcs = await new Promise((teljesul, elakad) => {
-    const ido = setTimeout(() => elakad(new Error('a felület nem indult el: ' + kimenet)), 15000);
+    const ido = setTimeout(() => elakad(new Error('a felület nem indult el ' + Math.round((Date.now() - indult) / 1000)
+      + ' mp alatt' + (kilepett !== null ? ' (kilépett: ' + kilepett + ')' : ' (még fut)') + ': „' + kimenet.slice(-300)
+      + '” · stderr: „' + hibaKimenet.slice(-500) + '”')), 15000);
     folyamat.stdout.on('data', (d) => {
       kimenet += d;
       const talalat = kimenet.match(/kulcs=([A-Za-z0-9_-]+)/);
@@ -5875,6 +5884,82 @@ proba('⭐⭐ D112 ①: a fájl-tár kerete — a nem vállalt törzs a keret f�
     return Object.values(ki).every(Boolean);
   } finally {
     for (const m of [a, b]) await rm(m, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐⭐ D112 ③: A FELDERÍTÉS — az őrjárat a háttérben elhozza az ágat, RÖGZÍTVE
+// ===================================
+//
+// A (alapító) a felületen két ágat ír: X alatt három gyerek, az elsőnek egy unokája; Y alatt két gyerek. A `figyel`
+// kiszolgál. D (friss, „alap” mód) A-t induló címnek veszi, és felderíti X-et (`felderites X 10`) — X-et magát sem ismeri.
+// D őrjárata a háttér-kérésekkel elhozza: D jegyzékében a felderítés KÉSZ (5 csomópont: X és a négy leszármazottja), az
+// átmeneti tárban RÖGZÍTVE. Utána D „böngészik” (Y fejlécei, kézzel) egy kis bemondás-korláttal (`KOINO_BEMONDAS_KORLAT=4`):
+// X leszármazottainak bemondott össz-pontja a rögzítés miatt megmarad (a régebbiek közül a nem rögzített esne ki).
+// Rontás: az őrjárat nem futtatja a felderítés körét → nem lesz kész → bukik; a rögzítés elmarad → bukik; a bemondások
+// korlátja a rögzítettet nem tartja meg → bukik; az ismeretlen ág szelete nem kérődik → nem lesz kész → bukik.
+proba('⭐⭐ D112 ③: a felderítés — az őrjárat a háttérben elhozza az ágat, rögzítve (a bemondott össz-pontjaival)', async () => {
+  const a = await ujKeszulek();
+  const d = await ujKeszulek();
+  const PA = 7705, PD = 7706, PF = 7707;
+  let fel = null, figyelo = null, od = null;
+  try {
+    await fut(a, 'koino', 'Felderítés', 'próba', 'nyilt');
+    fel = await feluletet(a, PF);
+    const uj = async (cim, szuloId = null, pont = 10) => (await fel.hiv('/api/gondolat', { method: 'POST',
+      body: JSON.stringify({ cim, kezdoTudatpont: pont, ...(szuloId ? { szuloId } : {}) }) })).adat?.data?._id;
+    const X = await uj('Az ág', null, 50);
+    const gy1 = await uj('Első gyerek', X, 30);
+    const gy2 = await uj('Második gyerek', X, 20);
+    const gy3 = await uj('Harmadik gyerek', X, 10);
+    const unoka = await uj('Unoka', gy1, 5);
+    const Y = await uj('A másik ág', null, 40);
+    await uj('Y első', Y, 15);
+    await uj('Y második', Y, 12);
+    fel.folyamat.kill();
+    fel = null;
+    await varj(600);
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(PA)],
+      { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: 'ignore' });
+    await varj(1500);
+    const kornyezet = { KOINO_KISZOLGALAS: 'alap', KOINO_BEMONDAS_KORLAT: '4' };
+    await fut(d, 'tars', '127.0.0.1', String(PA), 'A', kornyezet);
+    const indul = tiszta(await fut(d, 'felderites', X, '10', kornyezet));
+    let dKimenet = '';
+    od = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(PD)],
+      { env: { ...process.env, KOINO_ADAT: d, KOINO_NAPLO: '', ...kornyezet }, stdio: ['ignore', 'pipe', 'pipe'] });
+    od.stdout.on('data', (x) => { dKimenet += x; });
+    let jegyzek = '';
+    for (let i = 0; i < 150; i++) {
+      await varj(1000);
+      jegyzek = await readFile(join(d, 'sajat', 'felderitesek.json'), 'utf8').catch(() => '');
+      if (/"allapot":"kesz"/.test(jegyzek)) break;
+    }
+    od.kill();
+    od = null;
+    await varj(800);
+    const rogz = await readFile(join(d, 'sajat', 'atmeneti', 'rogzitett.json'), 'utf8').catch(() => '');
+    // a „böngészés”: Y fejlécei (újabb bemondások — a kis korlát fölött)
+    await fut(d, 'kerelem', 'fejlecek', Y, '127.0.0.1', String(PA), '50', 'mely', kornyezet);
+    const bemondasok = Object.keys(JSON.parse(await readFile(join(d, 'sajat', 'osszpontok.json'), 'utf8').catch(() => '{}')));
+    const lista = tiszta(await fut(d, 'felderites', kornyezet));
+    const ki = {
+      indul: /FELDERÍTÉS:/.test(indul),
+      kesz: /"allapot":"kesz"/.test(jegyzek) && /"latszik":5/.test(jegyzek),
+      rogzitve: [X, gy1, gy2, gy3, unoka].every((id) => rogz.includes(id)),
+      bemondas: [gy1, gy2, gy3, unoka].every((id) => bemondasok.includes(id)),
+      lista: /kész · 5\/10 csomópont/.test(lista)
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  D112 ③ felderítés — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
+        + JSON.stringify({ indul: indul.slice(-300), jegyzek: jegyzek.slice(0, 400), rogz: rogz.slice(0, 300), bemondasok,
+          lista: lista.slice(-300), d: tiszta(dKimenet).replace(/\s+/g, ' ').slice(-600) }) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const f of [fel?.folyamat, figyelo, od]) if (f) f.kill();
+    await varj(800);
+    for (const m of [a, d]) await rm(m, { recursive: true, force: true });
   }
 });
 

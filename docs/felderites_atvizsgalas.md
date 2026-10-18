@@ -128,3 +128,15 @@ bekötés parancssor-próbával (egy végig futó őrjárattal).
 terv és a fájl-tár új műveletei (`fajlProba.js` +2 — négy rontással; egy próba-gyengeség megerősítve: a friss-védelem
 rontása elsőre nem bukott, mert a friss fájl a sorrendben amúgy is utolsó volt — a nulla keretes eset fogja meg), és a
 bekötés (`tomorit` a kerettel: a másik gondolatának darabja kiesik, a saját marad — két rontással). Elágazás 176.
+
+✅ **② KÉSZ (2026-10-18) — a rögzítés:** a felderítés szeletei az átmeneti tárban rögzítve (a böngészés kerete csak a nem
+rögzítettekre számol, a rögzítettekre külön keret — 1 GB, a legrégebbi rögzítés megy előbb), a bemondott össz-pontjaik és a
+fejléc-tudásuk is megmarad. Próba: `atmenetiProba.js` +1 (négy rontással). Elágazás 177.
+
+✅ **③ KÉSZ (2026-10-18) — a jegyzék és az ütemező:** `felderites.js` (a beállítás, a jegyzék, a lépés, az elévülés), a
+Struktúra sorrendje a mélység-korláttal (`felderitesAllasa`), a háttér-kérés (egy társnál a lap előbb), az őrjárat köre és a
+`felderites` parancs. ⚠️ Építés közben kiderült: ha az ág gyökere ismeretlen, a bejáró csak a gyerekeit kéri — a felderítés
+ezért a szeletét is elkéri (különben soha nem lenne kész). Próbák: `felderitesProba.js` (4), `pakliProba.js` +1,
+`kerelemProba.js` +1 — mind rontással —, és a bekötés: egy friss készülék a háttérben elhozza az ágat (X-et magát sem
+ismerte), rögzítve, és egy későbbi böngészés a kis bemondás-korlát mellett sem söpri ki az össz-pontjait (négy rontással).
+Elágazás 178.

@@ -5892,6 +5892,22 @@ legrégebben érintett megy; `FAJL_FRISS` = 24 óra), `fajlIgeny.js` (a hívó t
 profil-darabok; a „mindent” készülék mindent tart; ritkítva az őrjáratban és a törzs-kérelem után, a `tomorit [proba]`
 kényszeríti; a felület a megmutatott fájlt megérinti; a próbák: `KOINO_FAJL_ATMENETI`, `KOINO_FAJL_FRISS`). Elágazás 176.
 
+✅ **② MEGÉPÜLT (2026-10-18) — a rögzítés:** `atmenetiTar.js` (`rogzites`, `rogzitesFeloldasa`, `rogzitettKulcsok`,
+`rogzitesAllasa`; a `rogzitett.json`: szelet → { felderítés → mikor }; a böngészés kerete — 20 MB, a legrégebben megnézett —
+csak a nem rögzített szeletekre számol, a rögzítettekre a saját keretük áll — `ROGZITETT_KORLAT` = 1 GB, fölötte a
+legrégebbi rögzítés megy; a feloldás után a szelet a böngészés kiszorításába kerül vissza; a más folyamat rögzítését a
+`frissit` olvassa), `koino.js` (`korlatosBemondasok`: a bemondott össz-pontok és a fejléc-tudás korlátja a rögzített
+entitásokét megtartja). Elágazás 177.
+
+✅ **③ MEGÉPÜLT (2026-10-18) — a jegyzék és az ütemező:** `js/allapot/felderites.js` (tiszta: a beállítás az
+alapértékekkel és a határokkal, a jegyzék, a lépés — kész / keret / elakadt / kér —, az elévülés), `pakli.js`
+(`felderitesAllasa` — a Struktúra sorrendje az ágban, a kerettel és a mélység-korláttal: `maxMelyseg`; az `agHelyzete` a
+mélységet is mondja), `fuggoKerelmek.js` (a `hatter` jel — egy társnál az előtér kérései előbb mennek; ha az előtér is kéri,
+már nem háttér), `koino.js` (`felderitesKor` az őrjárat minden körében: az elévültek feloldása, a futók lépése — a látható
+csomópontok rögzítése, a hiányzó háttér-kérésként, körönként a beállított számig és csak ha a függő kérelmek közt van hely a
+lapnak is — `FELDERITES_FUGGO_HATAR` = 48; ha az ág gyökere ismeretlen, a szeletét is kéri; a `felderites` parancs: a lista,
+az új / újra, a törlés; a próbák: `KOINO_BEMONDAS_KORLAT`). Elágazás 178. ⏭️ ④ a törzs-fázis → ⑤ a felület.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

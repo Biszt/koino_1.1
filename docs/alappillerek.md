@@ -1239,3 +1239,19 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     az íráskor jelöljük — a törzs több úton jön (a csere randevúja, a kérelem, a kézi út) · Csaba: F2 + F3 (A) ·
     `fajlTar.js` (`allapot`, `erintes`, `torol`, `fajlTakaritasTerve`), `fajlIgeny.js` (`vallaltE`), `koino.js`
     (`fajlTarTakaritasa`), a próbák.
+177. **2026-10-18 · a rögzítés (D112 ② — F2 (A))** → **a felderítés szeletei az átmeneti tárban RÖGZÍTVE (szelet →
+    felderítés → mikor): a böngészés kerete csak a nem rögzítettekre számol, a rögzítettekre külön keret áll (1 GB, a
+    legrégebbi rögzítés megy előbb), a feloldás visszaadja a böngészés kiszorításába; a bemondott össz-pontok és a
+    fejléc-tudás korlátja a rögzítettet megtartja** · mert a nézetek így változatlanul a két tárból olvasnak (egy harmadik tár
+    — F2 (B) — minden nézetet és a kiszolgálót érintette volna), és egy böngészés nem söpri ki a pillanatképet (D108/1:
+    „saját kerettel”) · Csaba: F2 (A) · `atmenetiTar.js` (`rogzites`, `rogzitesFeloldasa`, `rogzitettKulcsok`,
+    `rogzitesAllasa`, `ROGZITETT_KORLAT`), `koino.js` (`korlatosBemondasok`), a próbák.
+178. **2026-10-18 · a felderítés ütemezője (D112 ③ — F1, F4, F6 (A))** → **a felderítés egy háttérben futó Struktúra: az
+    őrjárat minden körében a futó felderítések egy lépése — a Struktúra sorrendje az ágban (a legjobb K, legfeljebb d szint
+    — `felderitesAllasa`), a látható csomópontok rögzítése, a hiányzó HÁTTÉR-kérésként (egy társnál a lap kérései előbb
+    mennek), körönként a beállított számig és csak ha a függő kérelmek közt marad hely a lapnak (48); kész, ha az első K
+    biztos; keret a méretnél; elakadt két óra után; 30 nap után feloldódik; ha az ág gyökere ismeretlen, a szeletét is
+    kéri** · mert a meglévő bejáró és kérelem-gép mindent tud (D102), a felderítésnek csak ütemeznie és rögzítenie kell; az
+    ismeretlen ág esetét a bekötés-próba mérte (a bejáró a fejléc-kérdéssel csak a gyerekeket kéri) · Csaba: F1, F4, F6 (A) ·
+    `felderites.js`, `pakli.js` (`felderitesAllasa`, `maxMelyseg`), `fuggoKerelmek.js` (`hatter`), `koino.js`
+    (`felderitesKor`, a `felderites` parancs), a próbák.

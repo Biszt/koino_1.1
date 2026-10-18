@@ -21,7 +21,7 @@ import {
   entitasReszletei, entitasKuszobei, hianyzoFelmenok, MAX_DARAB, RENDEZESEK, kuszobokBefele,
   pakliHierarchia, TESTVER_KORLAT,
   agHelyzete, sajatHozzarendelesek, HOZZARENDELES_KORLAT, biztosElotag, ELORE_KERES,
-  strukturaDarabszam, strukturaLap, STRUKTURA_KERET,
+  strukturaDarabszam, strukturaLap, STRUKTURA_KERET, felderitesAllasa,
   sikidomGyerekek, sikidomOslanc, SIKIDOM_DARAB,
   keresesHelyben, KERESES_ALAP, KERESES_MAX,
   helyiStatisztika
@@ -1492,6 +1492,20 @@ proba('⭐ D101 ③: ág-szűrve az ág részfája (agDarab), és a keret a lege
   return ag.agDarab === 2 && agLap.sorok.map((x) => x.entitasId).join() === [f.A1, f.A11].join()
     && keretes.ismert === 5 && keretes.latszik === 3 && keretesLap.sorok.length === 3
     && keretesLap.sorok[0].entitasId === f.A;
+});
+
+// ⭐ D112 ③ (F1): a felderítés állása — a Struktúra sorrendje az ágban, a kerettel és a MÉLYSÉG-korláttal. Rontás: a
+// mélység-korlát nincs nézve → az unoka is látszik → bukik.
+proba('⭐ D112 ③: a felderítés állása — a legjobb K az ágban, legfeljebb d szint mélyen (az ágban és a gyökértől is)', async () => {
+  const f = await kisFa();
+  const ag = await felderitesAllasa(f.tar, KOINO, { agazat: f.A, keret: 10 });
+  const sekely = await felderitesAllasa(f.tar, KOINO, { agazat: f.A, keret: 10, maxMelyseg: 1 });
+  const gyokerbol = await felderitesAllasa(f.tar, KOINO, { keret: 10, maxMelyseg: 0 });
+  const keretes = await felderitesAllasa(f.tar, KOINO, { agazat: f.A, keret: 2 });
+  return ag.latszik.length === 4 && ag.latszik.includes(f.A11) && ag.agIsmert
+    && sekely.latszik.length === 3 && !sekely.latszik.includes(f.A11) && sekely.latszik[0] === f.A
+    && gyokerbol.latszik.sort().join() === [f.A, f.B].sort().join()
+    && keretes.latszik.join() === [f.A, f.A1].join() && keretes.ismert === 4;
 });
 
 proba('⭐ D101 ③: a program sorait a prototípus fa-elrendezője (`faElrendezes.js`) hiánytalanul elhelyezi — ágban is', async () => {

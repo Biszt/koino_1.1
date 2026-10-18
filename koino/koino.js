@@ -84,7 +84,7 @@
 //
 // A két mappának saját kulcsa van, tehát valóban két e-ember — nem ugyanaz kétszer.
 
-import { writeFile, readFile, mkdir } from 'node:fs/promises';
+import { writeFile, readFile, mkdir, rename } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { randomUUID, randomInt } from 'node:crypto';
 import { dirname, join } from 'node:path';
@@ -224,6 +224,10 @@ import { terKartyai } from './js/allapot/ter.js';
 // ⭐ MELY FÁJLOKRA VAN SZÜKSÉGEM? — a szállítás első fele (a felderítés).
 import { fajlIgenyek, lenyomatUrlbol } from './js/allapot/fajlIgeny.js';
 import {
+  felderitesBeallitasa, uresFelderitesJegyzek, felderitesJegyzekAlakja, ujFelderites, felderitesLepese, elevultFelderitesek,
+  felderitesTorlese, GYOKER_AG, FELDERITES_ALAP, FELDERITES_HATAR
+} from './js/allapot/felderites.js';
+import {
   kerelemOsszeallitasa, ritkasagSzerint, birtoklasBeolvasztasa,
   valaszOsszeallitasa as fajlValaszOsszeallitasa
 } from './js/csere/fajlKerelem.js';
@@ -268,6 +272,8 @@ import {
   sajatHozzarendelesek,
   // ⭐ D101 ③: a Struktúra nézet.
   strukturaDarabszam, strukturaLap,
+  // ⭐ D112 ③: a felderítés állása (a Struktúra sorrendje a háttérben).
+  felderitesAllasa,
   // ⭐ D101 ④: a Síkidom nézet.
   sikidomGyerekek, sikidomOslanc,
   // ⭐ D101 ⑤: a Keresés (a helyi alja).
@@ -2076,7 +2082,7 @@ async function fuggoKerelemFelvetele(k, { cimek = null, dht = false } = {}) {
   const kp = await kapuPortja();
   const idegenCelok = celok.filter((c) => !(sajatCimE(c.hoszt, sajatGep) && Number(c.port) === kp));
   const r = kerelemFelvetele(await kerelmekOlvasasa(), { fajta: k.fajta, kulcs: k.kulcs, n: k.n ?? 20, m: k.m === true,
-    ...(k.utan ? { utan: k.utan } : {}), celok: idegenCelok, kopogtatok }, Date.now(), randomUUID());
+    ...(k.utan ? { utan: k.utan } : {}), hatter: k.hatter === true, celok: idegenCelok, kopogtatok }, Date.now(), randomUUID());
   await kerelmekIrasa(r.nyilvantartas);
   return { r, kopogtatok, kp };
 }
@@ -2248,6 +2254,78 @@ async function postafiokModositasa(koino, fn) {
 
 /** ⭐ D103: az őrjárat köre — a postafiók és a készülék értesítése (percenként legfeljebb egyszer). */
 let orjaratNezete = null;
+
+// ===================================
+// ⭐⭐ D112 ③: A FELDERÍTÉS — a háttérben futó, rögzített Struktúra (D108/1)
+// ===================================
+//
+// Egy felderítés egy ág egyszeri pillanatképe: az ág legjobb K csomópontja (a Struktúra sorrendje, legfeljebb d szint
+// mélyen — `pakli.js` `felderitesAllasa`), az átmeneti tárba, RÖGZÍTVE (`atmenetiTar.js` `rogzites` — a böngészés nem söpri
+// ki, a bemondott össz-pontjai is megmaradnak: `korlatosBemondasok`). Az őrjárat körönként lép (`felderitesKor`): a látható
+// csomópontok szeleteit rögzíti, a hiányzót függő kérelemként elkéri — HÁTTÉR-kérésként (F6: egy társnál a lap kérései
+// előbb mennek), körönként legfeljebb a beállított számot, és csak ha a függő kérelmek közt van hely a lapnak is
+// (`FELDERITES_FUGGO_HATAR`). Kész, ha a sorrend az első K-ig biztos; megáll a beállított méretnél; 30 nap után a
+// rögzítése feloldódik. A jegyzék helyi (`<koino>/felderitesek.json`).
+const FELDERITES_FUGGO_HATAR = 48;
+const felderitesFajl = () => join(alapHely(), KOINO, 'felderitesek.json');
+async function felderitesJegyzekOlvasasa() {
+  try { return felderitesJegyzekAlakja(JSON.parse(await readFile(felderitesFajl(), 'utf8'))); } catch { return uresFelderitesJegyzek(); }
+}
+async function felderitesJegyzekIrasa(j) {
+  await mkdir(dirname(felderitesFajl()), { recursive: true });
+  const ideiglenes = felderitesFajl() + '.' + process.pid + '.uj';
+  await writeFile(ideiglenes, JSON.stringify(felderitesJegyzekAlakja(j)), 'utf8');
+  await rename(ideiglenes, felderitesFajl());
+}
+
+/**
+ * ⭐ A felderítés köre (az őrjárat minden körében, és a `felderites` parancs indításkor): az elévültek feloldása, és minden
+ * futó felderítés egy lépése. @returns {Promise<{fut: number, kert: number, lezart: string[]}>}
+ */
+async function felderitesKor() {
+  let j = await felderitesJegyzekOlvasasa();
+  const most = Date.now();
+  let valtozott = false;
+  for (const az of elevultFelderitesek(j, most)) {
+    await atmeneti.rogzitesFeloldasa(az);
+    j = felderitesTorlese(j, az);
+    valtozott = true;
+  }
+  const futok = j.felderitesek.filter((f) => f.allapot === 'fut');
+  if (!futok.length) {
+    if (valtozott) await felderitesJegyzekIrasa(j);
+    return { fut: 0, kert: 0, lezart: [] };
+  }
+  await atmeneti.frissit();
+  orjaratNezete ??= ujPakliNezet({ osszegzesek: ellenorzottOsszegzesek, tartott: tartottSzeleteim });
+  let hely = Math.max(0, FELDERITES_FUGGO_HATAR - ((await kerelmekOlvasasa())?.fuggo?.length ?? 0));
+  let kert = 0;
+  const lezart = [];
+  for (const f of futok) {
+    const a = await felderitesAllasa(ketTarNezet(tar, atmeneti), KOINO, { agazat: f.ag === GYOKER_AG ? null : f.ag, keret: f.k,
+      maxMelyseg: f.melyseg, nezet: orjaratNezete, bemondasok: await bemondasok(), fejlecTudas: await fejlecTudas() });
+    // A rögzítés: a látható csomópontok szeletei (és maga az ág, ha az átmenetiben van) — ami még nincs meg, azt a
+    // következő kör rögzíti, amikor megjött.
+    await atmeneti.rogzites([...a.latszik, ...(f.ag !== GYOKER_AG ? [f.ag] : [])], f.az);
+    const bajt = atmeneti.rogzitesAllasa(f.az).bajt;
+    const { f: uj, kerj } = felderitesLepese(f, { ismert: a.ismert, latszik: a.latszik.length, biztos: a.biztos,
+      hianyzik: a.hianyzik.length, agIsmert: a.agIsmert, bajt }, most);
+    const db = Math.min(kerj, hely);
+    // ⚠️ Ha az ág gyökere még nem ismert, a bejáró csak a GYEREKEIT kéri (a fejléc-kérdés X alatt felel) — magát az ágat a
+    // szelete hozza (különben a felderítés soha nem lenne kész).
+    const kerendok = a.agIsmert ? a.hianyzik : [{ fajta: 'szelet', kulcs: f.ag }, ...a.hianyzik];
+    if (db > 0 && kerendok.length) {
+      const r = await lapHianyzoinakElkerese(kerendok, { korlat: db, hatter: true });
+      uj.kerelmek += r.kert;
+      kert += r.kert;
+      hely -= r.kert;
+    }
+    if (uj.allapot !== 'fut') lezart.push(uj.az);
+    j.felderitesek = j.felderitesek.map((x) => (x.az === uj.az ? uj : x));
+  }
+  await felderitesJegyzekIrasa(j);
+  return { fut: futok.length - lezart.length, kert, lezart };
+}
 async function orjaratErtesitesei() {
   orjaratNezete ??= ujPakliNezet({ osszegzesek: ellenorzottOsszegzesek, tartott: tartottSzeleteim });
   return postafiokFrissitese({ tar: ketTarNezet(tar, atmeneti), koino: KOINO, nezet: orjaratNezete,
@@ -2330,17 +2408,17 @@ function hozzarendelesMegjegyzes(lista, keres) {
 // ⭐ Amit a kérelem nemrég elhozott, azt ennyi ideig nem kérjük újra (a nem tartott ág gyerekeit a lekérdezés soha nem
 // tekinti BIZTOSNAK — e nélkül a lap minden lekérésnél újra kérne, és örökké „betöltés”-t mutatna; próba mérte).
 const LAP_FRISSESSEG = 10 * 60 * 1000;
-async function lapHianyzoinakElkerese(hianyzik) {
+async function lapHianyzoinakElkerese(hianyzik, { korlat = LAP_KERES_KORLAT, hatter = false } = {}) {
   const kertek = [];
   const eddig = await kerelmekOlvasasa();
   // ⭐ D102: a folytatás (`utan`) külön kérelem — a nemrég elhozott ELEJE nem tiltja a folytatást.
   const nemregKesz = (fajta, kulcs, utan) => (eddig?.kesz ?? []).some((x) => x.fajta === fajta && x.kulcs === kulcs
     && (x.utan?.az ?? null) === (utan?.az ?? null)
     && String(x.eredmeny).startsWith('megjött') && Date.now() - (x.ido ?? 0) < LAP_FRISSESSEG);
-  for (const h of (Array.isArray(hianyzik) ? hianyzik : []).slice(0, LAP_KERES_KORLAT)) {
+  for (const h of (Array.isArray(hianyzik) ? hianyzik : []).slice(0, korlat)) {
     const kulcs = h.kulcs === '' ? GYOKER_KULCS : h.kulcs;
     if (nemregKesz(h.fajta, kulcs, h.utan)) continue;
-    const k = { fajta: h.fajta, kulcs, n: 50, m: h.m === true, ...(h.utan ? { utan: h.utan } : {}) };
+    const k = { fajta: h.fajta, kulcs, n: 50, m: h.m === true, ...(h.utan ? { utan: h.utan } : {}), ...(hatter ? { hatter: true } : {}) };
     try { await fuggoKerelemFelvetele(k, { dht: false }); kertek.push(h); }
     catch (hiba) { console.warn('a lap kérelme nem vehető fel', { ok: hiba.message }); }
   }
@@ -2403,7 +2481,7 @@ const kerelemKarbantarto = reszfaKarbantarto();
 function bemondasFajl() {
   return join(alapHely(), KOINO, 'osszpontok.json');
 }
-const BEMONDAS_KORLAT = 10000;
+const BEMONDAS_KORLAT = kornyezetSzam('KOINO_BEMONDAS_KORLAT', 10000);
 
 /**
  * ⭐ A bemondott össz-pontok a számításnak — a fájlbeliek, és D95/1 óta az összegezve tartott (nagy) szeleteim ellenőrzött
@@ -2436,8 +2514,20 @@ async function bemondasokBeirasa(ujak) {
   if (!ujak.size) return;
   const m = await bemondasokFajlbol();
   for (const [az, x] of ujak) { m.delete(az); m.set(az, x); }
-  const lista = [...m.entries()].sort((a, b) => (a[1].ido ?? 0) - (b[1].ido ?? 0)).slice(-BEMONDAS_KORLAT);
-  await writeFile(bemondasFajl(), JSON.stringify(Object.fromEntries(lista)), 'utf8');
+  await writeFile(bemondasFajl(), JSON.stringify(Object.fromEntries(korlatosBemondasok(m))), 'utf8');
+}
+
+/**
+ * ⭐ D112 ② (F2): a bemondások és a fejléc-tudás korlátja (`BEMONDAS_KORLAT`, a legrégebbi esik ki) a RÖGZÍTETT
+ * (felderített) entitásokét megtartja — különben egy későbbi böngészés a pillanatkép össz-pontjait kiszorítaná, és a kártyái
+ * „? pont”-tal maradnának.
+ */
+function korlatosBemondasok(m) {
+  const rogzitettek = atmeneti.rogzitettKulcsok?.() ?? new Set();
+  const lista = [...m.entries()].sort((a, b) => (a[1].ido ?? 0) - (b[1].ido ?? 0));
+  const rog = lista.filter(([az]) => rogzitettek.has(az));
+  const tobbi = lista.filter(([az]) => !rogzitettek.has(az));
+  return [...tobbi.slice(Math.max(0, tobbi.length - Math.max(0, BEMONDAS_KORLAT - rog.length))), ...rog];
 }
 
 /** Egy esemény a két tárból (a tartósból, aztán az átmenetiből). */
@@ -2557,8 +2647,7 @@ async function fejlecTudasBeirasa(ujak) {
   if (!ujak.size) return;
   const m = await fejlecTudas();
   for (const [az, x] of ujak) { m.delete(az); m.set(az, x); }
-  const lista = [...m.entries()].sort((a, b) => (a[1].ido ?? 0) - (b[1].ido ?? 0)).slice(-BEMONDAS_KORLAT);
-  await writeFile(fejlecTudasFajl(), JSON.stringify(Object.fromEntries(lista)), 'utf8');
+  await writeFile(fejlecTudasFajl(), JSON.stringify(Object.fromEntries(korlatosBemondasok(m))), 'utf8');
 }
 
 /**
@@ -4410,6 +4499,59 @@ try {
       kiir((kiadva.length ? SZIN.jo : SZIN.halvany) + javaslatok + ' lezárt döntés · ' + kiadva.length
         + ' új csomag (' + esemenyDarab + ' esemény a töredékekbe)' + SZIN.vege
         + (kiadva.length ? '' : SZIN.halvany + ' — minden ott van már' + SZIN.vege));
+      break;
+    }
+
+    case 'felderites': {
+      // ===== ⭐⭐ D112 ③: A FELDERÍTÉS — egy ág egyszeri pillanatképe (D108/1) =====
+      //
+      // node koino/koino.js felderites                                — a felderítések és az állásuk
+      // node koino/koino.js felderites <ág|gyoker> [K] [mélység|-] [torzs] [MB]  — új (vagy újra) — az őrjárat viszi
+      // node koino/koino.js felderites torol <azonosító>              — a rögzítés feloldása, ki a jegyzékből
+      const al = ervek[0];
+      if (al === 'torol') {
+        const j = await felderitesJegyzekOlvasasa();
+        const f = j.felderitesek.find((x) => x.az === ervek[1] || x.az.startsWith(ervek[1] ?? '\u0000'));
+        if (!f) throw new Error('Nincs ilyen felderítés: ' + (ervek[1] ?? '(add meg az azonosítóját)'));
+        await atmeneti.rogzitesFeloldasa(f.az);
+        await felderitesJegyzekIrasa(felderitesTorlese(j, f.az));
+        kiir('Felderítés törölve: ' + f.az + SZIN.halvany + ' — a pillanatképe a böngészés kiszorításába került vissza' + SZIN.vege);
+        break;
+      }
+      if (al) {
+        let ag = GYOKER_AG;
+        if (al !== GYOKER_AG) {
+          const { allapot } = await kepetKeszit();
+          try { ag = feloldas(al, allapot.entitasok.keys()); } catch (hiba) {
+            if (/^[A-Za-z0-9_-]{43}$/.test(al)) ag = al; else throw hiba;
+          }
+        }
+        const k = parseInt(ervek[1], 10);
+        const melyseg = parseInt(ervek[2], 10);
+        const mb = parseInt(ervek[4], 10);
+        const { jegyzek, felderites: f, ujra } = ujFelderites(await felderitesJegyzekOlvasasa(), {
+          ag, k: Number.isInteger(k) ? k : undefined, melyseg: Number.isInteger(melyseg) ? melyseg : undefined,
+          torzs: ervek[3] === 'torzs', mb: Number.isInteger(mb) ? mb : undefined }, Date.now(), 'f-' + randomUUID().slice(0, 8));
+        await felderitesJegyzekIrasa(jegyzek);
+        const kor = await felderitesKor();
+        kiir(SZIN.vastag + (ujra ? 'ÚJRAFELDERÍTÉS: ' : 'FELDERÍTÉS: ') + SZIN.vege + (ag === GYOKER_AG ? 'az egész koinó' : ag.slice(0, 12) + '…')
+          + ' — a legjobb ' + f.k + (f.melyseg !== null ? ', legfeljebb ' + f.melyseg + ' szint' : '') + ', ' + (f.torzs ? 'a törzzsel' : 'csak fejléc')
+          + ', ' + f.mb + ' MB, körönként ' + f.keresKor + ' kérés (' + f.az + ')');
+        kiir(SZIN.halvany + '  ' + kor.kert + ' kérés indult; az őrjárat viszi tovább (az állás: node koino/koino.js felderites).'
+          + ' Pillanatkép: nem frissül, értesítést nem ad — a követés eszköze a tudatpont.' + SZIN.vege);
+        break;
+      }
+      const j = await felderitesJegyzekOlvasasa();
+      kiir(SZIN.vastag + 'FELDERÍTÉSEK: ' + j.felderitesek.length + SZIN.vege + SZIN.halvany + '  (pillanatképek — az alapérték: K = '
+        + FELDERITES_ALAP.k + ', ' + FELDERITES_ALAP.mb + ' MB; egyszerre ≤ ' + FELDERITES_HATAR.aktiv + ' fut)' + SZIN.vege);
+      const allapotNeve = { fut: 'fut', kesz: 'kész', keret: 'megállt (méret)', elakadt: 'elakadt', megallitva: 'megállítva' };
+      for (const f of j.felderitesek) {
+        const r = atmeneti.rogzitesAllasa(f.az);
+        kiir('  ' + f.az + '  ' + (f.ag === GYOKER_AG ? 'az egész koinó' : f.ag.slice(0, 12) + '…') + '  ' + allapotNeve[f.allapot]
+          + ' · ' + f.latszik + '/' + f.k + ' csomópont (biztos ' + f.biztos + ') · ' + r.szeletek + ' szelet rögzítve, '
+          + adatMennyiseg({ bajtKuldott: r.bajt }) + ' / ' + f.mb + ' MB · ' + f.kerelmek + ' kérés'
+          + (f.ok ? SZIN.halvany + ' — ' + f.ok + SZIN.vege : ''));
+      }
       break;
     }
 
@@ -6599,6 +6741,14 @@ try {
             const kt = await keresoTarTomoritese();
             if (kt) kiir(SZIN.halvany + '  🗜 ' + ora() + ' kereső-tár: ' + kt + ' bejegyzés kiesett (lejárt, vagy a régióimon kívül)' + SZIN.vege);
           }
+          // ⭐ D112 ③: a felderítés köre — a futó felderítések egy lépése (rögzítés, háttér-kérések).
+          try {
+            const fk = await felderitesKor();
+            if (fk.kert || fk.lezart.length) {
+              kiir(SZIN.halvany + '  📷 ' + ora() + ' felderítés: ' + (fk.kert ? fk.kert + ' kérés' : '')
+                + (fk.kert && fk.lezart.length ? ' · ' : '') + (fk.lezart.length ? fk.lezart.length + ' lezárult' : '') + SZIN.vege);
+            }
+          } catch (hiba) { console.warn('a felderítés köre most nem ment', { ok: hiba.message }); }
           // ⭐ D112 ① (F3): a fájl-tár kerete (ritkítva — `FAJL_TAKARITAS_KOZ`).
           try {
             const ft = await fajlTarTakaritasa();

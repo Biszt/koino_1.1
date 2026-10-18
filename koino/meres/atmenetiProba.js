@@ -66,6 +66,35 @@ proba('⭐⭐ a korlát fölött a LEGRÉGEBBEN MEGNÉZETT szelet megy — a meg
     && ujra.mind().length === 2 && !ujra.mind().some((e) => e.azonosito === g[1].azonosito);
 });
 
+// ⭐⭐ D112 ② (F2): a RÖGZÍTÉS (a felderítés pillanatképe). Rontás: a böngészés kiszorítása a rögzítettet is nézi → a
+// rögzített kiesik → bukik; a rögzítettek kerete nincs → a régebbi rögzítés nem megy → bukik; a feloldás nem adja vissza a
+// kiszorításba → bukik; a rögzítés nem kerül a lemezre → az újranyitott tár nem látja → bukik.
+proba('⭐⭐ D112 ②: a RÖGZÍTETT szelet a böngészés kiszorításából kimarad, saját kerete van (a régebbi rögzítés megy), a feloldás után visszakerül', async () => {
+  const hely = await mappa();
+  let ora = 1000;
+  const anna = await ujEember(KOINO);
+  const g = [];
+  for (const cim of ['A1', 'A2', 'A3', 'A4']) g.push(await anna.tesz('GondolatLetrehozas', { cim, meret: 10 }));
+  const egy = Buffer.byteLength(JSON.stringify(g[0])) + 1;
+  // a böngészés kerete: 1 szelet; a rögzítetteké: 2 szelet
+  const at = await atmenetiTarNyitasa(KOINO, hely, { korlat: Math.floor(egy * 1.5), rogzitettKorlat: Math.floor(egy * 2.5), most: () => ora });
+  const megvan = (i) => at.mind().some((e) => e.azonosito === g[i].azonosito);
+  await esemenyMentese(at, g[0]); ora += 10;                // A1 @1000
+  await at.rogzites([g[0].azonosito], 'F1'); ora += 10;     // A1 rögzítve (F1 @1010)
+  await esemenyMentese(at, g[1]); ora += 10;                // A2 szabad @1020
+  await esemenyMentese(at, g[2]); ora += 10;                // A3 szabad @1030 → a böngészés kerete 1: A2 megy, A1 marad
+  const bongeszes = megvan(0) && !megvan(1) && megvan(2);
+  await at.rogzites([g[2].azonosito], 'F2'); ora += 10;     // A3 rögzítve (F2 @1040) — rögzített: A1, A3
+  await esemenyMentese(at, g[3]); ora += 10;                // A4 szabad @1050
+  await at.rogzites([g[3].azonosito], 'F2'); ora += 10;     // A4 rögzítve (F2 @1060) → 3 rögzített > 2,5: a legrégebbi (A1) megy
+  const rogzitettKeret = !megvan(0) && megvan(2) && megvan(3) && at.rogzitesAllasa('F2').szeletek === 2;
+  const ujra = await atmenetiTarNyitasa(KOINO, hely, { korlat: 1e9 });
+  const lemezen = ujra.rogzitettKulcsok().has(g[2].azonosito) && ujra.rogzitettKulcsok().has(g[3].azonosito);
+  await at.rogzitesFeloldasa('F2');                         // A3, A4 szabad → a böngészés kerete 1: a régebben megnézett (A3) megy
+  const feloldva = at.rogzitettKulcsok().size === 0 && !megvan(2) && megvan(3);
+  return bongeszes && rogzitettKeret && lemezen && feloldva;
+});
+
 proba('⭐ a két tár EGY bemenet: a tartós mind, az átmenetiből ami a tartósban nincs — és a nézet is ugyanezt adja', async () => {
   const hely = await mappa();
   const tartos = await esemenyTarNyitasa(KOINO, hely);

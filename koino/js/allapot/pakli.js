@@ -1137,6 +1137,13 @@ async function strukturaSorrend(tar, koino, beallitas = {}) {
   const kep = await kepetKerni(nezet, koino, horgony, most, esemenyek, tar.csakAtmeneti?.() ?? null);
   const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok, await tartottKerdes(nezet));
   const agazat = typeof beallitas.agazat === 'string' && beallitas.agazat ? beallitas.agazat : null;
+  // ⭐ D112 ③ (F1): a felderítés mélység-korlátja — legfeljebb ennyi szinttel az ág (vagy a gyökér) alatt.
+  const maxMelyseg = Number.isInteger(beallitas.maxMelyseg) && beallitas.maxMelyseg >= 0 ? beallitas.maxMelyseg : null;
+  const gyokerMelysege = (az) => {
+    let x = kep.entitasok.get(az);
+    for (let m = 0; m <= FELMENO_KORLAT; m++) { if (!x?.szulo) return m; x = kep.entitasok.get(x.szulo); if (!x) return m + 1; }
+    return FELMENO_KORLAT + 1;
+  };
   let nemEldontheto = 0;
   const hianyzik = [];
   const lista = [];
@@ -1151,7 +1158,8 @@ async function strukturaSorrend(tar, koino, beallitas = {}) {
         continue;
       }
       if (!h.alatta) continue;
-    }
+      if (maxMelyseg !== null && h.melyseg > maxMelyseg) continue;
+    } else if (maxMelyseg !== null && gyokerMelysege(e.azonosito) > maxMelyseg) continue;
     lista.push(e.azonosito);
   }
   const ertek = (az) => agazati.get(az) ?? 0;
@@ -1167,6 +1175,18 @@ async function strukturaSorrend(tar, koino, beallitas = {}) {
   const keret = Math.max(1, Math.min(Number.isInteger(beallitas.keret) ? beallitas.keret : STRUKTURA_KERET, STRUKTURA_KERET));
   return { kep, agazati, lista, latszik: lista.slice(0, keret), keret, biztos: b.biztos, hianyzik, nemEldontheto,
     horgony, most, agazat };
+}
+
+/**
+ * ⭐⭐ D112 ③: A FELDERÍTÉS ÁLLÁSA — a Struktúra sorrendje az ágban (a kerettel és a mélységgel): a látható csomópontok
+ * (az ág legjobb K-ja, legjobb-először — mindig összefüggő részfa), meddig biztos a sorrend, és mit kell még elkérni.
+ * @param {Object} [beallitas] - { agazat, keret, maxMelyseg, nezet, bemondasok, fejlecTudas }
+ * @returns {Promise<{latszik: string[], ismert: number, biztos: number, hianyzik: Array<Object>, agIsmert: boolean}>}
+ */
+export async function felderitesAllasa(tar, koino, beallitas = {}) {
+  const s = await strukturaSorrend(tar, koino, beallitas);
+  return { latszik: s.latszik, ismert: s.lista.length, biztos: Math.min(s.biztos, s.latszik.length), hianyzik: s.hianyzik,
+    agIsmert: !s.agazat || s.kep.entitasok.has(s.agazat) };
 }
 
 /**
@@ -1514,7 +1534,7 @@ export function agHelyzete(entitasok, az, ag) {
   let x = az;
   for (let lepes = 0; lepes <= FELMENO_KORLAT; lepes++) {
     if (!x) return { alatta: false, hianyzo: null };               // a gyökérig értünk, az ág nem jött
-    if (x === ag) return { alatta: true, hianyzo: null };
+    if (x === ag) return { alatta: true, hianyzo: null, melyseg: lepes };   // ⭐ D112 ③: hány szinttel az ág alatt
     // ⚠️ Kör a szülő-láncon: minden felmenő a körön van, és az ág nem volt köztük — tehát nem alatta.
     if (latott.has(x)) return { alatta: false, hianyzo: null };
     latott.add(x);

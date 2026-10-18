@@ -508,6 +508,20 @@ proba('⭐ ⑦b: a KÉRDÉS függő kérelemként — a kérdés a kérelem rés
     && lezarva.kesz.at(-1).ker?.kerdes === 'park' && lezarva.fuggo.length === 1 && hibas;
 });
 
+// ⭐ D112 ③ (F6): a felderítés kérése HÁTTÉR — egy társnál a lap (az előtér) kérései előbb mennek; ha az előtér is kéri, már
+// nem háttér. Rontás: a háttér rangja nincs hátrébb → a régebbi háttér-kérés jön előbb → bukik.
+proba('⭐ D112 ③: a háttér-kérés (a felderítésé) egy társnál az előtér után megy — és ha az előtér is kéri, már nem háttér', () => {
+  const cel = [{ hoszt: '10.0.0.9', port: 7373 }];
+  let ny = kerelemFelvetele(ujNyilvantartas(), { fajta: 'fejlecek', kulcs: K1, hatter: true, celok: cel }, 1, 'hatter').nyilvantartas;
+  ny = kerelemFelvetele(ny, { fajta: 'fejlecek', kulcs: K2, celok: cel }, 2, 'eloter').nyilvantartas;
+  const elso = tarshozIllo(ny, '10.0.0.9', 7373);
+  const sor = tarshozIllok(ny, '10.0.0.9', 7373).map((x) => x.az);
+  const lemezrol = nyilvantartasAlakja(JSON.parse(JSON.stringify(ny)));
+  const felvett = kerelemFelvetele(ny, { fajta: 'fejlecek', kulcs: K1, celok: cel }, 3, 'x').nyilvantartas;
+  return elso?.az === 'eloter' && sor.join() === 'eloter,hatter' && lemezrol.fuggo.find((x) => x.az === 'hatter')?.hatter === true
+    && felvett.fuggo.find((x) => x.az === 'hatter')?.hatter === undefined;
+});
+
 proba('a korlát fölött a legrégebbi függő kiesik — és a kész naplóban kimondja (`kiszorult`)', () => {
   let ny = ujNyilvantartas();
   for (let i = 0; i <= FUGGO_KORLAT; i++) {
