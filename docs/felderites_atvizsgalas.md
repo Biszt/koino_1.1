@@ -140,3 +140,10 @@ ezért a szeletét is elkéri (különben soha nem lenne kész). Próbák: `feld
 `kerelemProba.js` +1 — mind rontással —, és a bekötés: egy friss készülék a háttérben elhozza az ágat (X-et magát sem
 ismerte), rögzítve, és egy későbbi böngészés a kis bemondás-korlát mellett sem söpri ki az össz-pontjait (négy rontással).
 Elágazás 178.
+
+✅ **④ KÉSZ (2026-10-19) — a törzs-fázis:** ha a törzs is kell, a fejlécek után a látható csomópontok szöveg-darabja és
+fájljai jönnek (háttér-kérésként, a felderítés méretébe számítva, a fájl-tárban védve). ⚠️ Két mérés-lelet: (1) a törzs-kérés
+elsőre csak a következő körben indult, és addigra a csere randevúja (D és A a próbában társak) hozta a darabokat — most
+ugyanabban a körben indul, amelyikben a fejlécek elkészültek; (2) a két út így is versenyez (hol a kérelem, hol a randevú ér
+előbb), ezért a próba azt méri, hogy a törzs-kérelem LÉTREJÖTT, és a darabok megvannak — egy első változata ezt nem tudta
+eldönteni (a „nem kér” rontás nem bukott). Próbák: `felderitesProba.js` +1, a bekötés (négy rontással). Elágazás 179.

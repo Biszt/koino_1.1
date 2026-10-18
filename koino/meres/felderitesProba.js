@@ -84,4 +84,23 @@ proba('⭐ D112: a 30 napnál régebbi pillanatkép elévül; a jegyzék alakja 
   return elevult.join() === 'regi' && alak.felderitesek.length === 2 && torolt.felderitesek.map((f) => f.az).join() === 'friss';
 });
 
+// ⭐ D112 ④: a két fázis — ha a törzs is kell, a fejlécek után a törzs-fázis jön (nem kész), ami akkor kész, ha egyik
+// látható csomópontnak sem hiányzik a törzse; a méretbe a törzs is számít. Rontás: a törzs-fázis kimarad (a fejlécek után
+// kész) → bukik; a törzs-fázis soha nem zárul → bukik.
+proba('⭐ D112 ④: a törzs-fázis — a fejlécek után jön (ha kérték), és akkor kész, ha egyik látható csomópontnak sem hiányzik a törzse', () => {
+  const f = ujFelderites(uresFelderitesJegyzek(), { ag: AG('a'), k: 10, torzs: true, keresKor: 2 }, 1000, 'f').felderites;
+  const fejlecKesz = felderitesLepese(f, { ismert: 4, latszik: 4, biztos: 4, hianyzik: 0, agIsmert: true, bajt: 0 }, 2000);
+  const torzsFut = felderitesLepese(fejlecKesz.f, { ismert: 4, latszik: 4, biztos: 4, hianyzik: 0, agIsmert: true, bajt: 100,
+    torzsHianyzik: 3 }, 3000);
+  const torzsKesz = felderitesLepese(torzsFut.f, { ismert: 4, latszik: 4, biztos: 4, hianyzik: 0, agIsmert: true, bajt: 500,
+    torzsHianyzik: 0 }, 4000);
+  const keret = felderitesLepese(torzsFut.f, { ismert: 4, latszik: 4, biztos: 4, hianyzik: 0, agIsmert: true, bajt: 30 * MB,
+    torzsHianyzik: 2 }, 4000);
+  const lemezrol = felderitesJegyzekAlakja({ felderitesek: [torzsFut.f] }).felderitesek[0];
+  return fejlecKesz.f.allapot === 'fut' && fejlecKesz.f.fazis === 'torzs' && fejlecKesz.kerj === 2
+    && torzsFut.f.allapot === 'fut' && torzsFut.f.torzsHianyzik === 3 && torzsFut.kerj === 2
+    && torzsKesz.f.allapot === 'kesz' && keret.f.allapot === 'keret'
+    && lemezrol.fazis === 'torzs' && lemezrol.torzsHianyzik === 3;
+});
+
 export default futtatas;

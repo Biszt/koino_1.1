@@ -1110,9 +1110,13 @@ async function fajlTarTakaritasa({ kenyszer = false, proba = false } = {}) {
   const blob = fajlBlobTarolo(KOINO);
   const { allapot, javaslatok, esemenyek } = await kepetKeszit();
   const vallalas = await sajatVallalasa(allapot);
+  // ⭐ D112 ④: a felderítés RÖGZÍTETT entitásainak törzse is védett (a felderítés saját keretében számol, nem itt).
+  await atmeneti.frissit();
+  const rogzitett = atmeneti.rogzitettKulcsok?.() ?? new Set();
   const { vallaltLenyomatok } = await fajlIgenyek(allapot, (l) => blob.van(l), {
     szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob),
-    vallaltE: (e) => !!e && ((e.hozzajarulok?.get(szerzo)?.pont ?? 0) > 0 || e.szerzo === szerzo || vallalas.szeletek.has(e.azonosito))
+    vallaltE: (e) => !!e && ((e.hozzajarulok?.get(szerzo)?.pont ?? 0) > 0 || e.szerzo === szerzo || vallalas.szeletek.has(e.azonosito)
+      || rogzitett.has(e.azonosito))
   });
   const vedett = new Set(vallaltLenyomatok);
   for (const e of esemenyek ?? []) if (e?.tipus === 'Profil' && typeof e.adat?.lenyomat === 'string') vedett.add(e.adat.lenyomat);
@@ -2307,13 +2311,34 @@ async function felderitesKor() {
     // A rögzítés: a látható csomópontok szeletei (és maga az ág, ha az átmenetiben van) — ami még nincs meg, azt a
     // következő kör rögzíti, amikor megjött.
     await atmeneti.rogzites([...a.latszik, ...(f.ag !== GYOKER_AG ? [f.ag] : [])], f.az);
-    const bajt = atmeneti.rogzitesAllasa(f.az).bajt;
+    let bajt = atmeneti.rogzitesAllasa(f.az).bajt;
+    // ⭐ D112 ④: A TÖRZS-FÁZIS — a látható csomópontok szöveg-darabja és fájljai (csak a vállaló adja — D84/1); ami megvan,
+    // a felderítés méretébe számít (és a fájl-tár takarítása védettnek látja — a rögzítés miatt).
+    // ⚠️ A törzs állását a fejléc-fázisban is számoljuk (ha a törzs kell): amikor a fejlécek elkészülnek, a törzs-kérések UGYANABBAN
+    // a körben indulnak — különben a következő kör cseréje (a randevú) előbb hozná, és a felderítés egy kört várna (mérve).
+    let torzsHianyzik = null;
+    const torzsKerendo = [];
+    if (f.torzs) {
+      const blob = fajlBlobTarolo(KOINO);
+      const meretek = new Map((await blob.allapot()).map((x) => [x.lenyomat, x.meret]));
+      for (const az of a.latszik) {
+        const e = a.entitasok.get(az);
+        if (!e) continue;
+        let hianyzik = false;
+        for (const l of await torzsLenyomatai(e, (x) => blob.olvas(x))) {
+          if (meretek.has(l)) bajt += meretek.get(l); else hianyzik = true;
+        }
+        if (hianyzik) torzsKerendo.push({ fajta: 'torzs', kulcs: az });
+      }
+      torzsHianyzik = torzsKerendo.length;
+    }
     const { f: uj, kerj } = felderitesLepese(f, { ismert: a.ismert, latszik: a.latszik.length, biztos: a.biztos,
-      hianyzik: a.hianyzik.length, agIsmert: a.agIsmert, bajt }, most);
+      hianyzik: a.hianyzik.length, agIsmert: a.agIsmert, bajt, torzsHianyzik }, most);
     const db = Math.min(kerj, hely);
     // ⚠️ Ha az ág gyökere még nem ismert, a bejáró csak a GYEREKEIT kéri (a fejléc-kérdés X alatt felel) — magát az ágat a
     // szelete hozza (különben a felderítés soha nem lenne kész).
-    const kerendok = a.agIsmert ? a.hianyzik : [{ fajta: 'szelet', kulcs: f.ag }, ...a.hianyzik];
+    const kerendok = uj.fazis === 'torzs' ? torzsKerendo
+      : (a.agIsmert ? a.hianyzik : [{ fajta: 'szelet', kulcs: f.ag }, ...a.hianyzik]);
     if (db > 0 && kerendok.length) {
       const r = await lapHianyzoinakElkerese(kerendok, { korlat: db, hatter: true });
       uj.kerelmek += r.kert;
@@ -4545,9 +4570,12 @@ try {
       kiir(SZIN.vastag + 'FELDERÍTÉSEK: ' + j.felderitesek.length + SZIN.vege + SZIN.halvany + '  (pillanatképek — az alapérték: K = '
         + FELDERITES_ALAP.k + ', ' + FELDERITES_ALAP.mb + ' MB; egyszerre ≤ ' + FELDERITES_HATAR.aktiv + ' fut)' + SZIN.vege);
       const allapotNeve = { fut: 'fut', kesz: 'kész', keret: 'megállt (méret)', elakadt: 'elakadt', megallitva: 'megállítva' };
+      const fazisNeve = (f) => (f.allapot === 'fut' && f.torzs ? (f.fazis === 'torzs' ? ' (a törzs: ' + (f.torzsHianyzik ?? '?')
+        + ' csomópontnak hiányzik)' : ' (a fejlécek)') : '');
       for (const f of j.felderitesek) {
         const r = atmeneti.rogzitesAllasa(f.az);
         kiir('  ' + f.az + '  ' + (f.ag === GYOKER_AG ? 'az egész koinó' : f.ag.slice(0, 12) + '…') + '  ' + allapotNeve[f.allapot]
+          + fazisNeve(f)
           + ' · ' + f.latszik + '/' + f.k + ' csomópont (biztos ' + f.biztos + ') · ' + r.szeletek + ' szelet rögzítve, '
           + adatMennyiseg({ bajtKuldott: r.bajt }) + ' / ' + f.mb + ' MB · ' + f.kerelmek + ' kérés'
           + (f.ok ? SZIN.halvany + ' — ' + f.ok + SZIN.vege : ''));

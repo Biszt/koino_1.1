@@ -31,6 +31,8 @@ export const GYOKER_AG = 'gyoker';
 const MB = 1024 * 1024;
 const AZONOSITO_MINTA = /^[A-Za-z0-9_-]{43}$/;
 const ALLAPOTOK = new Set(['fut', 'kesz', 'keret', 'elakadt', 'megallitva']);
+/** ⭐ D112 ④: a felderítés két fázisa — előbb a fejlécek (az ág legjobb K-ja), aztán (ha kérték) a törzsük. */
+const FAZISOK = new Set(['fejlec', 'torzs']);
 
 /**
  * ⭐ A beállítás — az alapértékekkel kiegészítve, a határok közé szorítva (F4). Az ág egy teljes azonosító vagy a gyökér.
@@ -65,7 +67,9 @@ export function felderitesJegyzekAlakja(x) {
     try { b = felderitesBeallitasa(f); } catch { continue; }
     if (ki.some((y) => y.az === f.az || y.ag === b.ag)) continue;
     const szam = (v) => (Number.isFinite(v) && v >= 0 ? v : 0);
-    ki.push({ az: f.az, ...b, allapot: f.allapot, kezdet: szam(f.kezdet), vege: Number.isFinite(f.vege) ? f.vege : null,
+    ki.push({ az: f.az, ...b, allapot: f.allapot, fazis: FAZISOK.has(f.fazis) ? f.fazis : 'fejlec',
+      torzsHianyzik: Number.isInteger(f.torzsHianyzik) && f.torzsHianyzik >= 0 ? f.torzsHianyzik : null,
+      kezdet: szam(f.kezdet), vege: Number.isFinite(f.vege) ? f.vege : null,
       frissitve: szam(f.frissitve), haladas: szam(f.haladas), latszik: szam(f.latszik), biztos: szam(f.biztos),
       bajt: szam(f.bajt), kerelmek: szam(f.kerelmek), ok: typeof f.ok === 'string' ? f.ok.slice(0, 200) : null });
   }
@@ -90,30 +94,44 @@ export function ujFelderites(jegyzek, beallitas, most, az) {
   if (ossz > FELDERITES_HATAR.osszMb) {
     throw new Error('A felderítések együtt legfeljebb ' + FELDERITES_HATAR.osszMb + ' MB-ot tarthatnak (ezzel ' + ossz + ' MB lenne).');
   }
-  const f = { az: regi?.az ?? az, ...b, allapot: 'fut', kezdet: most, vege: null, frissitve: most, haladas: most, latszik: 0,
+  const f = { az: regi?.az ?? az, ...b, allapot: 'fut', fazis: 'fejlec', torzsHianyzik: null, kezdet: most, vege: null,
+    frissitve: most, haladas: most, latszik: 0,
     biztos: 0, bajt: regi?.bajt ?? 0, kerelmek: 0, ok: null };
   j.felderitesek = [...tobbi, f];
   return { jegyzek: j, felderites: f, ujra: !!regi };
 }
 
 /**
- * ⭐⭐ Egy felderítés LÉPÉSE a Struktúra állásából (`pakli.js` `felderitesAllasa`): KÉSZ, ha a sorrend az első K-ig biztos
- * (vagy az ág kisebb, és nincs mit kérni); KERET, ha a rögzített része elérte a beállított méretet; ELAKADT, ha
- * `FELDERITES_ELAKADAS` óta nem lépett előre; különben fut, és legfeljebb `keresKor` új kérést kérhet.
+ * ⭐⭐ Egy felderítés LÉPÉSE a Struktúra állásából (`pakli.js` `felderitesAllasa`): a fejléc-fázis KÉSZ, ha a sorrend az
+ * első K-ig biztos (vagy az ág kisebb, és nincs mit kérni) — ha a törzs is kell (D112 ④), innen a törzs-fázis jön, ami akkor
+ * kész, ha a látható csomópontok egyikének sem hiányzik a törzse; KERET, ha a rögzített része (a törzzsel) elérte a
+ * beállított méretet; ELAKADT, ha `FELDERITES_ELAKADAS` óta nem lépett előre; különben fut, és legfeljebb `keresKor` új
+ * kérést kérhet.
  * @param {Object} f - a felderítés
- * @param {{ismert: number, latszik: number, biztos: number, hianyzik: number, agIsmert: boolean, bajt: number}} a
+ * @param {{ismert: number, latszik: number, biztos: number, hianyzik: number, agIsmert: boolean, bajt: number,
+ *   torzsHianyzik?: number|null}} a
  * @returns {{f: Object, kerj: number}}
  */
-export function felderitesLepese(f, { ismert, latszik, biztos, hianyzik, agIsmert, bajt }, most) {
+export function felderitesLepese(f, { ismert, latszik, biztos, hianyzik, agIsmert, bajt, torzsHianyzik = null }, most) {
   const uj = { ...f, frissitve: most, latszik, bajt };
   if (biztos > f.biztos || latszik > f.latszik) uj.haladas = most;
+  if (Number.isInteger(torzsHianyzik)) {
+    if (f.torzsHianyzik === null || torzsHianyzik < f.torzsHianyzik) uj.haladas = most;
+    uj.torzsHianyzik = torzsHianyzik;
+  }
   uj.biztos = biztos;
   if (f.allapot !== 'fut') return { f: uj, kerj: 0 };
   if (bajt >= f.mb * MB) {
     return { f: { ...uj, allapot: 'keret', vege: most, ok: 'elérte a beállított méretet (' + f.mb + ' MB)' }, kerj: 0 };
   }
-  const kesz = agIsmert && latszik > 0 && (biztos >= f.k || (biztos >= latszik && latszik >= Math.min(f.k, ismert) && hianyzik === 0));
-  if (kesz) return { f: { ...uj, allapot: 'kesz', vege: most, ok: null }, kerj: 0 };
+  if (f.fazis === 'torzs') {
+    if (torzsHianyzik === 0) return { f: { ...uj, allapot: 'kesz', vege: most, ok: null }, kerj: 0 };
+  } else {
+    const kesz = agIsmert && latszik > 0 && (biztos >= f.k || (biztos >= latszik && latszik >= Math.min(f.k, ismert) && hianyzik === 0));
+    if (kesz && !f.torzs) return { f: { ...uj, allapot: 'kesz', vege: most, ok: null }, kerj: 0 };
+    // ⭐ D112 ④: a fejlécek megvannak — a törzs-fázis (a haladás órája újraindul).
+    if (kesz) return { f: { ...uj, fazis: 'torzs', haladas: most }, kerj: f.keresKor };
+  }
   if (most - uj.haladas > FELDERITES_ELAKADAS) {
     return { f: { ...uj, allapot: 'elakadt', vege: most, ok: 'két órája nem jött semmi (nincs elérhető tartó)' }, kerj: 0 };
   }

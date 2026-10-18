@@ -1255,3 +1255,10 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     ismeretlen ág esetét a bekötés-próba mérte (a bejáró a fejléc-kérdéssel csak a gyerekeket kéri) · Csaba: F1, F4, F6 (A) ·
     `felderites.js`, `pakli.js` (`felderitesAllasa`, `maxMelyseg`), `fuggoKerelmek.js` (`hatter`), `koino.js`
     (`felderitesKor`, a `felderites` parancs), a próbák.
+179. **2026-10-19 · a felderítés törzse (D112 ④)** → **két fázis: a fejlécek, aztán (ha kérték) a látható csomópontok
+    törzse — a szöveg-darab és a fájlok, háttér-kérésként (csak a vállaló adja — D84/1), a felderítés méretébe számítva; a
+    törzs-kérések ugyanabban a körben indulnak, amelyikben a fejlécek elkészültek; a fájl-tár takarítása a rögzített
+    entitások törzsét védi** · mert a következő körre halasztva a csere randevúja (ami a két tár minden entitásának fájljait
+    kéri) előbb hozta volna a darabokat egy csere-társtól, és a felderítés egy kört várt volna (mérve); a randevú ettől még
+    versenyez — a felderítés dolga a kérés, a darab bármelyik úton jöhet · Claude · `felderites.js` (`fazis`,
+    `torzsHianyzik`), `pakli.js`, `koino.js` (`felderitesKor`, `fajlTarTakaritasa`), a próbák.

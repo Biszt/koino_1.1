@@ -5906,7 +5906,16 @@ mélységet is mondja), `fuggoKerelmek.js` (a `hatter` jel — egy társnál az 
 már nem háttér), `koino.js` (`felderitesKor` az őrjárat minden körében: az elévültek feloldása, a futók lépése — a látható
 csomópontok rögzítése, a hiányzó háttér-kérésként, körönként a beállított számig és csak ha a függő kérelmek közt van hely a
 lapnak is — `FELDERITES_FUGGO_HATAR` = 48; ha az ág gyökere ismeretlen, a szeletét is kéri; a `felderites` parancs: a lista,
-az új / újra, a törlés; a próbák: `KOINO_BEMONDAS_KORLAT`). Elágazás 178. ⏭️ ④ a törzs-fázis → ⑤ a felület.
+az új / újra, a törlés; a próbák: `KOINO_BEMONDAS_KORLAT`). Elágazás 178.
+
+✅ **④ MEGÉPÜLT (2026-10-19) — a törzs-fázis:** `felderites.js` (két fázis — `fazis`: a fejlécek, aztán ha kérték, a törzs; a
+törzs-fázis kész, ha a látható csomópontok egyikének sem hiányzik a törzse; `torzsHianyzik`), `pakli.js`
+(`felderitesAllasa` a látható entitásokat is adja), `koino.js` (`felderitesKor`: a látható csomópontok törzse — a
+szöveg-darab és a fájlok, `torzsLenyomatai` —, ami hiányzik, háttér-kérésként; ami megvan, a felderítés méretébe számít; a
+törzs-kérések UGYANABBAN a körben indulnak, amelyikben a fejlécek elkészültek; a fájl-tár takarítása a rögzített entitások
+törzsét védettnek látja). ⚠️ Megfigyelés (a bekötés-próba mérte): a csere randevúja a két tár MINDEN entitásának fájljait
+kéri, tehát egy csere-társtól a törzs a felderítés nélkül is jön — a két út versenyez; a fájl-tár kerete (①) ezt korlátozza.
+Elágazás 179. ⏭️ ⑤ a felület.
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 

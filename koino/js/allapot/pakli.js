@@ -1186,7 +1186,9 @@ async function strukturaSorrend(tar, koino, beallitas = {}) {
 export async function felderitesAllasa(tar, koino, beallitas = {}) {
   const s = await strukturaSorrend(tar, koino, beallitas);
   return { latszik: s.latszik, ismert: s.lista.length, biztos: Math.min(s.biztos, s.latszik.length), hianyzik: s.hianyzik,
-    agIsmert: !s.agazat || s.kep.entitasok.has(s.agazat) };
+    agIsmert: !s.agazat || s.kep.entitasok.has(s.agazat),
+    // ⭐ D112 ④: a látható csomópontok maguk (a törzs-fázisnak — a szöveg-darabjuk és a fájljaik).
+    entitasok: new Map(s.latszik.map((az) => [az, s.kep.entitasok.get(az)]).filter(([, e]) => e)) };
 }
 
 /**
