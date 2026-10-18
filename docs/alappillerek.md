@@ -1192,3 +1192,16 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     (`felajanlas` fajta, `felajanlasValaszAlakja`, `TOVABBADHATO_FAJTAK`), `vonal.js`, `fuggoKerelmek.js`, `cimjegyzek.js` (a
     `kereso` pár), `keresoTar.js` (`helyMerete`), `koino.js` (a kiszolgáló, `felajanlasKor`, a függő munka, a parancs), a
     próbák.
+173. **2026-10-18 · a kérdés (a kereső-réteg ⑤ — K1, K2 (C), K3, K7, K9)** → **a terv: a kérdés szavai a leghosszabbtól (a
+    K7 „legritkább szó”-jának olcsó becslése), a ≥ 4 jeles szónál a SZÓELEJE-fiók (a toldalékos alakokra is teljes), a
+    háromjelesnél az egész szó; egy nem osztódott fiók válasza teljes — ott megáll; az osztódottból 2 darab a minta, és a
+    következő szóra lép; új kérelem-fajta (`kereses`: a hely — fiók, mélység, darab — és a kérdés): a tartó a hely indexelt
+    bejegyzései közül a TELJES kérdésre illőket adja (a legfrissebbek elöl, ≤ 50), a szerzők tagsági kísérőivel, a hely
+    méretével és az osztódással; a kérdező MAGA ellenőriz (a kísérők a kapun, a találat alakja, tartalma, a hely, a szűrő, a
+    szerzők tagsága a saját tudásából — a nem ellenőrizhetőt kihagyja, kimondva), a csomagot az ÁTMENETI tárba teszi (a
+    kártya megnyitható), és ha a gondolatot ismeri, a valódi címével szűr (K9); a tartót közvetlenül vagy a DHT-n (a régió
+    témáján) éri el** · mert a tartó szava nem bizonyíték (3. szabály) — egy hazug tartó nem tag szerzőt, vagy más szót
+    tartalmazó címet is adhatna; a szóeleje-fiók nélkül a „park” a „parkban”-t nem találná; ⏸️ a NAT mögötti tartóhoz a
+    kérdés függő kérelemként (az őrjárat viszi) a ⑦-tel jön (a felület várja meg a választ) · Claude · `kereses.js`,
+    `kerelem.js` (`kereses` fajta), `vonal.js` (`KERESESVALASZ`), `keresoTar.js` (`helyBejegyzesei`), `koino.js` (a
+    kiszolgáló, `kereses`, `keresesValaszFeldolgozasa`, a `kereso keres` parancs), a próbák.

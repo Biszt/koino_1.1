@@ -710,4 +710,40 @@ proba('⭐⭐ D107 L4: a FELAJÁNLÁS a védett résen — a tartó megkapja a b
   }
 });
 
+// ===================================
+// ⭐⭐ A kereső-réteg ⑤: A KÉRDÉS — az alak és a menet a résen
+// ===================================
+
+// Rontás: a kérdés fiók-kulcsa / szövege nincs ellenőrizve → a hibás is átmegy → bukik.
+proba('⭐ a kérdés alakja: a hely (fiók, mélység, darab) és a szöveg — a hibás fiók, a túl hosszú vagy üres kérdés nem kérdés', () => {
+  const r = keresoRegioKulcsa(0, 0);
+  const jo = kerelemAlakja({ fajta: 'kereses', kulcs: r, k: 'p:park', s: 2, darab: '3', kerdes: 'park', n: 999 });
+  return jo?.k === 'p:park' && jo.s === 2 && jo.darab === '3' && jo.n === 50
+    && kerelemAlakja({ fajta: 'kereses', kulcs: r, k: 'park', kerdes: 'park' }) === null
+    && kerelemAlakja({ fajta: 'kereses', kulcs: r, k: 'p:park', kerdes: '' }) === null
+    && kerelemAlakja({ fajta: 'kereses', kulcs: r, k: 'p:park', kerdes: 'x'.repeat(201) }) === null
+    && kerelemAlakja({ fajta: 'kereses', kulcs: AZ, k: 'p:park', kerdes: 'park' }) === null;
+});
+
+// Rontás: a kérő nem viszi a helyet és a kérdést (vagy nem várja a választ) → a tartó nem kapja / a kérő nem kap választ → bukik.
+proba('⭐⭐ a KÉRDÉS a védett résen — a tartó megkapja a helyet és a kérdést, a kérő a találatokat, a méretet és az osztódást', async () => {
+  const p = await udpPar();
+  const hely = await mkdtemp(join(tmpdir(), 'koino-kerelem-'));
+  try {
+    const tar = await esemenyTarNyitasa('proba', hely);
+    let kapott = null;
+    const kiszolgalo = { async kereses(k) { kapott = k; return { talalatok: [{ a: 1 }], kiserok: [], meret: 300, osztodott: 1 }; } };
+    const [, r] = await Promise.all([
+      tartoResen(p.egyik, p.masikPort, tar, { kerelemKiszolgalo: kiszolgalo }),
+      kerelemUdpResen(p.masik, '127.0.0.1', p.egyikPort, 'proba',
+        { fajta: 'kereses', kulcs: GYOKER_KULCS, k: 'p:park', s: 0, darab: '0', kerdes: 'park iskola' })
+    ]);
+    return kapott?.k === 'p:park' && kapott.kerdes === 'park iskola' && r.kiszolgalta && r.kereses?.talalatok.length === 1
+      && r.kereses.meret === 300 && r.kereses.osztodott === 1;
+  } finally {
+    p.bezar();
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;

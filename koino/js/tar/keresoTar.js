@@ -406,6 +406,11 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
       return [...rekordok.values()].filter((r) => !r.f && regiobaEsik(r.hely, melyseg, darab) && !lejartE(r.b, t)).map((r) => r.b);
     },
     /** ⭐ ④c (K7): hány INDEXELT (nem függő, nem lejárt) bejegyzés áll egy helyen — a fiók (vagy darabja) mérete nálam. */
+    /** ⭐ A kereső-réteg ⑤: egy hely INDEXELT (nem függő, nem lejárt) bejegyzései — a kérdés válaszához. */
+    helyBejegyzesei(hely) {
+      const t = most();
+      return [...rekordok.values()].filter((r) => !r.f && r.hely === hely && !lejartE(r.b, t)).map((r) => r.b);
+    },
     helyMerete(hely) {
       const t = most();
       let n = 0;

@@ -5728,6 +5728,11 @@ tovább, korlátos, és előbb esik ki; a tagságot a csere tagsági köre és a
 kimondja), a felajánló régiónként (a kimondott osztódások szerint, a D110 mélységével, a megújítás újrahasznosításával), három
 úton (közvetlenül, automatikusan az őrjáratban, fájlban). Elágazás 172. ⏭️ Az ⑤ (a kérdés).
 
+✅ **⑤ MEGÉPÜLT (2026-10-18):** a kérdés — a terv (a leghosszabb szótól, a szóeleje-fiók, egy nem osztódott fiók válasza
+teljes, az osztódottból minta), a kérelem `kereses` fajtája, a tartó a teljes kérdésre szűr és a kísérőket adja, a kérdező
+maga ellenőriz (a tagságot is), a találat az átmeneti tárba; közvetlenül vagy a DHT-n talált tartónál. A ⑥ (a halványulás) a
+④a-val megépült. Elágazás 173. ⏭️ A ⑦ (a Keresés ablaka a hálózati találatokkal).
+
 ### D108. A FELDERÍTÉS ÉS A KISZOLGÁLÁSI KERET (2026-10-17, Csaba: „1. igen 2. igen 3. (A)”)
 
 **A kérdés (Csaba ötlete, 2026-10-17):** *„jelenleg az értesítések beállítása kezeli a kérelmeket, igaz? Arra gondoltam,

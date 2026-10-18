@@ -59,7 +59,7 @@ export function felajanlasValaszAlakja(u) {
   return { felvett: db(u?.felvett), fuggo: db(u?.fuggo), megvolt: db(u?.megvolt), elutasitott: db(u?.elutasitott), osztodott };
 }
 
-export const KERELEM_FAJTAK = ['szelet', 'fejlecek', 'torzs', 'felajanlas'];
+export const KERELEM_FAJTAK = ['szelet', 'fejlecek', 'torzs', 'felajanlas', 'kereses'];
 /** A továbbadható fajták (D92/1 (c)) — a felajánlás nem: a tulajdonos maga keresi a régió tartóit. */
 export const TOVABBADHATO_FAJTAK = ['szelet', 'fejlecek', 'torzs'];
 
@@ -105,6 +105,17 @@ export function kerelemAlakja(u) {
   const gyokerE = kulcs === GYOKER_KULCS;
   // ⭐⭐ D107 L4 (④c): A FELAJÁNLÁS — a kulcs egy kereső-régió (vagy a gyökér: „ami a régióidba esik”), a teher a
   // bejegyzések és a szerzőik tagsági kísérői (korlátosan; az alakjukat és a tartalmukat a tartó maga ellenőrzi).
+  // ⭐⭐ A kereső-réteg ⑤: A KÉRDÉS — egy hely (a fiók kulcsa, az osztódás mélysége, a darab) és a kérdés szövege; a kulcs a
+  // régió (vagy a gyökér). A tartó a hely találatait adja (`kereses.js` `helyTalalatai`), a kérdező maga ellenőriz.
+  if (u.fajta === 'kereses') {
+    if (!gyokerE && !keresoRegioBol(kulcs)) return null;
+    if (typeof u.k !== 'string' || !/^[ep]:[\p{L}\p{M}\p{N}]{1,64}$/u.test(u.k)) return null;
+    if (typeof u.kerdes !== 'string' || !u.kerdes.trim() || u.kerdes.length > 200) return null;
+    const s = Number.isInteger(u.s) && u.s >= 0 && u.s <= 144 ? u.s : 0;
+    const darab = typeof u.darab === 'string' && /^[0-9a-f]{1,40}$/.test(u.darab) ? u.darab : '0';
+    const n = Number.isInteger(u.n) && u.n > 0 ? Math.min(u.n, 50) : 50;
+    return { fajta: 'kereses', kulcs, k: u.k, s, darab, kerdes: u.kerdes, n };
+  }
   if (u.fajta === 'felajanlas') {
     if (!gyokerE && !keresoRegioBol(kulcs)) return null;
     return { fajta: 'felajanlas', kulcs,

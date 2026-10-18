@@ -5507,6 +5507,106 @@ proba('⭐⭐ ④c: az automatikus felajánlás — az őrjárat a DHT-n megtal�
   }
 });
 
+// ===================================
+// ⭐⭐ A KERESŐ-RÉTEG ⑤: A KÉRDÉS — közvetlenül egy tartónál, és a DHT-n talált tartónál
+// ===================================
+//
+// A gondolatának (két tulajdonos) bejegyzései C kereső-tárában (a kézi úton, a kísérőkkel — az indexben). D egy FRISS készülék
+// (semmit nem tud a koinóról): `kereso keres "park" 127.0.0.1 <port>` → egy találat („Közös park a faluban”), a gondolat D
+// ÁTMENETI tárában (a kártya megnyitható); a „iskola” kérdésre nincs találat. ⭐ K3, 3. szabály: ha a tartó a kísérőket
+// visszatartja (`KOINO_KERESES_KISEROK=0`), egy másik friss készülék (E) a szerzők tagságát nem tudja ellenőrizni, és a találatot
+// KIHAGYJA (kimondva). Viselkedést mérünk (a kiírást és D lemezét). Rontás: a kérdező a tagságot nem ellenőrzi → E-nél is
+// találat → bukik; a kérdező a találatot nem teszi az átmenetibe → D lemezén nincs → bukik.
+proba('⭐⭐ ⑤: a kérdés közvetlenül egy tartónál — a találat ellenőrizve az átmeneti tárba; kísérők nélkül a kérdező kihagyja (K3)', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const c = await ujKeszulek();
+  const d = await ujKeszulek();
+  const e = await ujKeszulek();
+  const port = 7694;
+  let figyelo = null;
+  const figyelj = async (kornyezet = {}) => {
+    if (figyelo) { figyelo.kill(); await varj(800); }
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)],
+      { env: { ...process.env, KOINO_ADAT: c, KOINO_NAPLO: '', ...kornyezet }, stdio: 'ignore' });
+    await varj(1500);
+  };
+  try {
+    await fut(a, 'koino', 'Kérdés', 'próba', 'nyilt');
+    const g = azonosito(await fut(a, 'gondolat', 'Közös park a faluban'), 'Létrejött:');
+    await taggaTesziKeszulek(a, b);
+    await fut(a, 'kivisz', join(a, 'mind.jsonl'), 'mind');
+    await fut(b, 'behoz', join(a, 'mind.jsonl'));
+    await fut(b, 'pont', g, '10');
+    await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
+    await fut(a, 'behoz', join(b, 'sajat.jsonl'));
+    await fut(a, 'kereso', 'felajanl', join(a, 'f.jsonl'));
+    await fut(c, 'kereso', 'behoz', join(a, 'f.jsonl'));
+    await figyelj();
+    const park = tiszta(await fut(d, 'kereso', 'keres', 'park', '127.0.0.1', String(port)));
+    const iskola = tiszta(await fut(d, 'kereso', 'keres', 'iskola', '127.0.0.1', String(port)));
+    const dAtmeneti = (await readdir(join(d, 'sajat', 'atmeneti')).catch(() => [])).join(' ');
+    await figyelj({ KOINO_KERESES_KISEROK: '0' });
+    const kiseroNelkul = tiszta(await fut(e, 'kereso', 'keres', 'park', '127.0.0.1', String(port)));
+    const ki = {
+      park: /Közös park a faluban/.test(park) && /1 találat/.test(park),
+      iskola: /nincs találat/.test(iskola),
+      atmeneti: dAtmeneti.includes(g),
+      k3: /nincs találat/.test(kiseroNelkul) && /1 kihagyva: a szerzők tagsága nem ellenőrizhető/.test(kiseroNelkul)
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  ⑤ kérdés — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
+        + JSON.stringify({ park: park.slice(-400), iskola: iskola.slice(-200), dAtmeneti: dAtmeneti.slice(0, 200),
+          kiseroNelkul: kiseroNelkul.slice(-300) }) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    if (figyelo) figyelo.kill();
+    await varj(800);
+    for (const m of [a, b, c, d, e]) await rm(m, { recursive: true, force: true });
+  }
+});
+
+// A kérdező a tartót a DHT-n találja meg (a régió témáján — C őrjárata hirdeti). Rontás: a kérdező a DHT-n nem keres → nincs kit
+// kérdezni → nincs találat → bukik.
+proba('⭐⭐ ⑤: a kérdés a DHT-n talált tartónál — cím nélkül, a régió témáján', async () => {
+  const { hamisHalozat } = await import('./dhtProba.js');
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const c = await ujKeszulek();
+  const d = await ujKeszulek();
+  const halo = await hamisHalozat(12);
+  const PC = 7695;
+  const dht = { KOINO_DHT_BELEPOK: halo.belepo(0), KOINO_TUKOR: '127.0.0.1:9' };
+  let oc = null;
+  try {
+    await fut(a, 'koino', 'Kérdés', 'próba', 'nyilt');
+    const g = azonosito(await fut(a, 'gondolat', 'Közös park a faluban'), 'Létrejött:');
+    await taggaTesziKeszulek(a, b);
+    await fut(a, 'kivisz', join(a, 'mind.jsonl'), 'mind');
+    await fut(b, 'behoz', join(a, 'mind.jsonl'));
+    await fut(b, 'pont', g, '10');
+    await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
+    await fut(a, 'behoz', join(b, 'sajat.jsonl'));
+    await fut(a, 'kereso', 'felajanl', join(a, 'f.jsonl'));
+    await fut(c, 'kereso', 'behoz', join(a, 'f.jsonl'));
+    let cKimenet = '';
+    oc = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(PC)],
+      { env: { ...process.env, KOINO_ADAT: c, KOINO_NAPLO: '', ...dht }, stdio: ['ignore', 'pipe', 'pipe'] });
+    oc.stdout.on('data', (x) => { cKimenet += x; });
+    for (let i = 0; i < 60 && !/címjegyzék:/.test(cKimenet); i++) await varj(250);
+    const park = tiszta(await fut(d, 'kereso', 'keres', 'park', dht));
+    const ki = { park: /Közös park a faluban/.test(park) && /1 találat/.test(park) };
+    if (!ki.park) process.stdout.write('  ⑤ kérdés a DHT-n — ami bukott: park · ' + JSON.stringify({ park: park.slice(-400) }) + '\n');
+    return ki.park;
+  } finally {
+    if (oc) oc.kill();
+    halo.bezar();
+    await varj(800);
+    for (const m of [a, b, c, d]) await rm(m, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

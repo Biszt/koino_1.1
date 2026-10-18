@@ -462,3 +462,29 @@ hirdetői a függő kérelem céljai, a kopogtató a régió témájának párja
 `kerelemProba.js` (+2: az alak és a menet a védett résen), és két bekötés-próba (közvetlenül: a kísérőkkel az indexbe, az
 osztódás után a mélyebb darabba; automatikusan: két őrjárat egy hamis DHT-n, társ-felvétel nélkül) — mind rontással.
 Elágazás 172. ⏭️ **Következik az ⑤ (a kérdés)**, aztán a ⑦ (a Keresés ablaka a hálózati találatokkal).
+
+## 14. ✅ Az ⑤ — a kérdés (2026-10-18)
+
+> A ④ után. Az alak a K1, K2 (C), K3, K7, K9 döntésein belül; új D-szintű kérdés nem merült fel.
+
+**A terv** (`js/csere/kereses.js` `kerdesTerve`): a kérdés szavai a LEGHOSSZABBTÓL (a hosszabb szó jellemzően ritkább — a
+K7 „a legritkább szóhoz megy”-ének olcsó becslése; a válaszból derül ki, ha a fiók mégis nagy); a szó fiókja a ≥ 4 jelesnél
+a SZÓELEJE (`p:` — teljes a toldalékos alakokra), a háromjelesnél az egész szó. A tartó a TELJES kérdésre szűr, tehát egy nem
+osztódott fiók válasza teljes — ott megállunk; az osztódottból 2 darabot kérdezünk (a minta — K7), és a következő szóra
+lépünk. **A menet:** a kérelem `kereses` fajtája (a hely — fiók, mélység, darab — és a kérdés); a tartó a hely indexelt
+bejegyzései közül a kérdésre illőket adja (a legfrissebbek elöl, ≤ 50), a szerzők tagsági kísérőivel, a hely méretével és
+az osztódással. **Az ellenőrzés** (3. szabály): a kérdező maga ellenőriz — a kísérőket a kapun, a találat alakját,
+tartalmát, a helyét és a szűrőt (`talalatokEllenorzese`), a szerzők tagságát a saját tudásából (a nem ellenőrizhetőt
+kihagyja, kimondva — K3); a csomagot az ÁTMENETI tárba teszi (a kártya megnyitható); a javasolt címet kimondja, és ha a
+gondolatot ismeri, a valódi címével is szűr (K9). **A tartó:** közvetlenül (`kereso keres "<kérdés>" <cím> <port>`), vagy a
+DHT-n a régió témáján (cím nélkül). ⏸️ A NAT mögötti tartóhoz a kérdés függő kérelemként (az őrjárat viszi) a ⑦-tel jön: a
+felület várja meg a választ.
+
+**Próbák:** `keresesProba.js` (5 — a terv, a tartó szűrője, a kérdező ellenőrzése, K9, a minta; mind rontással — három
+próba-gyengeség megerősítve: egy-egy rontást egy másik szűrő elfedett), `kerelemProba.js` (+2: az alak és a menet a védett
+résen), és két bekötés-próba (közvetlenül: a találat ellenőrizve az átmeneti tárba, kísérők nélkül kihagyva; a DHT-n talált
+tartónál) — öt rontással. Elágazás 173.
+
+**⑥ a halványulás** a ④a-val megépült (a lejárat bárkinél ugyanaz, a lejárt a tömörítéskor kiesik, a rajból sem jön vissza).
+⏭️ **Hátravan a ⑦:** a Keresés ablaka a hálózati találatokkal (a helyi alja után a hálózatiak; a NAT mögötti tartóhoz a függő
+kérelem útja).
