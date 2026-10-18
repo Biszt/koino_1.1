@@ -437,3 +437,11 @@ tag-tulajdonos van), a cím változásakor, és a soros megújításkor; a felaj
 kiszolgálási keret (D109) a felajánlást is méri (kérés).
 
 **A sorrend:** ④a (a megújítás és a lejárat) → ④b (a tagság) → ④c (a felajánlás). Utána ⑤ a kérdés, ⑦ a modál.
+
+✅ **④a KÉSZ (2026-10-18):** `js/tar/keresoMegujitas.js` (a megújítás elkészítése és ellenőrzése, a lejárat, a soros-rend),
+a kereső-tár ellenőrzi a megújítást, a lejártat nem veszi fel és nem adja tovább (a régió halmazából kimarad), a tömörítés
+és a megnyitás eldobja; a frissesség a megújítás ideje; a kézi felajánlás a megújításommal megy; az őrjárat óránként
+tömöríti a kereső-tárat. Próbák: `keresoMegujitasProba.js` (6), `keresoTarProba.js` (+1, a megújítás és a lejárat — a
+„frissebb nyer” egy olyan párral is, ahol a frissebbnek a nagyobb az azonosítója, hogy a holtverseny-döntő ne takarhassa el),
+`keresoRegioProba.js` (+1: a lejárt a rajból sem jön vissza), és a kézi út (a felajánlás minden sora megújítással — két
+rontással). Elágazás 170.

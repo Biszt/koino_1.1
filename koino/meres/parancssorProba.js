@@ -5192,7 +5192,8 @@ proba('⭐⭐ A kereső-réteg kézi útja: felajanl → behoz → kivisz → be
     const dBe = tiszta(await fut(d, 'kereso', 'behoz', f5));
     const dAll = tiszta(await fut(d, 'kereso'));
     const ki = {
-      felajanl: /A gondolataim 5 bejegyzése/.test(felajanl),
+      felajanl: /A gondolataim 5 bejegyzése/.test(felajanl)
+        && (await readFile(f3, 'utf8')).split('\n').filter(Boolean).every((x) => /"m":\{"szerzo"/.test(x)),
       cBe: /5 új bejegyzés/.test(cBe),
       cAll: /KERESŐ-TÁR: 5 bejegyzés/.test(cAll),
       cKoino: !/Közös park/.test(cKoino),

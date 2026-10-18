@@ -163,8 +163,10 @@ import {
 import { atmenetiTarNyitasa, ketTarBemenete, ketTarNezet } from './js/tar/atmenetiTar.js';
 import { keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesekEpitese, KERESO_KORLAT } from './js/tar/keresoTar.js';
 import { tarsMelysegeFeljegyzese, tanultMelyseg, ervenyesMelyseg, melysegJegyzekAlakja } from './js/csere/melysegTanulas.js';
+import { megujitasKeszitese, csomagTulajdonosai } from './js/tar/keresoMegujitas.js';
 import {
-  keszulekKeresoHelye, keresoMelysegBecslese, keresoRegioKulcsai, keresoRegioBol, keresoRegioTemaja, sajatKeresoRegioi
+  keszulekKeresoHelye, keresoMelysegBecslese, keresoRegioKulcsai, keresoRegioBol, keresoRegioTemaja, sajatKeresoRegioi,
+  regiobaEsik
 } from './js/csere/keresoReteg.js';
 import {
   koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
@@ -490,9 +492,25 @@ async function sajatBejegyzesek(allapot) {
         && e.adat.erintettek.some((x) => x?.entitas === g && x?.valtozas?.cim === maiCim)) ?? null;
       if (!javaslat) continue;
     }
-    ki.push(...bejegyzesekEpitese({ szuletes, javaslat, pontEsemenyek }));
+    // ⭐ D107 L3 (④a): a megújításom — ha a csomag tulajdonosai közt vagyok (különben a tartó elvetné).
+    const megujitas = (esemenyek) => (csomagTulajdonosai(esemenyek, g).includes(szerzo)
+      ? megujitasKeszitese(szemelyesJwk, szerzo, { koino: KOINO, g, esemenyek }) : null);
+    ki.push(...bejegyzesekEpitese({ szuletes, javaslat, pontEsemenyek, megujitas }));
   }
   return ki;
+}
+
+/**
+ * ⭐ D107 L3 (④a, a ⑥ magja): a kereső-tár tömörítése — a lejárt bejegyzés és a régióimon (a legsekélyebb szintjükön) kívül
+ * eső kiesik. Az őrjárat óránként egyszer hívja. @returns {Promise<number>} hány esett ki
+ */
+const KERESO_TOMORITES_KOZ = 3600 * 1000;
+
+async function keresoTarTomoritese() {
+  await keresoTar.frissit();
+  const r = await keresoRegioim();
+  const legsekelyebb = r.regiok[0];
+  return keresoTar.tomorites((b, hely) => !legsekelyebb || regiobaEsik(hely, legsekelyebb.melyseg, legsekelyebb.darab));
 }
 
 /**
@@ -5949,6 +5967,12 @@ try {
           if (tar.iroE?.() && await tomoritesEsedekesE()) {
             const t = await tomoritesFuttatasa();
             if (t.kivett) kiir(SZIN.halvany + '  🗜 ' + ora() + ' tömörítés: ' + t.kivett + ' esemény az átmeneti tárba (amit már nem vállalok)' + SZIN.vege);
+          }
+          // ⭐ D107 L3 (④a, a ⑥ magja): óránként a kereső-tár tömörítése (a lejárt és a régióimon kívül eső kiesik).
+          if (Date.now() - (res.keresoTomorites ?? 0) >= KERESO_TOMORITES_KOZ) {
+            res.keresoTomorites = Date.now();
+            const kt = await keresoTarTomoritese();
+            if (kt) kiir(SZIN.halvany + '  🗜 ' + ora() + ' kereső-tár: ' + kt + ' bejegyzés kiesett (lejárt, vagy a régióimon kívül)' + SZIN.vege);
           }
           // ⭐ D103: a postafiók és a készülék saját értesítése (zárt lapnál is — a felülettel zár alatt váltják egymást).
           try {

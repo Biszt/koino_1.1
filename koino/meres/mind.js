@@ -76,6 +76,7 @@ import tagsag from './tagsagProba.js';
 // ⭐ A vállalás és az átmeneti tár (B/1–B/2, D75) — a kapu, az eldobás, a D14 csak a tartósra.
 import atmeneti from './atmenetiProba.js';
 import keresoTar from './keresoTarProba.js';
+import keresoMegujitas from './keresoMegujitasProba.js';
 import keresoRegio from './keresoRegioProba.js';
 import melysegTanulas from './melysegTanulasProba.js';
 // ⭐ D95/1: a lezárási összegzés — a nagy szeletű érintett döntése az összegző tartónak.
@@ -127,6 +128,7 @@ const PROBAK = [
   { nev: 'iro', futtat: iro },
   { nev: 'atmeneti', futtat: atmeneti },
   { nev: 'keresotar', futtat: keresoTar },
+  { nev: 'keresomegujitas', futtat: keresoMegujitas },
   { nev: 'keresoregio', futtat: keresoRegio },
   { nev: 'melysegtanulas', futtat: melysegTanulas },
   { nev: 'szovegdarab', futtat: szovegDarab },
@@ -169,7 +171,7 @@ const PROBAK = [
 // ⛔ A szűrő PONTOSAN illeszkedik: a régi részszó-szűrő a `tar`-ra a `tarsak`-ot is elindította.
 const CSOPORTOK = {
   // a kanonikus alak, a kulcs, az aláírt esemény és a tár (az íróval)
-  alap: ['kanonikus', 'kulcs', 'esemeny', 'tar', 'iro', 'atmeneti', 'keresotar'],
+  alap: ['kanonikus', 'kulcs', 'esemeny', 'tar', 'iro', 'atmeneti', 'keresotar', 'keresomegujitas'],
   // események → állapot: entitások, döntéshozatal, szabályok, egyezmények, tagság
   allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'dontesicsomag', 'lezarasiosszegzes', 'osszpont', 'felszabaditas', 'identitas', 'tagsag', 'ertesites'],
   // a felületnek felelő réteg

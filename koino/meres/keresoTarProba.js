@@ -22,6 +22,7 @@ import {
 } from '../js/tar/keresoTar.js';
 import { cimKulcsai, bejegyzesHelye, regiobaEsik } from '../js/csere/keresoReteg.js';
 import { lenyomatDarabja } from '../js/csere/cimjegyzek.js';
+import { megujitasKeszitese, MEGUJITAS_ELETTARTAM } from '../js/tar/keresoMegujitas.js';
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A KERESŐ-TÁR (D107 L1 — a kereső-réteg ③a)');
@@ -111,11 +112,62 @@ proba('⭐ K9: a címadó javaslattal a javasolt cím kulcsa érvényes — a r�
     && r.uj && !regi.uj && /kulcsa/.test(regi.ok);
 });
 
-// ⛔ A megújítás (L3) a ④-ben: addig egy ellenőrizetlen megújítás nem tolhatja ki a lejáratot. Rontás: az `m` átengedve → bukik.
-proba('⛔ A megújítás (L3) a ④-ig nem érvényes — a megújítást hozó bejegyzés alakja hibás', async () => {
+// ⭐ D107 L3 (④a). Rontás: a megújítás ellenőrzése kihagyva → az idegené is bekerül → bukik; a frissesség nem a megújítás
+// ideje → a megújított nem írja felül a régit → bukik.
+proba('⭐⛔ A megújítás (L3): a tulajdonosé érvényes és ÚJ elem (a régit felülírja), a nem tulajdonosé a tartalomnál bukik', async () => {
+  const tar = await keresoTarNyitasa(KOINO, await ujMappa());
+  const { szerzok, szuletes, pontEsemenyek } = await gondolatTulajdonosokkal('Közös park');
+  const [regi] = bejegyzesekEpitese({ szuletes, pontEsemenyek });
+  await bejegyzesBefogadasa(tar, regi);
+  const jwk = async (e) => crypto.subtle.exportKey('jwk', e.kulcspar.privateKey);
+  const kulcs = await jwk(szerzok[1]);
+  const [uj] = bejegyzesekEpitese({ szuletes, pontEsemenyek,
+    megujitas: (esemenyek) => megujitasKeszitese(kulcs, szerzok[1].szerzo, { koino: KOINO, g: szuletes.azonosito, esemenyek,
+      ido: Date.now() + 5000 }) });
+  const r = await bejegyzesBefogadasa(tar, uj);
+  const idegen = await ujEember(KOINO);
+  const ik = await jwk(idegen);
+  const [hamis] = bejegyzesekEpitese({ szuletes, pontEsemenyek,
+    megujitas: (esemenyek) => megujitasKeszitese(ik, idegen.szerzo, { koino: KOINO, g: szuletes.azonosito, esemenyek,
+      ido: Date.now() + 9000 }) });
+  const h = await bejegyzesBefogadasa(tar, hamis);
+  const halmaz = tar.regioHalmaza(0, 0n);
+  // ⚠️ A FRISSEBB nyer — akkor is, ha az azonosítója a NAGYOBB (különben a holtverseny-döntő, a kisebb azonosító, véletlenül
+  // ugyanazt adná, és a rontás csak az esetek felében bukna): egy későbbi megújítás, amelynek az azonosítója nagyobb.
+  let uj2 = null;
+  for (let d = 9000; d < 200000 && !uj2; d += 1000) {
+    const [x] = bejegyzesekEpitese({ szuletes, pontEsemenyek,
+      megujitas: (esemenyek) => megujitasKeszitese(kulcs, szerzok[1].szerzo, { koino: KOINO, g: szuletes.azonosito, esemenyek,
+        ido: Date.now() + d }) });
+    if (bejegyzesAzonositoja(x) > bejegyzesAzonositoja(uj)) uj2 = x;
+  }
+  const tar2 = await keresoTarNyitasa(KOINO, await ujMappa());
+  await bejegyzesBefogadasa(tar2, uj2);
+  await bejegyzesBefogadasa(tar2, uj);
+  const halmaz2 = tar2.regioHalmaza(0, 0n);
+  if (!(halmaz2.length === 1 && halmaz2[0] === bejegyzesAzonositoja(uj2))) return false;
+  return uj.m?.szerzo === szerzok[1].szerzo && bejegyzesAzonositoja(uj) !== bejegyzesAzonositoja(regi) && r.uj
+    && halmaz.length === 1 && halmaz[0] === bejegyzesAzonositoja(uj) && !h.uj && /nem a csomag tulajdonosa/.test(h.ok)
+    && bejegyzesAlakja({ ...uj, m: { szerzo: 'x' } }) === null;
+});
+
+// ⭐ D107 L3 (④a — a ⑥ magja): a lejárat bárkinél ugyanaz. Rontás: a lejárat-ellenőrzés kihagyva → a lejárt is bekerül, és a
+// halmazban marad → bukik.
+proba('⛔ a LEJÁRT bejegyzés nem kerül be, a régió halmazából kimarad, a tömörítés és a megnyitás eldobja (a ⑥ magja)', async () => {
+  const mappa = await ujMappa();
+  let ora = Date.now();
+  const tar = await keresoTarNyitasa(KOINO, mappa, { most: () => ora });
   const { szuletes, pontEsemenyek } = await gondolatTulajdonosokkal('Közös park');
   const [b] = bejegyzesekEpitese({ szuletes, pontEsemenyek });
-  return bejegyzesAlakja(b) !== null && bejegyzesAlakja({ ...b, m: { ido: 1, szerzo: 'x', alairas: 'y' } }) === null;
+  const kesobb = await keresoTarNyitasa(KOINO, await ujMappa(), { most: () => Date.now() + MEGUJITAS_ELETTARTAM + 1000 });
+  const elutasitva = await bejegyzesBefogadasa(kesobb, b);
+  const bent = (await bejegyzesBefogadasa(tar, b)).uj && tar.regioHalmaza(0, 0n).length === 1;
+  ora += MEGUJITAS_ELETTARTAM + 1000;
+  const halmazbanNincs = tar.regioHalmaza(0, 0n).length === 0 && tar.regioBejegyzesei(0, 0n).length === 0;
+  const ujra = await keresoTarNyitasa(KOINO, mappa, { most: () => ora });
+  const kidobva = await tar.tomorites();
+  return !elutasitva.uj && /lejárt/.test(elutasitva.ok) && bent && halmazbanNincs && ujra.darab() === 0 && kidobva === 1
+    && tar.darab() === 0;
 });
 
 // ⭐ Két tartó a különbség után ugyanazt tartja. Rontás: a régi felülírja az újat (vagy mindkettő marad) → bukik.

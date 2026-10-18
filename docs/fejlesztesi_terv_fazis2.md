@@ -5715,7 +5715,11 @@ a gyökér-darabot is érinti): a kereső-átvizsgálás 12. szakasza. Elágazá
 ✅ **③b–③c MEGÉPÜLT (2026-10-17) — a ③ kész:** a régió a cserében (a NYITÁS `kd` jele, a legsekélyebb közös eltérő régió, a
 bejegyzés-azonosítók tartomány-egyeztetése, a `BEJEGYZES` átadás, a fogadó helye és kapuja), a régió témájának hirdetése, a
 régió-társak a DHT-ról a kör céljai közé, és a régió a rajban. Elágazás 167–168. ⏭️ A ④ (a felajánlás, a megújítás) — előtte
-a K10.
+a K10 (✅ D110).
+
+✅ **④a MEGÉPÜLT (2026-10-18):** az aláírt megújítás (a tulajdonos személyes kulcsával, a gondolat minden fiók-bejegyzésére
+egy aláírás, egy napnál jövőbeli nem), a lejárat (a megújítás + 30 nap, bárkinél ugyanaz — a lejárt nem kerül be és nem
+megy tovább), a soros (20. / 25. nap), az őrjárat óránkénti kereső-tömörítése. Elágazás 170.
 
 ### D108. A FELDERÍTÉS ÉS A KISZOLGÁLÁSI KERET (2026-10-17, Csaba: „1. igen 2. igen 3. (A)”)
 

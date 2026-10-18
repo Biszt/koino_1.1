@@ -1152,3 +1152,14 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     „legnagyobb” pedig két összebeszélt társnak engedett volna; a mélyre tolás ára csak a kisebb tartás, ezért az irány „csak
     mélyebbre” · Csaba, Claude · `melysegTanulas.js`, `fajlTar.js` (`melysegTarolo`), `vonal.js` (`tarsMelysegei`), `koino.js`
     (`tanultMelysegem`, `gyokerMelysegTanulva`, `keresoRegioim`), a fázis-2 terv D110-e.
+170. **2026-10-18 · az aláírt megújítás és a lejárat (a kereső-réteg ④a — D107 L3, K5; a ⑥ magja)** → **a megújítás egy
+    aláírt állítás, nem esemény (`m = { szerzo, ido, alairas }`); az aláírás a koinóra, a gondolatra és a csomag eseményeire
+    szól az idővel, a fiók és az osztódás NÉLKÜL (egy aláírás a gondolat minden fiók-bejegyzésére); az aláíró a csomag egyik
+    tulajdonosa, a személyes kulcsával; a tartó elveti a nem tulajdonosét, a hamisat és az egy napnál jövőbelit; a lejárat a
+    bejegyzésből (a megújítás ideje — vagy a csomag legfrissebb eseménye — + 30 nap), bárkinél ugyanaz; a lejárt nem kerül
+    be, a régió halmazából kimarad, a tömörítés és a megnyitás eldobja; a frissesség a megújítás ideje (a megújított
+    felülírja a régit); a soros: a gondolat és a tulajdonos lenyomatának sorrendjében az első a 20., a második a 25. napon
+    újít; az őrjárat óránként tömörít (a lejárt és a régióimon kívüli kiesik); a kézi felajánlás a megújításommal megy** ·
+    mert egy aláíratlan „átvettem ekkor” időt egy hazug tartó a végtelenségig frissen tarthatna (a „temető” a rajból jönne
+    vissza); 32 kulcsnál 32 aláírás helyett egy; a jövőbe dátumozott megújítás évekig élne · Claude ·
+    `keresoMegujitas.js`, `keresoTar.js`, `koino.js` (`sajatBejegyzesek`, `keresoTarTomoritese`), a próbák.

@@ -21,6 +21,7 @@ import { ujTablaKulcs, nyilvanosResz } from '../js/csere/tablaKulcs.js';
 import { kezfogasAlairasa } from '../js/csere/titkositas.js';
 import { keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesekEpitese, bejegyzesAzonositoja } from '../js/tar/keresoTar.js';
 import { sajatKeresoRegioi, bejegyzesHelye, regiobaEsik } from '../js/csere/keresoReteg.js';
+import { MEGUJITAS_ELETTARTAM } from '../js/tar/keresoMegujitas.js';
 
 const { proba, futtatas } = probaGyujtemeny('A kereső-régió a cserében (D107 L2 — a kereső-réteg ③b)');
 
@@ -66,8 +67,8 @@ async function bejegyzesek(n, elotag) {
   return ki;
 }
 
-async function keresoTarral(lista) {
-  const t = await keresoTarNyitasa(KOINO, await ujMappa());
+async function keresoTarral(lista, beallitas = {}) {
+  const t = await keresoTarNyitasa(KOINO, await ujMappa(), beallitas);
   for (const b of lista) await bejegyzesBefogadasa(t, b);
   return t;
 }
@@ -196,6 +197,17 @@ proba('⭐ ha csak az egyik fél tart régiót, a csere nem csúszik el, és ré
   const r = await csere(await esemenyTarNyitasa(KOINO, await ujMappa()), await esemenyTarNyitasa(KOINO, await ujMappa()),
     tA, tB, { kA, kB: null });
   return !r.a.ujBejegyzesek && !r.b.ujBejegyzesek && r.a.egyeztetoUzenetek === 0;
+});
+
+// ⛔ D107 L3 (④a): a „temető” a rajból sem jön vissza — ami a fogadónál (az ő órája szerint) lejárt, azt nem veszi fel, akkor
+// sem, ha a társnál még él. Rontás: a lejárat-ellenőrzés kihagyva → A felveszi → bukik.
+proba('⛔ a LEJÁRT bejegyzés a rajból sem jön vissza — a fogadó a saját órája szerint dönt', async () => {
+  const [tA, tB] = [await ujTablaKulcs(), await ujTablaKulcs()];
+  const kA = await keresoTarral([], { most: () => Date.now() + MEGUJITAS_ELETTARTAM + 60 * 1000 });
+  const kB = await keresoTarral(await bejegyzesek(1, 'Körte'));
+  const r = await csere(await esemenyTarNyitasa(KOINO, await ujMappa()), await esemenyTarNyitasa(KOINO, await ujMappa()),
+    tA, tB, { kA, kB });
+  return kB.darab() > 0 && kA.darab() === 0 && !r.a.ujBejegyzesek;
 });
 
 // ⭐⭐ D110: a vonal a társ bemondott mélységeit (a NYITÁS `gyd` és `kd` jelének első tagja) visszaadja — a hívó ebből

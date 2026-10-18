@@ -12,7 +12,7 @@
 //
 // Egy gondolat EGY fiókban: `{ k, s, g, esemenyek, m }` — a fiók kulcsa (`e:…` / `p:…` — K2 (C)), az osztódás mélysége
 // (K7), a gondolat azonosítója, a csomag (a születés, a címadó javaslat — K9 —, a pont-események — K3), és a megújítás
-// (L3 — a ④-ben; addig null). ⭐ A régió halmazának eleme a bejegyzés AZONOSÍTÓJA (a tartalmának lenyomata): egy gondolat
+// (L3 — `keresoMegujitas.js`; null, ha még nincs). ⭐ A régió halmazának eleme a bejegyzés AZONOSÍTÓJA (a tartalmának lenyomata): egy gondolat
 // több fiókban él ugyanazokkal az eseményekkel, a megújítás nem esemény, és egy pont-eseményről (címe nincs) a fogadó nem
 // tudná, melyik régióba tartozik. A megújított vagy bővült bejegyzés ÚJ elem — a tár gondolatonként és fiókonként a
 // FRISSEBBET tartja (a régi kiesik), így két tartó a különbség után ugyanazt tartja.
@@ -35,6 +35,8 @@ import { lenyomatSzinkron } from '../esemeny/kanonikusAlak.js';
 import { rendezettHalmaz } from '../esemeny/halmaz.js';
 import { esemenyMentese } from './esemenyTar.js';
 import { cimKulcsai, bejegyzesHelye, regiobaEsik, KERESHETO_TIPUSOK } from '../csere/keresoReteg.js';
+// ⭐ D107 L3 (④a): az aláírt megújítás és a lejárat — `keresoMegujitas.js`.
+import { megujitasEllenorzese, bejegyzesIdeje, lejartE } from './keresoMegujitas.js';
 import { DARAB_MAX_MELYSEG } from '../csere/cimjegyzek.js';
 
 // ===================================
@@ -58,10 +60,10 @@ const FAJL = 'bejegyzesek.jsonl';
 // ===================================
 
 /**
- * Egy (kívülről jött) bejegyzés alakja — vagy null, ha nem bejegyzés. ⛔ A megújítás (`m`) a ④-ben jön: addig csak a null
- * megújítású bejegyzés érvényes (egy ellenőrizetlen megújítás a lejáratot tolhatná ki — L3).
+ * Egy (kívülről jött) bejegyzés alakja — vagy null, ha nem bejegyzés. A megújítás (`m`, L3) null vagy egy `{ szerzo, ido,
+ * alairas }` — az ellenőrzése a TARTALOMÉ (`bejegyzesTartalma`: az aláírás, a tulajdonos, a jövő-tűrés).
  * @param {*} b
- * @returns {{k: string, s: number, g: string, esemenyek: Array<Object>, m: null}|null}
+ * @returns {{k: string, s: number, g: string, esemenyek: Array<Object>, m: Object|null}|null}
  */
 export function bejegyzesAlakja(b) {
   if (!b || typeof b !== 'object' || Array.isArray(b)) return null;
@@ -72,8 +74,12 @@ export function bejegyzesAlakja(b) {
     || b.esemenyek.length > BEJEGYZES_ESEMENY_KORLAT) return null;
   if (!b.esemenyek.every((e) => e && typeof e === 'object' && !Array.isArray(e) && azonositoAlaku(e.azonosito))) return null;
   if (new Set(b.esemenyek.map((e) => e.azonosito)).size !== b.esemenyek.length) return null;
-  if (b.m !== undefined && b.m !== null) return null;
-  return { k: b.k, s: b.s, g: b.g, esemenyek: b.esemenyek, m: null };
+  let m = null;
+  if (b.m !== undefined && b.m !== null) {
+    if (typeof b.m !== 'object' || Array.isArray(b.m) || Object.keys(b.m).length !== 3) return null;
+    m = { szerzo: b.m.szerzo, ido: b.m.ido, alairas: b.m.alairas };
+  }
+  return { k: b.k, s: b.s, g: b.g, esemenyek: b.esemenyek, m };
 }
 
 /**
@@ -101,11 +107,15 @@ function javasoltCim(e, g) {
  * a koinóban); legfeljebb egy címadó javaslat (K9 — ha van, az ő címe számít); a pont-események erre a gondolatra szólnak,
  * pozitívak, és legalább `BEJEGYZES_TULAJDONOS_MIN` különböző szerzőtől (K3); más esemény nincs benne; és a fiók kulcsa a
  * cím egyik kulcsa (a tartó maga számolja — K1: hamisítani nem lehet, csak elhallgatni).
+ * ⭐ D107 L3 (④a): a megújítás érvényes (a csomag egyik tulajdonosa írta alá erre a gondolatra és csomagra, nem jövőbeli), és
+ * a bejegyzés nem járt le (a megújítása — vagy a csomag legfrissebb eseménye — + 30 nap; bárkinél ugyanaz). A frissesség a
+ * bejegyzés ideje (`bejegyzesIdeje`): a megújított bejegyzés felülírja a régit.
  * @param {Object} b - `bejegyzesAlakja` kimenete
  * @param {string} koino
+ * @param {number} [most] - a tartó órája
  * @returns {{rendben: boolean, ok?: string, cim?: string, hely?: bigint, frissesseg?: number}}
  */
-export function bejegyzesTartalma(b, koino) {
+export function bejegyzesTartalma(b, koino, most = Date.now()) {
   if (!b.esemenyek.every((e) => e.koino === koino)) return { rendben: false, ok: 'más koinó eseménye' };
   const szuletes = b.esemenyek.find((e) => e.azonosito === b.g);
   if (!szuletes || szuletes.tipus !== 'GondolatLetrehozas' || typeof szuletes.adat?.cim !== 'string'
@@ -125,8 +135,12 @@ export function bejegyzesTartalma(b, koino) {
   if (pontok.length < BEJEGYZES_TULAJDONOS_MIN) return { rendben: false, ok: 'kevesebb tulajdonos, mint ' + BEJEGYZES_TULAJDONOS_MIN };
   const cim = ujCim ?? szuletes.adat.cim;
   if (!cimKulcsai(cim).includes(b.k)) return { rendben: false, ok: 'a fiók kulcsa nem a cím kulcsa' };
-  const frissesseg = Math.max(...b.esemenyek.map((e) => (Number.isInteger(e.ido) ? e.ido : 0)));
-  return { rendben: true, cim, hely: bejegyzesHelye(b.k, b.g, b.s), frissesseg };
+  if (b.m) {
+    const r = megujitasEllenorzese(b.m, { koino, g: b.g, esemenyek: b.esemenyek, most });
+    if (!r.rendben) return { rendben: false, ok: r.ok };
+  }
+  if (lejartE(b, most)) return { rendben: false, ok: 'a bejegyzés lejárt (30 napja nem újították — L3)' };
+  return { rendben: true, cim, hely: bejegyzesHelye(b.k, b.g, b.s), frissesseg: bejegyzesIdeje(b) };
 }
 
 /**
@@ -138,7 +152,8 @@ export function bejegyzesTartalma(b, koino) {
  * @param {{tulajdonosok?: number}} [beallitas]
  * @returns {Array<Object>} a bejegyzések (üres, ha nincs elég tulajdonos vagy a cím nem ad kulcsot)
  */
-export function bejegyzesekEpitese({ szuletes, javaslat = null, pontEsemenyek }, { tulajdonosok = BEJEGYZES_TULAJDONOS_MIN } = {}) {
+export function bejegyzesekEpitese({ szuletes, javaslat = null, pontEsemenyek, megujitas = null },
+  { tulajdonosok = BEJEGYZES_TULAJDONOS_MIN } = {}) {
   if (szuletes?.tipus !== 'GondolatLetrehozas') return [];
   const g = szuletes.azonosito;
   const ujCim = javaslat ? javasoltCim(javaslat, g) : null;
@@ -157,7 +172,10 @@ export function bejegyzesekEpitese({ szuletes, javaslat = null, pontEsemenyek },
   }
   if (valasztott.length < BEJEGYZES_TULAJDONOS_MIN) return [];
   const esemenyek = [szuletes, ...(ujCim !== null ? [javaslat] : []), ...valasztott];
-  return cimKulcsai(cim).map((k) => ({ k, s: 0, g, esemenyek, m: null }));
+  // ⭐ D107 L3 (④a): a megújítást (ha a hívó ad — egy függvény a kész csomagra) a csomag tulajdonosa írja alá; egy aláírás a
+  // gondolat minden fiók-bejegyzésére szól.
+  const m = typeof megujitas === 'function' ? megujitas(esemenyek) : null;
+  return cimKulcsai(cim).map((k) => ({ k, s: 0, g, esemenyek, m }));
 }
 
 // ===================================
@@ -237,7 +255,7 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
       try { j = JSON.parse(sor); } catch { continue; }
       const b = bejegyzesAlakja(j?.b);
       if (!b) continue;
-      const t = bejegyzesTartalma(b, koino);
+      const t = bejegyzesTartalma(b, koino, most());
       if (!t.rendben) continue;
       memoriaba(b, t, Buffer.byteLength(sor) + 1, Number.isInteger(j.erkezett) ? j.erkezett : 0);
     }
@@ -302,7 +320,7 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
     async felvesz(nyers) {
       const b = bejegyzesAlakja(nyers);
       if (!b) return { uj: false, ok: 'nem bejegyzés alakú' };
-      const t = bejegyzesTartalma(b, koino);
+      const t = bejegyzesTartalma(b, koino, most());
       if (!t.rendben) return { uj: false, ok: t.ok };
       const erkezett = most();
       const sor = JSON.stringify({ b, erkezett }) + '\n';
@@ -322,12 +340,18 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
     /** A nálam lévő bejegyzések helye (a mélység becsléséhez — `keresoMelysegBecslese`). */
     helyek() { return [...rekordok.values()].map((r) => r.hely); },
 
-    /** ⭐ Egy régió halmaza (a vonalnak): a bejegyzés-azonosítók rendezve. */
+    /**
+     * ⭐ Egy régió halmaza (a vonalnak): a bejegyzés-azonosítók rendezve. ⛔ A LEJÁRT bejegyzés nincs benne (L3): ami nálam
+     * lejárt, azt nem adom tovább — a „temető” így a rajból sem jön vissza (a fogadó maga is elveti).
+     */
     regioHalmaza(melyseg, darab) {
-      return rendezettHalmaz([...rekordok.entries()].filter(([, r]) => regiobaEsik(r.hely, melyseg, darab)).map(([id]) => id));
+      const t = most();
+      return rendezettHalmaz([...rekordok.entries()]
+        .filter(([, r]) => regiobaEsik(r.hely, melyseg, darab) && !lejartE(r.b, t)).map(([id]) => id));
     },
     regioBejegyzesei(melyseg, darab) {
-      return [...rekordok.values()].filter((r) => regiobaEsik(r.hely, melyseg, darab)).map((r) => r.b);
+      const t = most();
+      return [...rekordok.values()].filter((r) => regiobaEsik(r.hely, melyseg, darab) && !lejartE(r.b, t)).map((r) => r.b);
     },
 
     /** A változás jele (a vonal párjainak gyorsítótára ebből tudja, hogy újra kell számolni). */
@@ -335,11 +359,15 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
     darab() { return rekordok.size; },
     meret() { return osszBajt; },
 
-    /** ⭐ A tömörítés: csak a `megtart(bejegyzés, hely)` szerinti bejegyzések maradnak (a kívül esők — a ③b, a lejártak — a ⑥). */
-    async tomorites(megtart) {
+    /**
+     * ⭐ A tömörítés: csak a `megtart(bejegyzés, hely)` szerinti bejegyzések maradnak (a régióimon kívül esők kiesnek); ⭐ a
+     * LEJÁRT bejegyzés mindig kiesik (L3 — a ⑥ halványulás).
+     */
+    async tomorites(megtart = () => true) {
       let db = 0;
+      const t = most();
       for (const [id, r] of [...rekordok.entries()]) {
-        if (!megtart(r.b, r.hely)) { kivesz(id); db++; }
+        if (lejartE(r.b, t) || !megtart(r.b, r.hely)) { kivesz(id); db++; }
       }
       if (db) await fajlUjrairasa();
       return db;
