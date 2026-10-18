@@ -5068,6 +5068,18 @@ sorba állít: egy oldal 1 kör helyett 6, egy 200-as Struktúra 2–3 perc hely
 10–15 helyett 230–425 perc), egy 2000-es 19–29 helyett 176–447 perc. ⭐ A J3 („nem kell”) tehát a nagy, szétszórt
 koinóra igaz, a kicsire nem — a döntés újra Csabáé.
 
+
+**⛔ JAVÍTÁS (2026-10-18, a 77. mérés lelete):** a szimuláció bejárója ugyanazt a csomópontot két úton is a kupacba tehette
+(a tartó saját bejárása, és egy későbbi fejléc-válasz, ha a szülő kibontása visszavonódott), és a „kiadott B” a
+MÁSODPÉLDÁNYOKAT is számolta — a G és a H változat (és a H1, G1) így kevesebb valódi csomóponthoz mérte az időt (egy
+K = 50-es lista ~24 különböző csomópont volt). A javítás: a kiadás a már kiadottat átlépi. Újramérve (1 perces körrel,
+N = 2000 / 20 000 / 200 000): az **A, a D és az F nem változott** (azokban nem volt kettőzés); a **G** egy oldala **38–40
+perc** (29–34 helyett), a 200-as Struktúrája **153–168 perc** (94–116 helyett), a 2000-ese 582–1613 perc; a **H** egy oldala
+1 perc (változatlan), a 200-asa **6–8 perc** (1–3 helyett), a 2000-ese 19–79 perc (19–29 helyett); a **H1** egy oldala 16–19
+perc, a 200-asa 91–191 perc (46–85 helyett). ⭐ **A sorrend nem változott** — a G harmada–fele az A-nak, a „mindent” tartó a
+döntő, és a kapcsolatonkénti 1 kérelem (H1) egy jól ellátott tartónál továbbra is sokszoros lassulás —, tehát a **D102
+döntései (J1, J2, J3 (A), J4) állnak**; az abszolút idők viszont rosszabbak: egy friss készülék nagy koinóban, „mindent”
+tartó nélkül egy oldalt ~40 perc alatt, egy 200-as Struktúrát ~2,5 óra alatt kap meg (5 perces körrel ~45–50 perc / ~4,3–4,9 óra).
 ## 75. ⭐⭐ A KERESŐ-RÉTEG ÁRA — szimuláció (D105, K6: „előbb mérés”, 2026-10-16)
 
 *`node koino/meres/keresoMeres.js [N ...] [--prozai] [--B=256] [--T=512]` — magvas véletlen. A kérdés: a D105 kereső-rétege
@@ -5180,3 +5192,35 @@ LAPOS (50 000 legfelső szintű): kép nélkül 128 ms / kérés → a képpel 0
 ```
 (+ az állapot újraszámolása, ha a tár változott — változásonként egyszer, nem kérésenként.) ⭐ Egy kérés ára a tárral nem nő:
 a kérésszám (KK2) mérce lehet.
+
+## 77. ⭐⭐ A FELDERÍTÉS ÁRA — szimuláció (D108/1, „előbb a mérés”, 2026-10-18)
+
+*`node koino/meres/bejaroMeres.js --felderites [N ...]` — a 74. mérés modellje (javítva — lásd ott), 3 ismétlés átlaga. A
+felderítés egy ág pillanatképe: a legjobb-először sor első K csomópontja (a fejléc-fázis — a mai menet: a tartó maga jár be,
+G; és egy „mindent” tartóval, H), és ha a törzs is kell, a K csomópont mindegyikéhez egy TÖRZS-kérelem a saját tartóihoz
+(⛔ a törzset csak a vállaló adja — D84/1: csomópontonként más-más készülék, nagyrészt NAT mögött). A függők ≤ 64, egy
+tartónak körönként ≤ 64 kérelem; a perc a kör végéig számol. Egy FRISS készüléken (semmit nem tart).*
+
+```
+                      1 perces kör                                  5 perces kör
+G (a mai menet)
+  K = 50    fejléc 48–55 perc, 1,3–1,5 MB;  törzs: mind 43–55 perc     fejléc 68 perc;     törzs: mind 60–68 perc
+  K = 200   fejléc 153–154 perc, 3,7–5,8 MB; törzs: fele 15–16, mind 64–65 perc, ~145 készülék
+                                                                     fejléc 257–258 perc; törzs: fele 27–28, mind 93–97 perc
+  K = 1000  fejléc 683–840 perc, 8–21 MB;   törzs: mind 208–219 perc, ~650–690 készülék
+                                                                     fejléc 938–1185 perc; törzs: mind 338–350 perc
+H („mindent” tartó a kötések közt)
+  K = 50    fejléc 1 perc;  törzs 0 perc                               5 perc;  0 perc
+  K = 200   fejléc 8 perc, 4,8–5,3 MB;  törzs: mind 3 perc             40 perc; mind 15 perc
+  K = 1000  fejléc 33–40 perc, 9–23 MB; törzs: mind 15 perc            165–200 perc; mind 75 perc
+```
+
+⭐ **A lelet:** (1) a felderítés fejléc-fázisa ugyanaz, mint egy K-s Struktúra — a mai menettel egy friss készüléken K = 200
+**2,5–4,3 óra**, K = 1000 **11–20 óra**; ⭐ a koinó méretétől nem függ (20 000 és 200 000 entitásnál ugyanaz). (2) **A törzs
+nem a szűk keresztmetszet:** a törzs-kérelmek egymástól függetlenek (nem szintenként jönnek), ezért K = 200-nál csak ~1–1,5
+órát tesznek hozzá, pedig ~145 különböző készüléket érintenek — a fele 15–28 perc alatt megjön. (3) Egy „mindent” tartóval
+minden percekre rövidül; ⚠️ ott a KISZOLGÁLÁSI KERET szab határt (a szimuláció nem modellezi): egy társnak óránként ≤ 750
+kérés és ≤ 25 MB (KK5) — egy 1000-es törzses felderítés így legalább 80 perc. (4) A bájt: a fejléc-fázis ~8–30 KB
+csomópontonként (a minták), a törzs a tartalomtól függ (szöveg ~1–5 KB, egy fájl ≤ 2 MB). ⚠️ A modell egyszerűsít: a törzs a
+fejlécek UTÁN indul (a valóságban mehet egyszerre), a tartók 1 + Poisson(2) készülék, és a tartó-tippet (D111) nem ismeri.
+⭐ A javaslat (a felderítés átvizsgálása, F4): K = 200 alapból, csak fejléc, a törzs bekapcsolható.

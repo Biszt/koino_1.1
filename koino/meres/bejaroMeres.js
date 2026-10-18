@@ -39,6 +39,12 @@
 //
 // Magvas véletlen — összevethető. ⚠️ NEM ÖNPRÓBA (számokat ad).
 //   node koino/meres/bejaroMeres.js [N ...]          (alap: 2000 20000 200000)
+//
+// ⭐⭐ A 77. MÉRÉS — A FELDERÍTÉS ÁRA (D108, `--felderites`): egy ág egyszeri pillanatképe = a legjobb-először sor első K
+// csomópontja (a fejléc-fázis — a fenti bejáró G / H változata), és ha a törzs is kell, a K csomópont mindegyikéhez egy
+// TÖRZS-kérelem (a szöveg-darab, a fájlok): ⛔ a törzset csak a VÁLLALÓ adja (D84/1), tehát csomópontonként a saját tartói —
+// sok különböző készülék, nagyrészt NAT mögött (a kopogtatás után). Ugyanaz a modell (f, p_on, a kopogtatás, Q, C).
+//   node koino/meres/bejaroMeres.js --felderites [N ...]   (alap: 20000 200000)
 
 const kiir = (s) => process.stdout.write(s + '\n');
 
@@ -275,6 +281,9 @@ function bejaras(fa, tart, v, { B, T, Q, C, gyerekszam, folytatas, pOn = 0.7, na
       }
       if (!kupac.meret()) return { perc: kor * T, kerelmek, kb: bajt / 1024, kiadott };
       const x = kupac.kivesz();
+      // ⛔ (2026-10-18, a 77. mérés lelete) egy csomópont a kupacba két úton is bekerülhet (a tartó saját bejárása és egy
+      // későbbi fejléc-válasz) — a már kiadottat nem adjuk ki újra (korábban a kiadott B a másodpéldányokat is számolta).
+      if (kiadottHalmaz.has(x)) continue;
       kiadott.push(x);
       kiadottHalmaz.add(x);
       if (kellKerni(x) && !kibontva.has(x)) nyitottak.add(x);
@@ -294,9 +303,101 @@ function bejaras(fa, tart, v, { B, T, Q, C, gyerekszam, folytatas, pOn = 0.7, na
   return { perc: null, kerelmek, kb: bajt / 1024, kiadott };
 }
 
+// ===== ⭐ A 77. MÉRÉS: A TÖRZS-FÁZIS =====
+
+/**
+ * A kiadott csomópontok TÖRZSE: mindegyikhez egy törzs-kérelem a tartóihoz (csak a vállaló adja — D84/1; a „mindent”
+ * tartó mindent ad). A függők legfeljebb C, tartónként körönként legfeljebb Q; a NAT mögötti tartó a kopogtatás után
+ * (≤ natKes perc), körönként p_on eséllyel él (különben egy másik tartónál próbálkozik).
+ * @returns {{p50: number|null, p95: number|null, mind: number|null, kerelmek: number, tartok: number}}
+ */
+function torzsFazis(tart, v, kiadott, { T, Q, C, pOn = 0.7, natKes = 20, korlat = 3000, mindent = false }) {
+  // ⚠️ a bejáró kiadott listájában egy csomópont kétszer is állhat (a kupacba két úton kerülhet) — a törzs egyszer kell
+  const lista = [...new Set(kiadott)];
+  const hatra = [...lista];
+  const fuggo = new Map();
+  const megjott = [];
+  const erintett = new Set();
+  let kerelmek = 0;
+  const indit = (x, kor) => {
+    const tartok = mindent ? null : tart.tartok[x];
+    const tarto = tartok ? tartok[Math.floor(v() * tartok.length)] : 'kotes';
+    const nat = tarto !== 'kotes' && !tart.kozvetlen[tarto];
+    fuggo.set(x, { tarto, kesz: kor + (nat ? Math.ceil((v() * natKes) / T) : 0) });
+    kerelmek++;
+  };
+  let kor = 0;
+  for (; kor <= korlat && megjott.length < lista.length; kor++) {
+    while (fuggo.size < C && hatra.length) indit(hatra.shift(), kor);
+    const tartonkent = new Map();
+    for (const [x, k] of fuggo) {
+      if (k.kesz > kor) continue;
+      if (k.tarto !== 'kotes' && v() >= pOn) {
+        const t = tart.tartok[x];
+        k.tarto = t[Math.floor(v() * t.length)];
+        if (!tart.kozvetlen[k.tarto]) k.kesz = kor + 1 + Math.ceil((v() * natKes) / T);
+        continue;
+      }
+      const db = tartonkent.get(k.tarto) ?? 0;
+      if (db >= Q) continue;
+      tartonkent.set(k.tarto, db + 1);
+      erintett.add(k.tarto);
+      fuggo.delete(x);
+      megjott.push(kor);
+    }
+  }
+  const hely = (q) => (megjott.length >= Math.ceil(q * lista.length) ? megjott[Math.ceil(q * lista.length) - 1] * T : null);
+  return { p50: hely(0.5), p95: hely(0.95), mind: megjott.length === lista.length ? megjott.at(-1) * T : null, kerelmek,
+    tartok: erintett.size };
+}
+
 // ===== A FUTTATÁS =====
+const felderitesMod = process.argv.includes('--felderites');
 const meretek = process.argv.slice(2).map((x) => parseInt(x, 10)).filter((x) => x > 0);
-const NK = meretek.length ? meretek : [2000, 20000, 200000];
+const NK = meretek.length ? meretek : (felderitesMod ? [20000, 200000] : [2000, 20000, 200000]);
+
+if (felderitesMod) {
+  const FVALTOZATOK = [
+    { nev: 'G — a tartó maga jár be (a mai menet)', Q: 64, C: 64, gyerekszam: true, legjobbK: true },
+    { nev: 'H — egy „mindent” tartó a kötések közt', Q: 64, C: 64, gyerekszam: true, mindent: true, legjobbK: true }
+  ];
+  const FCELOK = [50, 200, 1000];
+  const ISMETLES_F = 3;
+  kiir('77. MÉRÉS — a felderítés ára: a legjobb-először sor első K csomópontja (fejléc), és a K törzse (szimuláció; '
+    + ISMETLES_F + ' ismétlés átlaga)');
+  kiir('f = 0,3 közvetlen · p_on = 0,7 · NAT: kopogtatás ≤ 20 perc · a függők ≤ 64 · tartónként körönként ≤ 64 kérelem\n');
+  for (const N of NK) {
+    const v0 = veletlenGyar(74000 + N);
+    const fa = faEpitese(N, v0);
+    const tart = tartokEpitese(fa, v0);
+    kiir('━━ N = ' + N + ' entitás · ' + tart.M + ' készülék');
+    for (const T of [1, 5]) {
+      kiir('  ── T = ' + T + ' perces őrjárat-kör');
+      for (const val of FVALTOZATOK) {
+        kiir('    ' + val.nev);
+        for (const K of FCELOK) {
+          if (K > N) continue;
+          let fp = 0, fk = 0, fkb = 0, fn = 0, t50 = 0, t95 = 0, tm = 0, tk = 0, tt = 0, tn = 0;
+          for (let i = 0; i < ISMETLES_F; i++) {
+            const r = bejaras(fa, tart, veletlenGyar(500 + i * 31 + K), { B: K, T, Q: val.Q, C: val.C, gyerekszam: val.gyerekszam,
+              folytatas: true, mindent: !!val.mindent, legjobbK: !!val.legjobbK });
+            if (r.perc === null) continue;
+            fn++; fp += r.perc; fk += r.kerelmek; fkb += r.kb;
+            const t = torzsFazis(tart, veletlenGyar(900 + i * 17 + K), r.kiadott, { T, Q: val.Q, C: val.C, mindent: !!val.mindent });
+            if (t.mind === null) continue;
+            tn++; t50 += t.p50; t95 += t.p95; tm += t.mind; tk += t.kerelmek; tt += t.tartok;
+          }
+          kiir('      K = ' + String(K).padEnd(5) + ' fejléc: ' + (fn ? Math.round(fp / fn) + ' perc, ' + Math.round(fk / fn) + ' kér., '
+            + Math.round(fkb / fn) + ' KB' : '—') + '  ·  törzs: ' + (tn ? 'fele ' + Math.round(t50 / tn) + ' perc, 95% '
+            + Math.round(t95 / tn) + ' perc, mind ' + Math.round(tm / tn) + ' perc, ' + Math.round(tk / tn) + ' kér., '
+            + Math.round(tt / tn) + ' tartó' : '—'));
+        }
+      }
+    }
+    kiir('');
+  }
+  process.exit(0);
+}
 const VALTOZATOK = [
   { nev: 'A — ma (Q=1, C=16, a levelet is kérdezi)', Q: 1, C: 16, gyerekszam: false },
   { nev: 'B — több kérelem egy kapcsolaton', Q: 16, C: 16, gyerekszam: false },

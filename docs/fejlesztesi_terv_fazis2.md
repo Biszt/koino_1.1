@@ -5769,6 +5769,10 @@ vele túl terhelni a készülékeket.”*
    mert a ma élő kérelem-utat is védi, és a kereső-réteg ④ (felajánlás) és ⑤ (kérdés) is erre épül → a kereső-réteg ③–⑦
    → a felderítés panelje és ütemezője.
 
+🔍 **A FELDERÍTÉS ÁTVIZSGÁLVA (2026-10-18)** — [`felderites_atvizsgalas.md`](felderites_atvizsgalas.md), a **77. mérés**
+(`bejaroMeres.js --felderites`) és a 74. mérés javítása (a G és a H kettőzött csomópontokat számolt; a D102 döntései
+állnak, az abszolút idők rosszabbak). ⛔ Lelet: a fájl-tár nem korlátos. ⏸️ Csabánál F1–F6.
+
 ### D109. A KISZOLGÁLÁSI KERET — KK1–KK6 (2026-10-17, Csaba: „minden javaslatodat elfogadom, mehetünk tovább.”)
 
 **Az alap:** a kiszolgálási keret átvizsgálása ([`kiszolgalasi_keret_atvizsgalas.md`](kiszolgalasi_keret_atvizsgalas.md))
