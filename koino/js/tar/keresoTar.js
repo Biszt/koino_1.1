@@ -17,8 +17,12 @@
 // tudná, melyik régióba tartozik. A megújított vagy bővült bejegyzés ÚJ elem — a tár gondolatonként és fiókonként a
 // FRISSEBBET tartja (a régi kiesik), így két tartó a különbség után ugyanazt tartja.
 //
-// ⚠️ A tagság (K3: a két tulajdonos ellenőrzött TAG, a nem tag szerző születése nem kerül indexbe) a ④-ben jön, a tagsági
-// kísérők gépével — itt az alak és a tartalom (`bejegyzesTartalma`).
+// ⭐ A TAGSÁG (K3 — a ④b): a bejegyzés csak akkor kerül az INDEXBE (a régió halmazába, a kérdés válaszába), ha a születés
+// szerzője és a csomag minden tulajdonosa ellenőrzött tag — a tagság-ellenőrzőt a hívó adja (`beallitas.tagE`: a `koino.js`
+// tagsági kérdezője, ami a nem tudott szerzőt a függő tagság-kérdések közé is felveszi — így a következő csere tagsági köre
+// elhozza a csomagját, D95/2). Amíg nem tudjuk, a bejegyzés FÜGGŐ: a tár egy korlátos részében (`FUGGO_HANYAD`), és ha a hely
+// kell, előbb a függő megy — így a nem tag (ingyen kulcsú) szerzők nem szoríthatják ki a valódiakat. A függőt nem adjuk tovább
+// (a régió halmazában nincs), a `fuggokFrissitese` emeli az indexbe, ha a tagság kiderült.
 //
 // ===== AZ ALAK A LEMEZEN =====
 //
@@ -49,11 +53,26 @@ export const KERESO_KORLAT = 16 * 1024 * 1024;
 /** Egy bejegyzés legfeljebb ennyi eseményt hoz (a születés, egy címadó javaslat, legfeljebb hat pont-esemény). */
 export const BEJEGYZES_ESEMENY_KORLAT = 8;
 
-/** ⭐ K3: ennyi különböző tulajdonos pontja kell (a tagságuk a ④-ben). */
+/** ⭐ K3: ennyi különböző tulajdonos pontja kell (a tagságuk a ④b-ben). */
 export const BEJEGYZES_TULAJDONOS_MIN = 2;
+
+/** ⭐ ④b: a FÜGGŐ (még nem ellenőrzött tagságú) bejegyzések együtt legfeljebb a korlát ennyied részét foglalhatják. */
+export const FUGGO_HANYAD = 10;
+
+/** A bejegyzés szerzői, akiknek tagnak kell lenniük (K3): a születés szerzője és a csomag pont-eseményeinek szerzői. */
+export function bejegyzesSzerzoi(b) {
+  const sz = new Set();
+  const szuletes = (b?.esemenyek ?? []).find((e) => e?.azonosito === b?.g);
+  if (szuletes?.szerzo) sz.add(szuletes.szerzo);
+  for (const e of b?.esemenyek ?? []) if (e?.tipus === 'TudatpontRendezes' && e.szerzo) sz.add(e.szerzo);
+  return [...sz];
+}
 
 const FIOK_KULCS_MINTA = /^[ep]:[\p{L}\p{M}\p{N}]{1,64}$/u;
 const FAJL = 'bejegyzesek.jsonl';
+// ⭐ Az újraírás jele: minden újraíró átírja (véletlen jel) — a másik folyamat `frissit`-je ebből tudja, hogy a fájl NEM csak
+// nőtt (az újraírás azonos hosszal is történhet — a függő jel 1 → 0 —, vagy hosszabbal, és akkor a régi helyről olvasna).
+const GENERACIO = 'generacio';
 
 // ===================================
 // A BEJEGYZÉS ALAKJA, AZONOSÍTÓJA ÉS TARTALMA
@@ -186,22 +205,39 @@ export function bejegyzesekEpitese({ szuletes, javaslat = null, pontEsemenyek, m
  * A kereső-tár megnyitása.
  * @param {string} koino
  * @param {string} mappa - a koinó mappája (`<adat>/<koino>`) — a kereső-tár ennek `kereso/` almappája
- * @param {{korlat?: number, most?: () => number}} [beallitas]
+ * @param {{korlat?: number, most?: () => number, tagE?: (szerzo: string) => Promise<boolean|null>}} [beallitas] — a `tagE`
+ *   nélkül nincs tagság-ellenőrzés (minden bejegyzés az indexbe kerül — a modul-próbáknak)
  */
 export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
   const hely = join(mappa, 'kereso');
   const fajl = join(hely, FAJL);
+  const generacioFajl = join(hely, GENERACIO);
+  let latottGeneracio = null;
+  const generacioOlvasasa = async () => { try { return await readFile(generacioFajl, 'utf8'); } catch { return null; } };
   const korlat = beallitas.korlat ?? KERESO_KORLAT;
   const most = beallitas.most ?? (() => Date.now());
+  const tagE = typeof beallitas.tagE === 'function' ? beallitas.tagE : null;
+  /** ⭐ ④b: minden szerzője ellenőrzött tag-e? (mindet megkérdezzük — a nem tudottak így mind a függő kérdések közé kerülnek) */
+  const mindTag = async (b) => {
+    if (!tagE) return true;
+    let mind = true;
+    for (const sz of bejegyzesSzerzoi(b)) {
+      let t = null;
+      try { t = await tagE(sz); } catch { t = null; }
+      if (t !== true) mind = false;
+    }
+    return mind;
+  };
   await mkdir(hely, { recursive: true });
 
-  const rekordok = new Map();       // azonosító → { b, hely, frissesseg, bajt, erkezett }
+  const rekordok = new Map();       // azonosító → { b, hely, frissesseg, bajt, erkezett, f } (f: függő — ④b)
   const helyek = new Map();         // 'g|k|s' → azonosító (fiókonként a frissebb)
   const esemenyek = new Map();      // esemény-azonosító → { e, db } (a kapu „már megvan”-ja és a `sorszamSzerint`)
   const fuggo = new Map();          // a kapun átment, még bejegyzésbe nem vett események (egy befogadás idejére)
   let olvasva = 0;                  // a fájlból ennyi bájtot olvastunk (a `frissit` innen folytatja)
   let valtozasSzam = 0;
   let osszBajt = 0;
+  let fuggoBajt = 0;
 
   const helyKulcs = (b) => b.g + '|' + b.k + '|' + b.s;
 
@@ -222,6 +258,7 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
     if (helyek.get(helyKulcs(r.b)) === id) helyek.delete(helyKulcs(r.b));
     for (const e of r.b.esemenyek) esemenyLe(e);
     osszBajt -= r.bajt;
+    if (r.f) fuggoBajt -= r.bajt;
     valtozasSzam++;
   };
 
@@ -229,7 +266,7 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
    * Egy (ellenőrzött) bejegyzés a memóriába — fiókonként a FRISSEBB marad (holtversenynél a kisebb azonosító): mindkét
    * tartó ugyanígy dönt, ezért a különbség után ugyanazt tartják. @returns {string|null} az azonosító, ha bekerült
    */
-  const memoriaba = (b, tartalom, bajt, erkezett) => {
+  const memoriaba = (b, tartalom, bajt, erkezett, f = false) => {
     const id = bejegyzesAzonositoja(b);
     if (rekordok.has(id)) return null;
     const regiId = helyek.get(helyKulcs(b));
@@ -239,10 +276,11 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
       if (!frissebb) return null;
       kivesz(regiId);
     }
-    rekordok.set(id, { b, hely: tartalom.hely, frissesseg: tartalom.frissesseg, bajt, erkezett });
+    rekordok.set(id, { b, hely: tartalom.hely, frissesseg: tartalom.frissesseg, bajt, erkezett, f: !!f });
     helyek.set(helyKulcs(b), id);
     for (const e of b.esemenyek) esemenyFel(e);
     osszBajt += bajt;
+    if (f) fuggoBajt += bajt;
     valtozasSzam++;
     return id;
   };
@@ -257,13 +295,16 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
       if (!b) continue;
       const t = bejegyzesTartalma(b, koino, most());
       if (!t.rendben) continue;
-      memoriaba(b, t, Buffer.byteLength(sor) + 1, Number.isInteger(j.erkezett) ? j.erkezett : 0);
+      // ⭐ ④b: a függő jel a sorból (a régi, jel nélküli sor függő, ha van tagság-ellenőrző — a `fuggokFrissitese` emeli)
+      memoriaba(b, t, Buffer.byteLength(sor) + 1, Number.isInteger(j.erkezett) ? j.erkezett : 0, tagE ? j.f !== 0 : false);
     }
   };
 
   const teljesBeolvasas = async () => {
+    latottGeneracio = await generacioOlvasasa();
     rekordok.clear(); helyek.clear(); esemenyek.clear();
     osszBajt = 0;
+    fuggoBajt = 0;
     let szoveg = '';
     try { szoveg = await readFile(fajl, 'utf8'); } catch { szoveg = ''; }
     // csak a teljes sorokat (egy éppen író folyamat félbe írt sorát a következő `frissit` olvassa)
@@ -274,13 +315,19 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
   };
   await teljesBeolvasas();
 
-  /** Ha az eldobható tár túlnőtt: a legrégebben érkezett megy (a kívül esőket a hívó a `tomorites`-sel dobja). */
+  /**
+   * Ha az eldobható tár túlnőtt: előbb a FÜGGŐ megy (④b — a nem ellenőrzött tagságú nem szoríthatja ki a valódit), aztán a
+   * legrégebben érkezett; és a függők együtt legfeljebb a korlát `FUGGO_HANYAD`-od részét foglalják (a kívül esőket a hívó a
+   * `tomorites`-sel dobja).
+   */
   const meretben = async () => {
-    if (osszBajt <= korlat) return 0;
-    const sorrend = [...rekordok.entries()].sort((a, b) => a[1].erkezett - b[1].erkezett || (a[0] < b[0] ? -1 : 1));
+    if (osszBajt <= korlat && fuggoBajt <= korlat / FUGGO_HANYAD) return 0;
+    const sorrend = [...rekordok.entries()]
+      .sort((a, b) => (b[1].f - a[1].f) || a[1].erkezett - b[1].erkezett || (a[0] < b[0] ? -1 : 1));
     let db = 0;
-    for (const [id] of sorrend) {
-      if (osszBajt <= korlat * 0.9) break;
+    for (const [id, r] of sorrend) {
+      if (osszBajt <= korlat * 0.9 && fuggoBajt <= korlat / FUGGO_HANYAD) break;
+      if (!r.f && osszBajt <= korlat * 0.9) break;
       kivesz(id);
       db++;
     }
@@ -289,11 +336,13 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
   };
 
   const fajlUjrairasa = async () => {
-    const sorok = [...rekordok.values()].map((r) => JSON.stringify({ b: r.b, erkezett: r.erkezett }) + '\n');
+    const sorok = [...rekordok.values()].map((r) => JSON.stringify({ b: r.b, erkezett: r.erkezett, f: r.f ? 1 : 0 }) + '\n');
     const ideiglenes = fajl + '.' + process.pid + '.uj';
     await writeFile(ideiglenes, sorok.join(''), 'utf8');
     await rename(ideiglenes, fajl);
     olvasva = Buffer.byteLength(sorok.join(''));
+    latottGeneracio = process.pid + ':' + Date.now() + ':' + Math.random().toString(36).slice(2);
+    try { await writeFile(generacioFajl, latottGeneracio, 'utf8'); } catch { /* a következő frissítés teljesen olvas */ }
   };
 
   return {
@@ -323,13 +372,15 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
       const t = bejegyzesTartalma(b, koino, most());
       if (!t.rendben) return { uj: false, ok: t.ok };
       const erkezett = most();
-      const sor = JSON.stringify({ b, erkezett }) + '\n';
-      const id = memoriaba(b, t, Buffer.byteLength(sor), erkezett);
+      // ⭐ ④b: a szerzők tagsága — ha valamelyik nem ellenőrzött, a bejegyzés FÜGGŐ (nem kerül az indexbe, nem megy tovább).
+      const f = !(await mindTag(b));
+      const sor = JSON.stringify({ b, erkezett, f: f ? 1 : 0 }) + '\n';
+      const id = memoriaba(b, t, Buffer.byteLength(sor), erkezett, f);
       if (!id) return { uj: false, azonosito: bejegyzesAzonositoja(b), ok: 'megvan (vagy van frissebb)' };
       await appendFile(fajl, sor, 'utf8');
       olvasva += Buffer.byteLength(sor);
       await meretben();
-      return { uj: rekordok.has(id), azonosito: id };
+      return { uj: rekordok.has(id), azonosito: id, fuggo: f };
     },
 
     /** A kapu átmeneti emlékezetének ürítése (egy befogadás végén). */
@@ -347,11 +398,29 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
     regioHalmaza(melyseg, darab) {
       const t = most();
       return rendezettHalmaz([...rekordok.entries()]
-        .filter(([, r]) => regiobaEsik(r.hely, melyseg, darab) && !lejartE(r.b, t)).map(([id]) => id));
+        .filter(([, r]) => !r.f && regiobaEsik(r.hely, melyseg, darab) && !lejartE(r.b, t)).map(([id]) => id));
     },
+    /** A régió INDEXELT (nem függő, nem lejárt) bejegyzései. */
     regioBejegyzesei(melyseg, darab) {
       const t = most();
-      return [...rekordok.values()].filter((r) => regiobaEsik(r.hely, melyseg, darab) && !lejartE(r.b, t)).map((r) => r.b);
+      return [...rekordok.values()].filter((r) => !r.f && regiobaEsik(r.hely, melyseg, darab) && !lejartE(r.b, t)).map((r) => r.b);
+    },
+    /** Függő-e (④b: a szerzők tagsága még nem ellenőrzött). */
+    fuggoE(id) { return rekordok.get(id)?.f ?? null; },
+    fuggoDarab() { let n = 0; for (const r of rekordok.values()) if (r.f) n++; return n; },
+    /**
+     * ⭐ ④b: a függők újraértékelése — akinek minden szerzője azóta ellenőrzött tag lett, az indexbe kerül.
+     * @returns {Promise<number>} hány került az indexbe
+     */
+    async fuggokFrissitese() {
+      if (!tagE) return 0;
+      let db = 0;
+      for (const r of rekordok.values()) {
+        if (!r.f) continue;
+        if (await mindTag(r.b)) { r.f = false; fuggoBajt -= r.bajt; db++; }
+      }
+      if (db) { valtozasSzam++; await fajlUjrairasa(); }
+      return db;
     },
 
     /** A változás jele (a vonal párjainak gyorsítótára ebből tudja, hogy újra kell számolni). */
@@ -375,6 +444,8 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
 
     /** Amit MÁS folyamat fűzött hozzá (vagy írt újra) — beolvasás. */
     async frissit() {
+      // ⭐ Ha valaki újraírta (más a generáció), teljesen újraolvassuk; különben csak a hozzáfűzött végét.
+      if ((await generacioOlvasasa()) !== latottGeneracio) { await teljesBeolvasas(); return true; }
       let meret;
       try { meret = (await stat(fajl)).size; } catch { meret = 0; }
       if (meret === olvasva) return false;

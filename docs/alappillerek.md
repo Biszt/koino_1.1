@@ -1163,3 +1163,17 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     mert egy aláíratlan „átvettem ekkor” időt egy hazug tartó a végtelenségig frissen tarthatna (a „temető” a rajból jönne
     vissza); 32 kulcsnál 32 aláírás helyett egy; a jövőbe dátumozott megújítás évekig élne · Claude ·
     `keresoMegujitas.js`, `keresoTar.js`, `koino.js` (`sajatBejegyzesek`, `keresoTarTomoritese`), a próbák.
+171. **2026-10-18 · a tagság a kereső-táron (a kereső-réteg ④b — K3)** → **a bejegyzés csak akkor kerül az INDEXBE (a régió
+    halmazába, a kérdés válaszába), ha a születés szerzője és a csomag minden tulajdonosa ellenőrzött tag; a tagság-ellenőrzőt
+    a hívó adja (a `koino.js` tagsági kérdezője — a nem tudott szerző a függő tagság-kérdések közé is felkerül, és a csere
+    tagsági köre elhozza a csomagját; minden szerzőt megkérdezünk); amíg nem tudjuk, a bejegyzés FÜGGŐ: nem megy tovább, a
+    függők együtt legfeljebb a korlát tizedét foglalják, és helyhiánynál előbb a függő esik ki; a csere után és a `kereso`
+    parancsban a függők újraértékelődnek; a kézi út fájlja a szerzők tagsági kísérőit is viszi (`{ kisero }` sorok — a
+    befogadó a lánc-típusú eseményeket és a csomagokat ugyanazon a kapun a tartós tárba veszi); ⛔ a kereső-tár újraírása
+    generáció-jelet ír, és a `frissit` ebből látja, ha a fájlt valaki újraírta** · mert a kulcs ingyen van: egy nem tag
+    szerző bejegyzései különben kiszoríthatnák a valódiakat; a régió tartói a függőt nem adják tovább, így a szemét nem
+    terjed; ⛔ a generáció-jel MÉRT hibából jött: a függő jel 1 → 0 átírása azonos hosszú fájlt ad, és a másik folyamat ezt
+    nem vette észre (hosszabb újraírásnál pedig rossz helyről olvasott volna tovább) — és egy rontás-próba azt is megmutatta,
+    hogy a `kereso` parancs saját újraértékelése a csere utáni emelés hiányát elfedte, ezért a próba a lemezt nézi · Claude
+    · `keresoTar.js` (`bejegyzesSzerzoi`, `FUGGO_HANYAD`, `fuggokFrissitese`, a generáció), `koino.js` (a tagság-ellenőrző,
+    a kísérők a kézi úton, az emelés a csere után), a próbák.

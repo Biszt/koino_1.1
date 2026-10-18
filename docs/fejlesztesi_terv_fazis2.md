@@ -5721,6 +5721,9 @@ a K10 (✅ D110).
 egy aláírás, egy napnál jövőbeli nem), a lejárat (a megújítás + 30 nap, bárkinél ugyanaz — a lejárt nem kerül be és nem
 megy tovább), a soros (20. / 25. nap), az őrjárat óránkénti kereső-tömörítése. Elágazás 170.
 
+✅ **④b MEGÉPÜLT (2026-10-18):** a tagság (K3) — csak az ellenőrzött tag-szerzők bejegyzése kerül az indexbe; a függő nem megy
+tovább, korlátos, és előbb esik ki; a tagságot a csere tagsági köre és a kézi út kísérői hozzák. Elágazás 171.
+
 ### D108. A FELDERÍTÉS ÉS A KISZOLGÁLÁSI KERET (2026-10-17, Csaba: „1. igen 2. igen 3. (A)”)
 
 **A kérdés (Csaba ötlete, 2026-10-17):** *„jelenleg az értesítések beállítása kezeli a kérelmeket, igaz? Arra gondoltam,

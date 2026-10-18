@@ -161,7 +161,9 @@ import {
   fuggoCelok, fuggoKopogtatok
 } from './js/csere/fuggoKerelmek.js';
 import { atmenetiTarNyitasa, ketTarBemenete, ketTarNezet } from './js/tar/atmenetiTar.js';
-import { keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesekEpitese, KERESO_KORLAT } from './js/tar/keresoTar.js';
+import {
+  keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesekEpitese, bejegyzesSzerzoi, KERESO_KORLAT
+} from './js/tar/keresoTar.js';
 import { tarsMelysegeFeljegyzese, tanultMelyseg, ervenyesMelyseg, melysegJegyzekAlakja } from './js/csere/melysegTanulas.js';
 import { megujitasKeszitese, csomagTulajdonosai } from './js/tar/keresoMegujitas.js';
 import {
@@ -407,7 +409,9 @@ const tar = await koinoTaraNyitasa(KOINO);
 const atmeneti = await atmenetiTarNyitasa(KOINO, join(alapHely(), KOINO));
 // ⭐⭐ D107 L1 (a kereső-réteg ③): A KERESŐ-TÁR — a régióm bejegyzései; puha állapot, a koinó állapotába NEM számít
 // (a csomagok pont-eseményei más gondolatokról szólnak — `keresoTar.js`).
-const keresoTar = await keresoTarNyitasa(KOINO, join(alapHely(), KOINO));
+// ⭐ ④b (K3): a tagság-ellenőrző a tagsági kérdező (lent) — a nem tudott szerző a függő tagság-kérdések közé is felkerül, és a
+// következő csere tagsági köre elhozza a csomagját (D95/2).
+const keresoTar = await keresoTarNyitasa(KOINO, join(alapHely(), KOINO), { tagE: (sz) => tagsagKerdes.tagE(sz) });
 
 /**
  * ⭐ Az ÁTMENETI tár mint cél (a `hozd`, a függő szelet-kérelem): ami a TARTÓS táramban már megvan (pl. a szelettel jött
@@ -3248,6 +3252,8 @@ function resMunka(allapot, halo, tars) {
     await csereAllapota().modosit((a) => csereFeljegyzese(a, { uj: alap.uj, kuldott: alap.kuldott, most: Date.now() }));
     // ⭐ D109 (KK4): a csere is kiszolgálás — a kiküldött bájtok a társ osztálya szerint könyvelődnek (a kötés csak könyvelődik).
     await kiszolgalasiKeretKapcsolo().feljegyez({ tabla: alairo, cim: tars.cim, bajt: csere.bajtKuldott ?? 0, keres: 1 });
+    // ⭐ ④b: ha a csere tagsági köre szerzők tagságát hozta, a függő kereső-bejegyzések az indexbe kerülhetnek.
+    if (keresoTar.fuggoDarab()) await keresoTar.fuggokFrissitese();
     if (csere.ujBejegyzesek) {
       kiir(SZIN.halvany + '  🔍 ' + ora() + ' ' + csere.ujBejegyzesek + ' új kereső-bejegyzés a régiómba (' + tars.cim + ':'
         + tars.port + ')' + SZIN.vege);
@@ -3932,39 +3938,64 @@ try {
       // kereső-táram fájlba (egy másik tartónak — a ③b cseréjének kézi párja).
       const al = ervek[0] ?? '';
       const fajlNeve = ervek[1];
-      const sorokba = (lista) => lista.map((b) => JSON.stringify(b) + '\n').join('');
+      // ⭐ ④b: a fájl a szerzők TAGSÁGI KÍSÉRŐIT is viszi (`{ kisero: esemény }` sorok — a csomagjuk, vagy a tagsági láncuk,
+      // D95/2): a befogadó ezekből ellenőrzi a tagságukat (K3), különben a bejegyzés nála függő maradna.
+      const sorokba = async (lista) => {
+        const szerzok = [...new Set(lista.flatMap((b) => bejegyzesSzerzoi(b)))];
+        const kiserok = szerzok.length ? await tagsagiKiserok(tar, KOINO, szerzok,
+          { koinoSzuletes: await koinoSzuletese(), szerzoKorlat: 256 }) : [];
+        return { szoveg: [...lista.map((b) => JSON.stringify(b)), ...kiserok.map((e) => JSON.stringify({ kisero: e }))]
+          .map((x) => x + '\n').join(''), kiserok: kiserok.length };
+      };
       if (al === 'kivisz') {
         if (!fajlNeve) throw new Error('Hova írjam? node koino/koino.js kereso kivisz <fájl>');
         const lista = keresoTar.bejegyzesek();
-        await writeFile(fajlNeve, sorokba(lista), 'utf8');
-        kiir('Kivittem a kereső-táram ' + lista.length + ' bejegyzését: ' + fajlNeve);
+        const f = await sorokba(lista);
+        await writeFile(fajlNeve, f.szoveg, 'utf8');
+        kiir('Kivittem a kereső-táram ' + lista.length + ' bejegyzését (' + f.kiserok + ' tagsági kísérővel): ' + fajlNeve);
         break;
       }
       if (al === 'felajanl') {
         if (!fajlNeve) throw new Error('Hova írjam? node koino/koino.js kereso felajanl <fájl>');
         const { allapot } = await kepetKeszit();
         const lista = await sajatBejegyzesek(allapot);
-        await writeFile(fajlNeve, sorokba(lista), 'utf8');
-        kiir('A gondolataim ' + lista.length + ' bejegyzése (a legalább két tulajdonosúaké, a cím minden kulcsa alatt): '
-          + fajlNeve + SZIN.halvany + ' — a kereső tartói `kereso behoz`-zal veszik fel' + SZIN.vege);
+        const f = await sorokba(lista);
+        await writeFile(fajlNeve, f.szoveg, 'utf8');
+        kiir('A gondolataim ' + lista.length + ' bejegyzése (a legalább két tulajdonosúaké, a cím minden kulcsa alatt; ' + f.kiserok
+          + ' tagsági kísérővel): ' + fajlNeve + SZIN.halvany + ' — a kereső tartói `kereso behoz`-zal veszik fel' + SZIN.vege);
         break;
       }
       if (al === 'behoz') {
         if (!fajlNeve) throw new Error('Honnan hozzam? node koino/koino.js kereso behoz <fájl>');
         const sorok = (await readFile(fajlNeve, 'utf8')).split('\n').filter((x) => x.trim());
-        let uj = 0, megvolt = 0;
+        let uj = 0, megvolt = 0, fuggo = 0;
         const elutasitva = [];
+        const bejegyzesek = [];
+        const kiserok = [];
         for (const [i, sor] of sorok.entries()) {
-          let b;
-          try { b = JSON.parse(sor); } catch { elutasitva.push({ sor: i + 1, ok: 'nem értelmezhető' }); continue; }
-          const r = await bejegyzesBefogadasa(keresoTar, b);
-          if (r.uj) uj++;
-          else if (r.azonosito) megvolt++;
-          else elutasitva.push({ sor: i + 1, ok: r.ok });
+          let j;
+          try { j = JSON.parse(sor); } catch { elutasitva.push({ sor: i + 1, ok: 'nem értelmezhető' }); continue; }
+          if (j && typeof j === 'object' && j.kisero && typeof j.kisero === 'object') kiserok.push(j.kisero);
+          else bejegyzesek.push({ sor: i + 1, b: j });
         }
+        // ⭐ ④b: előbb a tagsági kísérők — CSAK a lánc-típusú események és a tagsági csomagok, ugyanazon a kapun (a tartós tárba;
+        // a koinó állapotában gondolat nem lesz belőlük).
+        const kiseroBe = kiserok.filter((e) => e.koino === KOINO && (e.tipus === TAGSAGI_CSOMAG || LANC_TIPUSOK.has(e.tipus)));
+        const k = kiseroBe.length ? await beolvasztas(tar, kiseroBe, KOINO) : { uj: 0 };
+        for (const x of bejegyzesek) {
+          const r = await bejegyzesBefogadasa(keresoTar, x.b);
+          if (r.uj) { uj++; if (r.fuggo) fuggo++; }
+          else if (r.azonosito) megvolt++;
+          else elutasitva.push({ sor: x.sor, ok: r.ok });
+        }
+        const emelt = await keresoTar.fuggokFrissitese();
         kiir('Behozva a kereső-tárba: ' + fajlNeve);
         kiir('  ' + SZIN.jo + uj + ' új bejegyzés' + SZIN.vege + ' · ' + megvolt + ' már megvolt (vagy van frissebb) · '
-          + sorok.length + ' sor a fájlban');
+          + kiserok.length + ' tagsági kísérő (' + k.uj + ' új esemény) · ' + sorok.length + ' sor a fájlban');
+        if (fuggo - emelt > 0 || emelt) {
+          kiir(SZIN.halvany + '  ' + Math.max(0, fuggo - emelt) + ' függő (a szerzők tagsága még nem ellenőrzött — K3)'
+            + (emelt ? ' · ' + emelt + ' az indexbe emelve' : '') + SZIN.vege);
+        }
         if (elutasitva.length) {
           kiir(SZIN.nem + '  ' + elutasitva.length + ' bejegyzés ELUTASÍTVA:' + SZIN.vege);
           for (const el of elutasitva.slice(0, 5)) kiir(SZIN.halvany + '    ' + el.sor + '. sor: ' + el.ok + SZIN.vege);
@@ -3974,7 +4005,11 @@ try {
       if (al) throw new Error('Mit tegyek? node koino/koino.js kereso [felajanl <fájl> | behoz <fájl> | kivisz <fájl>]');
       const r = await keresoRegioim();
       const kb = (x) => (x / 1024).toFixed(1).replace('.', ',') + ' KB';
-      kiir(SZIN.vastag + 'KERESŐ-TÁR: ' + keresoTar.darab() + ' bejegyzés, ' + kb(keresoTar.meret()) + SZIN.vege + SZIN.halvany
+      await keresoTar.fuggokFrissitese();
+      const fuggoDb = keresoTar.fuggoDarab();
+      kiir(SZIN.vastag + 'KERESŐ-TÁR: ' + keresoTar.darab() + ' bejegyzés (' + (keresoTar.darab() - fuggoDb) + ' az indexben'
+        + (fuggoDb ? ' · ' + fuggoDb + ' függő — a szerzők tagsága még nem ellenőrzött' : '') + '), ' + kb(keresoTar.meret())
+        + SZIN.vege + SZIN.halvany
         + ' (a korlát ' + Math.round(KERESO_KORLAT / 1024 / 1024) + ' MB; puha állapot — a koinó állapotába nem számít)' + SZIN.vege);
       kiir('  a régióim (' + r.melyseg + '. mélység' + (r.tanult && r.melyseg > r.sajat
         ? ' — a társaimtól tanulva (' + r.tanult.tarsak + ' friss társ mediánja ' + r.tanult.median + '; a saját becslésem '

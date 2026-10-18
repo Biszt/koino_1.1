@@ -445,3 +445,11 @@ tömöríti a kereső-tárat. Próbák: `keresoMegujitasProba.js` (6), `keresoTa
 „frissebb nyer” egy olyan párral is, ahol a frissebbnek a nagyobb az azonosítója, hogy a holtverseny-döntő ne takarhassa el),
 `keresoRegioProba.js` (+1: a lejárt a rajból sem jön vissza), és a kézi út (a felajánlás minden sora megújítással — két
 rontással). Elágazás 170.
+
+✅ **④b KÉSZ (2026-10-18):** a kereső-tár a tagság-ellenőrzőt kívülről kapja (a `koino.js` tagsági kérdezője); a nem
+ellenőrzött szerzőjű bejegyzés FÜGGŐ (nem megy tovább, a korlát tizedéig, helyhiánynál előbb ő esik ki); a csere után és a
+`kereso` parancsban a függők újraértékelődnek; a kézi út fájlja a tagsági kísérőket is viszi. A ③b-ben a postaláda a
+szerzők tagságát ugyanabban a cserében a tagsági körrel kapja meg — a bejegyzések nála az indexbe kerülnek (a lemezen mérve).
+Közben javítva: a kereső-tár újraírása generáció-jelet ír (egy azonos hosszú újraírást a másik folyamat nem látott). Próbák:
+`keresoTarProba.js` (+3, és a `frissit`-próba az azonos hosszú újraírással), a kézi út (+1 készülék: kísérők nélkül függő), a
+③b (a lemezen az index) — mind rontással. Elágazás 171.

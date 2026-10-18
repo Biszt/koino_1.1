@@ -5162,12 +5162,15 @@ proba('⭐⭐⭐ D72: A SZÖVEG KÜLÖN DARAB — az esemény nem hordozza, a m�
 // C `kereso kivisz`-szel továbbadja D-nek, aki szintén ötöt vesz fel; egy hamisított fájlt (a születés címe átírva) D
 // elutasít — a kapun. Rontás: a befogadás a kaput kihagyja → D a hamisat is felveszi → bukik; az építő a tulajdonos-számot
 // nem nézi → az egy tulajdonosú gondolat is felkerül (≠ 5) → bukik; a felajánlás csak a SAJÁT pont-eseményemet viszi
-// (nem a főkönyv nyerteseit) → nincs két tulajdonos → 0 → bukik.
+// (nem a főkönyv nyerteseit) → nincs két tulajdonos → 0 → bukik. ⭐ ④b (K3): a fájl a szerzők tagsági kísérőit is viszi — C és
+// D az INDEXBE veszi fel; E a kísérők nélkül kapja → nála FÜGGŐK. Rontás: a felajánlás kísérők nélkül → C-nél 0 az indexben →
+// bukik; a `koino.js` nem adja a tagság-ellenőrzőt a kereső-tárnak → E-nél is az indexben → bukik.
 proba('⭐⭐ A kereső-réteg kézi útja: felajanl → behoz → kivisz → behoz — a hamisat elveti, és a koinó állapotába nem számít', async () => {
   const a = await ujKeszulek();
   const b = await ujKeszulek();
   const c = await ujKeszulek();
   const d = await ujKeszulek();
+  const e = await ujKeszulek();
   try {
     await fut(a, 'koino', 'Kereső', 'próba', 'nyilt');
     const g = azonosito(await fut(a, 'gondolat', 'Közös park a faluban'), 'Létrejött:');
@@ -5191,14 +5194,23 @@ proba('⭐⭐ A kereső-réteg kézi útja: felajanl → behoz → kivisz → be
     await fut(c, 'kereso', 'kivisz', f5);
     const dBe = tiszta(await fut(d, 'kereso', 'behoz', f5));
     const dAll = tiszta(await fut(d, 'kereso'));
+    // ⭐ ④b (K3): a kísérők NÉLKÜL a szerzők tagsága nem ellenőrizhető — E-nél a bejegyzések FÜGGŐK (nem az indexben).
+    const kiseroNelkul = join(c, 'kisero-nelkul.jsonl');
+    await writeFile(kiseroNelkul, (await readFile(f3, 'utf8')).split('\n').filter((x) => x && !x.startsWith('{"kisero"'))
+      .join('\n') + '\n', 'utf8');
+    await fut(e, 'kereso', 'behoz', kiseroNelkul);
+    const eAll = tiszta(await fut(e, 'kereso'));
     const ki = {
+      eFuggo: /KERESŐ-TÁR: 5 bejegyzés \(0 az indexben · 5 függő/.test(eAll),
       felajanl: /A gondolataim 5 bejegyzése/.test(felajanl)
-        && (await readFile(f3, 'utf8')).split('\n').filter(Boolean).every((x) => /"m":\{"szerzo"/.test(x)),
+        && (await readFile(f3, 'utf8')).split('\n').filter((x) => x && !x.startsWith('{"kisero"'))
+          .every((x) => /"m":\{"szerzo"/.test(x))
+        && /[1-9]\d* tagsági kísérővel/.test(felajanl),
       cBe: /5 új bejegyzés/.test(cBe),
-      cAll: /KERESŐ-TÁR: 5 bejegyzés/.test(cAll),
+      cAll: /KERESŐ-TÁR: 5 bejegyzés \(5 az indexben\)/.test(cAll),
       cKoino: !/Közös park/.test(cKoino),
       dHamis: /0 új bejegyzés/.test(dHamis) && /ELUTASÍTVA/.test(dHamis) && /kapun/.test(dHamis),
-      dBe: /5 új bejegyzés/.test(dBe) && /KERESŐ-TÁR: 5 bejegyzés/.test(dAll)
+      dBe: /5 új bejegyzés/.test(dBe) && /KERESŐ-TÁR: 5 bejegyzés \(5 az indexben\)/.test(dAll)
     };
     if (!Object.values(ki).every(Boolean)) {
       process.stdout.write('  kereső kézi út — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
@@ -5207,7 +5219,7 @@ proba('⭐⭐ A kereső-réteg kézi útja: felajanl → behoz → kivisz → be
     }
     return Object.values(ki).every(Boolean);
   } finally {
-    for (const m of [a, b, c, d]) await rm(m, { recursive: true, force: true });
+    for (const m of [a, b, c, d, e]) await rm(m, { recursive: true, force: true });
   }
 });
 
@@ -5238,13 +5250,18 @@ proba('⭐⭐ ③b: a csere a kereső-régiót is egyezteti — a postaláda ker
     await fut(c, 'kereso', 'behoz', join(a, 'felajanlas.jsonl'));
     await fut(c, 'tars', '127.0.0.1', String(port), 'D');
     await csereKor(d, c, port);
+    // ⭐ ④b: a LEMEZEN (a `kereso` parancs maga is újraértékel, az elfedné): a futó postaláda a csere után az indexbe emelte.
+    const dIndexben = (await readFile(join(d, 'sajat', 'kereso', 'bejegyzesek.jsonl'), 'utf8').catch(() => ''))
+      .split('\n').filter((x) => /"f":0/.test(x)).length;
     const dAll = tiszta(await fut(d, 'kereso'));
     const dKoino = (await readdir(d, { withFileTypes: true })).filter((x) => x.isDirectory() && x.name !== 'fajlok')
       .map((x) => x.name);
     let dTartos = '';
     for (const m of dKoino) dTartos += await readFile(join(d, m, 'esemenyek.jsonl'), 'utf8').catch(() => '');
     const ki = {
-      dKereso: /KERESŐ-TÁR: 5 bejegyzés/.test(dAll),
+      // ⭐ ④b: D a szerzők tagságát ugyanabban a cserében a tagsági körrel kapja meg (C tudja — a felajánlás kísérőiből), így a
+      // bejegyzések nála is az INDEXBE kerülnek.
+      dKereso: /KERESŐ-TÁR: 5 bejegyzés \(5 az indexben\)/.test(dAll) && dIndexben === 5,
       dTartosUres: !dTartos.includes('Közös park')
     };
     if (!Object.values(ki).every(Boolean)) {

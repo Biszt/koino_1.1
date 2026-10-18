@@ -18,7 +18,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import {
-  keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesAzonositoja, bejegyzesekEpitese, bejegyzesAlakja, BEJEGYZES_TULAJDONOS_MIN
+  keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesAzonositoja, bejegyzesekEpitese, bejegyzesAlakja, BEJEGYZES_TULAJDONOS_MIN,
+  bejegyzesSzerzoi, FUGGO_HANYAD
 } from '../js/tar/keresoTar.js';
 import { cimKulcsai, bejegyzesHelye, regiobaEsik } from '../js/csere/keresoReteg.js';
 import { lenyomatDarabja } from '../js/csere/cimjegyzek.js';
@@ -225,7 +226,21 @@ proba('⭐ Amit MÁS folyamat fűzött hozzá, az a `frissit` után látszik (é
   const kozben = a.darab();
   await b.tomorites(() => false);
   await a.frissit();
-  return elotte === 0 && lett && kozben === 1 && a.darab() === 0;
+  const kiurult = a.darab() === 0;
+  // ⭐ Az AZONOS hosszú újraírás is látszik (a függő jel 1 → 0 — mérve: a hossz nem változik): a generáció-jel alapján.
+  const tagok = new Set();
+  const tagE = async (sz) => (tagok.has(sz) ? true : null);
+  const m2 = await ujMappa();
+  const x = await keresoTarNyitasa(KOINO, m2, { tagE });
+  const y = await keresoTarNyitasa(KOINO, m2, { tagE });
+  const [bej2] = bejegyzesekEpitese(await gondolatTulajdonosokkal('Másik park'));
+  await bejegyzesBefogadasa(x, bej2);
+  await y.frissit();
+  const yFuggo = y.fuggoDarab() === 1;
+  for (const sz of bejegyzesSzerzoi(bej2)) tagok.add(sz);
+  await x.fuggokFrissitese();
+  await y.frissit();
+  return elotte === 0 && lett && kozben === 1 && kiurult && yFuggo && y.fuggoDarab() === 0 && y.regioHalmaza(0, 0n).length === 1;
 });
 
 // ⭐ A sérült sor nem dönti el a tárat (gyorsítótár). Rontás: a beolvasás a sérült soron elhasal → bukik.
@@ -250,6 +265,68 @@ proba('Az építő: a cím minden kulcsa alatt egy bejegyzés, a két legtöbb p
   const egyedul = await gondolatTulajdonosokkal('Magányos', [10]);
   return bk.length === cimKulcsai('Nagy közös parkban').length && bk.every((b) => b.s === 0 && b.esemenyek[0] === g.szuletes)
     && pontjai.join(',') === '30,40' && bejegyzesekEpitese(egyedul).length === 0;
+});
+
+// ===================================
+// ⭐⭐ ④b — A TAGSÁG (K3): csak az ellenőrzött tag-szerzők bejegyzése kerül az indexbe
+// ===================================
+
+// Rontás: a régió halmaza a függőt is adja → bukik; a `fuggokFrissitese` nem emel → bukik; a függő jel nem marad meg a lemezen
+// (újranyitva függő lesz) → bukik.
+proba('⭐⭐ ④b: a nem ellenőrzött tagságú szerző bejegyzése FÜGGŐ — nincs a régió halmazában; a tagság kiderülése után az indexben', async () => {
+  const mappa = await ujMappa();
+  const tagok = new Set();
+  const tagE = async (sz) => (tagok.has(sz) ? true : null);
+  const tar = await keresoTarNyitasa(KOINO, mappa, { tagE });
+  const g = await gondolatTulajdonosokkal('Közös park');
+  const [b] = bejegyzesekEpitese(g);
+  const r = await bejegyzesBefogadasa(tar, b);
+  const elotte = r.uj && r.fuggo === true && tar.regioHalmaza(0, 0n).length === 0 && tar.fuggoDarab() === 1;
+  const sz = bejegyzesSzerzoi(b);
+  tagok.add(sz[0]);                                   // csak egy szerző tag — még függő
+  const reszben = (await tar.fuggokFrissitese()) === 0 && tar.fuggoDarab() === 1;
+  for (const x of sz) tagok.add(x);
+  const emelt = (await tar.fuggokFrissitese()) === 1 && tar.regioHalmaza(0, 0n).length === 1 && tar.fuggoDarab() === 0;
+  const ujra = await keresoTarNyitasa(KOINO, mappa, { tagE });
+  return sz.length === 2 && elotte && reszben && emelt && ujra.regioHalmaza(0, 0n).length === 1 && ujra.fuggoDarab() === 0;
+});
+
+// ⭐ Minden szerzőt megkérdezünk (a nem tudottak mind a függő tagság-kérdések közé kerülnek). Rontás: az első nem tudottnál
+// megállunk → a második szerzőt nem kérdezzük → bukik.
+proba('⭐ ④b: a tagság-ellenőrző a bejegyzés MINDEN szerzőjét megkérdezi (a születésé és a tulajdonosoké)', async () => {
+  const kerdezett = new Set();
+  const tar = await keresoTarNyitasa(KOINO, await ujMappa(), { tagE: async (sz) => { kerdezett.add(sz); return null; } });
+  const g = await gondolatTulajdonosokkal('Közös park', [30, 20, 10]);
+  const [b] = bejegyzesekEpitese(g, { tulajdonosok: 3 });
+  await bejegyzesBefogadasa(tar, b);
+  return bejegyzesSzerzoi(b).length === 3 && bejegyzesSzerzoi(b).every((x) => kerdezett.has(x));
+});
+
+// ⛔ A kulcs ingyen van: a nem tag szerzők bejegyzései nem szoríthatják ki a valódiakat. Rontás: a kiszorítás nem a függővel
+// kezd (vagy a függők részének nincs korlátja) → egy valódi kiesik, vagy a függők a tized fölött → bukik.
+proba('⛔ ④b: a függők nem szorítják ki a valódiakat — együtt legfeljebb a korlát tizede, helyhiánynál előbb a függő megy', async () => {
+  const tagok = new Set();
+  const minta = bejegyzesekEpitese(await gondolatTulajdonosokkal('Minta park'))[0];
+  const egy = Buffer.byteLength(JSON.stringify({ b: minta, erkezett: 1, f: 1 })) + 1;
+  const korlat = egy * 12;
+  let ora = 1000;
+  const tar = await keresoTarNyitasa(KOINO, await ujMappa(), { korlat, most: () => ora, tagE: async (sz) => (tagok.has(sz) ? true : null) });
+  const valodiak = [];
+  for (let i = 0; i < 6; i++) {
+    const [b] = bejegyzesekEpitese(await gondolatTulajdonosokkal('Valódi park ' + i));
+    for (const x of bejegyzesSzerzoi(b)) tagok.add(x);
+    ora += 10;
+    await bejegyzesBefogadasa(tar, b);
+    valodiak.push(bejegyzesAzonositoja(b));
+  }
+  for (let i = 0; i < 10; i++) {
+    const [b] = bejegyzesekEpitese(await gondolatTulajdonosokkal('Kamu park ' + i));
+    ora += 10;
+    await bejegyzesBefogadasa(tar, b);
+  }
+  const fuggoMeret = tar.fuggoDarab() * egy;
+  return FUGGO_HANYAD === 10 && valodiak.every((id) => tar.bejegyzes(id) !== null) && fuggoMeret <= korlat / FUGGO_HANYAD + egy
+    && tar.fuggoDarab() <= 2;
 });
 
 export default async function (csendes) {
