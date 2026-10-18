@@ -408,7 +408,8 @@ export function keszulekKopogtatoTemaja(koino, alairo) {
 
 /** Egy hirdetett téma párja: ahol a hirdetőit kérni lehet (`fajta` 'gyoker' vagy 'szelet'). */
 export function temaKopogtatoja(koino, fajta, kulcs) {
-  if (fajta !== 'gyoker' && fajta !== 'szelet') throw new Error('ismeretlen hirdetett téma: ' + fajta);
+  // ⭐ D107 L4 (④c): a kereső-régió párja is — a felajánló ezen jelentkezik, ha a régió tartóját közvetlenül nem éri el.
+  if (fajta !== 'gyoker' && fajta !== 'szelet' && fajta !== 'kereso') throw new Error('ismeretlen hirdetett téma: ' + fajta);
   return cimjegyzekTema(koino, 'kopogtato', fajta + ':' + kulcs);
 }
 
@@ -423,7 +424,9 @@ export function temaKopogtatoja(koino, fajta, kulcs) {
 export function figyelendoKopogtatok({ koino, alairo, hirdetett = [] }) {
   const ki = [{ fajta: 'keszulek', kulcs: alairo, tema: keszulekKopogtatoTemaja(koino, alairo) }];
   for (const t of hirdetett) {
-    if (t.fajta === 'gyoker' || t.fajta === 'szelet') ki.push({ fajta: t.fajta, kulcs: t.kulcs, tema: temaKopogtatoja(koino, t.fajta, t.kulcs) });
+    if (t.fajta === 'gyoker' || t.fajta === 'szelet' || t.fajta === 'kereso') {
+      ki.push({ fajta: t.fajta, kulcs: t.kulcs, tema: temaKopogtatoja(koino, t.fajta, t.kulcs) });
+    }
   }
   return ki;
 }

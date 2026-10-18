@@ -405,6 +405,13 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
       const t = most();
       return [...rekordok.values()].filter((r) => !r.f && regiobaEsik(r.hely, melyseg, darab) && !lejartE(r.b, t)).map((r) => r.b);
     },
+    /** ⭐ ④c (K7): hány INDEXELT (nem függő, nem lejárt) bejegyzés áll egy helyen — a fiók (vagy darabja) mérete nálam. */
+    helyMerete(hely) {
+      const t = most();
+      let n = 0;
+      for (const r of rekordok.values()) if (!r.f && r.hely === hely && !lejartE(r.b, t)) n++;
+      return n;
+    },
     /** Függő-e (④b: a szerzők tagsága még nem ellenőrzött). */
     fuggoE(id) { return rekordok.get(id)?.f ?? null; },
     fuggoDarab() { let n = 0; for (const r of rekordok.values()) if (r.f) n++; return n; },

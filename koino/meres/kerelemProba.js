@@ -32,8 +32,10 @@ import {
 import {
   tovabbiUgras, UGRAS_MAX, valaszAlakja,
   kerelemAlakja, fejlecekValasza, fejlecKepe, mintaKeres, mintakValasza, fejlecekEllenorzese, torzsLenyomatai, FEJLEC_KORLAT,
-  elobbJon
+  elobbJon, felajanlasValaszAlakja
 } from '../js/csere/kerelem.js';
+import { keresoRegioKulcsa } from '../js/csere/keresoReteg.js';
+import { bejegyzesekEpitese } from '../js/tar/keresoTar.js';
 
 const { proba, futtatas } = probaGyujtemeny('A kérelem: az alapkérdések (D92/4–6)');
 
@@ -664,6 +666,48 @@ proba('⛔ a memóriabeli fájl-tár is ellenőriz: a hamis bájt nem zárul le,
   let tele = false;
   try { await m.ir(new Uint8Array(2000)); } catch { tele = true; }
   return lezaras.rendben === false && lezaras.romlott === true && !(await m.van('B'.repeat(43))) && tele;
+});
+
+// ===================================
+// ⭐⭐ D107 L4 (④c): A FELAJÁNLÁS — az alak és a menet a résen
+// ===================================
+
+// Rontás: a felajánlás kulcsa bármi lehet → a sima azonosító is átmegy → bukik; nincs korlát → bukik.
+proba('⭐ D107 L4: a felajánlás kulcsa egy kereső-régió (vagy a gyökér) — a teher korlátos, és nem adható tovább', () => {
+  const r = keresoRegioKulcsa(3, 5);
+  const jo = kerelemAlakja({ fajta: 'felajanlas', kulcs: r, bejegyzesek: new Array(100).fill({}), kiserok: [1, 2] });
+  const gy = kerelemAlakja({ fajta: 'felajanlas', kulcs: GYOKER_KULCS });
+  return jo?.fajta === 'felajanlas' && jo.bejegyzesek.length === 64 && jo.kiserok.length === 2 && gy?.kulcs === GYOKER_KULCS
+    && kerelemAlakja({ fajta: 'felajanlas', kulcs: AZ }) === null
+    && valaszAlakja({ az: 'abcdefgh12', fajta: 'felajanlas', kulcs: r }) === null
+    && felajanlasValaszAlakja({ felvett: 3, osztodott: [{ k: 'p:park', s: 1 }, { k: 'x', s: -1 }] }).osztodott.length === 1;
+});
+
+// ⭐ A menet. Rontás: a vonal nem viszi a bejegyzéseket (vagy nem várja a választ) → a tartó 0-t lát, a kérő nem kap választ.
+proba('⭐⭐ D107 L4: a FELAJÁNLÁS a védett résen — a tartó megkapja a bejegyzéseket és a kísérőket, a kérő a választ (az osztódással)', async () => {
+  const p = await udpPar();
+  const hely = await mkdtemp(join(tmpdir(), 'koino-kerelem-'));
+  try {
+    const tar = await esemenyTarNyitasa('proba', hely);
+    const a = await ujEember('proba');
+    const b = await ujEember('proba');
+    const szuletes = await a.tesz('GondolatLetrehozas', { cim: 'Közös park', meret: 10 });
+    const pontEsemenyek = [await a.tesz('TudatpontRendezes', { entitas: szuletes.azonosito, pont: 30 }),
+      await b.tesz('TudatpontRendezes', { entitas: szuletes.azonosito, pont: 20 })];
+    const bejegyzesek = bejegyzesekEpitese({ szuletes, pontEsemenyek });
+    let kapott = null;
+    const kiszolgalo = { async felajanlas(k) { kapott = k; return { felvett: k.bejegyzesek.length, osztodott: [{ k: 'p:park', s: 1 }] }; } };
+    const [, r] = await Promise.all([
+      tartoResen(p.egyik, p.masikPort, tar, { kerelemKiszolgalo: kiszolgalo }),
+      kerelemUdpResen(p.masik, '127.0.0.1', p.egyikPort, 'proba',
+        { fajta: 'felajanlas', kulcs: GYOKER_KULCS, bejegyzesek, kiserok: [szuletes] })
+    ]);
+    return kapott?.bejegyzesek.length === bejegyzesek.length && kapott.kiserok.length === 1 && r.kiszolgalta
+      && r.felajanlas?.felvett === bejegyzesek.length && r.felajanlas.osztodott[0]?.k === 'p:park' && r.felajanlas.osztodott[0].s === 1;
+  } finally {
+    p.bezar();
+    await rm(hely, { recursive: true, force: true });
+  }
 });
 
 export default futtatas;

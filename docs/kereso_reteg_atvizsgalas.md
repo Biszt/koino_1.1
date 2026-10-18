@@ -453,3 +453,12 @@ szerzők tagságát ugyanabban a cserében a tagsági körrel kapja meg — a be
 Közben javítva: a kereső-tár újraírása generáció-jelet ír (egy azonos hosszú újraírást a másik folyamat nem látott). Próbák:
 `keresoTarProba.js` (+3, és a `frissit`-próba az azonos hosszú újraírással), a kézi út (+1 készülék: kísérők nélkül függő), a
 ③b (a lemezen az index) — mind rontással. Elágazás 171.
+
+✅ **④c KÉSZ (2026-10-18) — a ④ kész:** `js/csere/felajanlas.js` (a régiónkénti csoportok a kimondott osztódások szerint, a
+felajánlottak jegyzéke, a megújítás újrahasznosítása), a kérelem `felajanlas` fajtája (`kerelem.js`, `vonal.js` — a tartó
+válasza az osztódással), a kiszolgáló (`koino.js` — a kísérők a kapun, a bejegyzések a kereső-tár kapuján, a régióim szerint, az
+osztódás a hely méretéből), a felajánló három útja (közvetlenül, automatikusan az őrjárat címjegyzék-körében — a régió
+hirdetői a függő kérelem céljai, a kopogtató a régió témájának párja —, és fájlban). Próbák: `felajanlasProba.js` (6),
+`kerelemProba.js` (+2: az alak és a menet a védett résen), és két bekötés-próba (közvetlenül: a kísérőkkel az indexbe, az
+osztódás után a mélyebb darabba; automatikusan: két őrjárat egy hamis DHT-n, társ-felvétel nélkül) — mind rontással.
+Elágazás 172. ⏭️ **Következik az ⑤ (a kérdés)**, aztán a ⑦ (a Keresés ablaka a hálózati találatokkal).

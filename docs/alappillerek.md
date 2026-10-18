@@ -1177,3 +1177,18 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     hogy a `kereso` parancs saját újraértékelése a csere utáni emelés hiányát elfedte, ezért a próba a lemezt nézi · Claude
     · `keresoTar.js` (`bejegyzesSzerzoi`, `FUGGO_HANYAD`, `fuggokFrissitese`, a generáció), `koino.js` (a tagság-ellenőrző,
     a kísérők a kézi úton, az emelés a csere után), a próbák.
+172. **2026-10-18 · a felajánlás a kérelem gépén (a kereső-réteg ④c — D107 L4, K7)** → **új kérelem-fajta (`felajanlas`): a
+    kulcs egy kereső-régió (vagy a gyökér: „ami a régióidba esik”), a teher a bejegyzések (≤ 64) és a szerzőik tagsági
+    kísérői (≤ 512); nem adható tovább; a tartó a kísérőket (lánc-típus + csomag) a kapun a tartós tárba, a bejegyzéseket a
+    kereső-tár kapuján veszi fel (csak ami a régióiba esik), és kimondja az OSZTÓDÁST (ahol egy hely nálam lévő, indexelt
+    része meghaladja a célt: `{ k, s' }`); a felajánló a gondolatai bejegyzéseit a kimondott osztódások szerinti mélységgel
+    régiónként csoportosítja (a mélység a D110 szerint), nyilvántartja a felajánlottakat (`felajanlasok.json`), a
+    megújítást újrahasznosítja, amíg érvényes és nem esedékes; három út: közvetlenül (`kereso felajanl <cím> <port>`),
+    automatikusan (az őrjárat címjegyzék-köre — a régió témájának hirdetői a függő kérelem céljai, a kopogtató a téma párja),
+    és fájlban (a kézi út)** · mert egy régióban egy tartó elég (a többihez a ③b viszi); az osztódás a tartó helyi tudása (ő
+    látja a fiók méretét), ezért ő mondja ki, és a darabok egymásba ágyazottak (a lánc követhető); a megújítás
+    újrahasznosítása nélkül minden kör új aláírás, új azonosító, újra-felajánlás lett volna; a kopogtató pár a NAT mögötti
+    tartóhoz kell (a tartó a párján látja, hogy valaki ajánlana, és felé kopog) · Claude · `felajanlas.js`, `kerelem.js`
+    (`felajanlas` fajta, `felajanlasValaszAlakja`, `TOVABBADHATO_FAJTAK`), `vonal.js`, `fuggoKerelmek.js`, `cimjegyzek.js` (a
+    `kereso` pár), `keresoTar.js` (`helyMerete`), `koino.js` (a kiszolgáló, `felajanlasKor`, a függő munka, a parancs), a
+    próbák.

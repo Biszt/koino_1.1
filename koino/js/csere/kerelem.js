@@ -42,8 +42,26 @@ import {
 import { osszegzesAlakja } from '../esemeny/osszegzoFa.js';
 import { entitasFajljai, lenyomatUrlbol } from '../allapot/fajlIgeny.js';
 import { szovegDarabbol } from '../esemeny/szovegDarab.js';
+// ⭐ D107 L4 (④c): a felajánlás kulcsa egy kereső-régió; a korlátok a felajánlás moduljáé.
+import { keresoRegioBol } from './keresoReteg.js';
+import { FELAJANLAS_KORLAT, FELAJANLAS_KISERO_KORLAT } from './felajanlas.js';
 
-export const KERELEM_FAJTAK = ['szelet', 'fejlecek', 'torzs'];
+/**
+ * ⭐ D107 L4 (④c): a felajánlás válaszának alakja — hányat vett fel a tartó (és ebből hány függő), hány volt már meg, hányat
+ * utasított el, és mely fiók OSZTÓDOTT (K7: `{ k, s }` — a felajánló a mélyebb darab régiójába viszi).
+ * @returns {{felvett: number, fuggo: number, megvolt: number, elutasitott: number, osztodott: Array<{k: string, s: number}>}}
+ */
+export function felajanlasValaszAlakja(u) {
+  const db = (x) => (Number.isInteger(x) && x >= 0 ? Math.min(x, 100000) : 0);
+  const osztodott = (Array.isArray(u?.osztodott) ? u.osztodott : []).slice(0, FELAJANLAS_KORLAT)
+    .filter((o) => o && typeof o.k === 'string' && o.k.length <= 80 && Number.isInteger(o.s) && o.s > 0 && o.s <= 144)
+    .map((o) => ({ k: o.k, s: o.s }));
+  return { felvett: db(u?.felvett), fuggo: db(u?.fuggo), megvolt: db(u?.megvolt), elutasitott: db(u?.elutasitott), osztodott };
+}
+
+export const KERELEM_FAJTAK = ['szelet', 'fejlecek', 'torzs', 'felajanlas'];
+/** A továbbadható fajták (D92/1 (c)) — a felajánlás nem: a tulajdonos maga keresi a régió tartóit. */
+export const TOVABBADHATO_FAJTAK = ['szelet', 'fejlecek', 'torzs'];
 
 /** Egy fejléc-listában legfeljebb ennyi kártya. */
 export const FEJLEC_KORLAT = 50;
@@ -85,6 +103,14 @@ export function kerelemAlakja(u) {
   if (!u || typeof u !== 'object' || !KERELEM_FAJTAK.includes(u.fajta)) return null;
   const kulcs = u.kulcs;
   const gyokerE = kulcs === GYOKER_KULCS;
+  // ⭐⭐ D107 L4 (④c): A FELAJÁNLÁS — a kulcs egy kereső-régió (vagy a gyökér: „ami a régióidba esik”), a teher a
+  // bejegyzések és a szerzőik tagsági kísérői (korlátosan; az alakjukat és a tartalmukat a tartó maga ellenőrzi).
+  if (u.fajta === 'felajanlas') {
+    if (!gyokerE && !keresoRegioBol(kulcs)) return null;
+    return { fajta: 'felajanlas', kulcs,
+      bejegyzesek: Array.isArray(u.bejegyzesek) ? u.bejegyzesek.slice(0, FELAJANLAS_KORLAT) : [],
+      kiserok: Array.isArray(u.kiserok) ? u.kiserok.slice(0, FELAJANLAS_KISERO_KORLAT) : [] };
+  }
   // ⚠️ A gyökér kulcsa (43 nulla) maga is azonosító alakú — ezért külön: csak fejlécre kérhető.
   if (gyokerE ? u.fajta !== 'fejlecek' : !azonositoAlaku(kulcs)) return null;
   const egesz = (x, alap, max) => (Number.isInteger(x) && x >= 0 ? Math.min(x, max) : alap);
@@ -132,7 +158,7 @@ export function tovabbiUgras(htl, veletlen = Math.random) {
  * @returns {null|{az: string, fajta: string, kulcs: string, esemenyek: Array, valasz: Object|null, fajlok: Array}}
  */
 export function valaszAlakja(u) {
-  if (!u || typeof u.az !== 'string' || !/^[A-Za-z0-9_-]{8,40}$/.test(u.az) || !KERELEM_FAJTAK.includes(u.fajta)) return null;
+  if (!u || typeof u.az !== 'string' || !/^[A-Za-z0-9_-]{8,40}$/.test(u.az) || !TOVABBADHATO_FAJTAK.includes(u.fajta)) return null;
   if (u.kulcs !== GYOKER_KULCS && !azonositoAlaku(u.kulcs)) return null;
   const esemenyek = (Array.isArray(u.esemenyek) ? u.esemenyek : []).filter((e) => e && typeof e === 'object').slice(0, VALASZ_ESEMENY_KORLAT);
   const fajlok = (Array.isArray(u.fajlok) ? u.fajlok : [])

@@ -162,13 +162,18 @@ import {
 } from './js/csere/fuggoKerelmek.js';
 import { atmenetiTarNyitasa, ketTarBemenete, ketTarNezet } from './js/tar/atmenetiTar.js';
 import {
-  keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesekEpitese, bejegyzesSzerzoi, KERESO_KORLAT
+  keresoTarNyitasa, bejegyzesBefogadasa, bejegyzesekEpitese, bejegyzesSzerzoi, bejegyzesAlakja, KERESO_KORLAT
 } from './js/tar/keresoTar.js';
 import { tarsMelysegeFeljegyzese, tanultMelyseg, ervenyesMelyseg, melysegJegyzekAlakja } from './js/csere/melysegTanulas.js';
 import { megujitasKeszitese, csomagTulajdonosai } from './js/tar/keresoMegujitas.js';
+// ⭐⭐ D107 L4 (④c): a felajánlás tiszta számításai.
+import {
+  regioCsoportok, felajanlandok, felajanlottakFeljegyzese, osztodasokFeljegyzese, megujitasUjrahasznalhato, megujitasFeljegyzese,
+  felajanlasJegyzekAlakja, uresFelajanlasJegyzek, regiobaEsoBejegyzes, FELAJANLAS_KORLAT
+} from './js/csere/felajanlas.js';
 import {
   keszulekKeresoHelye, keresoMelysegBecslese, keresoRegioKulcsai, keresoRegioBol, keresoRegioTemaja, sajatKeresoRegioi,
-  regiobaEsik
+  regiobaEsik, bejegyzesHelye, osztodasMelysege, KERESO_FIOK_CEL
 } from './js/csere/keresoReteg.js';
 import {
   koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
@@ -472,6 +477,10 @@ async function tarsMelysegeiFeljegyzese(alairo, m) {
  */
 async function sajatBejegyzesek(allapot) {
   const v = await sajatVallalasa(allapot);
+  // ⭐ ④c: a megújításomat újrahasznosítom, amíg érvényes a mai csomagra és nem esedékes (különben minden kör új aláírás —
+  // új azonosító — újra-felajánlás); a jegyzék helyi (`felajanlasok.json`).
+  let jegyzek = await felajanlasJegyzekOlvasasa();
+  let jegyzekValtozott = false;
   const pontjai = new Map();               // entitás → a nyertes pont-események azonosítói
   for (const [kulcs, az] of allapot.pontEsemenyek ?? []) {
     const ent = kulcs.slice(kulcs.lastIndexOf('|') + 1);
@@ -497,11 +506,105 @@ async function sajatBejegyzesek(allapot) {
       if (!javaslat) continue;
     }
     // ⭐ D107 L3 (④a): a megújításom — ha a csomag tulajdonosai közt vagyok (különben a tartó elvetné).
-    const megujitas = (esemenyek) => (csomagTulajdonosai(esemenyek, g).includes(szerzo)
-      ? megujitasKeszitese(szemelyesJwk, szerzo, { koino: KOINO, g, esemenyek }) : null);
+    const megujitas = (esemenyek) => {
+      if (!csomagTulajdonosai(esemenyek, g).includes(szerzo)) return null;
+      const regi = megujitasUjrahasznalhato({ koino: KOINO, g, esemenyek, szerzo, regi: jegyzek.megujitasok[g] ?? null });
+      if (regi) return regi;
+      const m = megujitasKeszitese(szemelyesJwk, szerzo, { koino: KOINO, g, esemenyek });
+      jegyzek = megujitasFeljegyzese(jegyzek, g, m);
+      jegyzekValtozott = true;
+      return m;
+    };
     ki.push(...bejegyzesekEpitese({ szuletes, javaslat, pontEsemenyek, megujitas }));
   }
+  if (jegyzekValtozott) await felajanlasJegyzekIrasa(jegyzek);
   return ki;
+}
+
+// ===================================
+// ⭐⭐ D107 L4 (④c): A FELAJÁNLÁS — a gondolataim bejegyzései a régió tartóinak
+// ===================================
+
+const felajanlasFajl = () => join(alapHely(), KOINO, 'felajanlasok.json');
+async function felajanlasJegyzekOlvasasa() {
+  try { return felajanlasJegyzekAlakja(JSON.parse(await readFile(felajanlasFajl(), 'utf8'))); } catch { return uresFelajanlasJegyzek(); }
+}
+async function felajanlasJegyzekIrasa(j) {
+  try {
+    await mkdir(dirname(felajanlasFajl()), { recursive: true });
+    await writeFile(felajanlasFajl(), JSON.stringify(j), 'utf8');
+  } catch { /* nem végzetes */ }
+}
+
+/** A bejegyzések szerzőinek tagsági kísérői (a felajánlás terhe — a tartó ezekből ellenőrzi a tagságot, K3). */
+async function bejegyzesekKiseroi(lista) {
+  const szerzok = [...new Set(lista.flatMap((b) => bejegyzesSzerzoi(b)))];
+  return szerzok.length ? tagsagiKiserok(tar, KOINO, szerzok, { koinoSzuletes: await koinoSzuletese(), szerzoKorlat: 256 }) : [];
+}
+
+/**
+ * A felajánlás régiónként: a gondolataim bejegyzései (a kimondott osztódások szerinti mélységgel) a régióm mélységén
+ * csoportosítva (D110 — a társaktól tanult mélységgel). @param {boolean} [csakUj] - csak a még fel nem ajánlottak
+ * @returns {Promise<{jegyzek: Object, melyseg: number, csoportok: Map}>}
+ */
+async function felajanlasCsoportjai(csakUj = true) {
+  const { allapot } = await kepetKeszit();
+  const lista = await sajatBejegyzesek(allapot);
+  const jegyzek = await felajanlasJegyzekOlvasasa();
+  const melyseg = (await keresoRegioim()).melyseg;
+  const csoportok = regioCsoportok(lista, melyseg, jegyzek.osztodasok);
+  if (csakUj) {
+    for (const [kulcs, c] of [...csoportok.entries()]) {
+      c.bejegyzesek = felajanlandok(c.bejegyzesek, jegyzek);
+      if (!c.bejegyzesek.length) csoportok.delete(kulcs);
+    }
+  }
+  return { jegyzek, melyseg, csoportok };
+}
+
+/** Egy felajánlás eredményének feljegyzése: a felajánlottak (ha a tartó kiszolgálta) és a kimondott osztódások. */
+async function felajanlasEredmenye(elkuldott, valasz) {
+  let j = await felajanlasJegyzekOlvasasa();
+  if (valasz) {
+    j = osztodasokFeljegyzese(j, valasz.osztodott, elkuldott);
+    // ⚠️ Az osztódott fiók bejegyzése NEM „felajánlott” — a mélyebb darab régiójába még viszem.
+    const osztottK = new Set(valasz.osztodott.map((o) => o.k));
+    j = felajanlottakFeljegyzese(j, elkuldott.filter((b) => !osztottK.has(b.k)));
+  }
+  await felajanlasJegyzekIrasa(j);
+}
+
+/**
+ * ⭐ Az őrjárat (és a paraméter nélküli `kereso felajanl`) felajánló köre — egy DHT-munkamenetben: a még fel nem ajánlott
+ * bejegyzéseim régiónként; a régió témáján a tartók (a hirdetőik), és egy FÜGGŐ KÉRELEM régiónként (a célok a hirdetők, a
+ * kopogtató a régió témájának párja — ha a tartót közvetlenül nem érem el, ő a párján lát, és felém kopog). Egy körben
+ * legfeljebb `FELAJANLAS_REGIO_KORLAT` régió. @returns {Promise<{regiok: number, celok: number}>}
+ */
+const FELAJANLAS_REGIO_KORLAT = 8;
+async function felajanlasKor(kliens) {
+  const { csoportok } = await felajanlasCsoportjai(true);
+  if (!csoportok.size) return { regiok: 0, celok: 0 };
+  // ⛔ Önmagunkat nem kérdezzük (a saját régiónkat mi is hirdetjük — a gép címe + a futó kapu portja, 42. mérés).
+  const sajatGep = await sajatOsszesCim();
+  const kp = await kapuPortja();
+  let ny = await kerelmekOlvasasa();
+  let regiok = 0, celokDb = 0;
+  for (const [kulcs, c] of [...csoportok.entries()].slice(0, FELAJANLAS_REGIO_KORLAT)) {
+    const tema = keresoRegioTemaja(KOINO, c.melyseg, c.darab);
+    let celok = [];
+    try {
+      celok = (await kliens.tarsakKeresese(tema)).tarsak
+        .filter((t) => !(sajatCimE(t.cim, sajatGep) && Number(t.port) === kp))
+        .slice(0, 6).map((t) => ({ hoszt: t.cim, port: t.port }));
+    } catch { celok = []; }
+    const r = kerelemFelvetele(ny, { fajta: 'felajanlas', kulcs, celok,
+      kopogtatok: [{ fajta: 'kereso', kulcs: c.melyseg + ':' + c.darab.toString(16) }] }, Date.now(), randomUUID());
+    ny = r.nyilvantartas;
+    regiok++;
+    celokDb += celok.length;
+  }
+  await kerelmekIrasa(ny);
+  return { regiok, celok: celokDb };
 }
 
 /**
@@ -1250,6 +1353,10 @@ async function cimjegyzekKor(port) {
       const k = await kliens.tarsakKeresese(t.tema);
       for (const x of k.tarsak.slice(0, REGIO_TARS_KORLAT)) regioTarsak.set(x.cim + ':' + x.port, { cim: x.cim, port: x.port });
     }
+    // ⭐⭐ D107 L4 (④c): a felajánlás — a még fel nem ajánlott bejegyzéseim régiónként függő kérelembe (a régió témájának
+    // hirdetői a célok); a kopogtatóikat lent, a többivel együtt jelentem be.
+    let felajanlas = { regiok: 0, celok: 0 };
+    try { felajanlas = await felajanlasKor(kliens); } catch (hiba) { console.warn('a felajánlás most nem ment', { ok: hiba.message }); }
     let bejelentve = 0;
     const bejelentett = [];
     for (const k of fuggoKopogtatok(await kerelmekOlvasasa())) {
@@ -1259,7 +1366,7 @@ async function cimjegyzekKor(port) {
     }
     await dhtIsmertekMentese(kliens);
     return { eredmeny, kopogtatok: [...kopogtatok.values()], regioTarsak: [...regioTarsak.values()], bejelentve, bejelentett,
-      forgalom: kliens.forgalom() };
+      felajanlas, forgalom: kliens.forgalom() };
   } finally {
     kliens.bezar();
   }
@@ -2176,9 +2283,23 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
   const k = { fajta: fk.fajta, kulcs: fk.kulcs, n: fk.n, m: fk.m === true, ...(fk.utan ? { utan: fk.utan } : {}), ...tovabb };
   const vege = { uj: 0, kuldott: 0, korok: 1, bajt: 0, alairo: null, kerelem: fk.fajta };
   let r;
+  // ⭐ D107 L4 (④c): a felajánlás terhe a küldés pillanatában (a mai bejegyzéseim, a mai megújítással), a régió csoportjából.
+  let felajanlott = null;
+  if (fk.fajta === 'felajanlas') {
+    const { csoportok } = await felajanlasCsoportjai(false);
+    felajanlott = (csoportok.get(fk.kulcs)?.bejegyzesek ?? []).slice(0, FELAJANLAS_KORLAT);
+    if (!felajanlott.length) {
+      await kerelmekIrasa(kerelemLezarasa(await kerelmekOlvasasa(), fk.az, 'nincs mit felajánlani', Date.now()));
+      return vege;
+    }
+  }
   try {
     r = fk.fajta === 'szelet'
       ? await szeletUdpResen(halo, tars.cim, tars.port, atmenetiCel, KOINO, fk.kulcs, { tovabb, ...await azonossagBeallitasa() })
+      : fk.fajta === 'felajanlas'
+      ? await kerelemUdpResen(halo, tars.cim, tars.port, KOINO,
+        { fajta: 'felajanlas', kulcs: fk.kulcs, bejegyzesek: felajanlott, kiserok: await bejegyzesekKiseroi(felajanlott) },
+        { ...await azonossagBeallitasa() })
       : await kerelemUdpResen(halo, tars.cim, tars.port, KOINO, k, {
         ...await azonossagBeallitasa(),
         mintaValaszto: (valasz) => mintaKeres(valasz),
@@ -2189,6 +2310,7 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
     await kerelmekIrasa(probalkozas(await kerelmekOlvasasa(), fk.az));
     return vege;
   }
+  if (felajanlott) r.felajanlott = felajanlott;
   vege.uj = await fuggoEredmenyFeldolgozasa(fk, r, tars);
   vege.bajt = (r.bajtKuldott ?? 0) + (r.bajtKapott ?? 0);
   return vege;
@@ -2209,6 +2331,12 @@ async function fuggoEredmenyFeldolgozasa(fk, r, tars) {
   } else if (fk.fajta === 'torzs' && r.kiszolgalta) {
     const megjott = r.fajlok.filter((x) => x.kesz).length;
     siker = megjott > 0; osszegzes = megjott + ' fájl';
+  } else if (fk.fajta === 'felajanlas' && r.kiszolgalta && r.felajanlas) {
+    // ⭐ D107 L4 (④c): a tartó felvette (vagy már tudta) — feljegyzem; az osztódott fiókot a mélyebb darab régiójába viszem.
+    await felajanlasEredmenye(r.felajanlott ?? [], r.felajanlas);
+    siker = true;
+    osszegzes = r.felajanlas.felvett + ' bejegyzést vett fel' + (r.felajanlas.osztodott.length ? ', ' + r.felajanlas.osztodott.length
+      + ' fiók osztódott' : '');
   }
   if (!siker && r.kesobb) {
     // ⭐ D109 (KK6): a tartó kiszolgálási kerete most nem enged — nem az ő hibája, és nem elbukott próbálkozás: addig nem
@@ -2523,6 +2651,37 @@ function kerelemKiszolgaloja() {
     async kiserok(esemenyek) {
       return tagsagiKiserok(tar, KOINO, [...new Set(esemenyek.filter((e) => TAGSAG_KELL.has(e.tipus)).map((e) => e.szerzo))],
         { koinoSzuletes: await koinoSzuletese(), szerzoKorlat: 64, korlat: 1024 });
+    },
+    /**
+     * ⭐⭐ D107 L4 (④c): A FELAJÁNLÁS — a tulajdonos bejegyzései a régióimba: előbb a szerzők tagsági kísérői (csak a lánc-típusú
+     * események és a csomagok, ugyanazon a kapun), aztán a bejegyzések a kereső-tár kapuján (csak ami a régióimba esik); és az
+     * OSZTÓDÁS (K7): ahol egy hely nálam lévő része meghaladja a célt, kimondom a mélyebb darabot.
+     */
+    async felajanlas(k) {
+      await keresoTar.frissit();
+      const kr = await keresoRegioim();
+      const kiseroBe = (k.kiserok ?? []).filter((e) => e && typeof e === 'object' && e.koino === KOINO
+        && (e.tipus === TAGSAGI_CSOMAG || LANC_TIPUSOK.has(e.tipus)));
+      if (kiseroBe.length) await beolvasztas(tar, kiseroBe, KOINO);
+      let felvett = 0, fuggo = 0, megvolt = 0, elutasitott = 0;
+      const helyek = new Map();
+      for (const nyers of (k.bejegyzesek ?? []).slice(0, FELAJANLAS_KORLAT)) {
+        const b = bejegyzesAlakja(nyers);
+        if (!b || !regiobaEsoBejegyzes(b, kr.regiok)) { elutasitott++; continue; }
+        const r = await bejegyzesBefogadasa(keresoTar, b);
+        if (r.uj) { felvett++; if (r.fuggo) fuggo++; } else if (r.azonosito) megvolt++; else { elutasitott++; continue; }
+        const hely = bejegyzesHelye(b.k, b.g, b.s);
+        helyek.set(b.k + '|' + b.s + '|' + hely, { k: b.k, s: b.s, hely });
+      }
+      const cel = Number(process.env.KOINO_KERESO_FIOK_CEL) > 0 ? Number(process.env.KOINO_KERESO_FIOK_CEL) : KERESO_FIOK_CEL;
+      const osztodott = [];
+      for (const x of helyek.values()) {
+        const t = osztodasMelysege(keresoTar.helyMerete(x.hely), cel);
+        if (t > 0) osztodott.push({ k: x.k, s: x.s + t });
+      }
+      if (felvett) kiir(SZIN.halvany + '  🔍 ' + ora() + ' felajánlás: ' + felvett + ' új kereső-bejegyzés a régiómba'
+        + (fuggo ? ' (' + fuggo + ' függő)' : '') + (osztodott.length ? ' · ' + osztodott.length + ' fiók osztódott' : '') + SZIN.vege);
+      return { felvett, fuggo, megvolt, elutasitott, osztodott };
     },
     async fejlecek(k) {
       // ⭐ D109 (KK1): a kiszolgáló képe a gyorsítótárból (a tartott-kérdés és a fejléc-kép is) — egy kérés ára a lista hossza.
@@ -3124,8 +3283,9 @@ function resMunka(allapot, halo, tars) {
       // ⭐ D102 (J4): a társ azt viszi, amelyiknek a céllistáján ő áll a legelöl (a már próbáltakat kihagyva).
       let fk = tarshozIllo(ny, tars.cim, tars.port, (x) => !nemProbalt(x));
       // ⭐ D102 (J3): ha több fejléc- vagy törzs-kérelem is hozzá szól, egy SOROZATBAN megy (egy kapcsolaton).
-      if (fk && fk.fajta !== 'szelet') {
-        const sorozat = tarshozIllok(ny, tars.cim, tars.port, (x) => !nemProbalt(x) || x.fajta === 'szelet', SOROZAT_KORLAT);
+      if (fk && fk.fajta !== 'szelet' && fk.fajta !== 'felajanlas') {
+        const sorozat = tarshozIllok(ny, tars.cim, tars.port,
+          (x) => !nemProbalt(x) || x.fajta === 'szelet' || x.fajta === 'felajanlas', SOROZAT_KORLAT);
         if (sorozat.length > 1) return await fuggoKerelemSorozatMunkaja(allapot, halo, tars, sorozat);
       }
       // ⭐ A ház (D100): a „miközben kopogtatunk” pontosan — a kérelem egy kopogtató témáján TÉNYLEG jelentkeztünk (az
@@ -3955,6 +4115,58 @@ try {
         kiir('Kivittem a kereső-táram ' + lista.length + ' bejegyzését (' + f.kiserok + ' tagsági kísérővel): ' + fajlNeve);
         break;
       }
+      if (al === 'felajanl' && ervek[1] && Number.isInteger(Number(ervek[2]))) {
+        // ⭐ D107 L4 (④c): KÖZVETLENÜL egy tartónak (`kereso felajanl <cím> <port>`) — minden bejegyzésem egy kérelemben (≤ 64;
+        // a tartó azt veszi fel, ami a régióiba esik), a kísérőkkel; az osztódást feljegyzem.
+        const { csoportok } = await felajanlasCsoportjai(false);
+        const lista = [...csoportok.values()].flatMap((c) => c.bejegyzesek).slice(0, FELAJANLAS_KORLAT);
+        if (!lista.length) { kiir('Nincs mit felajánlanom (nincs legalább két tulajdonosú gondolatom).'); break; }
+        const kiserok = await bejegyzesekKiseroi(lista);
+        const azonossag = await azonossagBeallitasa();
+        const { kapu } = await keziKapuNyitasa((halo, t) => kerelemUdpResen(halo, t.cim, t.port, KOINO,
+          { fajta: 'felajanlas', kulcs: GYOKER_KULCS, bejegyzesek: lista, kiserok }, { ...azonossag }));
+        let kor;
+        try {
+          kor = await kapu.kopog([{ cim: ervek[1], port: Number(ervek[2]) }], { idokorlat: KEZI_KOPOGAS_MS });
+        } finally {
+          kapu.zar();
+        }
+        const siker = kor.eredmenyek.find((e) => e.ok && e.eredmeny?.felajanlas);
+        if (!siker) {
+          const kesobb = kor.eredmenyek.find((e) => e.ok && e.eredmeny?.kesobb);
+          kiir(kesobb ? SZIN.halvany + '⏸ A tartó most nem szolgál ki (a kiszolgálási kerete betelt) — ' + kesobb.eredmeny.kesobb
+            + ' mp múlva újra.' + SZIN.vege : SZIN.nem + 'A tartó nem vette át a felajánlást' + SZIN.vege);
+          break;
+        }
+        const v = siker.eredmeny.felajanlas;
+        await felajanlasEredmenye(lista, v);
+        kiir('Felajánlva: ' + lista.length + ' bejegyzés (' + kiserok.length + ' tagsági kísérővel) → ' + ervek[1] + ':' + ervek[2]);
+        kiir('  ' + SZIN.jo + v.felvett + ' felvett' + SZIN.vege + ' (' + v.fuggo + ' függő) · ' + v.megvolt + ' már megvolt · '
+          + v.elutasitott + ' elutasítva (nem a régiójába esik, vagy hibás)'
+          + (v.osztodott.length ? ' · ' + SZIN.vastag + v.osztodott.length + ' fiók osztódott' + SZIN.vege + ' ('
+            + v.osztodott.map((o) => o.k + '→' + o.s).join(', ') + ') — a következő felajánlás a mélyebb darabba viszi' : ''));
+        break;
+      }
+      if (al === 'felajanl' && !fajlNeve) {
+        // ⭐ D107 L4 (④c): AUTOMATIKUSAN — a régiók tartóit a DHT-n keresem, és függő kérelmeket veszek fel (az őrjárat viszi).
+        const kliens = await tablaKliens();
+        let r;
+        try {
+          r = await felajanlasKor(kliens);
+          const kp = await kapuPortja();
+          if (kp) {
+            for (const k of fuggoKopogtatok(await kerelmekOlvasasa())) {
+              try { await kliens.bejelent(kopogtatoTemaBuffer(k), kp); } catch { /* segédeszköz */ }
+            }
+          }
+          await dhtIsmertekMentese(kliens);
+        } finally {
+          kliens.bezar();
+        }
+        kiir('Felajánlás: ' + r.regiok + ' régió, ' + r.celok + ' tartó a DHT-n' + SZIN.halvany
+          + ' — függő kérelmekként; az őrjárat a következő buliban viszi (az állás: node koino/koino.js kerelem)' + SZIN.vege);
+        break;
+      }
       if (al === 'felajanl') {
         if (!fajlNeve) throw new Error('Hova írjam? node koino/koino.js kereso felajanl <fájl>');
         const { allapot } = await kepetKeszit();
@@ -4002,7 +4214,7 @@ try {
         }
         break;
       }
-      if (al) throw new Error('Mit tegyek? node koino/koino.js kereso [felajanl <fájl> | behoz <fájl> | kivisz <fájl>]');
+      if (al) throw new Error('Mit tegyek? node koino/koino.js kereso [felajanl [<fájl> | <cím> <port>] | behoz <fájl> | kivisz <fájl>]');
       const r = await keresoRegioim();
       const kb = (x) => (x / 1024).toFixed(1).replace('.', ',') + ' KB';
       await keresoTar.fuggokFrissitese();

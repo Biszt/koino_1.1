@@ -22,7 +22,7 @@ export const KOPOGTATO_KORLAT = 12;
 export const FUGGO_ELEVULES = 2 * 60 * 60 * 1000;
 
 const KULCS_MINTA = /^[A-Za-z0-9_-]{43}$/;
-const FAJTAK = new Set(['fejlecek', 'torzs', 'szelet']);
+const FAJTAK = new Set(['fejlecek', 'torzs', 'szelet', 'felajanlas']);
 
 /** Üres nyilvántartás. */
 export function ujNyilvantartas() {
@@ -38,7 +38,7 @@ function celAlakja(c) {
 
 function kopogtatoAlakja(k) {
   if (!k || typeof k.fajta !== 'string' || typeof k.kulcs !== 'string' || k.kulcs.length > 64) return null;
-  if (!['keszulek', 'gyoker', 'szelet'].includes(k.fajta)) return null;
+  if (!['keszulek', 'gyoker', 'szelet', 'kereso'].includes(k.fajta)) return null;
   return { fajta: k.fajta, kulcs: k.kulcs };
 }
 

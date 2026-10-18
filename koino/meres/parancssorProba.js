@@ -5395,6 +5395,118 @@ proba('⭐⭐ D110: az üres készülék a társaitól tanulja a kereső-régió
   }
 });
 
+// ===================================
+// ⭐⭐ A KERESŐ-RÉTEG ④c: A FELAJÁNLÁS — közvetlenül egy tartónak, és az osztódás (K7)
+// ===================================
+//
+// A két gondolata (mindkettő címében „park” — a `p:park` fiók közös) B-vel közös; C egy végig futó tartó, a fiók célmérete
+// lekicsinyítve (`KOINO_KERESO_FIOK_CEL` = 1). A `kereso felajanl 127.0.0.1 <port>`: C felveszi (a kísérőkkel az INDEXBE), és
+// kimondja, hogy a `p:park` fiók osztódott; A ezt feljegyzi (`felajanlasok.json`), és a második felajánlás a `p:park`
+// bejegyzéseket a mélyebb darabba viszi (C-nél `s` = 1 bejegyzések). Viselkedést mérünk: C lemezét és A jegyzékét. Rontás: a
+// kiszolgáló az osztódást nem mondja ki → A jegyzékében nincs osztódás, C-nél nincs `s` = 1 → bukik; a felajánló az osztódást
+// nem jegyzi fel → a második is a régi helyre → bukik.
+proba('⭐⭐ ④c: a felajánlás közvetlenül egy tartónak — a kísérőkkel az indexbe, és a kimondott osztódás után a mélyebb darabba', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const c = await ujKeszulek();
+  const port = 7687;
+  let figyelo = null;
+  try {
+    await fut(a, 'koino', 'Felajánlás', 'próba', 'nyilt');
+    const g1 = azonosito(await fut(a, 'gondolat', 'Közös park a faluban'), 'Létrejött:');
+    const g2 = azonosito(await fut(a, 'gondolat', 'Iskolai park fásítása'), 'Létrejött:');
+    await taggaTesziKeszulek(a, b);
+    await fut(a, 'kivisz', join(a, 'mind.jsonl'), 'mind');
+    await fut(b, 'behoz', join(a, 'mind.jsonl'));
+    await fut(b, 'pont', g1, '10');
+    await fut(b, 'pont', g2, '10');
+    await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
+    await fut(a, 'behoz', join(b, 'sajat.jsonl'));
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)],
+      { env: { ...process.env, KOINO_ADAT: c, KOINO_NAPLO: '', KOINO_KERESO_FIOK_CEL: '1' }, stdio: 'ignore' });
+    await varj(1500);
+    const elso = tiszta(await fut(a, 'kereso', 'felajanl', '127.0.0.1', String(port)));
+    await varj(500);
+    const jegyzek = JSON.parse(await readFile(join(a, 'sajat', 'felajanlasok.json'), 'utf8').catch(() => '{}'));
+    const masodik = tiszta(await fut(a, 'kereso', 'felajanl', '127.0.0.1', String(port)));
+    await varj(500);
+    const cSorok = (await readFile(join(c, 'sajat', 'kereso', 'bejegyzesek.jsonl'), 'utf8').catch(() => '')).split('\n').filter(Boolean);
+    const mely = cSorok.filter((x) => /"k":"p:park","s":1/.test(x)).length;
+    const indexben = cSorok.filter((x) => /"f":0/.test(x)).length;
+    const ki = {
+      elso: /felvett/.test(elso) && /fiók osztódott/.test(elso) && /p:park→1/.test(elso),
+      jegyzek: Object.keys(jegyzek.osztodasok ?? {}).some((k) => k.startsWith('p:park#0')),
+      masodik: mely === 2,
+      index: indexben >= cSorok.length - 0 && cSorok.length > 0
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  ④c felajánlás — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
+        + JSON.stringify({ elso: elso.slice(-400), masodik: masodik.slice(-300), mely, indexben, n: cSorok.length,
+          osztodasok: jegyzek.osztodasok }) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    if (figyelo) figyelo.kill();
+    await varj(800);
+    for (const m of [a, b, c]) await rm(m, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐⭐ A KERESŐ-RÉTEG ④c: AZ AUTOMATIKUS FELAJÁNLÁS — az őrjárat a DHT-n keresi a régió tartóját
+// ===================================
+//
+// Két őrjárat egy HAMIS DHT-n, társ-felvétel nélkül: C a kereső-régiója témáját hirdeti (üres a kereső-tára); A (a
+// tulajdonos) a címjegyzék-körében a még fel nem ajánlott bejegyzéseit régiónként függő kérelembe veszi (a célok a régió
+// hirdetői), és a következő körben elviszi. Viselkedést mérünk: C lemezén ott az öt bejegyzés, az indexben. Rontás: a
+// címjegyzék-kör a felajánlást nem futtatja → C-hez semmi nem jön → bukik.
+proba('⭐⭐ ④c: az automatikus felajánlás — az őrjárat a DHT-n megtalálja a régió tartóját, és elviszi neki a bejegyzéseket', async () => {
+  const { hamisHalozat } = await import('./dhtProba.js');
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const c = await ujKeszulek();
+  const halo = await hamisHalozat(12);
+  const PA = 7688, PC = 7689;
+  const dht = { KOINO_DHT_BELEPOK: halo.belepo(0), KOINO_TUKOR: '127.0.0.1:9' };
+  const orjarat = (hely, port) => spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(port)],
+    { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...dht }, stdio: ['ignore', 'pipe', 'pipe'] });
+  let oa = null, oc = null;
+  try {
+    await fut(a, 'koino', 'Felajánlás', 'próba', 'nyilt');
+    const g = azonosito(await fut(a, 'gondolat', 'Közös park a faluban'), 'Létrejött:');
+    await taggaTesziKeszulek(a, b);
+    await fut(a, 'kivisz', join(a, 'mind.jsonl'), 'mind');
+    await fut(b, 'behoz', join(a, 'mind.jsonl'));
+    await fut(b, 'pont', g, '10');
+    await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
+    await fut(a, 'behoz', join(b, 'sajat.jsonl'));
+    let cKimenet = '', aKimenet = '';
+    oc = orjarat(c, PC);
+    oc.stdout.on('data', (x) => { cKimenet += x; });
+    for (let i = 0; i < 60 && !/címjegyzék:/.test(cKimenet); i++) await varj(250);
+    oa = orjarat(a, PA);
+    oa.stdout.on('data', (x) => { aKimenet += x; });
+    const cFajl = join(c, 'sajat', 'kereso', 'bejegyzesek.jsonl');
+    let db = 0;
+    for (let i = 0; i < 160 && db < 5; i++) {
+      await varj(500);
+      db = (await readFile(cFajl, 'utf8').catch(() => '')).split('\n').filter((x) => /"f":0/.test(x)).length;
+    }
+    const ki = { cIndex: db === 5 };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  ④c automatikus felajánlás — ami bukott: ' + Object.keys(ki).join(', ') + ' · '
+        + JSON.stringify({ db, a: tiszta(aKimenet).replace(/\s+/g, ' ').slice(-700), c: tiszta(cKimenet).replace(/\s+/g, ' ').slice(-300) })
+        + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const f of [oa, oc]) if (f) f.kill();
+    halo.bezar();
+    await varj(800);
+    for (const m of [a, b, c]) await rm(m, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

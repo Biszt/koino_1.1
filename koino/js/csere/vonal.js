@@ -80,7 +80,7 @@ import { ervenyesValtozat, halmazUzenet, halmazAlkalmazasa, kozosSzuro } from '.
 // mert a szelet-határokat ugyanúgy ő számolja.
 import { SZELET_MERET, szeletEllenorzes, ujMunkamegosztas } from './fajlAtvitel.js';
 // ⭐ D92/6: a kérelem alakja (a menet itt, a tartalom a `kerelem.js`-é — az nem importál hálózatot).
-import { kerelemAlakja, valaszAlakja, SOROZAT_KORLAT } from './kerelem.js';
+import { kerelemAlakja, valaszAlakja, felajanlasValaszAlakja, SOROZAT_KORLAT } from './kerelem.js';
 
 // Egy sor legfeljebb ekkora lehet. Egy esemény ~400 bájt, egy 10 000 fős ÁLLÁS ~1,6 MB —
 // a 8 MB tehát bőven elég, de egy végtelen sor már nem fér bele.
@@ -588,6 +588,13 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
           if (u.uzenet === 'MINTAKEREK') kuld({ uzenet: 'MINTAK', ...(await mintak(u.kert, u.megvan)) });
           kiszolgalva = 'fejlecek';
         }
+      } else if (k?.fajta === 'felajanlas' && kiszolgalo?.felajanlas) {
+        // ⭐⭐ D107 L4 (④c): A FELAJÁNLÁS — a tulajdonos a régióm tartójaként nekem adja a bejegyzéseit; a kiszolgáló a
+        // kereső-tár kapuján veszi fel (a hely a régióimba esik, a csomag a kapun, a megújítás és a tagság ellenőrizve), és
+        // megmondja, mi OSZTÓDOTT (K7). A vonal csak továbbadja.
+        const v = await kiszolgalo.felajanlas(k);
+        kuld({ uzenet: 'FELAJANLASVALASZ', ...felajanlasValaszAlakja(v) });
+        kiszolgalva = 'felajanlas';
       } else if (k?.fajta === 'torzs' && kiszolgalo?.torzs) {
         // ⛔ D84/1: a törzset csak a vállaló adja — a kiszolgáló üres listát mond, ha nem vállalja. ⚠️ És csak azt
         // sorolja fel, ami TÉNYLEG megvan nála: a fájl-hurok az első hiányzónál kilép (a kérő a következőre várna).
@@ -1746,6 +1753,8 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
   kuld({ uzenet: 'KERELEM', koino, fajta: kerelem.fajta, kulcs: kerelem.kulcs, n: kerelem.n, m: kerelem.m === true,
     ...(kerelem.utan ? { utan: kerelem.utan } : {}), ...(beallitas.sorozat ? { sorozat: true } : {}),
     ...(kerelem.az ? { az: kerelem.az, htl: kerelem.htl } : {}),
+    // ⭐ D107 L4 (④c): a felajánlás terhe — a bejegyzések és a szerzőik tagsági kísérői.
+    ...(kerelem.fajta === 'felajanlas' ? { bejegyzesek: kerelem.bejegyzesek ?? [], kiserok: kerelem.kiserok ?? [] } : {}),
     ...(beallitas.ki ? { ki: beallitas.ki } : {}),
     ...(beallitas.tabla ? { tabla: beallitas.tabla.kulcs, aa: beallitas.tabla.aa } : {}) });
   // A NYITAS-t (és bármi mást) átlépjük, amíg a válasz meg nem jön. ⭐ D93/3: a KELL-re a tagsági csomagunk megy.
@@ -1753,7 +1762,7 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
   for (;;) {
     u = await sor.kovetkezo();
     if (u.uzenet === 'KELL') { kuld(await tagsagValasz(beallitas)); continue; }
-    if (['FEJLECEK', 'TORZS', 'KESZ', 'ATVESZEM'].includes(u.uzenet)) break;
+    if (['FEJLECEK', 'TORZS', 'KESZ', 'ATVESZEM', 'FELAJANLASVALASZ'].includes(u.uzenet)) break;
   }
   const bajt = () => ({ bajtKuldott: kapcsolat.bytesWritten, bajtKapott: kapcsolat.bytesRead });
   // ⭐ D92/1 (c): a társ nem tartja, de továbbadja — a válasz később, `VALASZ`-ként jön (lépésenként).
@@ -1765,6 +1774,12 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
     // ⭐ D109 (KK6): a tartó kerete most nem enged — a kérő ennyi ideig máshoz forduljon.
     const kesobb = Number.isInteger(u.kesobb) && u.kesobb > 0 ? u.kesobb : null;
     return { kiszolgalta: false, ...(u.tiltva === 'zart' ? { tiltva: true } : {}), ...(kesobb ? { kesobb } : {}), ...bajt() };
+  }
+
+  // ⭐ D107 L4 (④c): a felajánlás válasza — utána a tartó KESZ-t mond.
+  if (u.uzenet === 'FELAJANLASVALASZ') {
+    for (;;) { const v = await sor.kovetkezo(); if (v.uzenet === 'KESZ') break; }
+    return { kiszolgalta: true, felajanlas: felajanlasValaszAlakja(u), ...bajt() };
   }
 
   if (u.uzenet === 'FEJLECEK') {
