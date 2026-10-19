@@ -1299,3 +1299,9 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     idegen a csere-keret alatt korlát nélkül vihetett fájlt (a KK4: „minden, amit másnak teszek”) — és az aktív forrás-gyűjtés
     a tartók keretére is épít; a D109-kori hibakereső naplósor is ki · Claude · `vonal.js` (`fajlKiszolgalas`, `fajlHozatala`),
     `udpVonal.js`, `koino.js`, a próbák.
+185. **2026-10-19 · a kopogás saját üteme (D115 — a 41. mérés (a)-ja)** → **a tábla (a néma kötések keresése, az új cím
+    kiírása), a címjegyzék és a házimunka HÁTTÉR-munka (egyszerre egy — a kör nem várja meg); és ha a kör legfeljebb 3 mp-cel
+    csúszott túl a saját ablakán, a következő azonnal indul** · mert a rés csak egyidejű kopogásra nyílik, és a 80. mérés két
+    okot talált a kimaradt fordulóra: a tábla a kopogás után sorban (az induló kör új címének kiírása 30–55 mp — épp a
+    hálózatváltás után, amikor a legnagyobb szükség van a résre), és a fordulóig tartó kopogás utáni ütemezés · Csaba: „a
+    többi mehet” · `koino.js` (`orjarat`, `ABLAK_KESES_TURES`, `KOINO_HATTER_KESLELTETES`), `korUtemMeres.js`, a próbák.

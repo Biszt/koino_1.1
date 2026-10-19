@@ -5294,3 +5294,31 @@ fájl megvan, de a második ág „nem jött át”-ot mond, és a részleges ma
 Romlott lezárást (a nem atomi szelet-írás olvasását) öt futás nem hozott — a lehetősége áll, a gyakorisága kicsi. ⭐ A 29/b
 haszna a mai kóddal is áll (×1,6–2,0, ha a forrás a szűk). → a UDP-s több forrás átvizsgálása
 ([`udp_tobb_forras_atvizsgalas.md`](../../docs/udp_tobb_forras_atvizsgalas.md)), T1: a közös munka lenyomatonként.
+
+## 80. ⭐⭐ A KOPOGÁS ÜTEME — hány percforduló marad ki egy valódi őrjárat körében? (41., 45. — „a kopogás saját üteme”, 2026-10-19, a laptopon)
+
+*`node koino/meres/korUtemMeres.js [perc] [port] [--friss]` — egy valódi őrjárat (`orjarat 1`, 8 perc) a VALÓDI DHT-n:
+egy friss készülék egy koinóval, két néma kötéssel (valódi tábla-kulcs, halott cím) és három halott induló címmel;
+`--friss`: az egyik kötés két perce hallgatott el (mint egy hálózatváltás után — a tábláról minden ablakban keresi). A kör
+kezdetét a `csere.json` adja; egy percforduló kimaradt, ha utána 5 mp-en belül nem indult kör. A régi kód a `079d115`
+változata (`KOINO_UTEM_JS`).*
+
+```
+                                                        percfordulók · kimaradt
+régi kód                                                   8 · 1   (az első: az új cím kiírása a táblára 34 mp)
+régi kód, frissen elnémult kötéssel                        8 · 1   (az első: a tábla-olvasás + a kiírás 29 mp-ig)
+új kód: a tábla és a házimunka a HÁTTÉRBEN                 8 · 0
+új kód, frissen elnémult kötéssel                          8 · 1   (15:18:00 — a kör 6 mp-cel a forduló ELŐTT indult)
+új kód + a csúszás tűrése, frissen elnémult kötéssel       8 · 0   (a háttér 1 körön át dolgozott — a kopogás ment)
+a tábla munkái: egy néma kötés keresése 4–25 mp · az új cím kiírása 30–55 mp (8–16 tároló) · a címjegyzék (háttérben) 41–50 KB
+```
+
+⛔ **A lelet — két ok, nem egy:** (1) a tábla és a házimunka a kopogás után SORBAN futott: az induló (és a hálózatváltás
+utáni) kör az új címét írja ki a táblára (30–55 mp), és a következő percforduló kimaradt — épp akkor, amikor a társnak a
+legnagyobb szüksége van ránk (a 41. mérés TCP-köre azóta kikerült, a D99 visszalépő üteme a régóta hallgató kötések
+keresését ritkította — a kiírás maradt). (2) ⛔ A kopogás az ablak VÉGÉIG tart, ha a kör a fordulóhoz közel indul (vagy egy
+forgalmas kör ismételt menetei kitöltik az ablakot) — és a régi kör a következő ablakot ilyenkor a következő percre tette:
+a háttér nélkül is elveszett egy forduló. ⭐ A javítás mindkettőre: a tábla és a házimunka egy HÁTTÉR-munka (egyszerre egy,
+a kör nem várja meg), és ha a kör legfeljebb 3 mp-cel csúszott túl a saját ablakán, a következő AZONNAL indul (a társ a
+fordulótól 6 mp-ig kopog). A parancssor-próbák determinisztikusan mérik mindkettőt (egy 9 mp-es háttérrel és egy halott
+címmel, 6 mp-es ablakokkal — a rontásuk 10–15 mp-es köröket ad). → a kopogás saját üteme (D115).

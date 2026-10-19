@@ -1822,6 +1822,9 @@ async function tablarolOlvasas(sajatKulcs, nemak, naplo = () => {}) {
 // ha a másik fél ott van. *Aki nincs ott, azt nem a kitartás hozza vissza, hanem a
 // következő buli.*
 const KOPOGAS_ARA_KORONKENT = 6;      // kopogás/társ — ~360 bájt, egy csere-kör nagyságrendje
+// ⭐ A kopogás saját üteme (80. mérés): ha a kör legfeljebb ennyivel csúszott túl a saját ablaka végén, a következő kör
+// azonnal indul (a társ a fordulótól még `KOPOGAS_ARA_KORONKENT` mp-ig kopog) — nem a következő percfordulón.
+const ABLAK_KESES_TURES = 3000;
 
 // ⭐ Ablakonként ennyi ISMERETLEN bekopogót veszünk fel célnak (2026-09-25). Nem varázsszám,
 // hanem a kötés-korlát (legfeljebb 5 kötés, jellemzően 3) nagyságrendje: annyi társ lehet,
@@ -6431,6 +6434,9 @@ try {
       // ⭐ D91/3: mikor hirdettük utoljára a címjegyzéket, és fut-e épp (a hirdetés nem tartja fel a kört).
       let utolsoHirdetes = 0;
       let hirdetesFut = null;
+      // ⭐ A KOPOGÁS SAJÁT ÜTEME (80. mérés): a tábla és a házimunka háttér-munkája (egyszerre egy), és hány kör óta fut.
+      let hatterMunka = null;
+      let hatterKimaradt = 0;
 
       // ===== ⭐⭐⭐ AZ ÁLLANDÓ UDP-KAPU (D69/3, 2026-09-25) — és 2026-09-26 óta AZ EGYETLEN =====
       //
@@ -6480,7 +6486,8 @@ try {
 
         // ⭐⭐⭐ AZ ABLAK VÉGE: ebből jön a menetek korlátja ÉS a kopogásé is (30. mérés).
         const kozMs = Math.max(1, Math.round(perc * 60 * 1000));
-        const ablakVege = Math.ceil((Date.now() + 1) / kozMs) * kozMs;
+        const korKezdetIdo = Date.now();
+        const ablakVege = Math.ceil((korKezdetIdo + 1) / kozMs) * kozMs;
 
         // ===== ⭐⭐⭐ KIRE KOPOGUNK? — HÁROM FORRÁS, EGY KAPU (D69/2) =====
         //
@@ -6679,218 +6686,248 @@ try {
             sikeres: sikeresEbbenAKorben, celok: korCelok, uj: korUj, most: Date.now() }));
         }
 
-        // ===== ⭐⭐⭐ A HIRDETŐTÁBLA (2026-09-20) =====
+        // ===== ⭐⭐⭐ A KOPOGÁS SAJÁT ÜTEME (41., 45., 80. mérés — 2026-10-19) =====
         //
-        // ⛔ MIÉRT A KÖR VÉGÉN: a kopogásnak a percfordulóra kell esnie (36/d: rést csak a
-        // KÖLCSÖNÖS kopogás nyit), a tábla viszont ráér — a DHT-művelet ~20 mp, az ablak 5
-        // perc. *Ami egyidejűséget kíván, az megy elöl; ami nem, az utána.*
-        try {
-          const kotesJegyzekMost = await kotesTar.olvas();
+        // ⛔ MI VOLT A BAJ: a tábla (DHT-művelet — egy néma kötés keresése 4–22 mp, az új cím kiírása akár 68 mp) és a
+        // házimunka a kopogás UTÁN, SORBAN futott — és ha túlnyúlt a következő percfordulón, az az ablak KIMARADT (41.: a kör
+        // 90–97 mp, a kopogás csak minden második percben; 45.: egy 68 mp-es tábla-írás egy egész ablakot elvitt). A rés pedig
+        // csak EGYIDEJŰ kopogásra nyílik (36/d): két készülék, ha az egyik páros, a másik páratlan percben kopog, soha nem
+        // találkozik — és épp akkor, amikor a legnagyobb szükség van rá (hálózatváltás után a társ néma, ettől hosszú a kör).
+        //
+        // ⭐ MOSTANTÓL A HÁTTÉRBEN, EGYSZERRE EGY: a tábla és a házimunka egy háttér-munka, a kör nem várja meg — a
+        // következő percfordulón a kopogás akkor is indul, ha a háttér még dolgozik (ilyenkor a HÁTTÉR köre marad ki, nem a
+        // kopogás). *Ami egyidejűséget kíván, az az óra szerint megy; ami nem, az ráér.* ⚠️ A háttér a kör eredményét
+        // (`sikeresEbbenAKorben` — a felszabadításhoz) a saját körétől kapja; amit a tábla talál, az a következő kör céljai
+        // közé kerül (`res.frissUdp`, a kötések).
+        if (hatterMunka) {
+          hatterKimaradt++;
+        } else {
+          if (hatterKimaradt) {
+            kiir(SZIN.halvany + '  · ' + ora() + ' a háttér (tábla, házimunka) ' + hatterKimaradt
+              + ' körön át dolgozott — a kopogás közben a percfordulón ment (80. mérés)' + SZIN.vege);
+            hatterKimaradt = 0;
+          }
+          hatterMunka = (async () => {
+            // ⭐ A MÉRÉS KAPCSOLÓJA (80. mérés): `KOINO_HATTER_KESLELTETES` (ms) egy lassú hátteret utánoz (terepen egy 68 mp-es
+            // tábla-írás — 45. mérés) — a próba ezzel méri, hogy a kopogás nem várja meg. Élesben 0.
+            const kesleltetes = Number.parseInt(process.env.KOINO_HATTER_KESLELTETES ?? '0', 10) || 0;
+            if (kesleltetes > 0) await new Promise((t) => setTimeout(t, kesleltetes));
+            // ===== ⭐⭐⭐ A HIRDETŐTÁBLA (2026-09-20) =====
+            //
+            // ⛔ MIÉRT A KÖR VÉGÉN: a kopogásnak a percfordulóra kell esnie (36/d: rést csak a
+            // KÖLCSÖNÖS kopogás nyit), a tábla viszont ráér — a DHT-művelet ~20 mp, az ablak 5
+            // perc. *Ami egyidejűséget kíván, az megy elöl; ami nem, az utána.*
+            try {
+              const kotesJegyzekMost = await kotesTar.olvas();
 
-          // (1) OLVASÁS: akiről egy ablak óta nem hallottunk, azt a tábláról keressük — ⭐ a régóta hallgatót visszalépő
-          // ütemben (72. mérés: percenként keresett egy rég eltűnt kötést, a mobilneten).
-          const nemak = tablanKeresendok(kotesJegyzekMost, kozMs);
-          if (nemak.length) {
-            const talaltak = await tablarolOlvasas(sajatTablaKulcsTeljes, nemak, (e) => {
-              if (e.mi === 'MEGVAN-A-TABLAN') {
-                // ⚠️ A kor a TÁRS órájából jön (idegen óra), ezért csak tájékoztatás —
-                // a címet frissként jegyezzük be, mert a táblán a MOSTANI címe áll.
-                const perce = e.mikor ? Math.round((Date.now() - e.mikor) / 60000) : null;
-                kiir(SZIN.jo + '  ⭐ ' + ora() + ' a táblán megvan egy néma társ új címe: '
-                  + e.hoszt + ':' + e.port + SZIN.vege
-                  + (perce === null ? ''
-                    : SZIN.halvany + ' (az ő órája szerint ' + perce + ' perce írta ki)'
-                      + SZIN.vege));
+              // (1) OLVASÁS: akiről egy ablak óta nem hallottunk, azt a tábláról keressük — ⭐ a régóta hallgatót visszalépő
+              // ütemben (72. mérés: percenként keresett egy rég eltűnt kötést, a mobilneten).
+              const nemak = tablanKeresendok(kotesJegyzekMost, kozMs);
+              if (nemak.length) {
+                const talaltak = await tablarolOlvasas(sajatTablaKulcsTeljes, nemak, (e) => {
+                  if (e.mi === 'MEGVAN-A-TABLAN') {
+                    // ⚠️ A kor a TÁRS órájából jön (idegen óra), ezért csak tájékoztatás —
+                    // a címet frissként jegyezzük be, mert a táblán a MOSTANI címe áll.
+                    const perce = e.mikor ? Math.round((Date.now() - e.mikor) / 60000) : null;
+                    kiir(SZIN.jo + '  ⭐ ' + ora() + ' a táblán megvan egy néma társ új címe: '
+                      + e.hoszt + ':' + e.port + SZIN.vege
+                      + (perce === null ? ''
+                        : SZIN.halvany + ' (az ő órája szerint ' + perce + ' perce írta ki)'
+                          + SZIN.vege));
+                  }
+                  // ⭐ A TÁRSAT IS MEGNEVEZZÜK (40. mérés): két néma kötésnél a napló eddig
+                  // nem mondta meg, melyikük hiányzik — utólag kellett kikövetkeztetni.
+                  if (e.mi === 'NINCS-A-TABLAN') {
+                    kiir(SZIN.halvany + '  · ' + ora() + ' egy néma társ (' + e.tars
+                      + '…) nincs a táblán (' + e.valasz + ' DHT-gép felelt)' + SZIN.vege);
+                  }
+                  // ⛔⛔ ÉS HA SENKI NEM FELELT, AZ NEM „NINCS A TÁBLÁN" (40. mérés).
+                  if (e.mi === 'TABLA-NEM-ELERHETO') {
+                    kiir(SZIN.nem + '  ✗ ' + ora() + ' a tábla NEM ÉRHETŐ EL (' + e.kerdes
+                      + ' kérdés, egyik DHT-gép sem felelt) — nem tudom, hol van ' + e.tars
+                      + '…' + SZIN.vege);
+                  }
+                  if (e.mi === 'OLVASAS-BUKOTT') {
+                    kiir(SZIN.nem + '  ✗ ' + ora() + ' a táblaolvasás elbukott (' + e.tars
+                      + '…: ' + e.ok + ')' + SZIN.vege);
+                  }
+                });
+                // ⭐ A TALÁLT CÍM A FRISS JEGYZÉKBE KERÜL — a következő buli már rá kopog.
+                for (const t of talaltak) {
+                  await frissUdpCimJegyzese(udpTarolo, t.hoszt, t.port, udpElevules);
+                  await kotesFeljegyzese(kotesTar, { alairo: t.alairo, titkosito: t.titkosito },
+                    { hoszt: t.hoszt, port: t.port });
+                }
+                if (talaltak.length) res.frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
               }
-              // ⭐ A TÁRSAT IS MEGNEVEZZÜK (40. mérés): két néma kötésnél a napló eddig
-              // nem mondta meg, melyikük hiányzik — utólag kellett kikövetkeztetni.
-              if (e.mi === 'NINCS-A-TABLAN') {
-                kiir(SZIN.halvany + '  · ' + ora() + ' egy néma társ (' + e.tars
-                  + '…) nincs a táblán (' + e.valasz + ' DHT-gép felelt)' + SZIN.vege);
+
+              // (2) ÍRÁS: csak akkor, ha a CÍMÜNK MEGVÁLTOZOTT (Csaba: eseményre, nem órára).
+              const mostiCim = res.sajatKulsoUdp
+                ? { hoszt: res.sajatKulsoUdp.cim, port: res.sajatKulsoUdp.port } : null;
+              const valtozott = mostiCim && (!tablaraKiirtCim
+                || tablaraKiirtCim.hoszt !== mostiCim.hoszt || tablaraKiirtCim.port !== mostiCim.port);
+              if (valtozott) {
+                const e = await tablaraKiiras(sajatTablaKulcsTeljes,
+                  await kotesTar.olvas(), mostiCim);
+                // ⭐ A 2026-09-21-i nyitott kérdés („a 0 tárolós kiírás is kiírtnak számít, és
+                // nincs újrapróbálkozás") a 42. mérésen mért kárt okozott — lent javítva.
+                // ⛔⛔ A NYITOTT KÉRDÉS MEGVÁLASZOLVA — A MÉRÉS DÖNTÖTT (42. mérés, 2026-09-25).
+                // A telefon a szomszéd wifijén kiírta az új címét, de **0 tároló** vette át (a
+                // DHT abban a percben nem felelt). A program ezt kiírtnak vette, és nem próbálta
+                // újra — a laptop 2 és fél órán át a RÉGI címét olvasta, és a rés meg sem nyílt.
+                // ⭐ Ezért kiírtnak csak az számít, amit legalább EGY tároló átvett; a 0 tárolós
+                // kiírást a következő kör újra megpróbálja. *Egy kiírás, amit senki nem őriz, nem
+                // kiírás.*
+                if (e.kiirt && e.tarolta > 0) {
+                  tablaraKiirtCim = mostiCim;
+                  kiir(SZIN.jo + '  ⭐ ' + ora() + ' az új címemet kiírtam a táblára ('
+                    + e.kiirt + ' társ rekeszébe, ' + e.tarolta + ' tároló)' + SZIN.vege);
+                } else if (e.kiirt) {
+                  kiir(SZIN.nem + '  ✗ ' + ora() + ' az új címem kiírása nem ért célba: egyetlen'
+                    + ' DHT-gép sem vette át — a következő körben újra próbálom' + SZIN.vege);
+                }
               }
-              // ⛔⛔ ÉS HA SENKI NEM FELELT, AZ NEM „NINCS A TÁBLÁN" (40. mérés).
-              if (e.mi === 'TABLA-NEM-ELERHETO') {
-                kiir(SZIN.nem + '  ✗ ' + ora() + ' a tábla NEM ÉRHETŐ EL (' + e.kerdes
-                  + ' kérdés, egyik DHT-gép sem felelt) — nem tudom, hol van ' + e.tars
-                  + '…' + SZIN.vege);
-              }
-              if (e.mi === 'OLVASAS-BUKOTT') {
-                kiir(SZIN.nem + '  ✗ ' + ora() + ' a táblaolvasás elbukott (' + e.tars
-                  + '…: ' + e.ok + ')' + SZIN.vege);
-              }
-            });
-            // ⭐ A TALÁLT CÍM A FRISS JEGYZÉKBE KERÜL — a következő buli már rá kopog.
-            for (const t of talaltak) {
-              await frissUdpCimJegyzese(udpTarolo, t.hoszt, t.port, udpElevules);
-              await kotesFeljegyzese(kotesTar, { alairo: t.alairo, titkosito: t.titkosito },
-                { hoszt: t.hoszt, port: t.port });
+            } catch (hiba) {
+              // ⚠️ A TÁBLA SEGÉDESZKÖZ (2. szabály): ha nem megy, a koino megy tovább.
+              kiir(SZIN.halvany + '  · ' + ora() + ' a tábla most nem elérhető ('
+                + hiba.message + ')' + SZIN.vege);
             }
-            if (talaltak.length) res.frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
-          }
 
-          // (2) ÍRÁS: csak akkor, ha a CÍMÜNK MEGVÁLTOZOTT (Csaba: eseményre, nem órára).
-          const mostiCim = res.sajatKulsoUdp
-            ? { hoszt: res.sajatKulsoUdp.cim, port: res.sajatKulsoUdp.port } : null;
-          const valtozott = mostiCim && (!tablaraKiirtCim
-            || tablaraKiirtCim.hoszt !== mostiCim.hoszt || tablaraKiirtCim.port !== mostiCim.port);
-          if (valtozott) {
-            const e = await tablaraKiiras(sajatTablaKulcsTeljes,
-              await kotesTar.olvas(), mostiCim);
-            // ⭐ A 2026-09-21-i nyitott kérdés („a 0 tárolós kiírás is kiírtnak számít, és
-            // nincs újrapróbálkozás") a 42. mérésen mért kárt okozott — lent javítva.
-            // ⛔⛔ A NYITOTT KÉRDÉS MEGVÁLASZOLVA — A MÉRÉS DÖNTÖTT (42. mérés, 2026-09-25).
-            // A telefon a szomszéd wifijén kiírta az új címét, de **0 tároló** vette át (a
-            // DHT abban a percben nem felelt). A program ezt kiírtnak vette, és nem próbálta
-            // újra — a laptop 2 és fél órán át a RÉGI címét olvasta, és a rés meg sem nyílt.
-            // ⭐ Ezért kiírtnak csak az számít, amit legalább EGY tároló átvett; a 0 tárolós
-            // kiírást a következő kör újra megpróbálja. *Egy kiírás, amit senki nem őriz, nem
-            // kiírás.*
-            if (e.kiirt && e.tarolta > 0) {
-              tablaraKiirtCim = mostiCim;
-              kiir(SZIN.jo + '  ⭐ ' + ora() + ' az új címemet kiírtam a táblára ('
-                + e.kiirt + ' társ rekeszébe, ' + e.tarolta + ' tároló)' + SZIN.vege);
-            } else if (e.kiirt) {
-              kiir(SZIN.nem + '  ✗ ' + ora() + ' az új címem kiírása nem ért célba: egyetlen'
-                + ' DHT-gép sem vette át — a következő körben újra próbálom' + SZIN.vege);
+            // ⚠️ A BÁJTOK 2026-09-26 ÓTA A RÉSEN JÖNNEK, a munkán belül (randevú): a kör utáni
+            // TCP-s elhozás kikerült (D69/2). *A buli után fenntartott kapcsolat (Csaba,
+            // 2026-09-12) most maga a rés — ugyanazon a foglalaton, amin a csere ment.*
+
+            // ⭐⭐ D91/3: A CÍMJEGYZÉK HIRDETÉSE — ~20 percenként (a háló 30–60 perc alatt felejt, 58. mérés): a saját
+            // gyökér-darabom, és a beállítás szerint néhány vállalt szeletem. ⚠️ Segédeszköz: a hibája nem dönti el a kört.
+            // ⚠️ A HÁTTÉRBEN: egy bejelentés 7–17 mp (58. mérés) — a kört nem tarthatja fel, és egyszerre egy fut.
+            // ⭐ D92/1: ha egy függő kérelem kopogtató témáján még nem jelentkeztünk, nem várunk 20 percet.
+            if (!hirdetesFut) {
+              const kellene = fuggoKopogtatok(await kerelmekOlvasasa()).map((k) => k.fajta + ':' + k.kulcs);
+              if (kellene.some((k) => !(res.bejelentettKopogtatok ?? new Set()).has(k))) utolsoHirdetes = 0;
             }
-          }
-        } catch (hiba) {
-          // ⚠️ A TÁBLA SEGÉDESZKÖZ (2. szabály): ha nem megy, a koino megy tovább.
-          kiir(SZIN.halvany + '  · ' + ora() + ' a tábla most nem elérhető ('
-            + hiba.message + ')' + SZIN.vege);
-        }
-
-        // ⚠️ A BÁJTOK 2026-09-26 ÓTA A RÉSEN JÖNNEK, a munkán belül (randevú): a kör utáni
-        // TCP-s elhozás kikerült (D69/2). *A buli után fenntartott kapcsolat (Csaba,
-        // 2026-09-12) most maga a rés — ugyanazon a foglalaton, amin a csere ment.*
-
-        // ⭐⭐ D91/3: A CÍMJEGYZÉK HIRDETÉSE — ~20 percenként (a háló 30–60 perc alatt felejt, 58. mérés): a saját
-        // gyökér-darabom, és a beállítás szerint néhány vállalt szeletem. ⚠️ Segédeszköz: a hibája nem dönti el a kört.
-        // ⚠️ A HÁTTÉRBEN: egy bejelentés 7–17 mp (58. mérés) — a kört nem tarthatja fel, és egyszerre egy fut.
-        // ⭐ D92/1: ha egy függő kérelem kopogtató témáján még nem jelentkeztünk, nem várunk 20 percet.
-        if (!hirdetesFut) {
-          const kellene = fuggoKopogtatok(await kerelmekOlvasasa()).map((k) => k.fajta + ':' + k.kulcs);
-          if (kellene.some((k) => !(res.bejelentettKopogtatok ?? new Set()).has(k))) utolsoHirdetes = 0;
-        }
-        if (!hirdetesFut && Date.now() - utolsoHirdetes >= HIRDETES_KOZ) {
-          utolsoHirdetes = Date.now();
-          hirdetesFut = cimjegyzekKor(res.sajatKulsoUdp?.port ?? port)
-            .then((h) => {
-              // ⚠️ A „nem értem el a DHT-t" és a „senki nem tárolta" két külön dolog (a 40. mérés tanulsága).
-              const tarolt = h.eredmeny.filter((e) => e.tarolta > 0).length;
-              const elerte = h.eredmeny.some((e) => e.probalt > 0);
-              kiir(SZIN.halvany + '  📇 ' + ora() + ' címjegyzék: ' + (elerte
-                ? tarolt + '/' + h.eredmeny.length + ' téma a DHT-n (' + ((h.forgalom.ki + h.forgalom.be) / 1024)
-                  .toFixed(1) + ' KB)'
-                : 'a DHT most nem érhető el (egyetlen gép sem felelt) — a raj ettől még működik') + SZIN.vege);
-              // ⭐⭐ D92/1: akik a kopogtató témáimon jelezték, hogy tőlem kérnek — a következő körökben feléjük is
-              // kopogok (30 percig). A saját címemet kihagyom.
-              res.bejelentettKopogtatok = new Set(h.bejelentett);
-              res.kopogtatok ??= new Map();
-              const sajat = res.sajatKulsoUdp ? res.sajatKulsoUdp.cim + ':' + res.sajatKulsoUdp.port : null;
-              let ujKopogtato = 0;
-              for (const k of h.kopogtatok) {
-                const kulcs = k.cim + ':' + k.port;
-                if (kulcs === sajat || ((/^127\./.test(k.cim) || k.cim === '::1') && k.port === port)) continue;
-                if (!res.kopogtatok.has(kulcs)) ujKopogtato++;
-                res.kopogtatok.set(kulcs, { cim: k.cim, port: k.port, lejar: Date.now() + KOPOGTATO_ELEVULES });
-              }
-              if (ujKopogtato || h.bejelentve) {
-                kiir(SZIN.halvany + '  🚪 ' + ora() + ' kopogtatás: ' + (ujKopogtato ? ujKopogtato + ' kérő vár rám' : '')
-                  + (ujKopogtato && h.bejelentve ? ' · ' : '') + (h.bejelentve ? h.bejelentve + ' tartónál jelentkeztem' : '')
-                  + SZIN.vege);
-              }
-              // ⭐ D107 L2 (③c): a régióm többi tartója ugyanígy a kör céljai közé (a csere a közös régiót egyezteti).
-              // ⛔ A kopogtatók UTÁN (mérve — a D92/1 kopogtatás-próba): ha előbb jön, egy kérő, aki a régiómnak is
-              // tartója, már ismertnek látszik, és a „kérő vár rám” jelzés elmarad.
-              let ujRegioTars = 0;
-              for (const k of h.regioTarsak ?? []) {
-                const kulcs = k.cim + ':' + k.port;
-                if (kulcs === sajat || ((/^127\./.test(k.cim) || k.cim === '::1') && k.port === port)) continue;
-                if (!res.kopogtatok.has(kulcs)) ujRegioTars++;
-                res.kopogtatok.set(kulcs, { cim: k.cim, port: k.port, lejar: Date.now() + KOPOGTATO_ELEVULES });
-              }
-              if (ujRegioTars) {
-                kiir(SZIN.halvany + '  🔍 ' + ora() + ' a kereső-régióm ' + ujRegioTars + ' további tartója a DHT-n — a kör'
-                  + ' céljai közé' + SZIN.vege);
-              }
-            })
-            .catch((hiba) => {
-              kiir(SZIN.halvany + '  ⚠ a címjegyzék hirdetése most nem sikerült: ' + hiba.message + SZIN.vege);
-            })
-            .finally(() => { hirdetesFut = null; });
-        }
-
-        // ⭐⭐ ÉS A HÁZTARTÁS: az elakadt tudatpontok visszavétele (2026-09-07).
-        // A készülék magától könyvel — de csak megülepedés után, mert egy késve érkező,
-        // határidőn belüli szavazat még visszafordíthatja a törlést. ⚠️ A csere UTÁN
-        // fut, nem előtte: így a friss események már beleszámítanak a döntésbe.
-        try {
-          // ⭐ A KÖR EREDMÉNYE DÖNTI EL, HOGY VOLT-E BULI: ha egyetlen társ sem felelt, ez
-          // a kör nem bizonyít semmit — a néma kör nem buli.
-          await elakadtPontokFelszabaditasa(true, MEGULEPEDES_BULIK, sikeresEbbenAKorben);
-        } catch (hiba) {
-          // Best-effort: a könyvelés hibája NE akassza meg az őrjáratot.
-          kiir(SZIN.halvany + '  ⚠ a felszabadítás most nem sikerült: ' + hiba.message + SZIN.vege);
-        }
-
-        // ⭐ B/2: az előléptetés (ami az átmenetiben van, de már vállalom) — körönként.
-        try { await atmenetiElolepetese(); } catch (hiba) {
-          kiir(SZIN.halvany + '  ⚠ az előléptetés most nem sikerült: ' + hiba.message + SZIN.vege);
-        }
-
-        // ⭐⭐ D85 T3: A SAJÁT LEZÁRT, TÖBB ÉRINTETTES JAVASLATAIM DÖNTÉSI CSOMAGJA (a (B): a töredékekbe).
-        // ⚠️ A csere UTÁN, mint a felszabadítás: a friss események már beleszámítanak. Ismételhető — ha
-        // minden ott van már, nem ír semmit.
-        try {
-          // ⭐ D93/2: a tagsági csomagom (ha tag lettem, vagy rövidebb láncot kaptam) — a saját azonosság-szeletembe.
-          try {
-            const tc = await tagsagiCsomagKiadasa(kornyezet);
-            if (tc.kiadva) kiir(SZIN.halvany + '  🪪 ' + ora() + ' tagsági csomag kiadva (' + tc.melyseg + '. szint)' + SZIN.vege);
-            // ⭐ D94: a 2. lépcső bemondása (ha 2. lépcsős lettem, vagy új érvényes tanúsítást kaptam).
-            const lb = await lepcsoBemondasKiadasa(kornyezet);
-            if (lb.kiadva) kiir(SZIN.halvany + '  🪪 ' + ora() + ' 2. lépcső-bemondás: ' + lb.ok + SZIN.vege);
-          } catch (hiba) { console.warn('a tagsági csomag kiadása nem sikerült', { ok: hiba.message }); }
-          const { kiadva } = await dontesiCsomagokKiadasa(kornyezet, { csakSajat: true });
-          if (kiadva.length) {
-            kiir(SZIN.halvany + '  📦 ' + ora() + ' ' + kiadva.length + ' döntési csomag a töredékekbe'
-              + ' (a lezárt, több érintettes javaslataimhoz)' + SZIN.vege);
-          }
-          // ⭐ D95/1: a nagy szelet teljes tartójaként (a „mindent” beállítással) a lezárt döntések összegzése.
-          const lo = await lezarasiOsszegzesekKiadasa();
-          if (lo) kiir(SZIN.halvany + '  📦 ' + ora() + ' ' + lo + ' lezárási összegzés a nagy szeletű döntésekhez' + SZIN.vege);
-          // ⭐ D75/1, D73: naponta egyszer a tár tömörítése (a szigorú (b) alatt; csak az író — az őrjárat az).
-          if (tar.iroE?.() && await tomoritesEsedekesE()) {
-            const t = await tomoritesFuttatasa();
-            if (t.kivett) kiir(SZIN.halvany + '  🗜 ' + ora() + ' tömörítés: ' + t.kivett + ' esemény az átmeneti tárba (amit már nem vállalok)' + SZIN.vege);
-          }
-          // ⭐ D107 L3 (④a, a ⑥ magja): óránként a kereső-tár tömörítése (a lejárt és a régióimon kívül eső kiesik).
-          if (Date.now() - (res.keresoTomorites ?? 0) >= KERESO_TOMORITES_KOZ) {
-            res.keresoTomorites = Date.now();
-            const kt = await keresoTarTomoritese();
-            if (kt) kiir(SZIN.halvany + '  🗜 ' + ora() + ' kereső-tár: ' + kt + ' bejegyzés kiesett (lejárt, vagy a régióimon kívül)' + SZIN.vege);
-          }
-          // ⭐ D112 ③: a felderítés köre — a futó felderítések egy lépése (rögzítés, háttér-kérések).
-          try {
-            const fk = await felderitesKor();
-            if (fk.kert || fk.lezart.length) {
-              kiir(SZIN.halvany + '  📷 ' + ora() + ' felderítés: ' + (fk.kert ? fk.kert + ' kérés' : '')
-                + (fk.kert && fk.lezart.length ? ' · ' : '') + (fk.lezart.length ? fk.lezart.length + ' lezárult' : '') + SZIN.vege);
+            if (!hirdetesFut && Date.now() - utolsoHirdetes >= HIRDETES_KOZ) {
+              utolsoHirdetes = Date.now();
+              hirdetesFut = cimjegyzekKor(res.sajatKulsoUdp?.port ?? port)
+                .then((h) => {
+                  // ⚠️ A „nem értem el a DHT-t" és a „senki nem tárolta" két külön dolog (a 40. mérés tanulsága).
+                  const tarolt = h.eredmeny.filter((e) => e.tarolta > 0).length;
+                  const elerte = h.eredmeny.some((e) => e.probalt > 0);
+                  kiir(SZIN.halvany + '  📇 ' + ora() + ' címjegyzék: ' + (elerte
+                    ? tarolt + '/' + h.eredmeny.length + ' téma a DHT-n (' + ((h.forgalom.ki + h.forgalom.be) / 1024)
+                      .toFixed(1) + ' KB)'
+                    : 'a DHT most nem érhető el (egyetlen gép sem felelt) — a raj ettől még működik') + SZIN.vege);
+                  // ⭐⭐ D92/1: akik a kopogtató témáimon jelezték, hogy tőlem kérnek — a következő körökben feléjük is
+                  // kopogok (30 percig). A saját címemet kihagyom.
+                  res.bejelentettKopogtatok = new Set(h.bejelentett);
+                  res.kopogtatok ??= new Map();
+                  const sajat = res.sajatKulsoUdp ? res.sajatKulsoUdp.cim + ':' + res.sajatKulsoUdp.port : null;
+                  let ujKopogtato = 0;
+                  for (const k of h.kopogtatok) {
+                    const kulcs = k.cim + ':' + k.port;
+                    if (kulcs === sajat || ((/^127\./.test(k.cim) || k.cim === '::1') && k.port === port)) continue;
+                    if (!res.kopogtatok.has(kulcs)) ujKopogtato++;
+                    res.kopogtatok.set(kulcs, { cim: k.cim, port: k.port, lejar: Date.now() + KOPOGTATO_ELEVULES });
+                  }
+                  if (ujKopogtato || h.bejelentve) {
+                    kiir(SZIN.halvany + '  🚪 ' + ora() + ' kopogtatás: ' + (ujKopogtato ? ujKopogtato + ' kérő vár rám' : '')
+                      + (ujKopogtato && h.bejelentve ? ' · ' : '') + (h.bejelentve ? h.bejelentve + ' tartónál jelentkeztem' : '')
+                      + SZIN.vege);
+                  }
+                  // ⭐ D107 L2 (③c): a régióm többi tartója ugyanígy a kör céljai közé (a csere a közös régiót egyezteti).
+                  // ⛔ A kopogtatók UTÁN (mérve — a D92/1 kopogtatás-próba): ha előbb jön, egy kérő, aki a régiómnak is
+                  // tartója, már ismertnek látszik, és a „kérő vár rám” jelzés elmarad.
+                  let ujRegioTars = 0;
+                  for (const k of h.regioTarsak ?? []) {
+                    const kulcs = k.cim + ':' + k.port;
+                    if (kulcs === sajat || ((/^127\./.test(k.cim) || k.cim === '::1') && k.port === port)) continue;
+                    if (!res.kopogtatok.has(kulcs)) ujRegioTars++;
+                    res.kopogtatok.set(kulcs, { cim: k.cim, port: k.port, lejar: Date.now() + KOPOGTATO_ELEVULES });
+                  }
+                  if (ujRegioTars) {
+                    kiir(SZIN.halvany + '  🔍 ' + ora() + ' a kereső-régióm ' + ujRegioTars + ' további tartója a DHT-n — a kör'
+                      + ' céljai közé' + SZIN.vege);
+                  }
+                })
+                .catch((hiba) => {
+                  kiir(SZIN.halvany + '  ⚠ a címjegyzék hirdetése most nem sikerült: ' + hiba.message + SZIN.vege);
+                })
+                .finally(() => { hirdetesFut = null; });
             }
-          } catch (hiba) { console.warn('a felderítés köre most nem ment', { ok: hiba.message }); }
-          // ⭐ D112 ① (F3): a fájl-tár kerete (ritkítva — `FAJL_TAKARITAS_KOZ`).
-          try {
-            const ft = await fajlTarTakaritasa();
-            if (ft?.torolt) kiir(SZIN.halvany + '  🗜 ' + ora() + ' fájl-tár: ' + ft.torolt + ' nem vállalt fájl kiesett ('
-              + adatMennyiseg({ bajtKuldott: ft.felszabadult }) + ' — újra elhozható)' + SZIN.vege);
-          } catch (hiba) { console.warn('a fájl-tár takarítása most nem ment', { ok: hiba.message }); }
-          // ⭐ D103: a postafiók és a készülék saját értesítése (zárt lapnál is — a felülettel zár alatt váltják egymást).
-          try {
-            const e = await orjaratErtesitesei();
-            if (e.kuldve) kiir(SZIN.halvany + '  🔔 ' + ora() + ' ' + e.kuldve + ' értesítés a készüléken' + SZIN.vege);
-          } catch (hiba) { console.warn('a postafiók most nem számolható', { ok: hiba.message }); }
-        } catch (hiba) {
-          kiir(SZIN.halvany + '  ⚠ a döntési csomag most nem ment ki: ' + hiba.message + SZIN.vege);
+
+            // ⭐⭐ ÉS A HÁZTARTÁS: az elakadt tudatpontok visszavétele (2026-09-07).
+            // A készülék magától könyvel — de csak megülepedés után, mert egy késve érkező,
+            // határidőn belüli szavazat még visszafordíthatja a törlést. ⚠️ A csere UTÁN
+            // fut, nem előtte: így a friss események már beleszámítanak a döntésbe.
+            try {
+              // ⭐ A KÖR EREDMÉNYE DÖNTI EL, HOGY VOLT-E BULI: ha egyetlen társ sem felelt, ez
+              // a kör nem bizonyít semmit — a néma kör nem buli.
+              await elakadtPontokFelszabaditasa(true, MEGULEPEDES_BULIK, sikeresEbbenAKorben);
+            } catch (hiba) {
+              // Best-effort: a könyvelés hibája NE akassza meg az őrjáratot.
+              kiir(SZIN.halvany + '  ⚠ a felszabadítás most nem sikerült: ' + hiba.message + SZIN.vege);
+            }
+
+            // ⭐ B/2: az előléptetés (ami az átmenetiben van, de már vállalom) — körönként.
+            try { await atmenetiElolepetese(); } catch (hiba) {
+              kiir(SZIN.halvany + '  ⚠ az előléptetés most nem sikerült: ' + hiba.message + SZIN.vege);
+            }
+
+            // ⭐⭐ D85 T3: A SAJÁT LEZÁRT, TÖBB ÉRINTETTES JAVASLATAIM DÖNTÉSI CSOMAGJA (a (B): a töredékekbe).
+            // ⚠️ A csere UTÁN, mint a felszabadítás: a friss események már beleszámítanak. Ismételhető — ha
+            // minden ott van már, nem ír semmit.
+            try {
+              // ⭐ D93/2: a tagsági csomagom (ha tag lettem, vagy rövidebb láncot kaptam) — a saját azonosság-szeletembe.
+              try {
+                const tc = await tagsagiCsomagKiadasa(kornyezet);
+                if (tc.kiadva) kiir(SZIN.halvany + '  🪪 ' + ora() + ' tagsági csomag kiadva (' + tc.melyseg + '. szint)' + SZIN.vege);
+                // ⭐ D94: a 2. lépcső bemondása (ha 2. lépcsős lettem, vagy új érvényes tanúsítást kaptam).
+                const lb = await lepcsoBemondasKiadasa(kornyezet);
+                if (lb.kiadva) kiir(SZIN.halvany + '  🪪 ' + ora() + ' 2. lépcső-bemondás: ' + lb.ok + SZIN.vege);
+              } catch (hiba) { console.warn('a tagsági csomag kiadása nem sikerült', { ok: hiba.message }); }
+              const { kiadva } = await dontesiCsomagokKiadasa(kornyezet, { csakSajat: true });
+              if (kiadva.length) {
+                kiir(SZIN.halvany + '  📦 ' + ora() + ' ' + kiadva.length + ' döntési csomag a töredékekbe'
+                  + ' (a lezárt, több érintettes javaslataimhoz)' + SZIN.vege);
+              }
+              // ⭐ D95/1: a nagy szelet teljes tartójaként (a „mindent” beállítással) a lezárt döntések összegzése.
+              const lo = await lezarasiOsszegzesekKiadasa();
+              if (lo) kiir(SZIN.halvany + '  📦 ' + ora() + ' ' + lo + ' lezárási összegzés a nagy szeletű döntésekhez' + SZIN.vege);
+              // ⭐ D75/1, D73: naponta egyszer a tár tömörítése (a szigorú (b) alatt; csak az író — az őrjárat az).
+              if (tar.iroE?.() && await tomoritesEsedekesE()) {
+                const t = await tomoritesFuttatasa();
+                if (t.kivett) kiir(SZIN.halvany + '  🗜 ' + ora() + ' tömörítés: ' + t.kivett + ' esemény az átmeneti tárba (amit már nem vállalok)' + SZIN.vege);
+              }
+              // ⭐ D107 L3 (④a, a ⑥ magja): óránként a kereső-tár tömörítése (a lejárt és a régióimon kívül eső kiesik).
+              if (Date.now() - (res.keresoTomorites ?? 0) >= KERESO_TOMORITES_KOZ) {
+                res.keresoTomorites = Date.now();
+                const kt = await keresoTarTomoritese();
+                if (kt) kiir(SZIN.halvany + '  🗜 ' + ora() + ' kereső-tár: ' + kt + ' bejegyzés kiesett (lejárt, vagy a régióimon kívül)' + SZIN.vege);
+              }
+              // ⭐ D112 ③: a felderítés köre — a futó felderítések egy lépése (rögzítés, háttér-kérések).
+              try {
+                const fk = await felderitesKor();
+                if (fk.kert || fk.lezart.length) {
+                  kiir(SZIN.halvany + '  📷 ' + ora() + ' felderítés: ' + (fk.kert ? fk.kert + ' kérés' : '')
+                    + (fk.kert && fk.lezart.length ? ' · ' : '') + (fk.lezart.length ? fk.lezart.length + ' lezárult' : '') + SZIN.vege);
+                }
+              } catch (hiba) { console.warn('a felderítés köre most nem ment', { ok: hiba.message }); }
+              // ⭐ D112 ① (F3): a fájl-tár kerete (ritkítva — `FAJL_TAKARITAS_KOZ`).
+              try {
+                const ft = await fajlTarTakaritasa();
+                if (ft?.torolt) kiir(SZIN.halvany + '  🗜 ' + ora() + ' fájl-tár: ' + ft.torolt + ' nem vállalt fájl kiesett ('
+                  + adatMennyiseg({ bajtKuldott: ft.felszabadult }) + ' — újra elhozható)' + SZIN.vege);
+              } catch (hiba) { console.warn('a fájl-tár takarítása most nem ment', { ok: hiba.message }); }
+              // ⭐ D103: a postafiók és a készülék saját értesítése (zárt lapnál is — a felülettel zár alatt váltják egymást).
+              try {
+                const e = await orjaratErtesitesei();
+                if (e.kuldve) kiir(SZIN.halvany + '  🔔 ' + ora() + ' ' + e.kuldve + ' értesítés a készüléken' + SZIN.vege);
+              } catch (hiba) { console.warn('a postafiók most nem számolható', { ok: hiba.message }); }
+            } catch (hiba) {
+              kiir(SZIN.halvany + '  ⚠ a döntési csomag most nem ment ki: ' + hiba.message + SZIN.vege);
+            }
+          })()
+            .catch((hiba) => kiir(SZIN.halvany + '  ⚠ a háttér (tábla, házimunka) most nem ment végig: ' + hiba.message + SZIN.vege))
+            .finally(() => { hatterMunka = null; });
         }
 
         // ===== ⭐⭐⭐ A KÖVETKEZŐ ABLAK A FAL ÓRÁJÁHOZ IGAZODIK (a buli 1. darabja) =====
@@ -6918,7 +6955,15 @@ try {
         // ~1 mp-cel tért el, és a két kör ettől ütközött. Élesben 0.
         const oraEltolas = Number.parseInt(process.env.KOINO_ORAELTOLAS ?? '0', 10) || 0;
         const most = Date.now() + oraEltolas;
-        const kovetkezoAblak = Math.ceil((most + 1) / kozMs) * kozMs;
+        // ⛔⛔ A KOPOGÁS SAJÁT ÜTEME, 2. rész (80. mérés): ha a kör a saját ablaka végén ÉPP túlcsúszott a percfordulón (a
+        // kopogás az ablak végéig tart — egy fordulóhoz közel induló első kör, vagy egy forgalmas kör ismételt menetei), az a
+        // forduló eddig elveszett: a következő ablak a következő percre esett. ⭐ Ha a csúszás kicsi (≤ `ABLAK_KESES_TURES`, az
+        // ablak felénél nem több), azonnal indulunk — a társ kopogása a fordulótól még másodpercekig tart, a rés még nyílhat.
+        const sajatAblakVege = Math.ceil((korKezdetIdo + oraEltolas + 1) / kozMs) * kozMs;
+        const keses = most - sajatAblakVege;
+        const kovetkezoAblak = keses < 0 ? sajatAblakVege
+          : keses <= Math.min(ABLAK_KESES_TURES, kozMs / 2) ? most
+          : Math.ceil((most + 1) / kozMs) * kozMs;
         // ⭐ Az alsó sáv (2026-10-15): a kör vége és a következő ablak (a saját óránkon — a lap ugyanezen a gépen fut).
         await csereAllapota().modosit((a) => korVege(a, { perc, port: kapu.port, kovetkezo: kovetkezoAblak - oraEltolas,
           sikeres: sikeresEbbenAKorben, celok: korCelok, uj: korUj, most: Date.now() }));

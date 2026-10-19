@@ -3771,6 +3771,75 @@ proba('⭐ D109 (KK4): a fájl-randevú kiküldött bájtjai a kiszolgálási ke
   }
 });
 
+// ===================================
+// ⭐⭐ A KOPOGÁS SAJÁT ÜTEME (41., 45., 80. mérés — 2026-10-19)
+// ===================================
+//
+// A rés csak egyidejű kopogásra nyílik, tehát a kopogásnak minden percfordulón ott kell lennie. A tábla és a házimunka eddig
+// SORBAN futott utána, és ha túlnyúlt a következő percfordulón, az az ablak kimaradt. A próba egy lassú hátteret utánoz
+// (`KOINO_HATTER_KESLELTETES` = 9 mp) 6 mp-es ablakokkal: a kör kezdetét a `csere.json` mondja meg. Rontás: a kör megvárja a
+// hátteret → csak minden második ablakban indul → bukik.
+proba('⭐⭐ a kopogás SAJÁT ütemben: a lassú háttér (tábla, házimunka) nem viszi el a percfordulót — a kör minden ablakban indul', async () => {
+  const hely = await ujKeszulek();
+  let orjarat = null;
+  try {
+    await fut(hely, 'koino', 'Ütem');
+    let kimenet = '';
+    orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', '7756'], {
+      env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', KOINO_HATTER_KESLELTETES: '9000' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    orjarat.stdout.on('data', (d) => { kimenet += d; });
+    orjarat.stderr.on('data', (d) => { kimenet += d; });
+    const kezdetek = [];
+    const kezd = Date.now();
+    while (Date.now() - kezd < 32000) {
+      const a = JSON.parse(await readFile(join(hely, 'sajat', 'csere.json'), 'utf8').catch(() => '{}'));
+      const k = a?.kor?.kezdet;
+      if (Number.isFinite(k) && k !== kezdetek.at(-1)) kezdetek.push(k);
+      await varj(250);
+    }
+    orjarat.kill(); orjarat = null;
+    await varj(800);
+    const kozok = kezdetek.slice(1).map((k, i) => k - kezdetek[i]);
+    if (kezdetek.length < 5) process.stdout.write('  a körök közti idők (ms): ' + kozok.join(', ') + '\n');
+    // 32 mp alatt 6 mp-es ablakokkal ~5–6 kör; ha a kör megvárná a 9 mp-es hátteret, minden második ablak kimaradna (~3).
+    return kezdetek.length >= 5 && kozok.every((k) => k < 9000) && /körön át dolgozott/.test(kimenet);
+  } finally {
+    if (orjarat) orjarat.kill();
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+// A kopogás saját üteme, 2. rész: egy halott címre kopogó kör az ablak VÉGÉIG kopog (a kopogás a fordulóig tart) — és a
+// régi kör ilyenkor a következő percfordulót már elvesztette (a következő ablak a következő percre esett). A 80. mérés egy
+// fordulóhoz közel induló első körnél mérte ugyanezt; egy forgalmas kör ismételt menetei is így járnak. Rontás: a csúszás
+// tűrése 0 → minden második forduló kimarad → bukik.
+proba('⭐⭐ a kopogás saját üteme: az ablak végéig kopogó kör után a következő forduló NEM vész el — a kör azonnal indul', async () => {
+  const hely = await ujKeszulek();
+  let orjarat = null;
+  try {
+    await fut(hely, 'koino', 'Ütem');
+    await fut(hely, 'tars', '10.255.255.7', '7373');
+    orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', '7757'], {
+      env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '' }, stdio: 'ignore' });
+    const kezdetek = [];
+    const kezd = Date.now();
+    while (Date.now() - kezd < 32000) {
+      const a = JSON.parse(await readFile(join(hely, 'sajat', 'csere.json'), 'utf8').catch(() => '{}'));
+      const k = a?.kor?.kezdet;
+      if (Number.isFinite(k) && k !== kezdetek.at(-1)) kezdetek.push(k);
+      await varj(250);
+    }
+    orjarat.kill(); orjarat = null;
+    await varj(800);
+    const kozok = kezdetek.slice(1).map((k, i) => k - kezdetek[i]);
+    if (kezdetek.length < 5) process.stdout.write('  a körök közti idők (ms): ' + kozok.join(', ') + '\n');
+    return kezdetek.length >= 5 && kozok.slice(1).every((k) => k < 9000);
+  } finally {
+    if (orjarat) orjarat.kill();
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
 // ⚠️ ITT ÁLLT 2026-09-26-IG „A TÜRELEM ELJUT A VONALIG” (D68): hat forrás a birtoklás-jegyzetben,
 // és a kör UTÁNI TCP-s elhozás 5 mp alatt feladta. ⛔ A D69/2 óta nincs TCP a készülékek
 // között, és a több forrásból egy fájl az éles úton nem fut (Csaba vállalta az árát) — a

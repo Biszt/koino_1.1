@@ -5987,6 +5987,26 @@ jegyzéken áll. ⛔ Közben javítva (D109 KK4): a fájl-randevú a kiszolgál�
 könyvelve, a keret fölött `FAJLNINCS` + `kesobb`) — eddig csak a csere bájtjai könyvelődtek. Próbák +12, mind rontással.
 Elágazás 183–184.
 
+### D115. A KOPOGÁS SAJÁT ÜTEME (2026-10-19, Csaba: „a többi mehet” — a 41. mérés (a)-ja)
+
+**Az alap:** a 41. mérés (a kör 90–97 mp, a kopogás csak minden második percben — két készülék, ha az egyik páros, a másik
+páratlan percben kopog, soha nem találkozik) és a 45. (egy 68 mp-es tábla-írás egy egész ablakot elvitt) óta nyitva: *„(a)
+a kopogás SAJÁT ütemben, minden percfordulón, a kör többi részétől függetlenül · (b) csak a kör rövidítése, garancia
+nélkül”*. Csaba a tételt („a kopogás saját üteme”) a következők közé tette — ez az (a).
+
+**A 80. mérés** (`korUtemMeres.js`, egy valódi őrjárat a valódi DHT-n): ma két ok visz el fordulót — a tábla munkája a
+kopogás után sorban (az induló, és a hálózatváltás utáni kör új címének kiírása 30–55 mp), és a fordulóig tartó kopogás
+utáni ütemezés (a következő ablak a következő percre esett).
+
+#### ✅ MEGÉPÜLT (2026-10-19)
+
+`koino.js` (`orjarat`): a tábla (a néma kötések keresése, az új cím kiírása), a címjegyzék és a házimunka egy HÁTTÉR-munka —
+egyszerre egy, a kör nem várja meg; ha a következő fordulón még fut, a HÁTTÉR köre marad ki (kimondva), nem a kopogás. A
+következő ablak: ha a kör legfeljebb `ABLAK_KESES_TURES` (3 mp, legfeljebb az ablak fele) késéssel ért a saját ablaka végére,
+azonnal indul. A mérés kapcsolója `KOINO_HATTER_KESLELTETES` (ms — egy lassú hátteret utánoz; élesben 0). Mérve: 8
+fordulóból 0 kimaradt (előtte 1, mindig az induló körben). Próbák +2 (parancssor — a lassú háttér és az ablak végéig kopogó kör,
+6 mp-es ablakokkal), két rontással. Elágazás 185.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem
