@@ -1285,3 +1285,17 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     koinó saját határáig (2^128) sem; a 128 ~3·10^21-ig tartott volna (kivételként); a 256 mély csomag (~240 KB) 32-szer
     egy válaszban a sor-korlátba nem fér, a csonka lánc pedig semmit nem bizonyít · Csaba: „(A) 256” · `tagsag.js`,
     `tagsagKisero.js`, `vonal.js`, `felajanlas.js`, `koino.js`, `lancFarokMeres.js`, `zartKapuMeres.js`, a próbák.
+183. **2026-10-19 · a UDP-s több forrás (D114 — T1–T5)** → **a folyamat KÖZÖS munka-jegyzéke lenyomatonként (a randevú és a
+    kérelem törzse rajta; itt áll a „3 egyidejű átvitel” is); a befejezetlen fájlok további tartói AKTÍVAN a kör céljai közé
+    (≤ 2 / kör, ≤ 3 / fájl); a rossz szelet tanulsága és a türelem a forrásokból a UDP-n; a birtoklás jegyzete a
+    tábla-aláíróval, korlátosan** · mert a 79. mérés szerint a párhuzamos munkák ugyanazt a fájlt egymástól függetlenül hozták
+    (minden szelet kétszer, ×1,0, lezárási verseny), és a D69/2 óta a több forrás élesben nem futott; a „több szeletes” a
+    részleges mappából pontos (a méretet az első szelet mondja meg) · Csaba: T2 (B) · `fajlAtvitel.js` (`kozosMunkaJegyzek`,
+    `aktivForrasok`), `fajlKerelem.js` (`birtoklasTakaritasa`), `fajlTar.js` (`reszlegesLenyomatok`), `udpVonal.js`
+    (`fajlRandevu`), `vonal.js`, `koino.js`, a próbák.
+184. **2026-10-19 · a fájl-randevú a kiszolgálási kereten (D109 KK4 pótlása)** → **a kiszolgáló fájlonként kérdezi a keretet
+    (a keret fölött `FAJLNINCS` + `kesobb` — kompatibilis), a kiküldött bájtok könyvelődnek, a kérő a „később”-re megáll, és a
+    kör a tartót addig nem hívja** · mert a D114 átvizsgálása közben kiderült: csak a csere bájtjai könyvelődtek, a randevún egy
+    idegen a csere-keret alatt korlát nélkül vihetett fájlt (a KK4: „minden, amit másnak teszek”) — és az aktív forrás-gyűjtés
+    a tartók keretére is épít; a D109-kori hibakereső naplósor is ki · Claude · `vonal.js` (`fajlKiszolgalas`, `fajlHozatala`),
+    `udpVonal.js`, `koino.js`, a próbák.

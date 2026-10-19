@@ -1227,6 +1227,165 @@ proba('⭐⭐⭐ A RANDEVÚ: MINDKÉT FÉL KÉR ÉS AD — egy foglalaton, ütk�
   }
 });
 
+// ⭐⭐ D114 (T1, 2026-10-19): KÉT FORRÁS EGY FÁJLRA A VALÓDI RANDEVÚN. A vendég két társsal EGYSZERRE randevúzik (a kapu
+// munkái párhuzamosak), és mindkettőnél megvan ugyanaz a fájl. ⛔ A 79. mérés: közös munka nélkül minden szelet kétszer
+// jött, és a két ág a lezárásért versenyzett. Rontás: a közös munka-jegyzék nélkül (a D114 előtti élő út) → a bájtok
+// kétszer jönnek → bukik.
+proba('⭐⭐ D114: KÉT FORRÁS EGY FÁJLRA — a két egyidejű randevú a közös munkán minden szeletet EGYSZER hoz, és nincs verseny', async () => {
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { fajlBlobTarolo } = await import('../js/tar/fajlTar.js');
+  const { kozosMunkaJegyzek } = await import('../js/csere/fajlAtvitel.js');
+
+  const hely = async (n) => { const h = await mkdtemp(join(tmpdir(), 'koino-ketforras-' + n + '-')); mappak.push(h); return h; };
+  const vendeg = fajlBlobTarolo(KOINO, await hely('v'));
+  const forrasA = fajlBlobTarolo(KOINO, await hely('a'));
+  const forrasB = fajlBlobTarolo(KOINO, await hely('b'));
+  const tartalom = new Uint8Array(7 * 64 * 1024 + 1234);                 // 8 szelet
+  for (let i = 0; i < tartalom.length; i++) tartalom[i] = (i * 13) % 251;
+  const { lenyomat } = await forrasA.ir(tartalom);
+  await forrasB.ir(tartalom);
+
+  const jegyzek = kozosMunkaJegyzek();
+  const p1 = await udpParos();
+  const p2 = await udpParos();
+  const tarV = await ujTar();
+  const tarA = await ujTar();
+  const tarB = await ujTar();
+  try {
+    // A vendég kér előbb (a kisebb „külső cím”), a források csak kiszolgálnak.
+    const vendegRandevu = (p, nev) => fajlRandevu(p.egyik, '127.0.0.1', p.masikPort, {
+      sajatCim: '0.0.0.0:1', kerhetok: [lenyomat], blob: vendeg, tar: tarV, koino: KOINO,
+      fajlOlvas: () => null, kiszolgalasKell: false, varakozasiIdo: 1500,
+      kozosMunka: jegyzek, forras: nev });
+    const forrasRandevu = (p, blob, tar) => fajlRandevu(p.masik, '127.0.0.1', p.egyikPort, {
+      sajatCim: '9.9.9.9:1', kerhetok: [], blob, tar, koino: KOINO,
+      fajlOlvas: (l) => blob.olvas(l), varakozasiIdo: 1500 });
+    const [v1, v2] = await Promise.all([vendegRandevu(p1, 'A'), vendegRandevu(p2, 'B'),
+      forrasRandevu(p1, forrasA, tarA), forrasRandevu(p2, forrasB, tarB)]);
+    const megjott = await vendeg.olvas(lenyomat);
+    return megjott !== null && Buffer.from(megjott).equals(Buffer.from(tartalom))
+      && v1.bajt + v2.bajt === tartalom.length && v1.bukott === 0 && v2.bukott === 0
+      && (await vendeg.reszlegesSzeletek(lenyomat)).length === 0 && jegyzek.futo === 0;
+  } finally {
+    p1.bezar();
+    p2.bezar();
+  }
+});
+
+// ⭐ D114 (T3): a rossz szelet helyi tanulsága a randevún (29/c). Rontás: a randevú nem kérdezi a `valaszthato`-t → a romlott
+// forrástól is kér → bukik; a romlott lezárás nem adja tovább, kik adtak szeletet → bukik.
+proba('⭐ D114 (T3): a randevú attól a társtól nem kéri a fájlt, akitől már romlottan jött — és a romlott lezárás megnevezi az adókat', async () => {
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { fajlBlobTarolo } = await import('../js/tar/fajlTar.js');
+  const { kozosMunkaJegyzek } = await import('../js/csere/fajlAtvitel.js');
+  const hely = async (n) => { const h = await mkdtemp(join(tmpdir(), 'koino-romlott-' + n + '-')); mappak.push(h); return h; };
+  const tartalom = new Uint8Array(3 * 64 * 1024 + 99);
+  for (let i = 0; i < tartalom.length; i++) tartalom[i] = (i * 5) % 249;
+  const futas = async ({ valaszthato, hamis }) => {
+    const vendeg = fajlBlobTarolo(KOINO, await hely('v'));
+    const forras = fajlBlobTarolo(KOINO, await hely('f'));
+    const { lenyomat } = await forras.ir(tartalom);
+    const eredmenyek = [];
+    const p = await udpParos();
+    try {
+      const [v] = await Promise.all([
+        fajlRandevu(p.egyik, '127.0.0.1', p.masikPort, {
+          sajatCim: '0.0.0.0:1', kerhetok: [lenyomat], blob: vendeg, tar: await ujTar(), koino: KOINO,
+          fajlOlvas: () => null, kiszolgalasKell: false, varakozasiIdo: 1500,
+          kozosMunka: kozosMunkaJegyzek(), forras: 'FORRAS',
+          fajlForrasok: { valaszthato: async () => valaszthato, turelem: async () => null,
+            eredmeny: async (l, e, adok) => { eredmenyek.push({ romlott: e.romlott === true, adok }); } } }),
+        fajlRandevu(p.masik, '127.0.0.1', p.egyikPort, {
+          sajatCim: '9.9.9.9:1', kerhetok: [], blob: forras, tar: await ujTar(), koino: KOINO, varakozasiIdo: 1500,
+          // ⛔ a támadó: ugyanakkora, de átírt bájtok (valódi koino ilyet nem ad ki — a `blob.olvas` újra lenyomatol)
+          fajlOlvas: async (l) => { const b = await forras.olvas(l); if (b && hamis) b[70000] ^= 0xff; return b; } })
+      ]);
+      return { v, eredmenyek, megvan: await vendeg.van(lenyomat) };
+    } finally {
+      p.bezar();
+    }
+  };
+  const kerulve = await futas({ valaszthato: false, hamis: false });
+  const romlott = await futas({ valaszthato: true, hamis: true });
+  return kerulve.v.kihagyott === 1 && kerulve.v.bajt === 0 && !kerulve.megvan
+    && !romlott.megvan && romlott.eredmenyek.length === 1 && romlott.eredmenyek[0].romlott
+    && romlott.eredmenyek[0].adok.join(',') === 'FORRAS';
+});
+
+// ⭐ D114 (T4): a türelem a forrásokból (D68/2) eljut a vonalig. A társ a kézfogás után elnémul — a vonal a fájl ismert
+// forrásaiból számolt ideig küzd (itt 2 mp), nem a fix 30 mp-ig. Rontás: a randevú nem adja tovább a türelmet → a fix 30
+// mp → bukik.
+proba('⭐ D114 (T4): a TÜRELEM A FORRÁSOKBÓL eljut a vonalig — a kézfogás után elnémult társtól 2 mp alatt feladja (a fix 30 helyett)', async () => {
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { fajlBlobTarolo } = await import('../js/tar/fajlTar.js');
+  const { kozosMunkaJegyzek } = await import('../js/csere/fajlAtvitel.js');
+  const { kezfogasUdpResen } = await import('../js/csere/udpVonal.js');
+  const h = await mkdtemp(join(tmpdir(), 'koino-turelem-')); mappak.push(h);
+  const vendeg = fajlBlobTarolo(KOINO, h);
+  const p = await udpParos();
+  try {
+    const kezd = Date.now();
+    const [v] = await Promise.all([
+      fajlRandevu(p.egyik, '127.0.0.1', p.masikPort, {
+        sajatCim: '0.0.0.0:1', kerhetok: ['N'.repeat(43)], blob: vendeg, tar: await ujTar(), koino: KOINO,
+        fajlOlvas: () => null, kiszolgalasKell: false, varakozasiIdo: 40000,
+        kozosMunka: kozosMunkaJegyzek(), forras: 'NEMA',
+        fajlForrasok: { valaszthato: async () => true, turelem: async () => 2000, eredmeny: async () => {} } }),
+      // A néma társ: kezet fog, aztán semmit nem csinál.
+      kezfogasUdpResen(p.masik, '127.0.0.1', p.egyikPort, { varakozasiIdo: 5000 })
+    ]);
+    const eltelt = Date.now() - kezd;
+    return v.bukott === 1 && v.kesz === 0 && eltelt < 12000;
+  } finally {
+    p.bezar();
+  }
+});
+
+// ⭐ D109 (KK4) a fájl-randevún — a D114 átvizsgálásának lelete: a csere a kereten volt, a randevú fájl-kiszolgálása nem (se
+// ítélet, se könyvelés). Rontás: a kiszolgáló nem kérdezi a keretet → a keret fölött is kiszolgál → bukik; nem könyvel →
+// bukik.
+proba('⭐ D109 (KK4) a fájl-randevún: a keret fölött a kiszolgáló „később”-t mond, és a kérő megáll — alatta kiszolgál, és a kiküldött bájtokat könyveli', async () => {
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { fajlBlobTarolo } = await import('../js/tar/fajlTar.js');
+  const hely = async (n) => { const h = await mkdtemp(join(tmpdir(), 'koino-fkeret-' + n + '-')); mappak.push(h); return h; };
+  const tartalom = new Uint8Array(2 * 64 * 1024 + 7);
+  for (let i = 0; i < tartalom.length; i++) tartalom[i] = (i * 3) % 247;
+  const futas = async (szabad) => {
+    const vendeg = fajlBlobTarolo(KOINO, await hely('v'));
+    const forras = fajlBlobTarolo(KOINO, await hely('f'));
+    const { lenyomat } = await forras.ir(tartalom);
+    const konyvelt = [];
+    const keret = { itelet: async () => (szabad ? { szabad: true } : { szabad: false, kesobb: 30 }),
+      feljegyez: async (t) => { konyvelt.push(t); } };
+    const p = await udpParos();
+    try {
+      const [v] = await Promise.all([
+        fajlRandevu(p.egyik, '127.0.0.1', p.masikPort, {
+          sajatCim: '0.0.0.0:1', kerhetok: [lenyomat], blob: vendeg, tar: await ujTar(), koino: KOINO,
+          fajlOlvas: () => null, kiszolgalasKell: false, varakozasiIdo: 1500 }),
+        fajlRandevu(p.masik, '127.0.0.1', p.egyikPort, {
+          sajatCim: '9.9.9.9:1', kerhetok: [], blob: forras, tar: await ujTar(), koino: KOINO, varakozasiIdo: 1500,
+          fajlOlvas: (l) => forras.olvas(l), kiszolgalasiKeret: keret, keretTars: { tabla: null, cim: '127.0.0.1' } })
+      ]);
+      return { v, megvan: await vendeg.van(lenyomat), konyvelt: konyvelt.reduce((o, t) => o + (t.bajt ?? 0), 0) };
+    } finally {
+      p.bezar();
+    }
+  };
+  const tilt = await futas(false);
+  const enged = await futas(true);
+  return tilt.v.kesobb === 30 && !tilt.megvan && tilt.v.bajt === 0
+    && enged.megvan && enged.konyvelt >= tartalom.length;
+});
+
 // ===================================
 // ⭐⭐⭐ A SZÉTVÁLASZTÁS: A FÁJL ENGED, A CSERE NEM (D68 / 3. lépés, 2026-09-15)
 // ===================================

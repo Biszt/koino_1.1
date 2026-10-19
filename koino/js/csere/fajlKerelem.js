@@ -107,22 +107,61 @@ export async function valaszOsszeallitasa(kertek, megvanE, korlat = KERELEM_KORL
  * azóta törölhette (D3: a tartalmi réteg elveszhet). A szállítás majd eldönti, meddig hisz
  * neki; itt nem bíráskodunk.
  *
- * @param {Object} jegyzet - lenyomat → { tarsak: { cimke: idopont } }
- * @param {string} tars - a társ CÍMKÉJE (hoszt:port) — ⚠️ helyi név, nem azonosság
+ * ⭐ D114 (T5): a társ neve a HITELESÍTETT TÁBLA-ALÁÍRÓJA (ha van), és mellette az utolsó címe (`cimek` — hogy az aktív
+ * forrás-gyűjtés felhívhassa): a régi hoszt:port címke a mobil NAT-on foglalatonként más volt, és egy társat több forrásnak
+ * számolt volna. ⛔ A tétel többi mezője (a bukott lezárás tanulsága — `romlott`) megmarad: eddig minden új hír eldobta.
+ *
+ * @param {Object} jegyzet - lenyomat → { tarsak: { név: időpont }, cimek?: { név: 'cím:port' }, romlott?: { név: időpont } }
+ * @param {string} tars - a társ neve (a tábla-aláírója, vagy ha nincs, hoszt:port) — ⚠️ helyi név, nem azonosság
  * @param {Array<string>} van
  * @param {number} [most]
+ * @param {string|null} [cim] - 'cím:port' — ahol most elértük
  * @returns {Object} az ÚJ jegyzet (a régit nem írjuk át helyben)
  */
-export function birtoklasBeolvasztasa(jegyzet, tars, van, most = Date.now()) {
+export function birtoklasBeolvasztasa(jegyzet, tars, van, most = Date.now(), cim = null) {
   const uj = { ...(jegyzet ?? {}) };
 
   for (const lenyomat of van ?? []) {
     if (typeof lenyomat !== 'string') continue;
-    const eddig = uj[lenyomat]?.tarsak ?? {};
-    uj[lenyomat] = { tarsak: { ...eddig, [tars]: most } };
+    const elem = uj[lenyomat] ?? {};
+    uj[lenyomat] = { ...elem, tarsak: { ...(elem.tarsak ?? {}), [tars]: most },
+      ...(typeof cim === 'string' && cim ? { cimek: { ...(elem.cimek ?? {}), [tars]: cim } } : {}) };
   }
 
   return uj;
+}
+
+/** ⭐ D114 (T5): a jegyzet korlátai (9. szabály) — fájlonként, összesen, és meddig hiszünk egy hírnek. */
+export const BIRTOKOS_KORLAT = 8;
+export const BIRTOKLAS_FAJL_KORLAT = 4096;
+export const BIRTOKLAS_ELEVULES = 30 * 24 * 3600 * 1000;
+
+/**
+ * ⭐ D114 (T5): a birtoklás jegyzetének takarítása — eddig korlát nélkül nőtt (minden valaha látott fájl, minden társ).
+ * Fájlonként a legfrissebb `BIRTOKOS_KORLAT` társ, a `BIRTOKLAS_ELEVULES`-nél régebbi hír (és bukás) kiesik, összesen a
+ * legutóbb hallott `BIRTOKLAS_FAJL_KORLAT` fájl marad.
+ * @returns {Object} az új jegyzet
+ */
+export function birtoklasTakaritasa(jegyzet, { most = Date.now(), tarsKorlat = BIRTOKOS_KORLAT,
+  fajlKorlat = BIRTOKLAS_FAJL_KORLAT, elevules = BIRTOKLAS_ELEVULES } = {}) {
+  const tetelek = [];
+  for (const [lenyomat, elem] of Object.entries(jegyzet ?? {})) {
+    if (typeof lenyomat !== 'string' || !elem || typeof elem !== 'object') continue;
+    const tarsak = Object.entries(elem.tarsak ?? {})
+      .filter(([, ido]) => Number.isFinite(ido) && most - ido <= elevules)
+      .sort((a, b) => b[1] - a[1]).slice(0, tarsKorlat);
+    const romlott = Object.entries(elem.romlott ?? {}).filter(([, ido]) => Number.isFinite(ido) && most - ido <= elevules);
+    if (!tarsak.length && !romlott.length) continue;
+    const nevek = new Set(tarsak.map(([t]) => t));
+    const cimek = Object.entries(elem.cimek ?? {}).filter(([t, c]) => nevek.has(t) && typeof c === 'string');
+    tetelek.push([lenyomat, {
+      tarsak: Object.fromEntries(tarsak),
+      ...(cimek.length ? { cimek: Object.fromEntries(cimek) } : {}),
+      ...(romlott.length ? { romlott: Object.fromEntries(romlott) } : {})
+    }, Math.max(0, ...tarsak.map(([, ido]) => ido), ...romlott.map(([, ido]) => ido))]);
+  }
+  tetelek.sort((a, b) => b[2] - a[2] || (a[0] < b[0] ? -1 : 1));
+  return Object.fromEntries(tetelek.slice(0, fajlKorlat).map(([l, e]) => [l, e]));
 }
 
 // ===================================

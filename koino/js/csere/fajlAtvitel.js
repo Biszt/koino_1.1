@@ -258,6 +258,89 @@ export function ujMunkamegosztas(megvanEltolasok = []) {
   };
 }
 
+// ===================================
+// ⭐⭐ A KÖZÖS MUNKA JEGYZÉKE — a UDP-s több forrás (D114 / T1, 2026-10-19)
+// ===================================
+//
+// ⛔ MIÉRT KELL: a D69/2 óta a fájl a randevún jön (`udpVonal.js` `fajlRandevu`), társanként egy munkában — és a kapu
+// munkái PÁRHUZAMOSAK. Ha ugyanaz a fájl két társnál is megvan, és a kör mindkettőt eléri, a két randevú egymástól
+// függetlenül, SAJÁT munkamegosztással hozta: a 79. mérésen minden szelet kétszer jött (16 a 8 helyett, ×1,0 a közös munka
+// ×1,6-ja helyett), és a két ág a lezárásért versenyzett (a második „hiányzó szelet”-et vagy kivételt kapott).
+//
+// ⭐ A JEGYZÉK: lenyomatonként EGY munkamegosztás a folyamatban — minden fájl-hozatal (a randevú, a kérelem törzse) ezt
+// kapja; az első ág nyitja (a lemezen lévő szeletekből), az utolsó kilépő zárja. Ettől a több forrás MAGÁTÓL megvan, amikor
+// egyszerre több tartóval dolgozunk, és egy ágnál a régi viselkedés marad. ⭐ És itt áll Csaba 3. döntése (2026-09-13): „3
+// egyidejű átvitel irányonként” — a UDP-n a társanként egy magától teljesül (egy társsal egy munka), az összesen 3 itt:
+// egy ág csak szabad helyre lép be (`belep` → null), a kérelem törzse (`kotelezo` — egy kapcsolat, sorban) a helyet
+// foglalja, de nem várakozik rá.
+//
+// A jegyzék a RÉSZTVEVŐKET is tudja (`adott`, `adok`): kik adtak szeletet ehhez a próbálkozáshoz — a rossz szelet helyi
+// tanulságának (29/c — `romlottJegyzes`) ennyi kell, és csak ennyi (nem rangsor: D18/2, D48).
+//
+// ⚠️ Futásidejű, folyamaton belüli állapot. Két folyamat (egy kézi `kerelem torzs` egy futó őrjárat mellett) versenyét nem
+// zárja ki — ritka, és a lezárás ott is ellenőriz (a név maga a bizonyíték).
+
+/**
+ * @param {Object} [beallitas]
+ * @param {number} [beallitas.osszesen] - egyszerre legfeljebb ennyi ág (kapcsolat) hoz fájlt
+ */
+export function kozosMunkaJegyzek({ osszesen = EGYIDEJU_ATVITEL } = {}) {
+  const fajlok = new Map();          // lenyomat → { munkaIgeret, agak, adok: Set }
+  let futo = 0;
+
+  /** Az ág végzett ezzel a fájllal (akár sikerrel, akár nem) — az utolsó kilépő a bejegyzést is zárja. */
+  const kilep = (lenyomat) => {
+    const f = fajlok.get(lenyomat);
+    futo = Math.max(0, futo - 1);
+    if (!f) return;
+    f.agak--;
+    if (f.agak <= 0) fajlok.delete(lenyomat);
+  };
+
+  return {
+    /**
+     * Egy ág belép egy fájlhoz: a közös munkamegosztás — vagy null, ha nincs szabad hely (a fájl a következő körre marad).
+     * ⚠️ A bejegyzés SZINKRON jön létre (a lemez olvasása előtt): két egyszerre belépő ág így ugyanazt a munkát kapja.
+     * @param {string} lenyomat
+     * @param {Function} megvanEltolasok - async () → a lemezen már meglévő szeletek eltolásai
+     * @param {Object} [b] - `kotelezo`: a hely foglal, de a korlát nem tartja vissza
+     * @returns {Promise<Object|null>} a munkamegosztás
+     */
+    async belep(lenyomat, megvanEltolasok, { kotelezo = false } = {}) {
+      if (!kotelezo && futo >= osszesen) return null;
+      futo++;
+      let f = fajlok.get(lenyomat);
+      if (!f) {
+        f = { agak: 0, adok: new Set(), munkaIgeret: (async () => ujMunkamegosztas(await megvanEltolasok()))() };
+        fajlok.set(lenyomat, f);
+      }
+      f.agak++;
+      try {
+        return await f.munkaIgeret;
+      } catch (hiba) {
+        kilep(lenyomat);
+        throw hiba;
+      }
+    },
+
+    kilep,
+
+    /** Egy forrás szeletet adott ehhez a próbálkozáshoz. */
+    adott(lenyomat, forras) {
+      if (typeof forras === 'string' && forras) fajlok.get(lenyomat)?.adok.add(forras);
+    },
+
+    /** Akik ehhez a próbálkozáshoz szeletet adtak (a bukott lezárás tanulságához). */
+    adok(lenyomat) { return [...(fajlok.get(lenyomat)?.adok ?? [])]; },
+
+    /** Dolgozik-e épp valaki ezen a fájlon? */
+    fut(lenyomat) { return fajlok.has(lenyomat); },
+
+    /** Hány ág hoz most fájlt (a próbáknak és a naplónak). */
+    get futo() { return futo; }
+  };
+}
+
 /**
  * A kapott szelet elfogadható-e?
  *
@@ -384,6 +467,51 @@ export function romlottFelejtes(jegyzet, lenyomat) {
   const { romlott, ...tobbi } = uj[lenyomat];
   uj[lenyomat] = tobbi;
   return uj;
+}
+
+// ===================================
+// ⭐⭐ D114 (T2 (B), Csaba, 2026-10-19: „Aktívan, korlátosan”): A FORRÁSOK GYŰJTÉSE
+// ===================================
+//
+// A közös munka (fent) akkor ad több forrást, ha a tartók épp egy körbe esnek. Az aktív gyűjtés ezt nem bízza a véletlenre:
+// a BEFEJEZETLEN (tehát több szeletes — az egyszeletes az első válasszal lezárul) hiányzó fájlok további ismert tartóit a kör
+// céljai közé veszi — körönként legfeljebb `AKTIV_FORRAS_KOR`-at, egy fájlhoz a körben már szereplőkkel együtt legfeljebb
+// `FORRASONKENT_EGY_FAJLRA`-t, a sorrend a hívóé (a ritkább előbb). Ez adja vissza, amit a TCP-kor tudott: ott a terv maga
+// választotta a forrásokat. Ára tartónként egy kopogás és egy csere; a teher a tartók között oszlik meg (D109 keretük).
+
+/** Egy körben legfeljebb ennyi tartót hívunk a fájlok miatt. */
+export const AKTIV_FORRAS_KOR = 2;
+
+/**
+ * A befejezetlen fájlok további tartói — a kör céljai.
+ * @param {Array<string>} lenyomatok - a befejezetlen hiányzók, a hívó sorrendjében
+ * @param {Object} jegyzet - a birtoklás jegyzete (`birtoklasBeolvasztasa`)
+ * @param {Set<string>} korben - a körben már szereplő társak nevei (tábla-aláírók)
+ * @param {Object} [b] - `kor`, `fajlonkent`
+ * @returns {Array<{alairo: string, cim: string, port: number, lenyomat: string}>}
+ */
+export function aktivForrasok(lenyomatok, jegyzet, korben, { kor = AKTIV_FORRAS_KOR, fajlonkent = FORRASONKENT_EGY_FAJLRA } = {}) {
+  const ki = [];
+  const valasztott = new Set();
+  for (const lenyomat of Array.isArray(lenyomatok) ? lenyomatok : []) {
+    if (ki.length >= kor) break;
+    const elem = jegyzet?.[lenyomat];
+    if (!elem) continue;
+    // A legfrissebb hír előbb; akitől ez a fájl már romlottan jött, azt kerüljük, ha van más (29/c).
+    const tarsak = Object.keys(elem.tarsak ?? {}).sort((a, b) => (elem.tarsak[b] ?? 0) - (elem.tarsak[a] ?? 0));
+    const jok = valaszthatoForrasok(tarsak, elem.romlott);
+    let hely = fajlonkent - jok.filter((t) => korben.has(t)).length;
+    for (const t of jok) {
+      if (ki.length >= kor || hely <= 0) break;
+      if (korben.has(t) || valasztott.has(t)) continue;
+      const m = typeof elem.cimek?.[t] === 'string' ? elem.cimek[t].match(/^(.+):(\d{1,5})$/) : null;
+      if (!m) continue;
+      ki.push({ alairo: t, cim: m[1], port: Number(m[2]), lenyomat });
+      valasztott.add(t);
+      hely--;
+    }
+  }
+  return ki;
 }
 
 /**

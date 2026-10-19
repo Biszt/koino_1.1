@@ -1541,6 +1541,19 @@ export function fajlBlobTarolo(koino, hely = alapHely()) {
     // és a csatornát továbbra sem kell megbízhatóvá tenni (3. szabály).
 
     /**
+     * ⭐ D114 (T2 (B)): a BEFEJEZETLEN letöltések lenyomatai — amiből már van szelet, de nincs lezárva. A méretet az első
+     * szelet mondja meg: ami így befejezetlen maradt, az több szeletes (az egyszeletes az első válasszal lezárul).
+     * @returns {Promise<Array<string>>}
+     */
+    async reszlegesLenyomatok() {
+      try {
+        return (await readdir(join(mappa, 'reszleges'))).filter((n) => /^[A-Za-z0-9_-]{43}$/.test(n)).sort();
+      } catch {
+        return [];
+      }
+    },
+
+    /**
      * ⭐⭐ MELY SZELETEK VANNAK MEG? — eltolások, növekvő sorrendben.
      *
      * *Ez MAGA az állapot:* nincs mellette napló, amit szinkronban kellene tartani. A
@@ -2135,6 +2148,7 @@ export function memoriaBlobTarolo(korlat = 2 * FAJL_KORLAT) {
     async olvas(lenyomat) { return nevRendben(lenyomat) ? (keszek.get(lenyomat) ?? null) : null; },
     async van(lenyomat) { return nevRendben(lenyomat) && keszek.has(lenyomat); },
     async reszlegesSzeletek(lenyomat) { return [...(reszek.get(lenyomat)?.keys() ?? [])].sort((a, b) => a - b); },
+    async reszlegesLenyomatok() { return [...reszek.keys()].sort(); },
     async reszlegesMeret(lenyomat) { return [...(reszek.get(lenyomat)?.values() ?? [])].reduce((o, b) => o + b.length, 0); },
     async reszlegesIras(lenyomat, eltolas, bajtok) {
       if (!nevRendben(lenyomat) || !Number.isSafeInteger(eltolas) || eltolas < 0) throw new Error('Érvénytelen részleges írás.');

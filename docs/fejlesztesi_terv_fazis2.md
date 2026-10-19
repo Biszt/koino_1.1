@@ -5966,6 +5966,27 @@ bájt-korlát · a csere: a korlátnál ülő tag lánca csomag nélkül is átm
 felajánlás kísérői közé egy teljes lánc belefér). Rontások: a korlát 128 · a csomag-korlát a régi 197 · csonkolás · a
 válasz-korlát 512 · nincs bájt-korlát · a vonal 512 · a felajánlás 512 — mind a hét bukik. Elágazás 182.
 
+### D114. A UDP-S TÖBB FORRÁS — a források gyűjtése aktívan, korlátosan (2026-10-19, Csaba: T2 „(B)”)
+
+**Az alap:** a D68 / 6. (Csaba ötlete: ugyanaz a fájl több forrásból) a TCP-n épült meg, és a D69/2-kor élesben kiesett
+(Csaba: *„elfogadom ezt az árat, ameddig az udp-és több forrás meg nem épűl”*). Az átvizsgálás
+([`udp_tobb_forras_atvizsgalas.md`](udp_tobb_forras_atvizsgalas.md)) és a 79. mérés: a szállítás-független fájl-hozatal tud
+közös munkán dolgozni, de az élő út (a randevú) nem ad neki közöset — és mivel a kapu munkái párhuzamosak, két egyidejű munka
+ugyanarra a fájlra minden szeletet kétszer hozott (×1,0 a közös munka ×1,6-ja helyett), és a lezárásért versenyzett.
+
+**A javaslat:** T1 közös munka lenyomatonként (a hiba javítása és a több forrás alapja) · T2 a források gyűjtése · T3 a rossz
+szelet helyi tanulsága a UDP-n (a 29/c, Csaba 2026-09-15-i jóváhagyása) · T4 a türelem a forrásokból (D68/2) · T5 a jegyzet
+a tábla-aláíróval. **Csaba döntése a T2-re — (B) aktívan, korlátosan:** a befejezetlen (több szeletes) hiányzó fájlok további
+ismert tartói a kör céljai közé — körönként legfeljebb kettő, egy fájlhoz a körben lévőkkel együtt legfeljebb három, a
+ritkább előbb. (A) volt: csak passzívan (akikkel a kör amúgy is dolgozik) · (C) csak a kérelem törzsénél.
+
+#### ✅ MEGÉPÜLT (2026-10-19)
+
+A részletek az átvizsgálás 6. szakaszában. A „3 egyidejű átvitel” (Csaba 3. döntése, 2026-09-13) a UDP-n most a közös
+jegyzéken áll. ⛔ Közben javítva (D109 KK4): a fájl-randevú a kiszolgálási kereten (az ítélet fájlonként, a kiküldött bájtok
+könyvelve, a keret fölött `FAJLNINCS` + `kesobb`) — eddig csak a csere bájtjai könyvelődtek. Próbák +12, mind rontással.
+Elágazás 183–184.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

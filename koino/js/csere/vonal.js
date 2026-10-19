@@ -1514,7 +1514,7 @@ async function fajlSzeletekKiszolgalasa(sor, kuld, fajlOlvas, elsoKeres) {
  * @param {Function} fajlOlvas - (lenyomat) → bájtok|null
  * @returns {Promise<{kiszolgalt: boolean, ok?: string, szeletek: number}>}
  */
-export async function fajlKiszolgalas(kapcsolat, fajlOlvas) {
+export async function fajlKiszolgalas(kapcsolat, fajlOlvas, beallitas = {}) {
   const sor = uzenetSor(kapcsolat);
   const kuld = (targy) => kapcsolat.write(JSON.stringify(targy) + '\n');
 
@@ -1526,6 +1526,15 @@ export async function fajlKiszolgalas(kapcsolat, fajlOlvas) {
     // ⚠️ Nem hiba, csak nem ez a dolgunk: megnevezzük, mi jött helyette.
     console.log('fajlKiszolgalas - VÉGE (nem fájl-kérés)', { uzenet: elso.uzenet });
     return { kiszolgalt: false, ok: 'nem fájl-kérés: ' + elso.uzenet, szeletek: 0 };
+  }
+
+  // ⭐ D109 (KK4, a D114 átvizsgálásának lelete): a fájl is kiszolgálás — ha a keret nem enged, „később” (a `FAJLNINCS`
+  // `kesobb` mezőjével — kompatibilis: a régi kérő hiánynak olvassa). Fájlonként egyszer kérdezünk (egy fájl ≤ 2 MB).
+  const kesobb = typeof beallitas.kesobb === 'function' ? await beallitas.kesobb() : null;
+  if (Number.isInteger(kesobb) && kesobb > 0) {
+    kuld({ uzenet: 'FAJLNINCS', lenyomat: elso.lenyomat, kesobb });
+    console.log('fajlKiszolgalas - VÉGE (később)', { kesobb });
+    return { kiszolgalt: false, kesobb, ok: '„később” — a kiszolgálási keret', szeletek: 0 };
   }
 
   const { szeletek } = await fajlSzeletekKiszolgalasa(sor, kuld, fajlOlvas, elso);
@@ -1554,7 +1563,7 @@ export async function fajlKiszolgalas(kapcsolat, fajlOlvas) {
  * @param {string} lenyomat
  * @param {Function} kapcsolatNyitas - () → a MÁR MEGNYITOTT kapcsolat (1. szabály: a hívóé)
  * @param {Object} [beallitas] - `korlat` (a fájl felső mérete), `munka` (a több forrás közös
- *        munkamegosztása, D68 / 6.)
+ *        munkamegosztása, D68 / 6.), `adott` (() → — egy szelet megjött ettől a forrástól; D114)
  * @returns {Promise<{kesz: boolean, ok?: string, romlott?: boolean, bajt: number, szeletek: number}>}
  */
 export async function fajlHozatala(blob, koino, lenyomat, kapcsolatNyitas, beallitas = {}) {
@@ -1601,6 +1610,11 @@ export async function fajlHozatala(blob, koino, lenyomat, kapcsolatNyitas, beall
           if (uzenet.uzenet === 'FAJLSZELET' || uzenet.uzenet === 'FAJLNINCS') break;
         }
 
+        if (uzenet.uzenet === 'FAJLNINCS' && Number.isInteger(uzenet.kesobb) && uzenet.kesobb > 0) {
+          // ⭐ D109 (KK6): a tartó kerete most nem enged — nem hiány, hanem „később”. A szelet visszakerül a közösbe.
+          console.log('fajlHozatala - VÉGE (később)', { lenyomat, kesobb: uzenet.kesobb });
+          return { kesz: false, ok: '„később” — a tartó kiszolgálási kerete', kesobb: uzenet.kesobb, bajt, szeletek };
+        }
         if (uzenet.uzenet === 'FAJLNINCS') {
           // ⚠️ NEM HIBA, HANEM HIÁNY (D19): a társ azt mondta, nála sincs meg. Lehet, hogy
           // törölte (D3: a tartalmi réteg elveszhet), vagy a jegyzetünk elavult.
@@ -1629,6 +1643,8 @@ export async function fajlHozatala(blob, koino, lenyomat, kapcsolatNyitas, beall
         }
         munka.kesz(kertEltolas);
         sikerult = true;
+        // ⭐ D114 (T3): a hívó tudja, ki ez a forrás — a közös jegyzék így látja, kik adtak szeletet ehhez a próbálkozáshoz.
+        if (darab.length > 0 && typeof beallitas.adott === 'function') beallitas.adott();
 
         // ⚠️ Az ÜRES szelet és a `vege` jelzés a fájl végét jelenti — ilyenkor a méret is
         // biztosan ismert, tehát a `keszEgesz()` mondja meg, van-e még dolgunk.
@@ -1821,11 +1837,21 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
     .filter((l) => typeof l === 'string' && /^[A-Za-z0-9_-]{43}$/.test(l)).slice(0, 64);
   const fajlok = [];
   if (beallitas.blob) {
+    // ⭐ D114 (T1): ha a hívó közös munka-jegyzéket ad (a valódi fájl-tárhoz), a törzs fájljai ugyanazon a
+    // munkamegosztáson jönnek, mint a randevúké — egy másik tartótól épp jövő fájlhoz csatlakozunk, nem hozzuk újra. A
+    // törzs egy kapcsolat, sorban: a helyet foglalja, de a korlát nem tartja vissza (`kotelezo`).
+    const km = beallitas.kozosMunka ?? null;
     for (const l of lenyomatok) {
       if (await beallitas.blob.van(l)) { fajlok.push({ lenyomat: l, kesz: true, megvolt: true }); continue; }
-      const r = await fajlHozatala(beallitas.blob, koino, l, async () => kapcsolat,
-        { korlat: beallitas.korlat, nyitvaHagy: true, sor });
-      fajlok.push({ lenyomat: l, kesz: r.kesz, ok: r.ok ?? null });
+      const munka = km ? await km.belep(l, () => beallitas.blob.reszlegesSzeletek(l), { kotelezo: true }) : null;
+      try {
+        const r = await fajlHozatala(beallitas.blob, koino, l, async () => kapcsolat,
+          { korlat: beallitas.korlat, nyitvaHagy: true, sor,
+            ...(munka ? { munka, adott: () => km.adott(l, beallitas.forras) } : {}) });
+        fajlok.push({ lenyomat: l, kesz: r.kesz, ok: r.ok ?? null, ...(r.romlott ? { romlott: true } : {}) });
+      } finally {
+        if (km) km.kilep(l);
+      }
     }
   }
   try { kuld({ uzenet: 'KESZ' }); } catch { /* zárt */ }

@@ -83,3 +83,34 @@ a mai kóddal is áll: a forrás a szűk ×1,6 / ×2,0 (2 / 3 forrás), a saját
 A protokoll (a `FAJLKEREK` eddig is hordozta az eltolást, a kiszolgáló állapotmentes), a lezárás szabálya (a név maga a
 bizonyíték), a kiszolgálási keret (a kiszolgáló dönt), a törzs korlátja (D84/1: csak a vállaló adja), a fájl-tár kerete
 (D112 ①). Új mező a vonalon nincs.
+
+## 6. ✅ D114 (Csaba, 2026-10-19: T2 „(B) Aktívan, korlátosan”) — MEGÉPÜLT
+
+- **T1** — `fajlAtvitel.js` `kozosMunkaJegyzek`: lenyomatonként egy munkamegosztás a folyamatban (a bejegyzés szinkron jön
+  létre, hogy két egyszerre belépő ág ugyanazt kapja; az utolsó kilépő zárja), a „3 egyidejű átvitel” (`belep` → null, ha
+  nincs hely; a kérelem törzse `kotelezo`), és a próbálkozás adói (`adott`, `adok`). A randevú (`udpVonal.js` `fajlRandevu`
+  — `kozosMunka`, `forras`) az épp futó fájlt előre veszi (ahhoz csatlakozik), a közben megjöttet nem kéri újra; a kérelem
+  törzse (`vonal.js`) ugyanazon a jegyzéken.
+- **T2 (B)** — `aktivForrasok` (tiszta: a befejezetlen fájlok — a részleges mappa, `fajlTar.js` `reszlegesLenyomatok` —
+  további, címmel ismert, nem romlott tartói, a körben lévők nélkül; körönként ≤ 2, fájlonként a körben lévőkkel ≤ 3); a
+  `koino.js` `aktivFajlForrasCeljai` a kör céljai közé veszi őket (a ritkább fájl előbb), és a D99 kihagyása rájuk nem
+  vonatkozik. ⭐ A „több szeletes” itt pontos: a méretet az első szelet mondja meg, és ami befejezetlen maradt, az nem
+  egyszeletes.
+- **T3** — a randevú `fajlForrasok.valaszthato` (akitől romlottan jött, attól nem kér, ha van más — ha nincs, felejt) és
+  `eredmeny` (a romlott lezárás a próbálkozás minden adóját feljegyzi; a megjött fájl jegyzete törlődik).
+- **T4** — `fajlForrasok.turelem`: a fájl kapcsolatának feladási ideje a tartók számából (`turelemForrasokbol`).
+- **T5** — a birtoklás jegyzete a tábla-aláíróval és a címmel (`birtoklasBeolvasztasa` — a tétel többi mezője, a `romlott`
+  is, megmarad: eddig minden új hír eldobta), korlátosan (`birtoklasTakaritasa`: fájlonként a legfrissebb 8, 30 nap, összesen
+  4096 fájl — eddig korlát nélkül nőtt); az írás a folyamaton belül sorban.
+
+⛔ **Egy lelet közben (D109 KK4):** a fájl-randevú kiszolgáló fázisa nem kérdezte a kiszolgálási keretet, és a kiküldött
+fájl-bájtok nem könyvelődtek — csak a csere bájtjai (egy idegen a csere-keret alatt a randevún korlát nélkül vihetett
+fájlt). A T2 erre is épít (a teher a tartók között a keretük szerint oszlik meg), ezért itt javítva: a kiszolgáló fájlonként
+kérdez (a keret fölött `FAJLNINCS` + `kesobb` — kompatibilis), a kiküldött bájtok könyvelődnek, a kérő a „később”-re megáll,
+és a kör a tartót addig nem hívja. És egy D109-kori hibakereső naplósor a keret könyvelésében kivéve.
+
+Próbák (+12, mind rontással): `fajlAtvitelProba.js` (a jegyzék: egy munka, egy lemez-olvasás · a 3-as korlát és a kötelező ·
+az adók · az aktív források), `fajlKerelemProba.js` (a jegyzet a névvel és a címmel, a `romlott` megmarad · a korlátok),
+`csereProba.js` (két forrás egy fájlra a valódi randevún — a bájtok egyszer · T3 · T4 · a keret a fájl-randevún),
+`parancssorProba.js` (az őrjárat más cél nélkül, csak az aktív forrásból hozza a félúton maradt képet, és a jegyzete
+törlődik · a gazda keret-állásában a kiküldött kép). Elágazás 183–184.

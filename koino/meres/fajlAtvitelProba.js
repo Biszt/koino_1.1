@@ -20,7 +20,9 @@ import {
   // ⭐ TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6., 2026-09-15)
   ujMunkamegosztas, FORRASONKENT_EGY_FAJLRA,
   // ⭐ A ROSSZ SZELET HELYI TANULSÁGA (D68 / 6.)
-  romlottJegyzes, romlottFelejtes, valaszthatoForrasok
+  romlottJegyzes, romlottFelejtes, valaszthatoForrasok,
+  // ⭐ D114: a közös munka jegyzéke és az aktív források
+  kozosMunkaJegyzek, aktivForrasok
 } from '../js/csere/fajlAtvitel.js';
 import { bajtLenyomat } from '../js/esemeny/kanonikusAlak.js';
 
@@ -451,6 +453,69 @@ proba('⭐ A `valaszthatoForrasok` önmagában is a fenti szabályt mondja', asy
     && valaszthatoForrasok(harom, { 'a:1': 1, 'b:1': 1, 'c:1': 1 }).length === 3
     // ⚠️ üres jegyzet → változatlan
     && valaszthatoForrasok(harom, undefined).length === 3;
+});
+
+// ===================================
+// ⭐⭐ D114 (2026-10-19): A KÖZÖS MUNKA JEGYZÉKE ÉS AZ AKTÍV FORRÁSOK
+// ===================================
+
+// Rontás: minden belépés új munkát nyit → bukik; a lemezt kétszer olvassa → bukik.
+proba('⭐⭐ D114: a közös munka — két EGYSZERRE belépő ág ugyanazt a munkamegosztást kapja, a lemezt egyszer olvassa', async () => {
+  const j = kozosMunkaJegyzek();
+  let olvasas = 0;
+  const megvan = async () => { olvasas++; await new Promise((t) => setTimeout(t, 5)); return []; };
+  const [m1, m2] = await Promise.all([j.belep(L(1), megvan), j.belep(L(1), megvan)]);
+  const m3 = await j.belep(L(2), megvan);
+  const e1 = await m1.kovetkezo();
+  m1.meretMegvan(3 * SZELET_MERET);
+  const e2 = await m2.kovetkezo();
+  return m1 === m2 && m3 !== m1 && olvasas === 2 && e1 === 0 && e2 === SZELET_MERET && j.fut(L(1)) && j.futo === 3;
+});
+
+// Rontás: nincs korlát → a negyedik is belép → bukik; a kilépés nem szabadít → bukik.
+proba('⛔ D114: a „3 egyidejű átvitel” (Csaba, 2026-09-13) — a negyedik ág nem lép be, a kilépés helyet ad; a kötelező (a kérelem törzse) igen', async () => {
+  const j = kozosMunkaJegyzek();
+  const ures = async () => [];
+  await j.belep(L(1), ures); await j.belep(L(1), ures); await j.belep(L(2), ures);
+  const negyedik = await j.belep(L(3), ures);
+  const kotelezo = await j.belep(L(3), ures, { kotelezo: true });
+  j.kilep(L(3));                          // a kötelező kilép
+  j.kilep(L(1));
+  const utana = await j.belep(L(3), ures);
+  j.kilep(L(1)); j.kilep(L(2)); j.kilep(L(3));
+  return negyedik === null && kotelezo !== null && utana !== null && !j.fut(L(1)) && !j.fut(L(3)) && j.futo === 0;
+});
+
+// Rontás: az `adott` nem jegyez → bukik; a bejegyzés az utolsó kilépő előtt eltűnik → bukik.
+proba('⭐ D114: a jegyzék tudja, kik adtak szeletet ehhez a próbálkozáshoz — az utolsó kilépőig', async () => {
+  const j = kozosMunkaJegyzek();
+  const ures = async () => [];
+  await j.belep(L(1), ures); await j.belep(L(1), ures);
+  j.adott(L(1), 'anna'); j.adott(L(1), 'bela'); j.adott(L(1), 'anna');
+  j.kilep(L(1));
+  const kozben = j.adok(L(1)).sort().join(',');
+  j.kilep(L(1));
+  return kozben === 'anna,bela' && j.adok(L(1)).length === 0;
+});
+
+const birtokolt = (tarsak, cimek = {}, romlott) => ({ tarsak, cimek, ...(romlott ? { romlott } : {}) });
+
+// Rontás: a körben lévőket nem zárja ki → bukik; a fájlonkénti korlát nem számolja a körben lévőket → bukik; a romlottat nem
+// kerüli → bukik.
+proba('⭐⭐ D114 (T2 (B)): az aktív források — a befejezetlen fájl további tartói, a körben lévők nélkül, fájlonként ≤ 3, körönként ≤ 2, a romlottat kerülve', async () => {
+  const jegyzet = {
+    [L(1)]: birtokolt({ a: 5, b: 4, c: 3, d: 2 }, { a: '1.1.1.1:1', b: '2.2.2.2:2', c: '3.3.3.3:3', d: '4.4.4.4:4' }),
+    [L(2)]: birtokolt({ e: 9, f: 8 }, { e: '5.5.5.5:5', f: '6.6.6.6:6' }, { e: 9 }),
+    [L(3)]: birtokolt({ g: 1 }, {})                                                  // cím nélkül: nem hívható
+  };
+  // L(1): a már a körben (a) + kettő (b, c) = 3 — a d már nem fér; L(2)-ből: körönként csak 2 → nem jut.
+  const egy = aktivForrasok([L(1), L(2)], jegyzet, new Set(['a']));
+  // L(2) elöl: az e romlott, van más (f) → f; aztán L(1): a legfrissebb előbb (a).
+  const ketto = aktivForrasok([L(2), L(1)], jegyzet, new Set());
+  const harom = aktivForrasok([L(3)], jegyzet, new Set());
+  return egy.map((x) => x.alairo).join(',') === 'b,c' && egy[0].cim === '2.2.2.2' && egy[0].port === 2
+    && ketto.map((x) => x.alairo).join(',') === 'f,a' && ketto[0].lenyomat === L(2)
+    && harom.length === 0;
 });
 
 export default futtatas;

@@ -229,13 +229,16 @@ import {
   felderitesTorlese, GYOKER_AG, FELDERITES_ALAP, FELDERITES_HATAR
 } from './js/allapot/felderites.js';
 import {
-  kerelemOsszeallitasa, ritkasagSzerint, birtoklasBeolvasztasa,
+  kerelemOsszeallitasa, ritkasagSzerint, birtoklasBeolvasztasa, birtoklasTakaritasa,
   valaszOsszeallitasa as fajlValaszOsszeallitasa
 } from './js/csere/fajlKerelem.js';
-// ⚠️ A TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6.) 2026-09-26 óta NEM fut az éles úton: csak a TCP-n
-// élt, és a TCP kikerült (D69/2, Csaba vállalta az árát). A tervező függvények
-// (`atvitelTerv`, `ujMunkamegosztas`, `romlottJegyzes`…) a `fajlAtvitel.js`-ben megmaradtak,
-// próbával — a UDP-s több forrás ezekre épül majd.
+// ⭐⭐ A TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6.) a UDP-n (D114, 2026-10-19): a D69/2 óta (nincs TCP) a fájl a randevún jön —
+// a közös munka-jegyzék (`kozosMunkaJegyzek`) teszi egy letöltéssé, ha egyszerre több tartótól jön; a bukott lezárás tanulsága
+// (`romlottJegyzes`, `valaszthatoForrasok`, `romlottFelejtes` — 29/c), a türelem a forrásokból (`turelemForrasokbol` — D68/2),
+// és a befejezetlen fájlok további tartói a kör céljai közé (`aktivForrasok` — T2 (B)).
+import {
+  kozosMunkaJegyzek, aktivForrasok, turelemForrasokbol, valaszthatoForrasok, romlottJegyzes, romlottFelejtes
+} from './js/csere/fajlAtvitel.js';
 // ⭐ A KÉZI ÚT (4. szabály): fájlba vinni és fájlból hozni — ugyanazon a kapun, mint a hálózat.
 import { kivitelSzovege, behozatalSzovegbol } from './js/csere/fajlCsere.js';
 import {
@@ -1165,18 +1168,82 @@ async function fajlResz() {
 
 // ⚠️ ITT ÁLLT 2026-09-26-IG A `fajlokElhozasa` ÉS A `fajlAtvitelKiirasa`: a kör UTÁN, TCP-n
 // hozták el a hiányzó fájlokat, több forrásból egyszerre (D68). ⛔ A D69/2 óta nincs TCP a
-// készülékek között — a fájl a résen jön, a randevún (`resMunkaKeszito`). A több forrás ára
-// ismert és vállalt (Csaba): egy fájl egyetlen társtól jön, amíg a UDP-s több forrás meg nem épül.
+// készülékek között — a fájl a résen jön, a randevún (`resMunkaKeszito`); a több forrás a D114 óta ott (lent).
+
+// ⭐⭐ D114 (T1): A KÖZÖS MUNKA-JEGYZÉK — a folyamat minden fájl-hozatala (a randevú, a kérelem törzse) ezen át: ugyanaz a
+// fájl két tartótól egy munkamegosztáson jön (a 79. mérés: e nélkül minden szelet kétszer, ×1,0), és itt áll a „3 egyidejű
+// átvitel” (Csaba, 2026-09-13).
+const fajlMunkak = kozosMunkaJegyzek();
+
+// ⚠️ A birtoklás jegyzetét a folyamat párhuzamos munkái írják (a kör minden társával egyszerre): az olvasás–írás sorban megy,
+// különben két munka egymás hírét írná felül.
+let fajlJegyzetSor = Promise.resolve();
+function fajlJegyzetModositasa(fn) {
+  const kesz = fajlJegyzetSor.then(async () => {
+    const jegyzo = fajlJegyzekTarolo(KOINO);
+    await jegyzo.ir(birtoklasTakaritasa(fn(await jegyzo.olvas())));
+  });
+  fajlJegyzetSor = kesz.catch(() => {});
+  return kesz;
+}
 
 /**
  * Amit a cserén a fájlokról tanultunk, azt elrakjuk — **helyi feljegyzés** (3. szabály):
  * sosem terjed, és csak azt mondja meg, **kitől érdemes kérni**.
+ * ⭐ D114 (T5): a társ neve a hitelesített tábla-aláírója (ha van), mellette a címe — az aktív gyűjtés ezen hívja fel.
  */
-async function fajlTanulsag(tarsCimke, fajlokNala) {
+async function fajlTanulsag(tarsNeve, fajlokNala, cim = null) {
   if (!Array.isArray(fajlokNala) || !fajlokNala.length) return 0;
-  const jegyzo = fajlJegyzekTarolo(KOINO);
-  await jegyzo.ir(birtoklasBeolvasztasa(await jegyzo.olvas(), tarsCimke, fajlokNala));
+  await fajlJegyzetModositasa((j) => birtoklasBeolvasztasa(j, tarsNeve, fajlokNala, Date.now(), cim));
   return fajlokNala.length;
+}
+
+/**
+ * ⭐ D114 (T2 (B)): a kör fájl-forrás céljai — a befejezetlen letöltések (a részleges mappa; a méretet az első szelet mondja
+ * meg, tehát ami így maradt, több szeletes), a ritkább előbb (kevesebb ismert tartó), és a jegyzetből a körben még nem
+ * szereplő, nem romlott, címmel ismert tartóik (`aktivForrasok`).
+ * @param {Array<{alairo?: string}>} celok - a kör eddigi céljai
+ * @returns {Promise<Array<{alairo: string, cim: string, port: number, lenyomat: string}>>}
+ */
+async function aktivFajlForrasCeljai(celok) {
+  const blob = fajlBlobTarolo(KOINO);
+  const befejezetlen = [];
+  for (const l of (await blob.reszlegesLenyomatok()).slice(0, 256)) if (!(await blob.van(l))) befejezetlen.push(l);
+  if (!befejezetlen.length) return [];
+  const jegyzet = await fajlJegyzekTarolo(KOINO).olvas();
+  const tartok = (l) => Object.keys(jegyzet[l]?.tarsak ?? {}).length;
+  befejezetlen.sort((a, b) => tartok(a) - tartok(b) || (a < b ? -1 : 1));
+  return aktivForrasok(befejezetlen, jegyzet, new Set(celok.map((c) => c.alairo).filter(Boolean)));
+}
+
+/**
+ * ⭐ D114 (T3–T4): a randevú forrás-tudása egy társról — a birtoklás jegyzetéből.
+ *   · `valaszthato` — kérjük-e ezt a fájlt ettől a társtól: ha tőle (is) romlottan jött, és van más, ismert, nem bukott
+ *     tartója, nem (29/c); ha nincs, felejtünk (egy bukás nem zárhatja el végleg az utat);
+ *   · `turelem` — a fájl ismert tartóinak számából (D68/2: egy forrásnál kitartunk, sokkal nem);
+ *   · `eredmeny` — a megjött fájl jegyzete törlődik (a tanulság tárgytalan, a birtokosai sem kellenek már); a romlott
+ *     lezárás a próbálkozás MINDEN adóját feljegyzi ehhez a fájlhoz (nem rangsor: fájlonként, és nem vád).
+ */
+function fajlForrasTudas(tarsNeve) {
+  return {
+    async valaszthato(lenyomat) {
+      const elem = (await fajlJegyzekTarolo(KOINO).olvas())[lenyomat];
+      if (!elem?.romlott?.[tarsNeve]) return true;
+      return valaszthatoForrasok(Object.keys(elem.tarsak ?? {}), elem.romlott).includes(tarsNeve)
+        || !Object.keys(elem.tarsak ?? {}).some((t) => t !== tarsNeve && !elem.romlott[t]);
+    },
+    async turelem(lenyomat) {
+      const elem = (await fajlJegyzekTarolo(KOINO).olvas())[lenyomat];
+      return turelemForrasokbol(Object.keys(elem?.tarsak ?? {}).length);
+    },
+    async eredmeny(lenyomat, e, adok) {
+      if (e?.kesz) {
+        await fajlJegyzetModositasa((j) => { const uj = { ...romlottFelejtes(j, lenyomat) }; delete uj[lenyomat]; return uj; });
+      } else if (e?.romlott && Array.isArray(adok) && adok.length) {
+        await fajlJegyzetModositasa((j) => romlottJegyzes(j, lenyomat, adok));
+      }
+    }
+  };
 }
 
 /**
@@ -2715,7 +2782,9 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
         ...await azonossagBeallitasa(),
         mintaValaszto: (valasz) => mintaKeres(valasz),
         megvan: (await kepetKeszit()).esemenyek.map((e) => e.azonosito).slice(-5000),
-        blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT });
+        blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT,
+        // ⭐ D114 (T1): a törzs fájljai a közös munkán (ha egy randevú épp ugyanazt hozza, csatlakozunk).
+        kozosMunka: fajlMunkak, forras: tars.cim + ':' + tars.port });
   } catch (hiba) {
     kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' — a függő kérelem nem ment át: ' + hiba.message + SZIN.vege);
     await kerelmekIrasa(probalkozas(await kerelmekOlvasasa(), fk.az));
@@ -2804,7 +2873,8 @@ async function fuggoKerelemSorozatMunkaja(allapot, halo, tars, fks) {
       ...await azonossagBeallitasa(),
       mintaValaszto: (valasz) => mintaKeres(valasz),
       megvan: (await kepetKeszit()).esemenyek.map((e) => e.azonosito).slice(-5000),
-      blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT });
+      blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT,
+      kozosMunka: fajlMunkak, forras: tars.cim + ':' + tars.port });
   } catch (hiba) {
     kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' — a kérelem-sorozat (' + fks.length + ') nem ment át: '
       + hiba.message + SZIN.vege);
@@ -3012,7 +3082,7 @@ function kiszolgalasiKeretKapcsolo() {
       }
       return { ...it, tars, osztaly };
     },
-    async feljegyez(t) { console.log('DEBUGFELJ', JSON.stringify(t), new Error().stack.split('\n').slice(2, 5).join(' | '));
+    async feljegyez(t) {
       const keret = await kiszolgalasiKeretem();
       keretFeljegyzes(keret, { tars: await keretTarsa(t), osztaly: await keretOsztalya(t), bajt: t.bajt ?? 0, keres: t.keres ?? 0 });
       await keretAllasIrasa(keret);
@@ -3946,8 +4016,11 @@ function resMunka(allapot, halo, tars) {
       allapot.hirdetendoDhtGepek = gepekHirdetese(await dhtIsmertek());
     }
     const kerhetok = Array.isArray(csere.fajlokNala) ? csere.fajlokNala : [];
+    // ⭐ D114 (T5): a társ neve a jegyzetben a hitelesített tábla-aláírója — a mobil NAT portja foglalatonként más.
+    const fajlForras = (ervenyesTablaKulcs(csere.kapottTablaKulcs) ? csere.kapottTablaKulcs.alairo : null)
+      ?? (tars.cim + ':' + tars.port);
     const fajlTanult = kerhetok.length
-      ? await fajlTanulsag(tars.cim + ':' + tars.port, kerhetok) : 0;
+      ? await fajlTanulsag(fajlForras, kerhetok, tars.cim + ':' + tars.port) : 0;
     allapot.frissUdp = await frissUdpCimek(allapot.udpTarolo, allapot.udpElevules);
     if (udpTanult || fajlTanult) {
       kiir(SZIN.halvany + '    '
@@ -3968,8 +4041,14 @@ function resMunka(allapot, halo, tars) {
       fajlOlvas: csere.tarsKorlatozva ? null : (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
       korlat: FAJL_KORLAT,
       kiszolgalasKell: !csere.tarsKorlatozva && adhatok > 0,
-      ujKerhetok: szovegKepeiKeresre(fajlBlobTarolo(KOINO))
+      ujKerhetok: szovegKepeiKeresre(fajlBlobTarolo(KOINO)),
+      // ⭐ D114: a közös munka (több forrás egy fájlra), ennek a társnak a neve, és a forrás-tudás.
+      kozosMunka: fajlMunkak, forras: fajlForras, fajlForrasok: fajlForrasTudas(fajlForras),
+      // ⭐ D109 (KK4): a fájl is kiszolgálás — a kiküldött bájtok a kereten (eddig csak a csere könyvelődött).
+      kiszolgalasiKeret: kiszolgalasiKeretKapcsolo(), keretTars: { tabla: alairo, cim: tars.cim }
     });
+    // ⭐ D109 (KK6): ha a tartó a fájlra „később”-t mondott, a kör addig nem hívja.
+    if (randevu.kesobb) kesobbFeljegyzese(tars, randevu.kesobb);
     if (randevu.kesz || randevu.kiszolgalt || randevu.bukott) {
       kiir(SZIN.jo + '  ✓ ' + ora() + ' fájlok a résen: ' + randevu.kesz
         + ' megjött' + (randevu.bajt ? ' (' + adatMennyiseg({ bajtKuldott: randevu.bajt }) + ')' : '')
@@ -5993,7 +6072,8 @@ try {
       const { kapu } = await keziKapuNyitasa((halo, t) => kerelemUdpResen(halo, t.cim, t.port, KOINO, k, {
         ...azonossag,
         mintaValaszto: (valasz) => mintaKeres(valasz), megvan,
-        blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT
+        blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT,
+        kozosMunka: fajlMunkak, forras: t.cim + ':' + t.port
       }));
       let kor;
       try {
@@ -6434,6 +6514,18 @@ try {
         try {
           for (const c of await rajKorCeljaim(res)) felvesz(c.hoszt, c.port, c.alairo);
         } catch (hiba) { console.warn('a raj-célok összeállítása nem sikerült', { ok: hiba.message }); }
+        // ⭐⭐ D114 (T2 (B) — Csaba: „Aktívan, korlátosan”): a BEFEJEZETLEN (több szeletes) hiányzó fájlok további ismert
+        // tartói — körönként legfeljebb kettő, egy fájlhoz a körben lévőkkel együtt legfeljebb három. A randevújuk a közös
+        // munkán ugyanazt a fájlt hozza: a fájl több forrásból jön, és a teher a tartók között oszlik meg.
+        const fajlForrasCelok = new Set();
+        try {
+          const aktiv = await aktivFajlForrasCeljai(celok);
+          for (const c of aktiv) { felvesz(c.cim, c.port, c.alairo); fajlForrasCelok.add(c.alairo); }
+          if (aktiv.length) {
+            kiir(SZIN.halvany + '  · ' + ora() + ' ' + aktiv.length + ' fájl-forrást is hívok — egy befejezetlen fájl további'
+              + ' tartói (D114)' + SZIN.vege);
+          }
+        } catch (hiba) { console.warn('a fájl-források összeállítása nem sikerült', { ok: hiba.message }); }
         // ⭐ Az induló címek NEM esnek a kopogás-korlát alá: a listát te töltöd, rövid marad.
         for (const t of induloLista) felvesz(t.hoszt, Number(t.port));
         // ⭐⭐ D92/1: a FÜGGŐ KÉRELMEIM céljai (a tartók, akiktől kérek) — és a KOPOGTATÓK (akik a kopogtató
@@ -6454,6 +6546,8 @@ try {
         tar.frissit?.();
         let kihagyott = 0;
         for (let i = celok.length - 1; i >= 0; i--) {
+          // ⚠️ D114: a fájl-forrást a fájl miatt hívjuk, nem az újdonságért — a D99 kihagyása rá nem vonatkozik.
+          if (fajlForrasCelok.has(celok[i].alairo)) continue;
           if (await csereKihagyhato(celok[i].alairo, kozMs / 2)) { celok.splice(i, 1); kihagyott++; }
         }
         if (kihagyott) {
@@ -7124,8 +7218,9 @@ try {
         // a lista, amit kértem és nála megvan. *Nem kell új kérdezősködés — ugyanaz az elv,
         // mint az `ALLAS`-nál.*
         const kerhetok = Array.isArray(csere.fajlokNala) ? csere.fajlokNala : [];
+        const fajlForras = (ervenyesTablaKulcs(csere.kapottTablaKulcs) ? csere.kapottTablaKulcs.alairo : null) ?? (cim + ':' + port);
         if (kerhetok.length) {
-          await fajlTanulsag(cim + ':' + port, kerhetok);
+          await fajlTanulsag(fajlForras, kerhetok, cim + ':' + port);
         }
 
         kiir();
@@ -7144,6 +7239,10 @@ try {
           fajlOlvas: csere.tarsKorlatozva ? null : (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
           korlat: FAJL_KORLAT,
           ujKerhetok: szovegKepeiKeresre(fajlBlobTarolo(KOINO)),
+          // ⭐ D114: a közös munka és a forrás-tudás a kézi csere randevúján is.
+          kozosMunka: fajlMunkak, forras: fajlForras, fajlForrasok: fajlForrasTudas(fajlForras),
+          kiszolgalasiKeret: kiszolgalasiKeretKapcsolo(),
+          keretTars: { tabla: ervenyesTablaKulcs(csere.kapottTablaKulcs) ? csere.kapottTablaKulcs.alairo : null, cim },
           utana: (e) => {
             if (e.mi === 'SZEREP' && e.szerep === 'nem-tudom') {
               // ⚠️ A HIÁNYT KIMONDJUK (D19) — különben csak annyi látszana, hogy „nem jött".

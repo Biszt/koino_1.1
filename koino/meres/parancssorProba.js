@@ -20,7 +20,7 @@
 
 import { probaGyujtemeny } from './probaFuttato.js';
 import { execFile, spawn } from 'node:child_process';
-import { mkdtemp, rm, readFile, writeFile, readdir } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile, readdir, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // ⭐ A néma DHT-gép és a néma tükör próbájához (40. mérés): egy foglalat, ami hall, de nem felel.
@@ -3660,6 +3660,111 @@ proba('⭐⭐⭐ AZ ŐRJÁRAT MAGÁTÓL ELHOZZA A KÉPET — kézi parancs nélk
   } finally {
     if (felulet) felulet.folyamat.kill();
     if (orjarat) orjarat.kill();
+    if (figyelo) { figyelo.kill(); await varj(1000); }
+    await rm(gazda, { recursive: true, force: true });
+    await rm(vendeg, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐⭐ D114 (T2 (B), 2026-10-19): AZ ŐRJÁRAT A BEFEJEZETLEN FÁJL TOVÁBBI TARTÓJÁT IS FELHÍVJA
+// ===================================
+//
+// A vendégnek egy nagy kép félúton maradt (a részleges mappában az első szelet), és a birtoklás jegyzete szerint a gazda tartja
+// (a tábla-aláírójával és a címével). A vendég őrjáratának MÁS célja nincs (se társ, se kötés): a gazdát csak az aktív
+// forrás-gyűjtés hívhatja fel. Viselkedést mérünk: a kép a vendég lemezén, bájtra. Rontás: az aktív gyűjtés üres → a gazdát
+// senki nem hívja → a kép nem jön meg → bukik.
+proba('⭐⭐ D114 (T2 (B)): az őrjárat a BEFEJEZETLEN fájl ismert tartóját is felhívja — más cél nélkül is megjön a kép, bájtra', async () => {
+  const gazda = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  const port = 7751;
+  let figyelo = null, felulet = null, orjarat = null;
+  try {
+    await fut(gazda, 'koino', 'Próba koinó');
+    await taggaTesziKeszulek(gazda, vendeg);
+    felulet = await feluletet(gazda, 7752);
+    const fej = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489', 'hex');
+    const kep = Buffer.concat([fej, Buffer.alloc(200 * 1024, 5), Buffer.from('0000000049454e44ae426082', 'hex')]);
+    const fel = await felulet.hiv('/api/feltoltes/kep', { method: 'POST', body: JSON.stringify({ adat: kep.toString('base64') }) });
+    await felulet.hiv('/api/gondolat', { method: 'POST', body: JSON.stringify({ cim: 'NAGY KÉP, FÉLÚTON', kezdoTudatpont: 50,
+      szoveg: [{ id: 'b1', tipus: 'kep', url: fel.adat.url }] }) });
+    felulet.folyamat.kill(); felulet = null; await varj(500);
+    // A vendég a kézi úton megkapja az eseményeket és a szöveg-darabot (benne a kép hivatkozása) — a képet nem.
+    await fut(gazda, 'kivisz', join(gazda, 'mind.jsonl'));
+    await fut(vendeg, 'behoz', join(gazda, 'mind.jsonl'));
+    const l = fel.adat.lenyomat;
+    // A kép félúton: az első szelet a részleges mappában (egy megszakadt korábbi letöltés).
+    await mkdir(join(vendeg, 'sajat', 'fajlok', 'reszleges', l), { recursive: true });
+    await writeFile(join(vendeg, 'sajat', 'fajlok', 'reszleges', l, '0'), kep.subarray(0, 64 * 1024));
+
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore' });
+    await varj(2000);
+    // A birtoklás jegyzete: a gazda tartja (a tábla-aláírójával és a címével — ahogy egy korábbi csere feljegyezte).
+    const alairo = JSON.parse(await readFile(join(gazda, 'tabla-kulcs.json'), 'utf8')).alairoNyilvanos;
+    await writeFile(join(vendeg, 'sajat', 'fajlbirtoklas.json'), JSON.stringify({
+      [l]: { tarsak: { [alairo]: Date.now() }, cimek: { [alairo]: '127.0.0.1:' + port } } }));
+
+    let kimenet = '';
+    orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', '7753'], {
+      env: { ...process.env, KOINO_ADAT: vendeg, KOINO_NAPLO: '' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    orjarat.stdout.on('data', (d) => { kimenet += d; });
+    orjarat.stderr.on('data', (d) => { kimenet += d; });
+    const nala = async () => readFile(join(vendeg, 'sajat', 'fajlok', l)).catch(() => null);
+    // ⭐ A megjött fájl jegyzete törlődik (a tanulság tárgytalan — a `koino.js` forrás-tudása).
+    const jegyzetben = async () => !!JSON.parse(await readFile(join(vendeg, 'sajat', 'fajlbirtoklas.json'), 'utf8').catch(() => '{}'))[l];
+    const kezd = Date.now();
+    while (Date.now() - kezd < 20000 && (!(await nala()) || await jegyzetben())) await varj(500);
+    orjarat.kill(); orjarat = null;
+    await varj(800);
+    const megjott = await nala();
+    if (!megjott) {
+      throw new Error('a félúton maradt kép nem jött meg — az őrjárat naplója: '
+        + kimenet.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ').trim().slice(-700));
+    }
+    return /fájl-forrást is hívok/.test(kimenet) && Buffer.from(megjott).equals(kep) && !(await jegyzetben());
+  } finally {
+    if (felulet) felulet.folyamat.kill();
+    if (orjarat) orjarat.kill();
+    if (figyelo) { figyelo.kill(); await varj(1000); }
+    await rm(gazda, { recursive: true, force: true });
+    await rm(vendeg, { recursive: true, force: true });
+  }
+});
+
+// ⭐ D109 (KK4) a fájl-randevún, a bekötés — a D114 átvizsgálásának lelete: a csere a kereten volt, a randevú kiküldött
+// fájl-bájtjai nem könyvelődtek. Viselkedést mérünk: a gazda keret-állása (`keret.json`) a kiküldött kép után. Rontás: a
+// randevú nem kapja a keretet → csak a csere bájtjai → bukik.
+proba('⭐ D109 (KK4): a fájl-randevú kiküldött bájtjai a kiszolgálási kereten — a gazda keret-állásában a kép is ott van', async () => {
+  const gazda = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  const port = 7754;
+  let figyelo = null, felulet = null;
+  try {
+    await fut(gazda, 'koino', 'Próba koinó');
+    await taggaTesziKeszulek(gazda, vendeg);
+    felulet = await feluletet(gazda, 7755);
+    const fej = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489', 'hex');
+    const kep = Buffer.concat([fej, Buffer.alloc(150 * 1024, 9), Buffer.from('0000000049454e44ae426082', 'hex')]);
+    const fel = await felulet.hiv('/api/feltoltes/kep', { method: 'POST', body: JSON.stringify({ adat: kep.toString('base64') }) });
+    await felulet.hiv('/api/gondolat', { method: 'POST', body: JSON.stringify({ cim: 'KERETES KÉP', kezdoTudatpont: 50,
+      szoveg: [{ id: 'b1', tipus: 'kep', url: fel.adat.url }] }) });
+    felulet.folyamat.kill(); felulet = null; await varj(500);
+    await fut(gazda, 'kivisz', join(gazda, 'mind.jsonl'));
+    await fut(vendeg, 'behoz', join(gazda, 'mind.jsonl'));
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore' });
+    await varj(2000);
+    const ki = await fut(vendeg, 'csere', '127.0.0.1', String(port));
+    const megjott = await readFile(join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat)).catch(() => null);
+    await varj(500);
+    const allas = JSON.parse(await readFile(join(gazda, 'sajat', 'keret.json'), 'utf8').catch(() => '{}'));
+    const bajt = allas.osszes?.bajt ?? 0;
+    if (!megjott) throw new Error('a kép nem jött meg — a csere: ' + ki.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ').slice(-400));
+    if (bajt < kep.length) process.stdout.write('  a gazda keret-állása: ' + bajt + ' bájt (a kép ' + kep.length + ')\n');
+    return Buffer.from(megjott).equals(kep) && bajt >= kep.length;
+  } finally {
+    if (felulet) felulet.folyamat.kill();
     if (figyelo) { figyelo.kill(); await varj(1000); }
     await rm(gazda, { recursive: true, force: true });
     await rm(vendeg, { recursive: true, force: true });

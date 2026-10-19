@@ -12,7 +12,7 @@
 //   · ⚠️ amit tanulunk, az **helyi feljegyzés** (3. szabály), nem esemény.
 
 import {
-  kerelemOsszeallitasa, valaszOsszeallitasa, birtoklasBeolvasztasa, ritkasagSzerint,
+  kerelemOsszeallitasa, valaszOsszeallitasa, birtoklasBeolvasztasa, ritkasagSzerint, birtoklasTakaritasa,
   KERELEM_KORLAT
 } from '../js/csere/fajlKerelem.js';
 
@@ -92,6 +92,30 @@ proba('⭐ A jegyzet NEM íródik át helyben — a régi példány érintetlen 
   const regi = {};
   const uj = birtoklasBeolvasztasa(regi, 'anna:7373', [L(1)]);
   return Object.keys(regi).length === 0 && Object.keys(uj).length === 1;
+});
+
+// Rontás: az új hír eldobja a tétel többi mezőjét → a romlott eltűnik → bukik; a cím nem kerül be → bukik.
+proba('⭐ D114 (T5): a birtoklás a társ nevével és CÍMÉVEL gyűlik — és a bukott lezárás tanulsága megmarad', async () => {
+  const regi = { [L(1)]: { tarsak: { anna: 1000 }, romlott: { anna: 1000 } } };
+  const uj = birtoklasBeolvasztasa(regi, 'bela', [L(1)], 2000, '9.9.9.9:7373');
+  return uj[L(1)].romlott?.anna === 1000 && uj[L(1)].tarsak.bela === 2000 && uj[L(1)].cimek?.bela === '9.9.9.9:7373'
+    && uj[L(1)].tarsak.anna === 1000;
+});
+
+// Rontás: nincs fájlonkénti korlát → bukik; az elévült hír marad → bukik; nincs összes korlát → bukik.
+proba('⛔ D114 (T5): a birtoklás jegyzete KORLÁTOS — fájlonként a legfrissebb 8, az elévült kiesik, összesen a legutóbbiak', async () => {
+  const NAP = 24 * 3600 * 1000;
+  const most = 100 * NAP;
+  let j = {};
+  for (let i = 0; i < 12; i++) j = birtoklasBeolvasztasa(j, 't' + i, [L(1)], most - i * 1000, '1.1.1.1:' + (i + 1));
+  j = birtoklasBeolvasztasa(j, 'regi', [L(2)], most - 40 * NAP);
+  j = birtoklasBeolvasztasa(j, 'x', [L(3)], most - 2000);
+  j = birtoklasBeolvasztasa(j, 'y', [L(4)], most - 1000);
+  const t = birtoklasTakaritasa(j, { most });
+  const ketto = birtoklasTakaritasa(j, { most, fajlKorlat: 2 });
+  const l1 = Object.keys(t[L(1)].tarsak);
+  return l1.length === 8 && l1.includes('t0') && !l1.includes('t11') && Object.keys(t[L(1)].cimek).length === 8
+    && !t[L(2)] && Object.keys(ketto).length === 2 && !!ketto[L(1)] && !!ketto[L(4)];
 });
 
 // ===================================

@@ -1279,6 +1279,13 @@ export async function fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyoma
  *        további lenyomat, ami egy megérkezett fájlból derült ki (D72: a szöveg képei)
  * @param {number} [beallitas.kerdesKorlat] - egy randevún legfeljebb ennyi fájlt kérünk
  *        (alapból `KERELEM_KORLAT`)
+ * @param {Object} [beallitas.kozosMunka] - ⭐ D114 (T1): a folyamat közös munka-jegyzéke (`fajlAtvitel.js`
+ *        `kozosMunkaJegyzek`) — ugyanazt a fájlt több társtól egyszerre, egy munkamegosztáson
+ * @param {string} [beallitas.forras] - ennek a társnak a neve a jegyzékben (a tábla-aláírója, vagy a címe)
+ * @param {Object} [beallitas.kiszolgalasiKeret] - ⭐ D109 (KK4): `itelet(t)` és `feljegyez(t)` — a fájl is kiszolgálás
+ * @param {Object} [beallitas.keretTars] - a társ a kerethez (`{ tabla, cim }`)
+ * @param {Object} [beallitas.fajlForrasok] - ⭐ D114 (T3–T4): `valaszthato(l)` (kérjük-e ettől a társtól — a bukott
+ *        lezárás tanulsága), `turelem(l)` (a feladás ideje ms-ben, a fájl ismert forrásaiból), `eredmeny(l, e, adok)`
  * @returns {Promise<{kesz: number, bukott: number, bajt: number, kiszolgalt: number,
  *                    szerep: 'kerek-elobb'|'kiszolgalok-elobb'|'nem-tudom',
  *                    korlatElerve: boolean}>}
@@ -1299,7 +1306,11 @@ export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) 
     // vész el: a fájl-igény a következő körben újra látja (a meglévő szöveg képei is igények).
     // ⚠️ Az őr a RÉTEGBEN van, alapértékkel — ha a hívóra bíznánk, az egyik út megtenné, a
     // másik elfelejtené.
-    kerdesKorlat = KERELEM_KORLAT
+    kerdesKorlat = KERELEM_KORLAT,
+    // ⭐ D114: a közös munka-jegyzék, ennek a társnak a neve benne, és a források helyi tudása (lent).
+    kozosMunka = null, forras = null, fajlForrasok = null,
+    // ⭐ D109 (KK4): a fájl is kiszolgálás — a kiszolgáló fázis a kereten (a D114 átvizsgálásának lelete).
+    kiszolgalasiKeret = null, keretTars = null
   } = beallitas;
 
   // ⭐ A RANDEVÚ MINDKÉT FÁZISA TÖMEG-FORGALOM — kérünk vagy adunk, mindkettő fájl.
@@ -1320,7 +1331,9 @@ export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) 
   let halo = nyersHalo;
   utana({ mi: 'SZEREP', szerep, sajatCim, tarsCim: ove });
 
-  let kesz = 0, bukott = 0, bajt = 0, kiszolgalt = 0;
+  let kesz = 0, bukott = 0, bajt = 0, kiszolgalt = 0, kihagyott = 0;
+  // ⭐ D109 (KK6): ha a társ „később”-t mondott (a kerete nem enged), az mp-ek — és tőle ebben a randevúban nem kérünk többet.
+  let kesobb = null;
   // ⭐ Kimondjuk, ha a korlát miatt maradt ki valami (D19) — a maradék a következő körben jön.
   let korlatElerve = false;
 
@@ -1331,15 +1344,42 @@ export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) 
     // ugyanebben a randevúban elkérjük őket (különben a kép egy bulival később jönne, mint a
     // szöveg). ⚠️ Egy lenyomatot csak egyszer kérünk, és összesen legfeljebb `kerdesKorlat`-ot.
     const egyediek = [...new Set(kerhetok)];
+    // ⭐ D114 (T1): amin a folyamatban épp dolgozik valaki (egy másik társtól), az előre — ahhoz csatlakozunk, és két
+    // forrásból jön; a sorrend egyébként a csere kérése (a ritkább előbb).
+    if (kozosMunka) egyediek.sort((a, b) => Number(kozosMunka.fut(b)) - Number(kozosMunka.fut(a)));
     const sor = egyediek.slice(0, kerdesKorlat);
     if (egyediek.length > sor.length) korlatElerve = true;
     const kert = new Set(sor);
     while (sor.length) {
       const lenyomat = sor.shift();
+      // ⭐ D114: ami közben megjött (egy másik ág lezárta), azt nem kérjük újra; és akitől ez a fájl már egyszer bukott,
+      // attól nem kérjük, ha van más forrása (a 29/c helyi tanulsága — ha nincs más, felejtünk).
+      if (kozosMunka && await blob.van(lenyomat)) continue;
+      if (fajlForrasok && !(await fajlForrasok.valaszthato(lenyomat))) {
+        kihagyott++;
+        utana({ mi: 'KIHAGYVA', lenyomat, ok: 'ettől a társtól ez a fájl már egyszer romlottan jött — másik forrástól kérjük' });
+        continue;
+      }
+      // ⭐ D114 (T1): a közös munkamegosztás — vagy ha a „3 egyidejű átvitel” betelt, a többi a következő körben.
+      let munka = null;
+      if (kozosMunka) {
+        munka = await kozosMunka.belep(lenyomat, () => blob.reszlegesSzeletek(lenyomat));
+        if (!munka) { korlatElerve = true; utana({ mi: 'ATVITEL-KORLAT', lenyomat }); break; }
+      }
       try {
+        // ⭐ D114 (T4): a türelem a fájl ismert forrásaiból (D68/2) — egy forrásnál kitartunk, sokkal nem.
+        const feladasIdo = fajlForrasok ? await fajlForrasok.turelem(lenyomat) : null;
         const e = await fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyomat,
-          { korlat, varakozasiIdo, torlodasJel: jel });
+          { korlat, varakozasiIdo, torlodasJel: jel,
+            ...(munka ? { munka, adott: () => kozosMunka.adott(lenyomat, forras) } : {}),
+            ...(Number.isFinite(feladasIdo) && feladasIdo > 0 ? { feladasIdo } : {}) });
+        if (Number.isInteger(e.kesobb)) {
+          kesobb = e.kesobb;
+          utana({ mi: 'KESOBB', lenyomat, kesobb });
+          break;
+        }
         if (e.kesz) { kesz++; bajt += e.bajt ?? 0; } else { bukott++; }
+        if (fajlForrasok) await fajlForrasok.eredmeny(lenyomat, e, kozosMunka ? kozosMunka.adok(lenyomat) : (e.szeletek ? [forras] : []));
         utana({ mi: e.kesz ? 'MEGJOTT' : 'NEM-JOTT', lenyomat, ok: e.ok, bajt: e.bajt ?? 0 });
         if (e.kesz && ujKerhetok) {
           // ⚠️ A maradék keretnél EGGYEL többet kérdezünk: ha annyi jön, tudjuk, hogy a korlát
@@ -1355,6 +1395,8 @@ export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) 
         // ⚠️ EGY FÁJL BUKÁSA NEM DÖNTI EL A TÖBBIT — ugyanaz az elv, mint a `tarsak.js`-nél.
         bukott++;
         utana({ mi: 'NEM-JOTT', lenyomat, ok: hiba.message, bajt: 0 });
+      } finally {
+        if (munka) kozosMunka.kilep(lenyomat);
       }
     }
   };
@@ -1386,7 +1428,16 @@ export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) 
         kapcsolat.destroy(new Error('a társ nem kért semmit (' + turelem + ' ms)'));
       });
       try {
-        const e = await fajlKiszolgalas(kapcsolat, olvas);
+        // ⭐ D109 (KK4): fájlonként a keret ítélete, és a kiküldött bájtok a társ osztálya szerint könyvelődnek.
+        const keretKesobb = kiszolgalasiKeret ? async () => {
+          const it = await kiszolgalasiKeret.itelet(keretTars ?? { cim: tarsCim });
+          return it?.szabad === false ? (Number.isInteger(it.kesobb) && it.kesobb > 0 ? it.kesobb : 60) : null;
+        } : null;
+        const e = await fajlKiszolgalas(kapcsolat, olvas, keretKesobb ? { kesobb: keretKesobb } : {});
+        if (kiszolgalasiKeret && (kapcsolat.bytesWritten ?? 0) > 0) {
+          await kiszolgalasiKeret.feljegyez({ ...(keretTars ?? { cim: tarsCim }), bajt: kapcsolat.bytesWritten, keres: 1 });
+        }
+        if (e.kesobb) { utana({ mi: 'KISZOLGALAS-KESOBB', kesobb: e.kesobb }); break; }
         if (!e.kiszolgalt) { utana({ mi: 'KISZOLGALAS-VEGE', ok: e.ok }); break; }
         kiszolgalt++;
         utana({ mi: 'KISZOLGALTAM', hanyadik: kiszolgalt });
@@ -1454,7 +1505,8 @@ export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) 
     if (sajat) res.zar();
   }
 
-  const eredmeny = { kesz, bukott, bajt, kiszolgalt, szerep, torlodasJel: jel, korlatElerve };
+  const eredmeny = { kesz, bukott, bajt, kiszolgalt, szerep, torlodasJel: jel, korlatElerve, ...(kihagyott ? { kihagyott } : {}),
+    ...(kesobb ? { kesobb } : {}) };
   console.log('fajlRandevu - VÉGE', eredmeny);
   return eredmeny;
 }
