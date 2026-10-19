@@ -5682,7 +5682,8 @@ a meglévők `BigInt`-re igazítva; rontás (`GYOKER_MAX_MELYSEG` = 16): pontosa
 lépcső szúrópróbájának útja) az (A) szerint szűk: a természetes lánc (63. mérés: egymillió tagnál ~13 lépés, lépésenként
 ~2,9-szeres) ~10^29–10^30 tagnál éri el, a koinó határához ~85 kell. A felemelése olcsó (a legrosszabb bizonyíték kétszer
 hosszabb), de ⚠️ állapotot befolyásoló állandó (D66 — a tagság a döntés bemenete): éles koinó előtt kell megtenni. Elágazás
-155.
+155. → ✅ **D113** (2026-10-19): 256 — ⚠️ a fenti „~10^29–10^30” az ÁTLAGOS mélység volt; a korlát a legmélyebb tagnál dönt
+(78. mérés: a 64-et ~1,3·10^11 tagnál elérte volna).
 
 ### D107. A KERESŐ-RÉTEG TARTÁSA, HIRDETÉSE ÉS FELAJÁNLÁSA — L1–L4 (2026-10-16, Csaba: „Az L1–L4 javaslataidat elfogadom, mehet a ③.”)
 
@@ -5928,6 +5929,42 @@ pillanatkép mérete „0 MB”-nak látszott (most 1 MB alatt KB); (2) ⛔ az e
 tartó teljes gyökér-válasza után a sorrend biztos, de a bejáró a gyökeret (gyerekszám híján) tovább kérendőnek tartja — a
 lapnak ez jó, egy pillanatképnek a teljes válasz elég (`pakli.js` `felderitesAllasa`). Elágazás 180. Mellette (a ⑦b próba
 megnevezett bukásából): a függő kérelem „már próbáltuk” jele időre szól (2 perc), nem a futás végéig — elágazás 181.
+
+### D113. A TAGSÁGI LÁNC KORLÁTJA — 256 (2026-10-19, Csaba: „(A) 256”)
+
+**Az alap:** a D106 (A) szabálya (egy méret-korlát se legyen szűkebb, mint a koinó saját határa) és a 78. mérés. A D106 a
+64-es korlátot „~10^29–10^30 tagnál” szűknek mondta — ez az ÁTLAGOS mélység volt. A korlát viszont a LEGMÉLYEBB tagnál dönt
+(aki mélyebben ül, nem tag, amíg egy közelebbi tag be nem hívja), és véletlen meghívónál a fa magassága ~e·ln n: a 64-et a
+legmélyebb tag már ~1,3·10^11 tagnál eléri — az emberiség ~13-szorosánál, a (B) tízszeres tartalékán épp csak túl. A 2.
+lépcső szúrópróbájának útja ugyanezt a korlátot használja, és a helyi növekedésnél gyorsabban nő (évtizedenként ~4–6 lépés).
+
+**A három lehetőség:** (A) 256 — a legmélyebb tag is belefér a koinó saját határáig (2^128-nál ~234, aktív meghívóknál ~156),
+és a szúrópróba útja is; ára a korlátnál ülő tag csomagja (~240 KB) és két protokoll-őr · (B) 128 kimondott kivételként — a
+legmélyebb tag ~3·10^21-ig fér bele, a határon a tagok ~0,003%-a rövidítene, protokoll-változás nélkül · (C) 64 marad,
+kivételként — nem javasolt.
+
+**Csaba döntése — (A):** `MELYSEG_KORLAT` = 256 (`tagsag.js`) — a tagság és a 2. lépcső szúrópróbájának útja (`identitas.js`
+`seta`). ⚠️ Állapotot befolyásoló állandó (D66): éles koinó még nincs, a teszt-koinókban 64-nél mélyebb lánc nincs (bennük a
+változás semmit nem mozdít); a régi program a 197 eseménynél nagyobb csomagot elutasítja — a telefon a terepi teszteléskor
+frissül (együtt).
+
+#### ✅ MEGÉPÜLT (2026-10-19)
+
+- `tagsag.js`: `MELYSEG_KORLAT` = 256 → a tagsági csomag legfeljebb 773 esemény (`CSOMAG_ESEMENY_KORLAT`, a profillal).
+- ⭐ A tagsági kísérők (`tagsagKisero.js` `tagsagiKiserok`): egy szerzőé EGÉSZBEN vagy sehogy — a csonka lánc semmit nem
+  bizonyít, csak helyet foglal (eddig a darabszám a láncot középen vágta); a válasz legfeljebb 1024 esemény
+  (`TAGSAG_VALASZ_KORLAT` — egy szerző teljes lánca belefér) és 4 MB (`TAGSAG_VALASZ_BAJT` — a vonal 8 MB-os sor-korlátja
+  alatt); ami nem fér bele, a következő cserén jön (addig függő); a kézi út (fájl) bájt-korlát nélkül.
+- A vonal (`vonal.js` `TAGSAG_ESEMENY_KORLAT`) és a felajánlás (`felajanlas.js` `FELAJANLAS_KISERO_KORLAT`) kísérő-korlátja
+  512 → 1024.
+- Mérve (a 64. mérés műszerével, `zartKapuMeres.js`): a korlátnál ülő tag első találkozása a zárt kapun ~282 KB a dróton (a
+  csomag 237,6 KB) — társanként egyszer; a 64-esnél 73 KB volt. A természetes tagé nem változik (13–30 lépés).
+
+Próbák (+5): `tagsagProba.js` (a 200. szinten ülő tag tag, és a csomagja átmegy a kapun; a korlát-próba 256-ra),
+`tagsagKiseroProba.js` (egy szerzőé egészben — a korlátnál ülő tag 513 eseményes lánca belefér, a csonka nem megy · a
+bájt-korlát · a csere: a korlátnál ülő tag lánca csomag nélkül is átmegy, és a pontja számít), `kerelemProba.js` (a
+felajánlás kísérői közé egy teljes lánc belefér). Rontások: a korlát 128 · a csomag-korlát a régi 197 · csonkolás · a
+válasz-korlát 512 · nincs bájt-korlát · a vonal 512 · a felajánlás 512 — mind a hét bukik. Elágazás 182.
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 

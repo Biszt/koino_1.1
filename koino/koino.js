@@ -4481,7 +4481,7 @@ try {
           // 4. szabály): a túloldalon a pontjaik és szavazataik csak így számítanak.
           kiserok: async (esemenyek) => tagsagiKiserok(tar, KOINO,
             [...new Set(esemenyek.filter((e) => TAGSAG_KELL.has(e.tipus)).map((e) => e.szerzo))],
-            { koinoSzuletes: await koinoSzuletese(), szerzoKorlat: 256, korlat: 4096 })
+            { koinoSzuletes: await koinoSzuletese(), szerzoKorlat: 256, korlat: 4096, bajtKorlat: Infinity })
         });
 
       if (darab === 0) {
@@ -4629,7 +4629,7 @@ try {
       const sorokba = async (lista, tippForras) => {
         const szerzok = [...new Set(lista.flatMap((b) => bejegyzesSzerzoi(b)))];
         const kiserok = szerzok.length ? await tagsagiKiserok(tar, KOINO, szerzok,
-          { koinoSzuletes: await koinoSzuletese(), szerzoKorlat: 256 }) : [];
+          { koinoSzuletes: await koinoSzuletese(), szerzoKorlat: 256, korlat: 4096, bajtKorlat: Infinity }) : [];
         const tippSorok = [];
         for (const g of new Set(lista.map((b) => b.g))) {
           const t = await tippForras(g);

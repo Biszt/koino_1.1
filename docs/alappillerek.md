@@ -171,10 +171,10 @@ után ezek nem mind vannak meg — addig „nem ellenőrizhető" (D19). A cél: 
 meghívási lánc természetesen logaritmikus (1M tagnál ~13 lépés, ~16 KB), lánc-szerű növekedésnél lineáris (a D59
 mélység-korlátja és a rövidítő meghívás kezeli). ⛔ A szabály-réteg ma nem kérdez tagságot (Sybil-rés). Hat kérdés
 (E1–E6). ✅ **Eldőlt (D93, Csaba, 2026-10-03 — „minden javaslatodat elfogadom”):** csak az ellenőrzött tag számít a
-döntésben; a tagsági csomag a saját azonosság-szeletben (D = 64); a zárt koinó a kézfogásban (személyes aláírás +
+döntésben; a tagsági csomag a saját azonosság-szeletben (D = 64 — D113 óta 256); a zárt koinó a kézfogásban (személyes aláírás +
 csomag); a 2. lépcső ugyanígy (előbb mérés); a Profil kötelező mezőkkel, a meghívás megnevezi a lenyomatát; a
 kontraszt-jelzés bemenete. ✅ **Megépült (2026-10-04):** a tagság tiszta számítása (`tagsag.js` — a legrövidebb lánc,
-D = 64), a tagsági csomag (E2; a kapu ellenőrzi, az őrjárat kiadja), a Profil (E5; a koinó `profil=` mezői, a
+D = 64, D113 óta 256), a tagsági csomag (E2; a kapu ellenőrzi, az őrjárat kiadja), a Profil (E5; a koinó `profil=` mezői, a
 `profil` parancs, a meghívás a lenyomatot tanúsítja), és ⭐ **az E1: a szabály-réteg csak a tag pontját, javaslatát,
 szavazatát, érték javaslatát és állásfoglalását számolja** — a nem tagé `tagsagFuggoben` (az okával; nem vád, D19), és a
 meghívás után UGYANAZ az esemény számít. A döntési csomag a résztvevők tagsági láncát is viszi. ✅ **Az E3 (2026-10-04): a zárt
@@ -1029,7 +1029,7 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     bitje is „végtelen” volt), és a 16 bites darab a kereső-indexnél már ~3,4 millió gondolatnál megállt volna; a teher-korlát
     (egy készülék munkája) viszont a végtelen eszköze, nem korlát · Csaba (a mérce), Claude (a K8) · a fázis-2 terv D106-a,
     `cimjegyzek.js` (`GYOKER_MAX_MELYSEG`, `gyokerLenyomata`, `gyokerJelOlvasasa`), `vonal.js`, `szeletEgyeztetes.js`,
-    `koino.js`. ⏸️ A tagsági lánc 64-es korlátja a szabály szerint szűk — külön lépés (állapot-befolyásoló, D66).
+    `koino.js`. ⏸️ A tagsági lánc 64-es korlátja a szabály szerint szűk — külön lépés (állapot-befolyásoló, D66). → ✅ 182.
 156. **2026-10-16 · a kereső-réteg tiszta számításai (D105 ②)** → **a szó: NFC + kisbetű, a betűk, jelek és számjegyek
     egybefüggő sora, ékezet-összevonás nélkül, a hossza jelekben; a kulcs: `e:` + az egész szó (3 és ≥ 5 jel), `p:` + az
     első négy jel (≥ 4 jel); egy cím legfeljebb 32 kulcs (az elejéről); a szűrő: minden kérdés-szó egy cím-szó eleje; a
@@ -1277,3 +1277,11 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     nem válaszol”), és a régi szabály szerint ez a tartó a kérelem lejáratáig (két óra) nem kapott újra esélyt — a terepen
     egy átmenetileg lassú tartó ugyanígy járna. Nem a próba hangolása: a próba a dokumentált gombbal (`KOINO_KERELEM_UJRAPROBA`)
     rövidebb időt ad · Claude · `fuggoKerelmek.js`, `koino.js`, a próbák.
+182. **2026-10-19 · a tagsági lánc korlátja 64 → 256 (D113 — a D106 (A))** → **`MELYSEG_KORLAT` = 256 (a tagság és a 2.
+    lépcső szúrópróbájának útja); a tagsági kísérők egy szerzőé egészben vagy sehogy, a válasz ≤ 1024 esemény és ≤ 4 MB (a
+    vonal 8 MB-os sor-korlátja alatt); a vonal és a felajánlás kísérő-korlátja 1024** · mert a 78. mérés szerint a korlát a
+    LEGMÉLYEBB tagnál dönt, nem az átlagnál (a D106 számítása az átlaggal ~10^29–10^30-at mondott): véletlen meghívónál a
+    fa magassága ~e·ln n, a 64-et a legmélyebb tag ~1,3·10^11 tagnál elérte volna (az emberiség ~13-szorosa), a 256-ot a
+    koinó saját határáig (2^128) sem; a 128 ~3·10^21-ig tartott volna (kivételként); a 256 mély csomag (~240 KB) 32-szer
+    egy válaszban a sor-korlátba nem fér, a csonka lánc pedig semmit nem bizonyít · Csaba: „(A) 256” · `tagsag.js`,
+    `tagsagKisero.js`, `vonal.js`, `felajanlas.js`, `koino.js`, `lancFarokMeres.js`, `zartKapuMeres.js`, a próbák.

@@ -35,6 +35,7 @@ import {
   elobbJon, felajanlasValaszAlakja
 } from '../js/csere/kerelem.js';
 import { keresoRegioKulcsa } from '../js/csere/keresoReteg.js';
+import { CSOMAG_ESEMENY_KORLAT } from '../js/allapot/tagsag.js';
 import { bejegyzesekEpitese } from '../js/tar/keresoTar.js';
 
 const { proba, futtatas } = probaGyujtemeny('A kérelem: az alapkérdések (D92/4–6)');
@@ -727,6 +728,12 @@ proba('⭐ D107 L4: a felajánlás kulcsa egy kereső-régió (vagy a gyökér) 
     && kerelemAlakja({ fajta: 'felajanlas', kulcs: AZ }) === null
     && valaszAlakja({ az: 'abcdefgh12', fajta: 'felajanlas', kulcs: r }) === null
     && felajanlasValaszAlakja({ felvett: 3, osztodott: [{ k: 'p:park', s: 1 }, { k: 'x', s: -1 }] }).osztodott.length === 1;
+});
+
+// Rontás: a kísérő-korlát a régi 512 → a korlátnál ülő tag lánca nem fér bele → bukik.
+proba('⭐ D113: a felajánlás kísérői közé egy szerző TELJES lánca belefér (a 256 mély tagé a profillal 773 esemény)', () => {
+  const k = kerelemAlakja({ fajta: 'felajanlas', kulcs: GYOKER_KULCS, kiserok: new Array(CSOMAG_ESEMENY_KORLAT).fill({}) });
+  return CSOMAG_ESEMENY_KORLAT === 773 && k?.kiserok.length === CSOMAG_ESEMENY_KORLAT;
 });
 
 // ⭐ A menet. Rontás: a vonal nem viszi a bejegyzéseket (vagy nem várja a választ) → a tartó 0-t lát, a kérő nem kap választ.

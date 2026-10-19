@@ -11,8 +11,8 @@
 //   · TAG: a `Belepes`-e szeletében van egy ÉRVÉNYES meghívás egy TAGTÓL — a meghívás neki szól (`kit` = a horgony
 //     szerzője), nem önmagáé, a meghívó horgonya (`sajatBelepes`) a meghívás szerzőjéé; ⭐ D93/5: ha a koinó profil-
 //     mezőket vár, a meghívás megnevezi a profil lenyomatát, és a tagnak van ilyen `Profil` eseménye;
-//   · ⭐ a LEGRÖVIDEBB lánc számít, és legfeljebb `MELYSEG_KORLAT` mély (D59, D93/2 — a „végtelen”: a bizonyíték így
-//     felülről korlátos; a mélyen ülő becsületes tag egy közelebbi tag ingyenes meghívásával rövidít — 63. mérés).
+//   · ⭐ a LEGRÖVIDEBB lánc számít, és legfeljebb `MELYSEG_KORLAT` mély (D59, D93/2, D113 — a „végtelen”: a bizonyíték
+//     így felülről korlátos; a mélyen ülő becsületes tag egy közelebbi tag ingyenes meghívásával rövidít — 63. mérés).
 //
 // ⚠️ A hiány nem vád (D19): ha a lánc egy eseménye hiányzik, „nem ellenőrizhető”, nem „nem tag”. A kör nem szül tagságot.
 //
@@ -28,8 +28,14 @@
 
 import { esemenyEllenorzese, azonositoAlaku } from '../esemeny/esemeny.js';
 
-/** A meghívási lánc legnagyobb mélysége (D59 biztonsági szelepe, D93/2: 64). */
-export const MELYSEG_KORLAT = 64;
+/**
+ * A meghívási lánc legnagyobb mélysége (D59 biztonsági szelepe — a bizonyíték hosszának őre). ⭐ D113 (Csaba,
+ * 2026-10-19 — a D106 (A) szabálya): 256. A korlát a LEGMÉLYEBB tagnál dönt, nem az átlagnál (78. mérés): véletlen
+ * meghívónál a fa magassága e·ln n, a 64-et a legmélyebb tag már ~1,3·10^11 tagnál elérte volna (az emberiség ~13-szoros),
+ * a 256-ot a koinó saját határáig (2^128) sem éri el (~234; aktív meghívóknál ~156). A 2. lépcső szúrópróbájának útja is
+ * ezt használja (`identitas.js` `seta`). ⚠️ Állapotot befolyásoló állandó (D66).
+ */
+export const MELYSEG_KORLAT = 256;
 export const TAGSAGI_CSOMAG = 'TagsagiCsomag';
 export const PROFIL = 'Profil';
 /** Egy tagsági csomagban legfeljebb ennyi esemény (lépésenként a belépés, a meghívás, a profil + a gyökér). */

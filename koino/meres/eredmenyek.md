@@ -4688,6 +4688,8 @@ növekedésnél LINEÁRIS** (egymillió tagnál ~47 600 lépés, ~57 MB) — ezt
 sérti a „végtelent”. ⭐ A válasz a meglévő szabályokban van: több meghívás lehet, a legrövidebb lánc számít, és a D59
 mélység-korlátja (`D`) felülről korlátossá teszi a bizonyítékot — a mélyen ülő becsületes tag egy közelebbi tag
 (ingyenes) meghívásával rövidít. → [`e_identitas_atvizsgalas.md`](../../docs/e_identitas_atvizsgalas.md).
+⚠️ *(2026-10-19, a 78. mérés:)* a 64-es korlátot innen az ÁTLAGGAL mértük („~10^29–10^30 tagnál éri el”); a korlát viszont
+a LEGMÉLYEBB tagnál dönt — a 64-et a legmélyebb tag már ~1,3·10^11 tagnál eléri. → **D113**: 256.
 
 ## 64. ⭐ A ZÁRT KOINÓ KAPUJA A DRÓTON — a személy és a tagsági csomag a kézfogásban (D93/3, 2026-10-04, a laptopon)
 
@@ -5224,3 +5226,43 @@ kérés és ≤ 25 MB (KK5) — egy 1000-es törzses felderítés így legalább
 csomópontonként (a minták), a törzs a tartalomtól függ (szöveg ~1–5 KB, egy fájl ≤ 2 MB). ⚠️ A modell egyszerűsít: a törzs a
 fejlécek UTÁN indul (a valóságban mehet egyszerre), a tartók 1 + Poisson(2) készülék, és a tartó-tippet (D111) nem ismeri.
 ⭐ A javaslat (a felderítés átvizsgálása, F4): K = 200 alapból, csak fejléc, a törzs bekapcsolható.
+
+## 78. ⭐⭐ A TAGSÁGI LÁNC FARKA — a legmélyebb tag, nem az átlag (a D106 (A) a `MELYSEG_KORLAT`-ra, 2026-10-19)
+
+*`node koino/meres/lancFarokMeres.js` — a 63. mérés két természetes növekedése, csak a mélység: `egyenletes` (véletlen
+meghívó — véletlen rekurzív fa) és `aktív` (a hívó súlya 1 + a meghívottjai száma — sík-rendezett rekurzív fa). A
+szimuláció 10^8 (egyenletes) / 10^7 (aktív) tagig a fa MAGASSÁGÁT adja; a farkat a PONTOS eloszlás méri (a k-adik tag
+mélysége Bernoulli(1/j)-k összege — 10^7-ig k-ról k-ra), és a Hwang-féle közelítés vetíti ki (a pontossal 5%-on belül
+egyezik); a magasság a tételekből (egyenletes: e·ln n − 1,5·ln ln n + O(1); aktív: 1,7956·ln n + O(1)), az O(1) tag a
+szimulációból, óvatosan (a legnagyobb). A dróton a 64. mérés műszere (`zartKapuMeres.js`, +256-os mélység).*
+
+```
+a szimuláció (átlag / 95% / 99,99% / a legmélyebb):
+  egyenletes  10^6: 13,2 / 19 / 27 / 33   10^7: 15,4 / 21 / 30 / 36   10^8: 17,8 / 24 / 33 / 40
+  aktív       10^6:  7,5 / 12 / 19 / 21   10^7:  9,1 / 14 / 21 / 26
+a farok (egyenletes, 10^7 tag; a tagok hányada L-nél mélyebben — pontosan / Hwang / egy szimulált fa):
+  L = 25: 0,922% / 0,884% / 0,399%    L = 30: 0,032% / 0,031% / 5,3e-5    L = 35: 4,9e-6 / 4,9e-6 / 1,0e-7
+a legmélyebb tag:   10^10 (az emberiség)   10^11 (×10)   2^128 (a koinó saját határa)
+  egyenletes                ~57               ~63           ~234   (átlag ~88)
+  aktív                     ~38               ~43           ~156
+a korlátok — hol éri el a legmélyebb tag · a koinó határán a tagok hányada a korlátnál mélyebben (egyenletes):
+  L =  64   egyenletes ~1,3·10^11, aktív ~1,6·10^16   ·   98,9%
+  L = 128   egyenletes ~3,0·10^21, aktív ~4,7·10^31   ·   2,7·10^-5 (~9·10^33 tag)
+  L = 256   egyenletes ~1,2·10^42, aktív ~4,3·10^62   ·   ~10^-48 (senki)
+a korlátnál ülő tag első találkozása a zárt kapun (csomaggal, a dróton):
+  mélység 64: a csomag 60,1 KB, 72 862 B   ·   mélység 256: a csomag 237,6 KB, 282 457 B (társanként egyszer)
+a 2. lépcső szúrópróbájának útja (a 65. mérés, helyi növekedés; átlag / 95% / a leghosszabb):
+  10^3: 4,3 / 7 / 9   10^4: 8,1 / 12 / 16   10^5: 12,9 / 18 / 24   10^6: 16,9 / 24 / 27   → évtizedenként ~+4 / ~+6
+```
+
+⛔ **A lelet:** a 64-es korlátot eddig az ÁTLAGHOZ mértük (63. mérés → „~10^29–10^30 tagnál éri el” — a D106 is ezt
+mondta), de az átlag ott éri el a korlátot, ahol a tagok FELE már túl van rajta. A korlát a LEGMÉLYEBB tagnál dönt (aki
+mélyebben ül, nem tag, amíg egy közelebbi tag be nem hívja): véletlen meghívónál a fa magassága ~e·ln n (az átlag ~2,7-
+szerese), és a 64-et a legmélyebb tag már **~1,3·10^11** tagnál eléri — az emberiség ~13-szorosánál, a D106 (B) tízszeres
+tartalékán épp csak túl; a koinó saját határán a tagok ~99%-a mélyebben ülne. A 128-at ~3·10^21-nél (ott a tagok
+~0,003%-ának kellene rövidítenie), a **256-ot a koinó határáig sem** (~234; aktív meghívóknál ~156). A 2. lépcső
+szúrópróbájának útja ugyanezt a korlátot használja, és a helyi növekedésnél évtizedenként ~4–6 lépéssel nő (kivetítve a
+koinó határán ~150 / ~210). ⭐ Az ára a természetes tagnál nem változik (13–30 lépés, 16–37 KB); a korlátnál ülőé ~240 KB
+(a dróton ~280 KB, társanként egyszer) — 32 ilyen egy tagsági válaszban (~7–11 MB, a profillal több) a vonal 8 MB-os
+sor-korlátjába nem fér biztosan, ezért a válasz bájt-korlátot kap. ⚠️ Egy szimulált fa farka erősen ingadozik (egyetlen futás
+~2×; az átlagos mélység szórása ~0,6) — a farkat ezért a pontos eloszlás méri. → **D113** (Csaba, 2026-10-19: „(A) 256”).

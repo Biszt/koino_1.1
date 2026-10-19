@@ -22,8 +22,9 @@ import { megujitasEllenorzese, megujitaniKell, csomagTulajdonosai } from '../tar
 
 /** Egy felajánló kérelemben legfeljebb ennyi bejegyzés (a tartó a többit nem nézi). */
 export const FELAJANLAS_KORLAT = 64;
-/** Egy felajánló kérelemben legfeljebb ennyi tagsági kísérő. */
-export const FELAJANLAS_KISERO_KORLAT = 512;
+/** Egy felajánló kérelemben legfeljebb ennyi tagsági kísérő (D113: legalább egy szerző teljes lánca — 773 a 256-os
+ * mélységnél; a `tagsagKisero.js` válasz-korlátja). */
+export const FELAJANLAS_KISERO_KORLAT = 1024;
 /** A jegyzék korlátai (helyi feljegyzés). */
 export const AJANLOTT_KORLAT = 4096;
 export const OSZTODAS_KORLAT = 4096;

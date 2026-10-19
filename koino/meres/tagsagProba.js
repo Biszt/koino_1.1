@@ -3,7 +3,7 @@
 // Felelősség: A TAGSÁG TISZTA SZÁMÍTÁSÁNAK próbája (D56, D59, D93 — `js/allapot/tagsag.js`), valódi aláírt eseményekkel.
 //
 // Amit mér: (1) az alapító (a létrehozó és a megnevezett alapító), a meghívott, a többszintű lánc; (2) ⭐ a LEGRÖVIDEBB
-// lánc számít; (3) ⭐ a mélység-korlát (D = 64) — és a rövidítő meghívás; (4) a hiányzó láncszem „nem ellenőrizhető”,
+// lánc számít; (3) ⭐ a mélység-korlát (D113: 256) — és a rövidítő meghívás; (4) a hiányzó láncszem „nem ellenőrizhető”,
 // nem „nem tag” (D19); (5) az érvénytelen meghívás (más kulcsnak szól, önmagának, idegen horgony) nem számít, a kör nem
 // szül tagságot; (6) ⭐ D93/5: a profil-feltétel; (7) ⭐ D93/2: a tagsági csomag — a lánca, a kapu-ellenőrzése, és hogy
 // az index a csomagból ősök nélkül is tagságot számol.
@@ -69,19 +69,32 @@ proba('⭐ a LEGRÖVIDEBB lánc számít — két meghívás közül a közelebb
   return r.igen && r.melyseg === 2;
 });
 
-proba('⭐ a mélység-korlát: a 64. szint tag, a 65. nem — egy közelebbi tag (ingyenes) meghívása rövidít', async () => {
+proba('⭐ a mélység-korlát (D113: 256): a 256. szint tag, a 257. nem — egy közelebbi tag (ingyenes) meghívása rövidít', async () => {
   const k = await koino();
   const es = [k.letrehozas];
   let elozo = hivoja(k);
   const lanc = [];
   for (let i = 0; i < MELYSEG_KORLAT + 1; i++) { const b = await belepo(); es.push(b.belepes, await meghiv(elozo, b)); lanc.push(b); elozo = b; }
   const idx = tagsagiIndex(es);
-  const utolso = lanc[MELYSEG_KORLAT];        // a 65. szinten
+  const utolso = lanc[MELYSEG_KORLAT];        // a 257. szinten
   const tulMely = horgonyTagsaga(idx, utolso.horgony);
   const rovid = await meghiv(lanc[1], utolso); // a 2. szintű tag is behívja
   const r2 = horgonyTagsaga(tagsagiIndex([...es, rovid]), utolso.horgony);
   return horgonyTagsaga(idx, lanc[MELYSEG_KORLAT - 1].horgony).melyseg === MELYSEG_KORLAT
     && !tulMely.igen && tulMely.ellenorizheto && r2.igen && r2.melyseg === 3;
+});
+
+proba('⭐ D113: a 200. szinten ülő tag is TAG, és a tagsági csomagja átmegy a kapun (a 64 és a 128 szűk lett volna — 78. mérés)', async () => {
+  const k = await koino();
+  const es = [k.letrehozas];
+  let elozo = hivoja(k);
+  for (let i = 0; i < 200; i++) { const b = await belepo(); es.push(b.belepes, await meghiv(elozo, b)); elozo = b; }
+  const idx = tagsagiIndex(es);
+  const r = horgonyTagsaga(idx, elozo.horgony);
+  const lanc = tagsagiLanc(idx, elozo.horgony);
+  const csomag = await elozo.ember.tesz(TAGSAGI_CSOMAG, { lanc }, undefined, { entitas: elozo.horgony });
+  const ell = await tagsagiCsomagEllenorzese(csomag);
+  return r.igen && r.melyseg === 200 && lanc.length === 2 * 200 + 1 && ell.rendben && ell.melyseg === 200;
 });
 
 proba('a hiányzó láncszem NEM ELLENŐRIZHETŐ (D19) — nem „nem tag”', async () => {

@@ -110,9 +110,11 @@ const OSZ_KORLAT = 64;
 const KUL_KORLAT = 64;
 const KUL_ESEMENY_KORLAT = 256;
 
-// ⭐ D95/2: a tagsági kísérők köre — egy kérdésben legfeljebb ennyi szerző, egy válaszban legfeljebb ennyi esemény.
+// ⭐ D95/2: a tagsági kísérők köre — egy kérdésben legfeljebb ennyi szerző, egy válaszban legfeljebb ennyi esemény
+// (D113: legalább egy szerző teljes lánca — a `tagsagKisero.js` válasz-korlátja; a bájtot a válaszoló korlátozza, a
+// sor-korlát alatt).
 const TAGSAG_SZERZO_KORLAT = 32;
-const TAGSAG_ESEMENY_KORLAT = 512;
+const TAGSAG_ESEMENY_KORLAT = 1024;
 
 // ⭐⭐⭐ ÉS AMIT MÁSOKRÓL MONDUNK, AZ HÁROM (Csaba döntése, 2026-09-20 — a 34. mérés után).
 //

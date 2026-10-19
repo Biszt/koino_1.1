@@ -200,7 +200,8 @@ egy szám, ami a koinóval nőne, de rögzített szélességű: ha a koinó kin�
 ábrázolható. Ma három ilyen van:
 - a gyökér-darab **16 bites** száma (K8) — a gyökérnél ~16,8 millió legfelső szintű gondolatig, a kereső-indexnél
   ~3,4 (a K2 (C)-vel ~1,7) millió gondolatig tartana;
-- a tagsági lánc **64-es** mélység-korlátja (`MELYSEG_KORLAT`, D59 — a bizonyíték hosszának őre) — a természetes,
+- a tagsági lánc **64-es** mélység-korlátja (`MELYSEG_KORLAT`, D59 — a bizonyíték hosszának őre; → ✅ D113: 256 — a 78.
+  mérés szerint a korlát a LEGMÉLYEBB tagnál dönt, és a lenti „~10^29–10^30” az átlag volt) — a természetes,
   logaritmikus mélység (63. mérés: egymillió tagnál ~13, vagyis lépésenként ~2,9-szeres) ~10^29–10^30 tagnál érné el;
 - a kanonikus alak **„biztonságos egész”** határa (2^53 ≈ 9·10^15, `kanonikusAlak.js`, és az összegző fa összegei, az
   össz-pont bemondása — `osszegzoFa.js`, `osszPont.js`) — egy népszerű ág össz-pontja (legfeljebb e-ember × 10 000 pont)

@@ -25,8 +25,14 @@ import { AZONOSITO_MINTA } from '../esemeny/esemeny.js';
 
 /** Egy cserében legfeljebb ennyi szerző tagságát kérdezzük. */
 export const TAGSAG_KERDES_KORLAT = 32;
-/** Egy válaszban legfeljebb ennyi esemény (a többi a következő cserén). */
-export const TAGSAG_VALASZ_KORLAT = 512;
+/**
+ * Egy válaszban legfeljebb ennyi esemény és ennyi bájt (a többi a következő cserén). ⭐ D113: a darabszám legalább egy
+ * szerző teljes lánca (`CSOMAG_ESEMENY_KORLAT` = 773 a 256-os mélységnél), a bájt a vonal 8 MB-os sor-korlátja alatt
+ * (egy 256 mély csomag ~0,3–0,4 MB — 32 ilyen nem férne egy sorba). Egy szerző kísérői EGÉSZBEN mennek, vagy sehogy: a
+ * csonka lánc semmit nem bizonyít, csak helyet foglal.
+ */
+export const TAGSAG_VALASZ_KORLAT = 1024;
+export const TAGSAG_VALASZ_BAJT = 4 * 1024 * 1024;
 /** A függő szerzők jegyzéke: legfeljebb ennyi, ennyi ideig, ennyi kérdezésig. */
 export const FUGGO_KORLAT = 256;
 export const FUGGO_ELETTARTAM = 6 * 3600 * 1000;
@@ -72,7 +78,9 @@ export async function szerzoTagsagaTarbol(tar, koino, szerzo, koinoSzuletes = nu
 
 /**
  * A kért szerzők tagsági kísérői: szerzőnként a legutóbbi tagsági csomagja, vagy ha nincs, a tagsági lánca (amennyit a
- * táramból bizonyítani tudok). Egy eseményt egyszer adunk (a láncok közös ősei), és legfeljebb `korlat`-ot.
+ * táramból bizonyítani tudok). Egy eseményt egyszer adunk (a láncok közös ősei), legfeljebb `korlat`-ot és `bajtKorlat`
+ * bájtot — ⭐ D113: egy szerzőét EGÉSZBEN vagy sehogy (ami nem fér bele, az a következő válaszban jön; a kérdezőnél addig
+ * függő marad).
  * @param {Object} tar
  * @param {string} koino
  * @param {Array<string>} szerzok
@@ -80,22 +88,31 @@ export async function szerzoTagsagaTarbol(tar, koino, szerzo, koinoSzuletes = nu
  * @param {Object|null} [b.koinoSzuletes]
  * @param {number} [b.szerzoKorlat]
  * @param {number} [b.korlat]
+ * @param {number} [b.bajtKorlat] - a kézi út (fájl) `Infinity`-t ad: ott nincs sor-korlát
  * @returns {Promise<Array<Object>>}
  */
 export async function tagsagiKiserok(tar, koino, szerzok, { koinoSzuletes = null, szerzoKorlat = TAGSAG_KERDES_KORLAT,
-  korlat = TAGSAG_VALASZ_KORLAT } = {}) {
+  korlat = TAGSAG_VALASZ_KORLAT, bajtKorlat = TAGSAG_VALASZ_BAJT } = {}) {
   const ki = new Map();
+  let bajt = 0;
   for (const sz of (Array.isArray(szerzok) ? szerzok : []).filter(szerzoAlaku).slice(0, szerzoKorlat)) {
-    if (ki.size >= korlat) break;
+    if (ki.size >= korlat || bajt >= bajtKorlat) break;
     const csomag = (await sajatLancEsemenyei(tar, sz))
       .filter((e) => e.koino === koino && e.tipus === TAGSAGI_CSOMAG)
       .sort((a, b) => b.sorszam - a.sorszam)[0];
-    if (csomag) { ki.set(csomag.azonosito, csomag); continue; }
-    const { r, idx } = await szerzoTagsagaTarbol(tar, koino, sz, koinoSzuletes);
-    if (!r.igen || !r.horgony) continue;
-    for (const e of tagsagiLanc(idx, r.horgony) ?? []) if (e) ki.set(e.azonosito, e);
+    let sajat = csomag ? [csomag] : null;
+    if (!sajat) {
+      const { r, idx } = await szerzoTagsagaTarbol(tar, koino, sz, koinoSzuletes);
+      if (!r.igen || !r.horgony) continue;
+      sajat = (tagsagiLanc(idx, r.horgony) ?? []).filter(Boolean);
+    }
+    const uj = sajat.filter((e) => !ki.has(e.azonosito));
+    const ujBajt = uj.reduce((o, e) => o + Buffer.byteLength(JSON.stringify(e), 'utf8'), 0);
+    if (ki.size + uj.length > korlat || bajt + ujBajt > bajtKorlat) continue;
+    for (const e of uj) ki.set(e.azonosito, e);
+    bajt += ujBajt;
   }
-  return [...ki.values()].slice(0, korlat);
+  return [...ki.values()];
 }
 
 // ===================================

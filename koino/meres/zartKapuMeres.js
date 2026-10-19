@@ -10,7 +10,7 @@
 //   · ZÁRT, ELSŐ TALÁLKOZÁS, CSOMAG NÉLKÜL — a kapu kéri, a társ a személyes aláírását és a horgonyát küldi (a lánca
 //     a kérdezőnél megvan);
 //   · ZÁRT, ELSŐ TALÁLKOZÁS, CSOMAGGAL — a társ a tagsági csomagját is küldi; a csomag mérete a lánc mélységével nő
-//     (1, 5, 13 — a 63. mérés szerint egymillió tagnál ~13 —, 30, 64 = a mélység-korlát);
+//     (1, 5, 13 — a 63. mérés szerint egymillió tagnál ~13 —, 30, 64 = a régi mélység-korlát, 256 = a D113 korlátja);
 //   · KÖLCSÖNÖS — mindkét fél először látja a másikat, és mindkettő 13 mélységű csomagot küld.
 //
 // A csomag valódi: aláírt belépések és meghívások lánca az alapítóig (`tagsag.js`: `tagsagiLanc`), a lánc-gyökérrel
@@ -116,7 +116,7 @@ sor('nyílt (nincs kapu) — a mérce', nyilt);
 sor('zárt, ismert társ (a tábla-kulcsáról)', await csere(alap.szuletes, { zartKapu: kapu(true) }, { szemelyesAlairo: tagAlairo }));
 sor('zárt, első találkozás, csomag nélkül', await csere(alap.szuletes, { zartKapu: kapu(false) },
   { szemelyesAlairo: tagAlairo, tagsagiCsomag: async () => null }));
-for (const k of [1, 5, 13, 30, 64]) {
+for (const k of [1, 5, 13, 30, 64, 256]) {
   const l = k === 1 ? alap : await lancCsomaggal(k);
   const m = await csere(l.szuletes, { zartKapu: kapu(false) },
     { szemelyesAlairo: await alairo(l.tag, l.horgony), tagsagiCsomag: async () => l.csomag });

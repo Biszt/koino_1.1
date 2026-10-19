@@ -19,7 +19,7 @@ import { esemenyMentese, koinoEsemenyei } from '../js/tar/esemenyTar.js';
 import { csereUdpResen } from '../js/csere/udpVonal.js';
 import { beolvasztas } from '../js/csere/csere.js';
 import { allapotSzamitasa } from '../js/allapot/allapotSzamitas.js';
-import { tagsagiIndex, tagsagiLanc, TAGSAGI_CSOMAG } from '../js/allapot/tagsag.js';
+import { tagsagiIndex, tagsagiLanc, szerzoTagsaga, TAGSAGI_CSOMAG, MELYSEG_KORLAT } from '../js/allapot/tagsag.js';
 import { tagsagKerdo, tagsagiKiserok, FUGGO_PROBA } from '../js/allapot/tagsagKisero.js';
 
 const { proba, futtatas } = probaGyujtemeny('A tagsági kísérők a cserében (D95/2)');
@@ -73,7 +73,7 @@ async function vilag({ csomaggal = true, bNalMind = false } = {}) {
   for (const e of bNal) await esemenyMentese(tarB, e);
   // B a szigorú (b) alatt csak ezekben vesz részt (a koinó születése, G, a saját azonosság-szelete).
   const bReszvesz = new Set([letrehozas.azonosito, g.azonosito, horgonya(b)]);
-  return { tarA, tarB, mappaB, g, cPont, xCsomag, cCsomag, c, x, letrehozas, bReszvesz };
+  return { tarA, tarB, mappaB, g, cPont, xCsomag, cCsomag, c, x, letrehozas, bReszvesz, alapito };
 }
 
 /** A csere: A felel (a válaszoló), B kérdez — B csak a vállalt szeletekben vesz részt. */
@@ -124,6 +124,76 @@ proba('⭐ ha a válaszolónak NINCS csomagja, a tagsági LÁNCOT küldi (amit b
   const { b } = await csere(v);
   const n = await bNezete(v);
   return b.tagsagEredmeny?.megtudott >= 1 && !n.cFugg && !(await v.tarB.esemeny(v.cCsomag.azonosito));
+});
+
+// Rontás: a vonal válasz-korlátja a régi 512 → D lánca csonkán jön (vagy C és X kísérői maradnak ki) → bukik.
+proba('⭐ D113: a korlátnál ülő tag TELJES lánca (csomag nélkül, 513 esemény) a CSERÉN is átmegy — utána a pontja számít', async () => {
+  const v = await vilag();
+  // D a 256. szinten, csomag nélkül, pontot tesz G-re — csak A tudja.
+  let elozo = { ember: v.alapito, horgony: v.letrehozas.azonosito };
+  for (let i = 0; i < MELYSEG_KORLAT; i++) {
+    const ember = await ujEember(KOINO);
+    const belepes = await ember.tesz('Belepes', {});
+    const meghivas = await elozo.ember.tesz('Meghivas', { kit: ember.szerzo, sajatBelepes: elozo.horgony }, undefined,
+      { entitas: belepes.azonosito });
+    await esemenyMentese(v.tarA, belepes);
+    await esemenyMentese(v.tarA, meghivas);
+    elozo = { ember, horgony: belepes.azonosito };
+  }
+  const dPont = await elozo.ember.tesz('TudatpontRendezes', { entitas: v.g.azonosito, pont: 3, szerep: 'aktiv' });
+  await esemenyMentese(v.tarA, dPont);
+  await csere(v);
+  const allapot = allapotSzamitasa(await koinoEsemenyei(v.tarB, KOINO));
+  return !allapot.tagsagFuggoben.some((k) => k.azonosito === dPont.azonosito)
+    && (allapot.entitasok.get(v.g.azonosito)?.osszesPont ?? 0) === 10 + 4 + 6 + 2 + 3;
+});
+
+/**
+ * ⭐ D113: egy MÉLY tag (a korlátnál, csomag nélkül — a lánca 2 × 256 + 1 esemény) és egy csomagos tag (C) egy tárban.
+ */
+async function melyVilag() {
+  const alapito = await ujEember(KOINO);
+  const letrehozas = await alapito.tesz('KoinoLetrehozas', { nev: 'Mély', leiras: null, alapitok: [], zart: true });
+  const tar = await esemenyTarNyitasa(KOINO, await ujMappa());
+  await esemenyMentese(tar, letrehozas);
+  let elozo = { ember: alapito, horgony: letrehozas.azonosito };
+  const sor = [];
+  for (let i = 0; i < MELYSEG_KORLAT; i++) {
+    const ember = await ujEember(KOINO);
+    const belepes = await ember.tesz('Belepes', {});
+    const meghivas = await elozo.ember.tesz('Meghivas', { kit: ember.szerzo, sajatBelepes: elozo.horgony }, undefined,
+      { entitas: belepes.azonosito });
+    await esemenyMentese(tar, belepes);
+    await esemenyMentese(tar, meghivas);
+    elozo = { ember, horgony: belepes.azonosito };
+    sor.push(elozo);
+  }
+  // C: a 2. szinten, csomaggal.
+  const c = sor[1];
+  const idx = tagsagiIndex(await koinoEsemenyei(tar, KOINO), KOINO);
+  const cCsomag = await c.ember.tesz(TAGSAGI_CSOMAG, { lanc: tagsagiLanc(idx, c.horgony) }, undefined, { entitas: c.horgony });
+  await esemenyMentese(tar, cCsomag);
+  return { tar, letrehozas, mely: elozo.ember.szerzo, c: c.ember.szerzo, cCsomag };
+}
+
+proba('⭐ D113: a válasz egy szerző kísérőit EGÉSZBEN adja — a korlátnál ülő tag teljes lánca (513 esemény) belefér, a csonka nem megy', async () => {
+  const v = await melyVilag();
+  const teljes = await tagsagiKiserok(v.tar, KOINO, [v.mely], { koinoSzuletes: v.letrehozas });
+  const szuk = await tagsagiKiserok(v.tar, KOINO, [v.mely], { koinoSzuletes: v.letrehozas, korlat: 300 });
+  // A teljes lánc a túloldalon tagságot ad (az ősök szeletei nélkül):
+  const tag = szerzoTagsaga(tagsagiIndex(teljes, KOINO), v.mely);
+  return teljes.length === 2 * MELYSEG_KORLAT + 1 && tag.igen && tag.melyseg === MELYSEG_KORLAT && szuk.length === 0;
+});
+
+proba('⭐ D113: a válasz BÁJT-korlátja — ami nem fér bele, a következő válaszban jön (a sorrendtől függetlenül a beférő megy)', async () => {
+  const v = await melyVilag();
+  const cBajt = Buffer.byteLength(JSON.stringify(v.cCsomag), 'utf8');
+  const elol = await tagsagiKiserok(v.tar, KOINO, [v.mely, v.c], { koinoSzuletes: v.letrehozas, bajtKorlat: cBajt + 1000 });
+  const hatul = await tagsagiKiserok(v.tar, KOINO, [v.c, v.mely], { koinoSzuletes: v.letrehozas, bajtKorlat: cBajt + 1000 });
+  const egyben = await tagsagiKiserok(v.tar, KOINO, [v.c, v.mely], { koinoSzuletes: v.letrehozas, bajtKorlat: Infinity });
+  return elol.length === 1 && elol[0].azonosito === v.cCsomag.azonosito
+    && hatul.length === 1 && hatul[0].azonosito === v.cCsomag.azonosito
+    && egyben.length === 1 + 2 * MELYSEG_KORLAT + 1;
 });
 
 proba('⭐ EGYEZŐ szeleteknél is lemegy, ha B-nek függő kérdése van (a nyitás jele) — jel nélkül (rontás) nem', async () => {
