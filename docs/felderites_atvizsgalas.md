@@ -147,3 +147,11 @@ elsőre csak a következő körben indult, és addigra a csere randevúja (D és
 ugyanabban a körben indul, amelyikben a fejlécek elkészültek; (2) a két út így is versenyez (hol a kérelem, hol a randevú ér
 előbb), ezért a próba azt méri, hogy a törzs-kérelem LÉTREJÖTT, és a darabok megvannak — egy első változata ezt nem tudta
 eldönteni (a „nem kér” rontás nem bukott). Próbák: `felderitesProba.js` +1, a bekötés (négy rontással). Elágazás 179.
+
+✅ **⑤ KÉSZ (2026-10-19) — a felület — A FELDERÍTÉS MEGÉPÜLT:** a kártya menüjében „📷 Felderítés…” (a beállító ablak), a fő
+menüben a „Felderítések” ablak (az állás, újra, törlés — magától frissül) és „Az egész koinó felderítése…”, a rögzített
+kártyán „📷” (pillanatkép, N napja). A program oldalán a felderítés útvonalai a kapun. A böngészőben két készülékkel
+végigjárva (egy ág és az egész koinó; a törlés). Két lelet a böngészőből: a kis pillanatkép „0 MB”-nak látszott (most KB), és
+az egész koinó felderítése a gyökér miatt soha nem lett volna kész (a tartó teljes gyökér-válasza most elég — rontással).
+Próbák: a ③ bekötés-próbája a felület útvonalaival (a lista, a kártya jele, a hibás beállítás, a törlés — két rontással),
+`pakliProba.js` +1 (a gyökér — rontással). Elágazás 180.

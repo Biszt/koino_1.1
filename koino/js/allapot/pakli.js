@@ -1185,7 +1185,13 @@ async function strukturaSorrend(tar, koino, beallitas = {}) {
  */
 export async function felderitesAllasa(tar, koino, beallitas = {}) {
   const s = await strukturaSorrend(tar, koino, beallitas);
-  return { latszik: s.latszik, ismert: s.lista.length, biztos: Math.min(s.biztos, s.latszik.length), hianyzik: s.hianyzik,
+  // ⚠️ A gyökér (2026-10-19, a böngészős próba lelete): ha a tartó TELJES választ adott a gyökér szintjére (`levag: 'teljes'`),
+  // a sorrend már biztos (a határ 0), de a gyerekszámot a gyökérre nem mondja — a bejáró ezért tovább kérendőnek tartja (a
+  // lapnak ez jó: új legfelső szintűek jöhetnek). Egy pillanatképnek a tartó teljes válasza elég — különben az egész koinó
+  // felderítése soha nem lenne kész.
+  const gyokerTeljesValasz = beallitas.fejlecTudas?.get?.(GYOKER_TUDAS_KULCS)?.levag === 'teljes';
+  const hianyzik = s.hianyzik.filter((h) => !(gyokerTeljesValasz && h.kulcs === GYOKER));
+  return { latszik: s.latszik, ismert: s.lista.length, biztos: Math.min(s.biztos, s.latszik.length), hianyzik,
     agIsmert: !s.agazat || s.kep.entitasok.has(s.agazat),
     // ⭐ D112 ④: a látható csomópontok maguk (a törzs-fázisnak — a szöveg-darabjuk és a fájljaik).
     entitasok: new Map(s.latszik.map((az) => [az, s.kep.entitasok.get(az)]).filter(([, e]) => e)) };

@@ -162,6 +162,7 @@ import {
 // ⭐⭐ D92/1: a függő kérelmek (a cím nélküli kérés — a kopogtatás).
 import {
   ujNyilvantartas, nyilvantartasAlakja, kerelemFelvetele, lejartakKivetele, tarshozIllo, tarshozIllok, kerelemLezarasa, probalkozas,
+  ujraProbalhato,
   fuggoCelok, fuggoKopogtatok
 } from './js/csere/fuggoKerelmek.js';
 import { atmenetiTarNyitasa, ketTarBemenete, ketTarNezet } from './js/tar/atmenetiTar.js';
@@ -2271,6 +2272,8 @@ let orjaratNezete = null;
 // (`FELDERITES_FUGGO_HATAR`). Kész, ha a sorrend az első K-ig biztos; megáll a beállított méretnél; 30 nap után a
 // rögzítése feloldódik. A jegyzék helyi (`<koino>/felderitesek.json`).
 const FELDERITES_FUGGO_HATAR = 48;
+/** ⭐ Egy függő kérelem ugyanannál a társnál legfeljebb ennyi időnként próbálkozik újra (a próbák: `KOINO_KERELEM_UJRAPROBA` ms). */
+const KERELEM_UJRAPROBA = kornyezetSzam('KOINO_KERELEM_UJRAPROBA', 2 * 60 * 1000);
 const felderitesFajl = () => join(alapHely(), KOINO, 'felderitesek.json');
 async function felderitesJegyzekOlvasasa() {
   try { return felderitesJegyzekAlakja(JSON.parse(await readFile(felderitesFajl(), 'utf8'))); } catch { return uresFelderitesJegyzek(); }
@@ -2678,10 +2681,10 @@ async function fejlecTudasBeirasa(ujak) {
 /**
  * ⭐⭐ D92/1: A FÜGGŐ KÉRELEM MUNKÁJA — a rés megnyílt egy társsal, akitől egy függő kérelmet várunk (a célja ő, vagy
  * egy ismeretlen bekopogó, miközben kopogtatunk). A csere helyett a kérelem fut; ha megjött, a kérelem lezárul, ha
- * nem, a próbálkozás feljegyződik (és ezt a társat ezzel a kérelemmel ebben a futásban többet nem kérdezzük).
+ * nem, a próbálkozás feljegyződik (és ezt a társat ezzel a kérelemmel `KERELEM_UJRAPROBA` ideig nem kérdezzük újra).
  */
 async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
-  allapot.kerelemProbaltak.add(fk.az + '|' + tars.cim + ':' + tars.port);
+  allapot.kerelemProbaltak.set(fk.az + '|' + tars.cim + ':' + tars.port, Date.now());
   // ⭐ D92/3: a kérő UGRAS_MAX-ot küld (és az azonosítót) — így a társ, ha nem tartja, továbbadhatja.
   const tovabb = { az: fk.az, htl: UGRAS_MAX };
   const k = { fajta: fk.fajta, kulcs: fk.kulcs, n: fk.n, m: fk.m === true, ...(fk.utan ? { utan: fk.utan } : {}), ...tovabb };
@@ -2791,7 +2794,7 @@ async function fuggoEredmenyFeldolgozasa(fk, r, tars) {
  * ellátott tartónál (a kis, családi koinó) a kapcsolatonkénti egy kérelem mindent sorba állított.
  */
 async function fuggoKerelemSorozatMunkaja(allapot, halo, tars, fks) {
-  for (const fk of fks) allapot.kerelemProbaltak.add(fk.az + '|' + tars.cim + ':' + tars.port);
+  for (const fk of fks) allapot.kerelemProbaltak.set(fk.az + '|' + tars.cim + ':' + tars.port, Date.now());
   const kerelmek = fks.map((fk) => ({ fajta: fk.fajta, kulcs: fk.kulcs, n: fk.n, m: fk.m === true,
     ...(fk.utan ? { utan: fk.utan } : {}), az: fk.az, htl: UGRAS_MAX }));
   const vege = { uj: 0, kuldott: 0, korok: 1, bajt: 0, alairo: null, kerelem: 'sorozat:' + fks.length };
@@ -3729,9 +3732,13 @@ function resMunka(allapot, halo, tars) {
     // ⭐⭐ D92/1: FÜGGŐ KÉRELEM ehhez a társhoz? — a célja ez a cím, vagy egy ismeretlen bekopogó, miközben
     // kopogtatunk (a tartó a kopogtató témáján látta, hogy kérünk tőle). Akkor a csere helyett a kérelem fut.
     {
-      allapot.kerelemProbaltak ??= new Set();
+      // ⚠️ (2026-10-19, a ⑦b próba megnevezett bukása): a „már próbáltuk” jel IDŐRE szól, nem a futás végéig — egy
+      // átmenetileg néma tartó (épp indul, terhelt: „a másik fél nem válaszol”) különben a kérelem lejáratáig (két óra) nem
+      // kapna újra esélyt ettől a futó őrjárattól. Ugyanazt a társat ugyanazzal a kérelemmel legfeljebb kétpercenként.
+      allapot.kerelemProbaltak ??= new Map();
       const ny = await kerelmekOlvasasa();
-      const nemProbalt = (x) => !allapot.kerelemProbaltak.has(x.az + '|' + tars.cim + ':' + tars.port);
+      const nemProbalt = (x) => ujraProbalhato(allapot.kerelemProbaltak, x.az + '|' + tars.cim + ':' + tars.port, Date.now(),
+        KERELEM_UJRAPROBA);
       // ⭐ D102 (J4): a társ azt viszi, amelyiknek a céllistáján ő áll a legelöl (a már próbáltakat kihagyva).
       let fk = tarshozIllo(ny, tars.cim, tars.port, (x) => !nemProbalt(x));
       // ⭐ D102 (J3): ha több fejléc- vagy törzs-kérelem is hozzá szól, egy SOROZATBAN megy (egy kapcsolaton).
@@ -7585,6 +7592,35 @@ try {
         if (modszer === 'POST' || modszer === 'PUT' || modszer === 'PATCH') {
 
           // ===================================
+          // ⭐⭐ D112 ⑤: A FELDERÍTÉS — indítás (vagy újra) és törlés a lapról
+          // ===================================
+          //
+          // A lap csak kéri (7. szabály): a beállítás határait a program szabja (`felderites.js`), a felderítést az őrjárat
+          // végzi; itt az első lépés fut (a kérések felvétele). Csak a saját (az indításkori) koinóban.
+          if (utvonal === '/api/felderites' || utvonal === '/api/felderites/torol') {
+            if (!sajatKoino) return { allapot: 400, adat: { hiba: 'Felderíteni csak a saját koinódban lehet.' } };
+            try {
+              if (utvonal === '/api/felderites/torol') {
+                const j = await felderitesJegyzekOlvasasa();
+                const f = j.felderitesek.find((x) => x.az === test?.az);
+                if (!f) return { allapot: 404, adat: { hiba: 'Nincs ilyen felderítés.' } };
+                await atmeneti.rogzitesFeloldasa(f.az);
+                await felderitesJegyzekIrasa(felderitesTorlese(j, f.az));
+                return { adat: { success: true, torolve: f.az } };
+              }
+              const szam = (v) => (Number.isInteger(v) ? v : undefined);
+              const { jegyzek, felderites: f, ujra } = ujFelderites(await felderitesJegyzekOlvasasa(), {
+                ag: test?.ag, k: szam(test?.k), melyseg: szam(test?.melyseg), torzs: test?.torzs === true, mb: szam(test?.mb)
+              }, Date.now(), 'f-' + randomUUID().slice(0, 8));
+              await felderitesJegyzekIrasa(jegyzek);
+              const kor = await felderitesKor();
+              return { adat: { success: true, felderites: f, ujra, kert: kor.kert } };
+            } catch (hiba) {
+              return { allapot: 400, adat: { hiba: hiba.message } };
+            }
+          }
+
+          // ===================================
           // ⭐⭐ FÁJL FELTÖLTÉSE (5.7) — a tartalom-címzett tárba
           // ===================================
           //
@@ -7981,6 +8017,18 @@ try {
 
         if (modszer !== 'GET') return { allapot: 405, adat: { hiba: 'nem támogatott művelet' } };
 
+        // ⭐ D112 ⑤: a felderítések és az állásuk (a rögzített rész mérete az átmeneti tárból), és a beállítás határai.
+        if (utvonal === '/api/felderitesek') {
+          if (!sajatKoino) return { adat: { felderitesek: [], alap: FELDERITES_ALAP, hatar: FELDERITES_HATAR } };
+          await atmeneti.frissit();
+          const j = await felderitesJegyzekOlvasasa();
+          const { allapot } = await kepetKeszit();
+          return { adat: {
+            felderitesek: j.felderitesek.map((f) => ({ ...f, agCim: f.ag === GYOKER_AG ? null : (allapot.entitasok.get(f.ag)?.cim ?? null),
+              rogzitettSzelet: atmeneti.rogzitesAllasa(f.az).szeletek })).reverse(),
+            alap: FELDERITES_ALAP, hatar: FELDERITES_HATAR } };
+        }
+
         if (utvonal === '/api/en') {
           // Ki vagyok? Ez O(1): a helyi kulcs, számítás nélkül.
           return { adat: { azonosito: szerzo, rovid: rovidAzonosito(szerzo), koino: KOINO } };
@@ -8122,7 +8170,9 @@ try {
             : { kert: 0, fuggo: 0, celos: 0 };
           // ⭐ D101 ⑥: a kártyák számlálója — az ága alatti olvasatlan értesítések (a postafiók ős-láncaiból)
           const olvasatlan = sajatKoino ? await kartyaSzamlalo() : new Map();
-          const szamlal = (lista) => (lista ?? []).map((k) => ({ ...k, olvasatlanErtesitesek: olvasatlan.get(k.azonosito) ?? 0 }));
+          // ⭐ D112 ⑤: és ha egy felderítés pillanatképe (rögzítve) — mikor (a kártya „📷” jele)
+          const szamlal = (lista) => (lista ?? []).map((k) => ({ ...k, olvasatlanErtesitesek: olvasatlan.get(k.azonosito) ?? 0,
+            ...(sajatKoino && atmeneti.rogzitesIdeje?.(k.azonosito) ? { rogzitve: atmeneti.rogzitesIdeje(k.azonosito) } : {}) }));
           return { adat: { ...h, pakli: szamlal(h.pakli), testverek: szamlal(h.testverek),
             betoltes: keres.fuggo > 0, kitolKerni: keres.celos, kertKerelmek: keres.kert } };
         }

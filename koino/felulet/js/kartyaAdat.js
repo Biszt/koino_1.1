@@ -84,7 +84,9 @@ export function kartyaAdatta(k) {
     // ⭐ H2: az össz-pont forrása és hogy tartom-e — a kártya nem olvassa (bájtra a prototípusé), a jelölést a
     // `koinoPakli.js` teszi rá a kirajzolás után. Csak a hierarchikus paklinál van.
     koinoForras: k.osszPontForras
-      ? { tartom: k.tartom === true, osszPontForras: k.osszPontForras, pontokIsmeretlenek: k.pontokIsmeretlenek === true }
+      ? { tartom: k.tartom === true, osszPontForras: k.osszPontForras, pontokIsmeretlenek: k.pontokIsmeretlenek === true,
+        // ⭐ D112 ⑤: ha egy felderítés pillanatképe (rögzítve) — mikor rögzítették
+        rogzitve: Number.isFinite(k.rogzitve) ? k.rogzitve : null }
       : null,
 
     adatok: {

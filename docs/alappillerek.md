@@ -1262,3 +1262,18 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     kéri) előbb hozta volna a darabokat egy csere-társtól, és a felderítés egy kört várt volna (mérve); a randevú ettől még
     versenyez — a felderítés dolga a kérés, a darab bármelyik úton jöhet · Claude · `felderites.js` (`fazis`,
     `torzsHianyzik`), `pakli.js`, `koino.js` (`felderitesKor`, `fajlTarTakaritasa`), a próbák.
+180. **2026-10-19 · a felderítés a felületen (D112 ⑤ — F5 (A))** → **a kártya menüjében „📷 Felderítés…” a kártya bővítési
+    pontján (`extraMenuOpciok` — a prototípus kártyája bájtra változatlan), a fő menüben a „Felderítések” ablak és „Az egész
+    koinó felderítése…”, a rögzített kártyán „📷”; a kapun `GET /api/felderitesek`, `POST /api/felderites`, `POST
+    /api/felderites/torol`; ⭐ a felderítés állásában a tartó TELJES gyökér-válasza elég (a bejáró a gyökeret gyerekszám
+    híján tovább kérendőnek tartja)** · mert a lap csak rajzol (7. szabály), a határokat a program szabja; a gyökér-esetet a
+    böngészős próba mérte (az egész koinó felderítése „fut”-ban ragadt volna, két óra múlva „elakadt”) · Csaba: F5 (A) ·
+    `felulet/js/koinoFelderites.js`, `foMenu.js`, `koinoPakli.js`, `kartyaAdat.js`, `koinoFelderites.css`, `koino.js`,
+    `atmenetiTar.js` (`rogzitesIdeje`), `pakli.js` (`felderitesAllasa`), a próbák.
+181. **2026-10-19 · a függő kérelem újrapróbája (a ⑦b próba megnevezett bukása)** → **a „már próbáltuk ezt a társat ezzel a
+    kérelemmel” jel IDŐRE szól (`KERELEM_UJRAPROBA` = 2 perc — `fuggoKerelmek.js` `ujraProbalhato`), nem a futó őrjárat
+    végéig** · mert a teljes sor terhelése alatt a ⑦b próba háromszor bukott, és a bukás (a függő kérelem sorait kiíró
+    hibaüzenettel) megnevezte az okát: az első próbálkozás egy épp újrainduló tartónál 10 mp csend után elbukott („a másik fél
+    nem válaszol”), és a régi szabály szerint ez a tartó a kérelem lejáratáig (két óra) nem kapott újra esélyt — a terepen
+    egy átmenetileg lassú tartó ugyanígy járna. Nem a próba hangolása: a próba a dokumentált gombbal (`KOINO_KERELEM_UJRAPROBA`)
+    rövidebb időt ad · Claude · `fuggoKerelmek.js`, `koino.js`, a próbák.

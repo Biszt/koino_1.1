@@ -62,6 +62,7 @@
 /* ⚠️ A BELÉPŐ TÉR (5.6) — az EGYETLEN nem örökölt CSS: a prototípusban a „koino" mint
    fogalom nem létezett, tehát nincs mit átemelni. Csak a meglévő változókra épül. */
 @import './components/koinoKartya.css';
+@import './components/koinoFelderites.css';
 
 /* ===== A LAP VÁZA — ami a prototípus főoldalán nem volt =====
    ⭐ 2026-10-15 óta a fő menü és az infók a prototípus alsó sávjában ülnek (`foOldal.css`); a felső fejléc megszűnt.

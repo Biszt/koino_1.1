@@ -27,7 +27,7 @@ import { esemenyMentese } from '../js/tar/esemenyTar.js';
 import { readdir } from 'node:fs/promises';
 import {
   kerelemFelvetele, lejartakKivetele, tarshozIllo, tarshozIllok, kerelemLezarasa, probalkozas, fuggoCelok, fuggoKopogtatok,
-  nyilvantartasAlakja, ujNyilvantartas, FUGGO_KORLAT, FUGGO_ELEVULES, CEL_KORLAT
+  nyilvantartasAlakja, ujNyilvantartas, FUGGO_KORLAT, FUGGO_ELEVULES, CEL_KORLAT, ujraProbalhato
 } from '../js/csere/fuggoKerelmek.js';
 import {
   tovabbiUgras, UGRAS_MAX, valaszAlakja,
@@ -520,6 +520,14 @@ proba('⭐ D112 ③: a háttér-kérés (a felderítésé) egy társnál az elő
   const felvett = kerelemFelvetele(ny, { fajta: 'fejlecek', kulcs: K1, celok: cel }, 3, 'x').nyilvantartas;
   return elso?.az === 'eloter' && sor.join() === 'eloter,hatter' && lemezrol.fuggo.find((x) => x.az === 'hatter')?.hatter === true
     && felvett.fuggo.find((x) => x.az === 'hatter')?.hatter === undefined;
+});
+
+// ⭐ (2026-10-19) A „már próbáltuk” jel IDŐRE szól: egy átmenetileg néma tartó a következő újrapróba-időben újra esélyt kap.
+// Rontás: a jel a futás végéig tart (ha egyszer próbáltuk, soha) → bukik.
+proba('⭐ a függő kérelem ugyanannál a társnál az újrapróba-idő után újra próbálható — előtte nem', () => {
+  const p = new Map([['k|10.0.0.1:7373', 1000]]);
+  return ujraProbalhato(p, 'masik', 1000, 120000) && !ujraProbalhato(p, 'k|10.0.0.1:7373', 1000 + 60000, 120000)
+    && ujraProbalhato(p, 'k|10.0.0.1:7373', 1000 + 120000, 120000);
 });
 
 proba('a korlát fölött a legrégebbi függő kiesik — és a kész naplóban kimondja (`kiszorult`)', () => {

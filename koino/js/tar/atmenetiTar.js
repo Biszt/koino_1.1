@@ -336,7 +336,9 @@ export async function atmenetiTarNyitasa(koino, mappa, beallitas = {}) {
       const kulcsok = Object.keys(rogzitett).filter((k) => rogzitett[k][az] && szeletek.has(k));
       return { szeletek: kulcsok.length, bajt: kulcsok.reduce((s, k) => s + szeletek.get(k).bajt, 0) };
     },
-    rogzitettMeret() { return rogzitettBajt(); }
+    rogzitettMeret() { return rogzitettBajt(); },
+    /** ⭐ D112 ⑤: egy szelet legutóbbi rögzítésének ideje (a kártya „pillanatkép” jele), vagy null. */
+    rogzitesIdeje(k) { return rogzitettE(k) ? Math.max(...Object.values(rogzitett[k])) : null; }
   };
 }
 

@@ -5915,7 +5915,19 @@ szöveg-darab és a fájlok, `torzsLenyomatai` —, ami hiányzik, háttér-kér
 törzs-kérések UGYANABBAN a körben indulnak, amelyikben a fejlécek elkészültek; a fájl-tár takarítása a rögzített entitások
 törzsét védettnek látja). ⚠️ Megfigyelés (a bekötés-próba mérte): a csere randevúja a két tár MINDEN entitásának fájljait
 kéri, tehát egy csere-társtól a törzs a felderítés nélkül is jön — a két út versenyez; a fájl-tár kerete (①) ezt korlátozza.
-Elágazás 179. ⏭️ ⑤ a felület.
+Elágazás 179.
+
+✅ **⑤ MEGÉPÜLT (2026-10-19) — a felület — a D112 KÉSZ:** `felulet/js/koinoFelderites.js` (koinós többlet: a kártya menüjében
+„📷 Felderítés…” — a kártya bővítési pontján, `extraMenuOpciok`, a prototípus kártyája bájtra változatlan —, a beállító ablak
+és a „📷 Felderítések” ablak: az állás, újra, törlés, öt másodpercenként frissül), `foMenu.js` (a „Felderítések” és „Az egész
+koinó felderítése…” pont), a kártya „📷” jele (`koinoPakli.js`, a fordító: `kartyaAdat.js` — a forrás-jel mellett,
+„pillanatkép, N napja”), `koinoFelderites.css`; a program oldala: `koino.js` (`GET /api/felderitesek` — a jegyzék, a
+rögzített rész, a beállítás határai; `POST /api/felderites` — új / újra; `POST /api/felderites/torol`; a hierarchikus pakli
+kártyái a rögzítés idejével — `atmenetiTar.js` `rogzitesIdeje`). ⚠️ A böngészős próba két leletet hozott: (1) a kis
+pillanatkép mérete „0 MB”-nak látszott (most 1 MB alatt KB); (2) ⛔ az egész koinó felderítése soha nem lett volna kész: a
+tartó teljes gyökér-válasza után a sorrend biztos, de a bejáró a gyökeret (gyerekszám híján) tovább kérendőnek tartja — a
+lapnak ez jó, egy pillanatképnek a teljes válasz elég (`pakli.js` `felderitesAllasa`). Elágazás 180. Mellette (a ⑦b próba
+megnevezett bukásából): a függő kérelem „már próbáltuk” jele időre szól (2 perc), nem a futás végéig — elágazás 181.
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 

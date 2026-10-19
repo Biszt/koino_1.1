@@ -1,0 +1,27 @@
+/* koino/felulet/css/components/koinoFelderites.css */
+
+/* Felelősség: ⭐ D112 ⑤ — a felderítés ablakai (koinós többlet): a beállító ablak mezői és a felderítések sorai, és a
+   rögzített (felderített) kártya jele. A színek a lap meglévő változóiból, ahol vannak. */
+
+/* ===== A BEÁLLÍTÓ ABLAK ===== */
+.koino-felderites { display: flex; flex-direction: column; gap: 10px; }
+.koino-felderites__cim { font-weight: 600; margin: 0; }
+.koino-felderites__leiras { font-size: 0.85em; opacity: 0.8; margin: 0; line-height: 1.4; }
+.koino-felderites__mezo { display: flex; flex-direction: column; gap: 4px; font-size: 0.9em; }
+.koino-felderites__mezo input[type="number"] { padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; font: inherit; }
+.koino-felderites__mezo--jelolo { flex-direction: row; align-items: center; gap: 8px; }
+
+/* ===== A FELDERÍTÉSEK SORAI ===== */
+.koino-felderitesek { display: flex; flex-direction: column; gap: 10px; }
+.koino-felderites-sor { border: 1px solid #ddd; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+.koino-felderites-sor--fut { border-color: #9cc5a1; }
+.koino-felderites-sor--elakadt, .koino-felderites-sor--keret { border-color: #e0b36a; }
+.koino-felderites-sor__cim { font-weight: 600; overflow-wrap: anywhere; }
+.koino-felderites-sor__allas { font-size: 0.85em; opacity: 0.85; line-height: 1.4; }
+.koino-felderites-sor__ok { font-style: italic; }
+.koino-felderites-sor__gombok { display: flex; gap: 8px; justify-content: flex-end; }
+.koino-felderites-sor__gomb { padding: 4px 10px; border-radius: 6px; border: 1px solid #bbb; background: transparent; cursor: pointer; font: inherit; font-size: 0.85em; }
+.koino-felderites-sor__gomb--torol { border-color: #d39a9a; }
+
+/* ===== A RÖGZÍTETT (FELDERÍTETT) KÁRTYA JELE ===== */
+.pakli-kartya__rogzitett { margin-left: 4px; cursor: help; }

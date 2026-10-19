@@ -470,6 +470,17 @@ export class KoinoPakli extends Pakli {
       const jel = FORRAS_JELE[forras.osszPontForras];
       // A prototípus kártyája az ágazati pontot a tudatpont-sorban, ezzel a felirattal írja ki (`Kartya.js`).
       const elem = dom.querySelector('.pakli-kartya__ikon-sor--tudatpont .pakli-kartya__ikon-elem[aria-label^="Ágazati"]');
+      // ⭐ D112 ⑤: a felderítés pillanatképe — „📷 pillanatkép, N napja” (nem frissül; a követés eszköze a tudatpont).
+      // ⚠️ Külön osztály (nem `pakli-kartya__forras`): a lenti forrás-jel épp azt keresi, hogy van-e már jel.
+      if (forras.rogzitve && elem && !elem.querySelector('.pakli-kartya__rogzitett')) {
+        const nap = Math.floor((Date.now() - forras.rogzitve) / (24 * 3600 * 1000));
+        const kep = document.createElement('span');
+        kep.className = 'pakli-kartya__rogzitett';
+        kep.textContent = '📷';
+        kep.title = 'Pillanatkép (felderítés), ' + (nap <= 0 ? 'ma' : nap + ' napja')
+          + ' — nem frissül; amit követni akarsz, arra tegyél tudatpontot';
+        elem.appendChild(kep);
+      }
       if (!jel || !elem || elem.querySelector('.pakli-kartya__forras')) return;
       // Az „ismeretlen” 0-ja nem nulla, hanem „nem tudom” — a szám helyett a jel áll.
       if (forras.osszPontForras === 'ismeretlen') elem.textContent = '🌿🌟 ';

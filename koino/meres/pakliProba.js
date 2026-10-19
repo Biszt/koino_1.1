@@ -1508,6 +1508,20 @@ proba('⭐ D112 ③: a felderítés állása — a legjobb K az ágban, legfelje
     && keretes.latszik.join() === [f.A, f.A1].join() && keretes.ismert === 4;
 });
 
+// ⭐ D112 (a böngészős próba lelete): az egész koinó felderítésénél a tartó TELJES gyökér-válasza elég — a gyökér nem marad
+// kérendő (különben a felderítés soha nem lenne kész). Rontás: a gyökér-szűrés kimarad → a gyökér kérendő marad → bukik.
+proba('⭐ D112: az egész koinó felderítése — a tartó teljes gyökér-válasza után a gyökér nem marad kérendő', async () => {
+  const f = await kisFa();
+  const nezet = ujPakliNezet({ tartott: async () => new Set() });
+  const gy = new Map([[f.A, { gy: 2 }], [f.A1, { gy: 1 }], [f.A2, { gy: 0 }], [f.A11, { gy: 0 }], [f.B, { gy: 0 }]]);
+  const teljes = await felderitesAllasa(f.tar, KOINO, { keret: 10, nezet,
+    fejlecTudas: new Map([...gy, [GYOKER_KULCS, { levag: 'teljes' }]]) });
+  const reszben = await felderitesAllasa(f.tar, KOINO, { keret: 10, nezet: ujPakliNezet({ tartott: async () => new Set() }),
+    fejlecTudas: gy });
+  return teljes.latszik.length === 5 && teljes.biztos === 5 && teljes.hianyzik.length === 0
+    && reszben.hianyzik.some((h) => h.kulcs === '');
+});
+
 proba('⭐ D101 ③: a program sorait a prototípus fa-elrendezője (`faElrendezes.js`) hiánytalanul elhelyezi — ágban is', async () => {
   const { default: FaElrendezes } = await import('../felulet/js/utils/faElrendezes.js');
   const f = await kisFa();

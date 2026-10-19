@@ -204,6 +204,18 @@ export function probalkozas(ny, az) {
   return alap;
 }
 
+/**
+ * ⭐ Újra próbálható-e egy kérelem egy társnál? (2026-10-19 — a ⑦b próba megnevezett bukása) A „már próbáltuk” jel IDŐRE
+ * szól: egy átmenetileg néma tartó (épp indul, terhelt) a kérelem lejáratáig nem kapna újra esélyt, ha a jel a futás végéig
+ * tartana; ugyanazt a társat ugyanazzal a kérelemmel legfeljebb `ujraproba` időnként kérdezzük.
+ * @param {Map<string, number>} probaltak - kérelem|cím → mikor próbáltuk
+ * @param {string} kulcs @param {number} most @param {number} ujraproba (ms)
+ */
+export function ujraProbalhato(probaltak, kulcs, most, ujraproba) {
+  const mikor = probaltak?.get?.(kulcs);
+  return !Number.isFinite(mikor) || most - mikor >= ujraproba;
+}
+
 /** Minden függő kérelem célja (a kör kopogás-céljaihoz) — címenként egyszer. */
 export function fuggoCelok(ny) {
   const ki = new Map();

@@ -36,6 +36,8 @@ import ErtesitesekModal from './components/modals/ErtesitesekModal.js';
 import ErtesitesiBeallitasModal from './components/modals/ErtesitesiBeallitasModal.js';
 import { aktivEntitasLekerese, aktivEntitasMentese, tokenLekerese } from './utils/authHelper.js';
 import { apiGet } from './utils/apiHelper.js';
+// ⭐ D112 ⑤: a felderítések ablaka (koinós többlet — a prototípusban nincs felderítés).
+import { felderitesekMegnyitasa, felderitesInditasa } from './koinoFelderites.js';
 
 const MODAL_KONTENER = 'modal-kontener';
 
@@ -103,6 +105,9 @@ export class FoMenu {
       { ikon: '↕️', felirat: 'Rendezés', akcio: () => this._rendezesMegnyitasa() },
       // ⭐ A koinós többlet (5.6): a belépő tér — a koinók, amiket ismerek (a prototípusban a „koinó” mint fogalom nem volt)
       ...(this.terMegnyitasa ? [{ ikon: '🌐', felirat: 'A tér — a koinóim', akcio: () => this._terMegnyitasa() }] : []),
+      // ⭐ D112 ⑤ (F5): a felderítések (pillanatképek) — az állás, újra, törlés; és az egész koinó felderítése
+      { ikon: '📷', felirat: 'Felderítések', akcio: () => felderitesekMegnyitasa() },
+      { ikon: '📷', felirat: 'Az egész koinó felderítése…', akcio: () => felderitesInditasa({ ag: 'gyoker' }) },
       // — 2) Értesítések —
       { ikon: '🔔', felirat: 'Értesítések', elvalaszto: true, badge: true, akcio: () => this._ertesitesekMegnyitasa() },
       { ikon: '🔔', felirat: 'Értesítési beállítások', akcio: () => this._ertesitesiBeallitasokGlobalis() },

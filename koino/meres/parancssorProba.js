@@ -5700,7 +5700,10 @@ proba('⭐⭐ ⑦b: a NAT mögötti tartó — a kérdést az őrjárat függő 
   const d = await ujKeszulek();
   const halo = await hamisHalozat(12);
   const PC = 7698, PD = 7699, PF = 7700;
-  const dht = { KOINO_DHT_BELEPOK: halo.belepo(0), KOINO_TUKOR: '127.0.0.1:9' };
+  // ⚠️ (2026-10-19) A teljes sor terhelése alatt az első próbálkozás C-nél (épp újraindult) egyszer 10 mp csend után elbukott
+  // („a másik fél nem válaszol”) — a program azóta ugyanazt a társat ugyanazzal a kérelemmel újrapróba-idő után újra kérdezi
+  // (alapból 2 perc); itt rövidebb, hogy a próba ablakán belül essen.
+  const dht = { KOINO_DHT_BELEPOK: halo.belepo(0), KOINO_TUKOR: '127.0.0.1:9', KOINO_KERELEM_UJRAPROBA: '15000' };
   const orjarat = (hely, port) => spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(port)],
     { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...dht }, stdio: ['ignore', 'pipe', 'pipe'] });
   let oc = null, od = null, fel = null;
@@ -5946,17 +5949,36 @@ proba('⭐⭐ D112 ③: a felderítés — az őrjárat a háttérben elhozza az
     await fut(d, 'kerelem', 'fejlecek', Y, '127.0.0.1', String(PA), '50', 'mely', kornyezet);
     const bemondasok = Object.keys(JSON.parse(await readFile(join(d, 'sajat', 'osszpontok.json'), 'utf8').catch(() => '{}')));
     const lista = tiszta(await fut(d, 'felderites', kornyezet));
+    // ⭐ D112 ⑤: a felület — a felderítések listája, a kártya „pillanatkép” jele, a hibás beállítás, a törlés
+    fel = await feluletet(d, 7711, kornyezet);
+    const lap = await fel.hiv('/api/felderitesek');
+    const kartyaRogzitve = async () => {
+      const h = (await fel.hiv('/api/pakli/hierarchikus?entitas=' + gy1)).adat;
+      return [...(h.pakli ?? []), ...(h.testverek ?? [])].find((k) => k.azonosito === gy1)?.rogzitve ?? null;
+    };
+    const jelElotte = await kartyaRogzitve();
+    const hibas = await fel.hiv('/api/felderites', { method: 'POST', body: JSON.stringify({ ag: 'rossz' }) });
+    const az = lap.adat.felderitesek?.[0]?.az;
+    const torol = await fel.hiv('/api/felderites/torol', { method: 'POST', body: JSON.stringify({ az }) });
+    const lapUtana = await fel.hiv('/api/felderitesek');
+    const jelUtana = await kartyaRogzitve();
     const ki = {
       indul: /FELDERÍTÉS:/.test(indul),
       kesz: /"allapot":"kesz"/.test(jegyzek) && /"latszik":5/.test(jegyzek),
       rogzitve: [X, gy1, gy2, gy3, unoka].every((id) => rogz.includes(id)),
       bemondas: [gy1, gy2, gy3, unoka].every((id) => bemondasok.includes(id)),
-      lista: /kész · 5\/10 csomópont/.test(lista)
+      lista: /kész · 5\/10 csomópont/.test(lista),
+      felulet: lap.allapot === 200 && lap.adat.felderitesek?.length === 1 && lap.adat.felderitesek[0].allapot === 'kesz'
+        && lap.adat.felderitesek[0].agCim === 'Az ág' && lap.adat.felderitesek[0].rogzitettSzelet >= 5 && lap.adat.alap?.k === 200,
+      jel: Number.isFinite(jelElotte) && jelUtana === null,
+      hibas: hibas.allapot === 400 && /ág/.test(hibas.adat.hiba ?? ''),
+      torles: torol.allapot === 200 && lapUtana.adat.felderitesek?.length === 0
     };
     if (!Object.values(ki).every(Boolean)) {
       process.stdout.write('  D112 ③ felderítés — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
         + JSON.stringify({ indul: indul.slice(-300), jegyzek: jegyzek.slice(0, 400), rogz: rogz.slice(0, 300), bemondasok,
-          lista: lista.slice(-300), d: tiszta(dKimenet).replace(/\s+/g, ' ').slice(-600) }) + '\n');
+          lista: lista.slice(-300), lap: lap?.adat, jelElotte, jelUtana, hibas: hibas?.adat, torol: torol?.adat,
+          d: tiszta(dKimenet).replace(/\s+/g, ' ').slice(-600) }) + '\n');
     }
     return Object.values(ki).every(Boolean);
   } finally {
