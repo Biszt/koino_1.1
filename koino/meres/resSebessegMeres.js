@@ -463,6 +463,9 @@ async function tobbForrasMeres(meret, forrasok, beallitas = {}) {
   const kozosMunka = ujMunkamegosztas(await vendeg.reszlegesSzeletek(lenyomat));
   const szeletSzam = Math.max(1, Math.ceil(meret / SZELET_MERET));
   const forrasonkent = new Array(forrasok).fill(0);
+  // ⭐ (2026-10-19, a UDP-s több forrás átvizsgálása) ágonként az eredmény — a közös munka NÉLKÜLI sorban a lezárás
+  // versenye ebből látszik.
+  const agak = new Array(forrasok).fill(null);
 
   const kezd = Date.now();
   try {
@@ -502,8 +505,10 @@ async function tobbForrasMeres(meret, forrasok, beallitas = {}) {
           kapcsolat.setTimeout(120000, () => kapcsolat.destroy(new Error('néma forrás')));
           return kapcsolat;
         };
-        const e = await fajlHozatala(vendeg, KOINO, lenyomat, nyito, { munka: kozosMunka });
+        // ⚠️ `kozosNelkul`: minden ág a SAJÁT munkamegosztásával — a mai élő út (a randevú nem ad `munka`-t).
+        const e = await fajlHozatala(vendeg, KOINO, lenyomat, nyito, beallitas.kozosNelkul ? {} : { munka: kozosMunka });
         forrasonkent[i] = e.szeletek ?? 0;
+        agak[i] = { kesz: e.kesz === true, ok: e.ok ?? null, romlott: e.romlott === true };
       })());
     }
 
@@ -518,7 +523,9 @@ async function tobbForrasMeres(meret, forrasok, beallitas = {}) {
       kesz: kesz !== null && kesz.length === meret,
       ido: Date.now() - kezd,
       szeletek: forrasonkent.reduce((o, n) => o + n, 0),
+      szeletSzam,
       forrasonkent,
+      agak,
       csomag: parosok[0].szamlalo,
       kozosSor: kozosVonal ? { maxSor: kozosVonal.maxSor, eldobott: kozosVonal.eldobott } : null
     };
@@ -817,7 +824,10 @@ async function tobbForrasSor(cimke, forrasok, be, alapIdo, meret = TF_MERET) {
     + sebesseg.toFixed(0).padStart(7) + ' KB/s'
     + (alapIdo ? ('×' + (alapIdo / e.ido).toFixed(1)).padStart(7) : ''.padStart(7))
     + '   ' + (e.kesz ? 'szeletek: ' + e.forrasonkent.join('/')
-      : '⛔ ' + (e.ok ?? 'NEM LETT KÉSZ')));
+      : '⛔ ' + (e.ok ?? 'NEM LETT KÉSZ'))
+    // ⭐ A közös munka nélküli sorban: hány szelet jött a szükségeshez képest, és mit mondott a lezárás ágonként.
+    + (be.kozosNelkul && e.agak ? ' · ' + e.szeletek + ' szelet a ' + e.szeletSzam + ' helyett · ágak: '
+      + e.agak.map((a) => (!a ? '?' : a.kesz ? 'kész' : a.romlott ? 'ROMLOTT' : (a.ok ?? 'nem'))).join(' / ') : ''));
   return e.ido;
 }
 
@@ -873,6 +883,18 @@ kiir('');
   const be = { kesleltetes: 10, savszelesseg: 150, kozosSav: 600 };
   const alap = await tobbForrasSor('(C/2) 1 MB — finomabb szemcse', 1, be, 0, 1024 * 1024);
   await tobbForrasSor('(C/2) 1 MB — finomabb szemcse', 3, be, alap, 1024 * 1024);
+}
+
+// ----- (D) ⛔ A MAI ÉLŐ ÚT: két egyidejű munka ugyanarra a fájlra, KÖZÖS munkamegosztás NÉLKÜL (2026-10-19) -----
+// A randevú (`fajlRandevu` → `fajlUdpResen` → `fajlHozatala`) nem ad `munka`-t, a kapu munkái viszont párhuzamosak: ha
+// ugyanaz a fájl két társnál is megvan, és a kör mindkettőt eléri, két ág hozza egymástól függetlenül. A kérdés: kétszer
+// jön-e minden szelet, és mi lesz a lezárásból (a szelet-fájl írása nem atomi — a lezárás olvashat egy épp írt szeletet)?
+kiir('');
+{
+  const be = { kesleltetes: 10, savszelesseg: 200, kozosSav: 0 };
+  const alap = await tobbForrasSor('(D) a mérce · közös munkával', 1, be, 0);
+  await tobbForrasSor('(D) közös munkával', 2, be, alap);
+  for (let i = 0; i < 5; i++) await tobbForrasSor('(D) közös munka NÉLKÜL', 2, { ...be, kozosNelkul: true, mag: 101 + i }, alap);
 }
 
 kiir('');

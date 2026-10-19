@@ -5266,3 +5266,31 @@ koinó határán ~150 / ~210). ⭐ Az ára a természetes tagnál nem változik 
 (a dróton ~280 KB, társanként egyszer) — 32 ilyen egy tagsági válaszban (~7–11 MB, a profillal több) a vonal 8 MB-os
 sor-korlátjába nem fér biztosan, ezért a válasz bájt-korlátot kap. ⚠️ Egy szimulált fa farka erősen ingadozik (egyetlen futás
 ~2×; az átlagos mélység szórása ~0,6) — a farkat ezért a pontos eloszlás méri. → **D113** (Csaba, 2026-10-19: „(A) 256”).
+
+## 79. ⛔ KÉT EGYIDEJŰ MUNKA UGYANARRA A FÁJLRA — a mai élő út, közös munkamegosztás nélkül (a UDP-s több forrás átvizsgálása, 2026-10-19, a laptopon)
+
+*`node koino/meres/resSebessegMeres.js`, a „TÖBB FORRÁSBÓL EGY FÁJL” szakasz (D) sora — a 29/b műszere (a valódi
+`fajlHozatala` és kiszolgáló a UDP-utánzaton, forrásonként külön vonal, 200 darab/mp, 10 ms), egy 512 KB-os fájl
+(8 szelet). A mai élő úton a randevú (`fajlRandevu` → `fajlUdpResen`) NEM ad közös munkamegosztást, a kapu munkái viszont
+párhuzamosak: ha a fájl két társnál is megvan, és a kör mindkettőt eléri, két ág hozza egymástól függetlenül. Mellette a
+29/b sorai a mai kóddal.*
+
+```
+a 29/b sorai ma (közös munkával):
+  (A) a forrás a szűk        1 forrás 4129 ms · 2 forrás ×1,6 (4/4) · 3 forrás ×2,0 (3/2/3)
+  (B) a mi letöltésünk a szűk 1 forrás 3918 ms · 3 forrás ×1,0
+  (C) aszimmetrikus (4×)     1 forrás 5132 ms · 2 ×1,5 · 3 ×1,7 · 5 ×2,0
+(D) két forrás, a (A) vonalán:
+  közös munkával            2637 ms   ×1,6   szeletek 4/4
+  közös munka NÉLKÜL (5×)   4163–4197 ms   ×1,0   szeletek 8/8 — 16 a 8 helyett, mind az ötször
+     a két ág lezárása:     kész / kész (1×) · kész / „hiányzó szelet” (3×) · ⛔ kivétel: ENOENT egy szelet
+                            olvasásakor (1× — a másik ág lezárása közben eldobta a részleges mappát)
+```
+
+⛔ **A lelet:** a mai élő úton két egyidejű munka ugyanarra a fájlra **minden szeletet kétszer hoz** (kétszeres forgalom —
+és a két tartó kiszolgálási keretéből is kétszer), **sebességben semmit nem nyer** (×1,0 a közös munka ×1,6-ja helyett),
+és a lezárásért versenyez: az öt futásból négyszer a második ág bukásnak könyvelte, egyszer kivétellel szállt el (a
+fájl megvan, de a második ág „nem jött át”-ot mond, és a részleges mappába utólag írt szeletei árván maradhatnak).
+Romlott lezárást (a nem atomi szelet-írás olvasását) öt futás nem hozott — a lehetősége áll, a gyakorisága kicsi. ⭐ A 29/b
+haszna a mai kóddal is áll (×1,6–2,0, ha a forrás a szűk). → a UDP-s több forrás átvizsgálása
+([`udp_tobb_forras_atvizsgalas.md`](../../docs/udp_tobb_forras_atvizsgalas.md)), T1: a közös munka lenyomatonként.
