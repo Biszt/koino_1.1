@@ -3840,6 +3840,70 @@ proba('⭐⭐ a kopogás saját üteme: az ablak végéig kopogó kör után a k
   }
 });
 
+// ===================================
+// ⭐⭐ D116: A FELDERÍTETLEN RÉSZ — a darab a vonalon, a kérő lemezén és a felületén
+// ===================================
+//
+// A (alapító) a felületen egy ágat ír: X alatt három gyerek, az elsőnek két unokája, az egyiknek egy dédunokája (X alatt 6).
+// A `figyel` kiszolgál. D („alap” mód) két kérelmet tesz: a gyökér szintjét (egy szinten) és X legjobb két gyerekét. ⭐ A
+// viselkedés: D lemezén X bemondásában ott az alatta lévők száma (6), a darab-minták átmentek (a tartó a gyerekek születését
+// is küldte — `alattaEllenorzott`), a fejléc-tudásban X gyerekszáma (3); és D felülete X kártyáján kimondja, mi hiányzik
+// (1 gyerek, 4 entitás), az első gyerekén is (2 gyerek, 3 entitás). Rontás: a kérő nem jegyzi a darabot → bukik; a tartó
+// nem küldi a minta gyerekének születését → X fejléce elbukik → bukik; a felület nem kapja a fejléc-tudást → bukik.
+proba('⭐⭐ D116: a felderítetlen rész — a darab a vonalon (mintákkal), a kérő lemezén, és a felület kártyáin', async () => {
+  const a = await ujKeszulek();
+  const d = await ujKeszulek();
+  const PA = 7758, PF = 7759, PD = 7760;
+  let fel = null, figyelo = null;
+  try {
+    await fut(a, 'koino', 'Darab', 'próba', 'nyilt');
+    fel = await feluletet(a, PF);
+    const uj = async (cim, szuloId = null, pont = 10) => (await fel.hiv('/api/gondolat', { method: 'POST',
+      body: JSON.stringify({ cim, kezdoTudatpont: pont, ...(szuloId ? { szuloId } : {}) }) })).adat?.data?._id;
+    const X = await uj('Az ág', null, 50);
+    const gy1 = await uj('Első gyerek', X, 30);
+    await uj('Második gyerek', X, 20);
+    await uj('Harmadik gyerek', X, 10);
+    const u1 = await uj('Első unoka', gy1, 8);
+    await uj('Második unoka', gy1, 6);
+    await uj('Dédunoka', u1, 4);
+    fel.folyamat.kill();
+    fel = null;
+    await varj(600);
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(PA)],
+      { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: 'ignore' });
+    await varj(1500);
+    const kornyezet = { KOINO_KISZOLGALAS: 'alap' };
+    const elso = tiszta(await fut(d, 'kerelem', 'fejlecek', 'gyoker', '127.0.0.1', String(PA), '10', kornyezet));
+    const masodik = tiszta(await fut(d, 'kerelem', 'fejlecek', X, '127.0.0.1', String(PA), '2', kornyezet));
+    figyelo.kill();
+    figyelo = null;
+    await varj(800);
+    const bemondasok = JSON.parse(await readFile(join(d, 'sajat', 'osszpontok.json'), 'utf8').catch(() => '{}'));
+    const tudas = JSON.parse(await readFile(join(d, 'sajat', 'fejlectudas.json'), 'utf8').catch(() => '{}'));
+    fel = await feluletet(d, PD, kornyezet);
+    const h = (await fel.hiv('/api/pakli/hierarchikus?entitas=' + X)).adat;
+    const kartya = (az) => [...(h?.pakli ?? []), ...(h?.testverek ?? [])].find((k) => k.azonosito === az);
+    const ki = {
+      bemondas: bemondasok[X]?.alatta === 6 && bemondasok[gy1]?.alatta === 3,
+      mintak: bemondasok[X]?.alattaEllenorzott > 0,
+      gyerekszam: tudas[X]?.gy === 3,
+      kartyaX: kartya(X)?.hiany?.gyerek === 1 && kartya(X).hiany.alatta === 4 && kartya(X).hiany.legalabb === false,
+      kartyaGy1: kartya(gy1)?.hiany?.gyerek === 2 && kartya(gy1).hiany.alatta === 3
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  D116 — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ' · '
+        + JSON.stringify({ elso: elso.slice(-300), masodik: masodik.slice(-300), x: bemondasok[X], gy1: bemondasok[gy1],
+          tudasX: tudas[X], kX: kartya(X)?.hiany, kGy1: kartya(gy1)?.hiany }) + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const f of [fel?.folyamat, figyelo]) if (f) f.kill();
+    await varj(800);
+    for (const m of [a, d]) await rm(m, { recursive: true, force: true });
+  }
+});
+
 // ⚠️ ITT ÁLLT 2026-09-26-IG „A TÜRELEM ELJUT A VONALIG” (D68): hat forrás a birtoklás-jegyzetben,
 // és a kör UTÁNI TCP-s elhozás 5 mp alatt feladta. ⛔ A D69/2 óta nincs TCP a készülékek
 // között, és a több forrásból egy fájl az éles úton nem fut (Csaba vállalta az árát) — a

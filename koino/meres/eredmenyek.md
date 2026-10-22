@@ -5322,3 +5322,27 @@ a háttér nélkül is elveszett egy forduló. ⭐ A javítás mindkettőre: a t
 a kör nem várja meg), és ha a kör legfeljebb 3 mp-cel csúszott túl a saját ablakán, a következő AZONNAL indul (a társ a
 fordulótól 6 mp-ig kopog). A parancssor-próbák determinisztikusan mérik mindkettőt (egy 9 mp-es háttérrel és egy halott
 címmel, 6 mp-es ablakokkal — a rontásuk 10–15 mp-es köröket ad). → a kopogás saját üteme (D115).
+
+## 81. ⭐ AZ ÖSSZ-DARAB A VONALON — mennyibe kerül a felderítetlen rész jele? (D116, 2026-10-22, a laptopon)
+
+*`node koino/meres/darabMeres.js [gondolatok ...]` — valódi aláírt eseményekből egy véletlen fa (≤ 8 szint, ≤ 8 testvér,
+gondolatonként 1–3 szerző pontja), a gyökérre három fejléc-kérdés a kérelem saját függvényeivel (a vonal ugyanezeket a
+JSON-üzeneteket küldi), 20 futás átlaga (a minta-helyek véletlenek). A régi kód: `KOINO_KOD=<git archive 15afaf3 koino/js>`;
+a minta-számok: `KOINO_MINTA=kd,kg,td,tg` (a kiválasztott és a testvérek darab és gyerek szerinti mintái).*
+
+```
+                                            60 gondolat                       400 gondolat
+                                     régi    D116 (2,1,1,1)            régi    D116 (2,1,1,1)
+a gyökér szintje (egy szinten, 20)   3,2 KB   4,8 KB                    2,8 KB   5,0 KB
+a gyökér-gondolat mélyen (50)       47,4 KB  51,6 KB                   46,5 KB  52,3 KB
+egy első szintű ág mélyen (50)       3,4 KB   3,5 KB                   41,9 KB  45,0 KB
+ebből a FEJLECEK (a lista)          +0,5–0,6 KB (az `ad` mezők)
+a 400-as fa mélyen, más minta-számokkal: 0,0,0,0 → 49,5 · 2,1,0,0 → 50,3 · 2,1,1,1 → 54,0 (egy másik futás) · 4,2,2,1 → 54,9–57,0 KB
+a minta-gyerekek születése, ami külön utazott: mélyen 0,5–2, egy szinten 1,6–1,9 (a többi a listában áll)
+```
+
+⭐ **A lelet:** a lista maga alig nő (+0,5 KB — tételenként egy szám); a többlet a MINTÁKÉ. ⚠️ Darab-minta nélkül is +3 KB a
+mély kérésen: a három összegű fa bizonyítékai nagyobbak (minden testvér-csomópont három számot visz). Egy darab- vagy gyerek-minta
+0,6–0,9 KB (a bizonyítéka, és ha a gyerek nincs a listában, a születése). ⭐ A választás: a kiválasztott 2 + 1, a legfelső 3
+testvér 1 + 1 — a mély kérés +9–12%, a gyökér egy szintje +1,6–2,2 KB; a tét kisebb, mint az össz-ponté (8 és 4 minta): a darab a
+nézet jele, a sorrendet nem dönti el. → a felderítetlen rész (D116).

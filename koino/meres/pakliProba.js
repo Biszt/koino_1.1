@@ -794,6 +794,59 @@ proba('⭐ AZ ÖSSZ-PONT FORRÁSA a kártyán (H2): ellenőrizve · bemondás ·
   return Object.values(ki).every(Boolean);
 });
 
+// ⭐⭐ D116: a FELDERÍTETLEN RÉSZ — egy segédből a kártyán, a testvéreknél, a Struktúra és a Síkidom soraiban, és a felderítés
+// állásában. A-t tartom (két gyereke: A1, A2 — csak a születésük); A1-ről a tartó azt mondta: 5 gyereke van és 12 entitás alatta
+// (ebből egyet ismerek: A11); A2-ről csak az össz-pontot (a darabját nem — „nem tudom”); a gyökér szintjéről: 4 legfelső
+// szintű és 30 entitás. Rontás: a bemondott alatta helyett a helyben ismert → a hiány eltűnik → bukik.
+proba('⭐⭐ D116: a FELDERÍTETLEN RÉSZ — a kártyán, a testvéreknél, a Struktúra és a Síkidom soraiban, és a felderítés állásában', async () => {
+  const { tar, anna } = await ujKoino();
+  const A = await gondolat(tar, anna, 'A', 50);
+  const masik = await ujEember(KOINO);
+  const szuletes = async (cim, szulo = null) => {
+    const e = await masik.tesz('GondolatLetrehozas', { cim, meret: 10, szulo });
+    await esemenyMentese(tar, e);
+    return e.azonosito;
+  };
+  const A1 = await szuletes('A1', A), A2 = await szuletes('A2', A), A11 = await szuletes('A11', A1);
+  const nezet = ujPakliNezet({ tartott: async () => new Set([A]) });
+  const bemondasok = new Map([[A1, { osszPont: 77, alatta: 12 }], [A2, { osszPont: 9 }]]);
+  const fejlecTudas = new Map([[A1, { gy: 5 }], [GYOKER_KULCS, { gy: 4, ad: 30 }]]);
+  const b = { nezet, bemondasok, fejlecTudas };
+  const h = await pakliHierarchia(tar, KOINO, { entitas: A1, ...b });
+  const gy = await pakliHierarchia(tar, KOINO, { entitas: A, ...b });
+  const kartya = (hh, az) => [...hh.pakli, ...hh.testverek].find((x) => x.azonosito === az);
+  const sorok = (await strukturaLap(tar, KOINO, b)).sorok;
+  const sor = (az) => sorok.find((x) => x.entitasId === az);
+  const sikidom = await sikidomGyerekek(tar, KOINO, { szulo: A, ...b });
+  const agA1 = await felderitesAllasa(tar, KOINO, { agazat: A1, keret: 10, ...b });
+  const egesz = await felderitesAllasa(tar, KOINO, { keret: 10, ...b });
+  const ki = {
+    // A1: 5 gyerekből 1 ismert, 12 alatta-ból 1 → 4 gyerek és 11 entitás hiányzik (pontosan)
+    a1: kartya(h, A1)?.hiany?.gyerek === 4 && kartya(h, A1).hiany.alatta === 11 && kartya(h, A1).hiany.legalabb === false
+      && kartya(h, A1).hiany.osszesAlatta === 12,
+    // A (tartom): a gyerekeit mind ismerem; alatta (1 + 12) + (1 + ?) — legalább 14, ebből 3-at ismerek
+    a: kartya(h, A)?.hiany?.gyerek === 0 && kartya(h, A).hiany.alatta === 11 && kartya(h, A).hiany.legalabb === true,
+    // A2: semmit nem tudok róla („+?”)
+    a2: kartya(h, A2)?.hiany?.gyerek === null && kartya(h, A2).hiany.legalabb === true,
+    // a testvérek: A1 szülője A — mind ismert; a gyökérnél 4-ből 1
+    testver: h.testverHiany?.gyerek === 0 && gy.testverHiany?.gyerek === 3 && gy.testverHiany.alatta === 26,
+    struktura: sor(A1)?.koinoHiany?.alatta === 11 && sor(A)?.koinoHiany?.legalabb === true,
+    sikidom: sikidom.gyerekek.find((x) => x.entitasId === A1)?.koinoHiany?.gyerek === 4,
+    felderites: agA1.agOsszes === 13 && agA1.agOsszesLegalabb === false && egesz.agOsszes === 30
+  };
+  if (!Object.values(ki).every(Boolean)) console.log('    (D116 — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ')');
+  return Object.values(ki).every(Boolean);
+});
+
+// ⭐ D116: ha mindent tartok („mindent” mód), egyik kártyán sincs hiány-jel (null) — a jel csak a valódi hiányé.
+proba('⭐ D116: „mindent” módban egyik kártyán sincs hiány-jel — és a felderítés az ág pontos méretét mondja', async () => {
+  const f = await kisFa();
+  const h = await pakliHierarchia(f.tar, KOINO, { entitas: f.A1 });
+  const ag = await felderitesAllasa(f.tar, KOINO, { agazat: f.A, keret: 10 });
+  return [...h.pakli, ...h.testverek].every((x) => x.hiany === null) && h.testverHiany === null
+    && ag.agOsszes === 4 && ag.agOsszesLegalabb === false;
+});
+
 proba('⭐ A HIÁNYZÓ FELMENŐ és a kért, de nem ismert entitás: kérendő szelet — a lánc ott csonka, nem hibás', async () => {
   const { tar, anna } = await ujKoino();
   const ismeretlenSzulo = 'Z'.repeat(43);

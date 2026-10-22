@@ -1305,3 +1305,16 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     okot talált a kimaradt fordulóra: a tábla a kopogás után sorban (az induló kör új címének kiírása 30–55 mp — épp a
     hálózatváltás után, amikor a legnagyobb szükség van a résre), és a fordulóig tartó kopogás utáni ütemezés · Csaba: „a
     többi mehet” · `koino.js` (`orjarat`, `ABLAK_KESES_TURES`, `KOINO_HATTER_KESLELTETES`), `korUtemMeres.js`, a próbák.
+186. **2026-10-22 · a felderítetlen rész (D116)** → **a részfa-fa három összeget visz ([pont, darab, gyerek]); a fejléc az alatta
+    lévők számát is hozza, a gyökér köti, és a szúrópróba a darab és a gyerek szerint is vesz mintát (az eltalált gyerek
+    születésével); a felület egy segédből mondja ki, mi maradt felderítetlen (a kártyán, a testvérnél, a Struktúrában, a
+    Síkidomban, a felderítésnél)** · a teljes szerkezet minden készüléken a 9. szabályba ütközik, a darabszám irányonként nem; a
+    gyerekszám egymagában is minden felderítetlen irányt megjelöl (a megszerzett rész összefüggő), de a mennyiséget csak az
+    össz-darab mondja meg · a kitalált gyerek és a darabot hordozó szerzői levél csak a darab szerinti mintán, a felfújt
+    gyerekszám a gyerek szerintin bukik — ezért kettő; 81. mérés: +9–12% a mély kérésen · Csaba: „(B) Gyerekszám + össz-darab” ·
+    `osszPont.js`, `kerelem.js`, `pakli.js` (`felderitetlenTudas`), `koino.js`, `felulet/js/koinoFelderitetlen.js`, a próbák.
+187. **2026-10-22 · a minták születése nem tudás (D116 — a bekötés-próba lelete)** → **a kérő a fejléc-minták eseményei közül
+    csak a pont-eseményeket teszi az átmeneti tárba** · a darab-minták gyerekeinek születése bizonyíték: a tárban a gyerek
+    „ismert” lett volna pont és fejléc nélkül — a felderítetlen rész kisebbnek látszott (mérve: 4 helyett 2), és a D102 bejárója
+    egy csomópontot teljesnek vett volna, aminek a gyerekei össz-pontját nem ismeri · Claude · `koino.js`
+    (`fejlecValaszFeldolgozasa`), a parancssor-próba.

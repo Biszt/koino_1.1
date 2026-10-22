@@ -6007,6 +6007,48 @@ azonnal indul. A mérés kapcsolója `KOINO_HATTER_KESLELTETES` (ms — egy lass
 fordulóból 0 kimaradt (előtte 1, mindig az induló körben). Próbák +2 (parancssor — a lassú háttér és az ablak végéig kopogó kör,
 6 mp-es ablakokkal), két rontással. Elágazás 185.
 
+### D116. A FELDERÍTETLEN RÉSZ — a gyerekszám és az össz-darab (2026-10-22, Csaba: „(B) Gyerekszám + össz-darab”)
+
+**A kérdés (Csaba, a felderítés kézi próbája előtt):** *„kéne még valami jelzés arra, hogy ha valamilyen irányba van még
+entitás, amit nem derítettünk fel. […] Jó lenne, ha az összes entitásról tudnának a készülékek, darabszám és struktúra szerint.
+szóval, még a címe sem kell. pl. ha valaminek 50-nél is több testvére van, akkor tudni kéne, hogy pont 50-en testvér van, vagy
+csak annyit szerzett be a készülék.”* És: *„Az össz tudatpont, a készülék számára ismert entitások összege, vagy az a tényleges
+össz pontszám?”*
+
+**A válasz:** (1) az össz-pont a TÉNYLEGES (a tartó bemondása a teljes részfából — a ✓/≈/+?/? jel mondja meg, honnan); (2) a
+teljes SZERKEZET minden készüléken a 9. szabályba ütközik (egy entitás a szerkezetben is ≥ 64 bájt — 10^12 entitásnál
+készülékenként 64 TB); (3) a DARABSZÁM irányonként igen: a gyerekszámot a tartó eddig is bemondta (a felület nem mutatta), és mivel
+a megszerzett rész mindig összefüggő fa a gyökértől, a „kevesebb ismert gyerek, mint a bemondott” MINDEN felderítetlen irányt
+megjelöl — csak azt nem mondja, mennyi van alatta.
+
+**Csaba döntése: (B)** — a gyerekszám a felületen, és mellé az **össz-darab** (hány entitás van alatta összesen), az össz-pont
+mintájára; a jel **a ház kártyáin, a testvér-jelzőben, a Struktúra és a Síkidom csomópontjain és a Felderítések ablakában**.
+
+#### ✅ MEGÉPÜLT (2026-10-22)
+
+- **A részfa-fa három összeget visz** (`osszPont.js` `RESZFA_HOSSZ`: [pont, darab, gyerek]): a szerzői levél [pont, 0, 0], a
+  gyerek-levél [össz-pont, 1 + alatta, 1] — a gyökérben az össz-pont, az alatta és a gyerekszám, mind a hármat ugyanaz a fa köti.
+  Az `osszPontokSzamitasa` az alattát is összegzi (a bemondott ágé a bemondásból; a nem tartott, bemondás nélküli csomópont és a
+  régi — darab nélküli — bemondás kimondva bizonytalan: `alattaBizonytalan`), az `ismertAlattaSzamitasa` a helyben ismert
+  leszármazottakat számolja.
+- **A vonalon** (`kerelem.js`): a fejléc tétele és a kérdezett maga is hozza az alattát (`ad`, és ha alsó korlát, `adb`); a
+  kérdező a gyökérhez köti (o[1] = `ad`, o[2] = `gy`). ⭐ **A szúrópróba a darabra is**: a DARAB szerinti minta (a nagy ágra nagyobb
+  eséllyel esik) a darabot hordozó szerzői levelet és a kitalált gyereket fogja meg, a GYEREK szerinti (egyenletes a gyerekek közt)
+  a gyerekszámot felfújó levelet — az eltalált gyerek aláírt születése a válaszban jön (ha nincs a listában), és a szülője X (ha
+  nem, az egyezmény helyezte át — kimondott korlát). A minta-számok (81. mérés): a kiválasztott 2 + 1, a legfelső 3 testvér 1 + 1.
+- **A kérő** (`koino.js`): a bemondásba az alatta (és az ellenőrzött darab-minták száma), a fejléc-tudásba a kérdezett alatta;
+  ⛔ a minták születései NEM kerülnek a tárba (bizonyíték, nem tudás — különben a gyerek „ismert” lenne pont és fejléc nélkül, és
+  a D102 bejárója egy csomópontot teljesnek venne; a bekötés-próba mérte).
+- **A felderítetlen rész egy helyen** (`pakli.js` `felderitetlenTudas`): csomópontonként hány gyerek és hány entitás nem ismert
+  alatta (a tartó szerint, mínusz amit ismerek; ha nem tudom, kimondva) — a ház kártyái (`hiany`), a testvérek (`testverHiany`),
+  a Struktúra és a Síkidom sorai (`koinoHiany`), a felderítés állása (`agOsszes` — a jegyzékbe is).
+- **A felület** (`koinoFelderitetlen.js` — egy szöveg a négy nézetnek): a kártyán „▾+N”, a testvér-jelző alatt „+N testvér”, a
+  Struktúra csomópontján és a Síkidom alakzatán ugyanez (a modálok köré — `koinoModalok.js`), a Felderítések ablakában „az ágban N
+  entitás”; a magyarázat a `title`-ben.
+- **A 81. mérés** (`darabMeres.js`, a régi kóddal is): a fejléc maga +0,5 KB; a mély kérés (a bogár, 50 fejléc) 46–47 → 51–52 KB
+  (+9–12%), a gyökér egy szintje 2,8–3,2 → 4,8–5,0 KB. Próbák +8 (össz-pont 4, kérelem 1, pakli 2, parancssor 1), mind rontással.
+  Elágazás 186–187.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

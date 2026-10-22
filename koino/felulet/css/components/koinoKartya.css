@@ -129,6 +129,43 @@
   color: var(--color-primary);
 }
 
+/* ⭐ D116: a FELDERÍTETLEN RÉSZ jele — ha a kártya alatt van még entitás, amit ez a készülék nem ismer („▾+N”). A
+   `koinoFelderitetlen.js` teszi rá; a magyarázat a `title`-ben. Halvány, mint a forrás jele (D19: nem vád). */
+.pakli-kartya__felderitetlen {
+  margin-left: 6px;
+  font-size: 0.85em;
+  font-style: italic;
+  color: var(--color-text-faint);
+  cursor: help;
+  white-space: nowrap;
+}
+
+/* ⭐ D116: a nem ismert testvérek száma a testvér-jelző alatt (a képernyő jobb szélén, mint a kacsacsőrök — nem gomb). */
+.koino-testver-hiany {
+  position: fixed;
+  right: 1rem;
+  top: calc(50% + 4.2rem);
+  transform: translateY(-50%);
+  z-index: 150;
+  padding: 2px 8px;
+  border: 1px dashed rgba(200, 192, 181, 0.8);
+  border-radius: var(--radius-full);
+  background: rgba(247, 243, 236, 0.7);
+  color: var(--color-text-faint);
+  font-family: var(--font-body);
+  font-size: var(--text-xs, .8rem);
+  font-style: italic;
+  cursor: help;
+}
+
+/* ⭐ D116: ugyanez a Struktúra csomópontjain (SVG — a csomópont koordinátáiban). */
+.koino-struktura-hiany {
+  font-size: 9px;
+  font-style: italic;
+  fill: #6b5f52;
+  cursor: help;
+}
+
 /* A betöltés az állapot-sorban: az őrjárat hozza, amit a pakli még nem ismer (H1). */
 .allapot.betoltes {
   font-style: italic;

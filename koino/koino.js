@@ -297,7 +297,7 @@ import {
   fejlecekValasza, fejlecKepe, mintakValasza, mintaKeres, fejlecekEllenorzese, torzsLenyomatai, kerelemAlakja, tovabbiUgras, UGRAS_MAX,
   SOROZAT_KORLAT
 } from './js/csere/kerelem.js';
-import { reszfaKarbantarto, osszPontokSzamitasa } from './js/allapot/osszPont.js';
+import { reszfaKarbantarto, osszPontokSzamitasa, RESZFA_HOSSZ, RESZFA_DARAB } from './js/allapot/osszPont.js';
 // ⭐⭐ D109 (KK2–KK5): a kiszolgálási keret könyvelése (mennyit dolgoztam másoknak az utóbbi órában, kinek)
 import {
   ujKeret, keretHatara, keretFeljegyzes, keretItelete, keretAllasa, tarsKulcsa, tarsOsztalya, keretKotesE, KERET_ALAP,
@@ -2406,7 +2406,8 @@ async function felderitesKor() {
       torzsHianyzik = torzsKerendo.length;
     }
     const { f: uj, kerj } = felderitesLepese(f, { ismert: a.ismert, latszik: a.latszik.length, biztos: a.biztos,
-      hianyzik: a.hianyzik.length, agIsmert: a.agIsmert, bajt, torzsHianyzik }, most);
+      hianyzik: a.hianyzik.length, agIsmert: a.agIsmert, bajt, torzsHianyzik, agOsszes: a.agOsszes,
+      agOsszesLegalabb: a.agOsszesLegalabb }, most);
     const db = Math.min(kerj, hely);
     // ⚠️ Ha az ág gyökere még nem ismert, a bejáró csak a GYEREKEIT kéri (a fejléc-kérdés X alatt felel) — magát az ágat a
     // szelete hozza (különben a felderítés soha nem lenne kész).
@@ -2590,7 +2591,10 @@ async function bemondasok() {
   const t = await osszegzesTarolo(KOINO).olvas();
   for (const [k, x] of Object.entries(t.szeletek)) {
     if (x?.fok === 'osszegzo' && Number.isSafeInteger(x.osszPont) && x.osszPont >= 0) {
-      m.set(k, { osszPont: x.osszPont, ido: x.ellenorizve ?? 0, ellenorzott: true, osszegzett: true });
+      // ⭐ D116: a tárolt gyökér a darabot is hozza (a D116 előtti egy összegű gyökér nem — akkor „nem tudom”).
+      const ad = x.gyoker?.o?.length === RESZFA_HOSSZ ? x.gyoker.o[RESZFA_DARAB] : null;
+      m.set(k, { osszPont: x.osszPont, ido: x.ellenorizve ?? 0, ellenorzott: true, osszegzett: true,
+        ...(Number.isSafeInteger(ad) && ad >= 0 ? { alatta: ad } : {}) });
     }
   }
   return m;
@@ -2700,7 +2704,10 @@ async function fejlecValaszFeldolgozasa(r) {
     jok++;
     const m = await esemenyMentese(atmeneti, t.letrehozo);
     if (m.mentve && !m.marMegvolt) bevett++;
-    ujBemondasok.set(t.az, { osszPont: t.osszPont, ido: Date.now(), ellenorzott: ered.mintazott ? ered.minta.ellenorzott : 0 });
+    // ⭐ D116: az alatta lévők száma is (és ha a tartó maga sem tudta pontosan — `adb`); a darab-minták száma, ha volt.
+    ujBemondasok.set(t.az, { osszPont: t.osszPont, ido: Date.now(), ellenorzott: ered.mintazott ? ered.minta.ellenorzott : 0,
+      ...(Number.isSafeInteger(ered.ad) ? { alatta: ered.ad, ...(ered.adb ? { alattaBizonytalan: ered.adb } : {}),
+        ...(ered.mintazott && ered.minta.darabEllenorzott ? { alattaEllenorzott: ered.minta.darabEllenorzott } : {}) } : {}) });
     // ⭐ J2: a gyerekszám (csak ha a válaszoló tartja), és vele a levágás — ⚠️ a levágás a tétel gyerekeire CSAK mély
     // válaszban igaz (ott a válaszoló a tartott tételek gyerekeit is bejárta); egy szinten csak a kérdezettre.
     if (Number.isSafeInteger(ered.gy)) {
@@ -2710,10 +2717,17 @@ async function fejlecValaszFeldolgozasa(r) {
   // A kérdezett maga: a gyerekszáma (ha a válaszoló tartja) és a levágás — a folytatás innen tudja, hol tart.
   const kulcs = r.valasz?.kulcs;
   if (typeof kulcs === 'string' && (Number.isSafeInteger(r.valasz?.gy) || levag) && rendben.length === tetelek.length) {
+    // ⭐ D116: és a kérdezett alatt lévők száma (a gyökérnél: a koinó, amennyit a tartó ismer) — a felderítés „N / összes”-éhez.
+    const ad = Number.isSafeInteger(r.valasz.ad) && r.valasz.ad >= 0 ? r.valasz.ad : null;
     ujTudas.set(kulcs, { ...(Number.isSafeInteger(r.valasz.gy) ? { gy: r.valasz.gy } : {}), ...(levag ? { levag } : {}),
+      ...(ad !== null ? { ad, ...(Number.isSafeInteger(r.valasz.adb) && r.valasz.adb > 0 ? { adb: r.valasz.adb } : {}) } : {}),
       m: r.valasz.m === true, ido: Date.now() });
   }
+  // ⛔ D116: csak a pont-események — a darab-minták gyerekeinek születése BIZONYÍTÉK, nem tudás: ha a tárba kerülne, a gyerek
+  // „ismert” lenne pont és fejléc nélkül (a felderítetlen rész kisebbnek látszana, és a bejáró egy csomópontot teljesnek
+  // venne, aminek a gyerekei össz-pontját nem ismeri — a D102 biztos előtagja hibásan nőne). A bekötés-próba mérte.
   for (const pe of r.esemenyek) {
+    if (pe?.tipus !== 'TudatpontRendezes') continue;
     const m = await esemenyMentese(atmeneti, pe);
     if (m.mentve && !m.marMegvolt) bevett++;
   }
@@ -3215,9 +3229,10 @@ function kerelemKiszolgaloja() {
       // ⭐ D109 (KK1): a kiszolgáló képe a gyorsítótárból (a tartott-kérdés és a fejléc-kép is) — egy kérés ára a lista hossza.
       const { allapot, tartott, bemondasok: bem, fejlec } = await kiszolgaloKepe();
       const tartja = tartott(k.kulcs);
-      const { valasz, fak } = await fejlecekValasza({ allapot, kulcs: k.kulcs, n: k.n, m: k.m === true, utan: k.utan ?? null,
-        tartott, karbantarto: kerelemKarbantarto, esemenyOlvas: esemenyKetTarbol, bemondasok: bem, kep: fejlec });
-      return { valasz, tartja, mintak: (kert, megvan) => mintakValasza({ fak, kert, megvan, esemenyOlvas: esemenyKetTarbol }) };
+      const { valasz, fak, letrehozoAz, listazott } = await fejlecekValasza({ allapot, kulcs: k.kulcs, n: k.n, m: k.m === true,
+        utan: k.utan ?? null, tartott, karbantarto: kerelemKarbantarto, esemenyOlvas: esemenyKetTarbol, bemondasok: bem, kep: fejlec });
+      return { valasz, tartja,
+        mintak: (kert, megvan) => mintakValasza({ fak, kert, megvan, esemenyOlvas: esemenyKetTarbol, letrehozoAz, listazott }) };
     },
     /** ⭐ D92/1 (c): átveszem-e továbbadásra? (nem kaptam már meg, a számláló enged, van hely) */
     async atvesz(k, honnan) {
@@ -8308,6 +8323,8 @@ try {
             szerzo,
             nezet: pakliNezet,
             bemondasok: aktivKoino === KOINO ? await bemondasok() : new Map(),
+            // ⭐ D116: a bemondott gyerekszámok — a kártyák „még nem ismert” jeléhez
+            fejlecTudas: aktivKoino === KOINO ? await fejlecTudas() : new Map(),
             darabOlvas: (lenyomat) => fajlBlobTarolo(aktivKoino).olvas(lenyomat)
           });
           const keres = aktivKoino === KOINO && h.hianyzik.length ? await lapHianyzoinakElkerese(h.hianyzik)

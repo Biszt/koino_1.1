@@ -71,7 +71,9 @@ export function felderitesJegyzekAlakja(x) {
       torzsHianyzik: Number.isInteger(f.torzsHianyzik) && f.torzsHianyzik >= 0 ? f.torzsHianyzik : null,
       kezdet: szam(f.kezdet), vege: Number.isFinite(f.vege) ? f.vege : null,
       frissitve: szam(f.frissitve), haladas: szam(f.haladas), latszik: szam(f.latszik), biztos: szam(f.biztos),
-      bajt: szam(f.bajt), kerelmek: szam(f.kerelmek), ok: typeof f.ok === 'string' ? f.ok.slice(0, 200) : null });
+      bajt: szam(f.bajt), kerelmek: szam(f.kerelmek), ok: typeof f.ok === 'string' ? f.ok.slice(0, 200) : null,
+      // ⭐ D116: az ág teljes mérete a tartó szerint (null: nem tudom), és hogy alsó korlát-e
+      agOsszes: Number.isSafeInteger(f.agOsszes) && f.agOsszes >= 0 ? f.agOsszes : null, agOsszesLegalabb: f.agOsszesLegalabb === true });
   }
   return { felderitesek: ki.slice(-FELDERITES_JEGYZEK_KORLAT) };
 }
@@ -96,7 +98,7 @@ export function ujFelderites(jegyzek, beallitas, most, az) {
   }
   const f = { az: regi?.az ?? az, ...b, allapot: 'fut', fazis: 'fejlec', torzsHianyzik: null, kezdet: most, vege: null,
     frissitve: most, haladas: most, latszik: 0,
-    biztos: 0, bajt: regi?.bajt ?? 0, kerelmek: 0, ok: null };
+    biztos: 0, bajt: regi?.bajt ?? 0, kerelmek: 0, ok: null, agOsszes: null, agOsszesLegalabb: false };
   j.felderitesek = [...tobbi, f];
   return { jegyzek: j, felderites: f, ujra: !!regi };
 }
@@ -108,12 +110,16 @@ export function ujFelderites(jegyzek, beallitas, most, az) {
  * beállított méretet; ELAKADT, ha `FELDERITES_ELAKADAS` óta nem lépett előre; különben fut, és legfeljebb `keresKor` új
  * kérést kérhet.
  * @param {Object} f - a felderítés
+ * ⭐ D116: az ág teljes mérete (`agOsszes` — a tartó szerint, `pakli.js` `felderitesAllasa`) a jegyzékbe kerül (az ablak
+ * „N / összes”-éhez); a lépést nem befolyásolja.
  * @param {{ismert: number, latszik: number, biztos: number, hianyzik: number, agIsmert: boolean, bajt: number,
- *   torzsHianyzik?: number|null}} a
+ *   torzsHianyzik?: number|null, agOsszes?: number|null, agOsszesLegalabb?: boolean}} a
  * @returns {{f: Object, kerj: number}}
  */
-export function felderitesLepese(f, { ismert, latszik, biztos, hianyzik, agIsmert, bajt, torzsHianyzik = null }, most) {
-  const uj = { ...f, frissitve: most, latszik, bajt };
+export function felderitesLepese(f, { ismert, latszik, biztos, hianyzik, agIsmert, bajt, torzsHianyzik = null, agOsszes = null,
+  agOsszesLegalabb = false }, most) {
+  const uj = { ...f, frissitve: most, latszik, bajt,
+    ...(Number.isSafeInteger(agOsszes) && agOsszes >= 0 ? { agOsszes, agOsszesLegalabb: agOsszesLegalabb === true } : {}) };
   if (biztos > f.biztos || latszik > f.latszik) uj.haladas = most;
   if (Number.isInteger(torzsHianyzik)) {
     if (f.torzsHianyzik === null || torzsHianyzik < f.torzsHianyzik) uj.haladas = most;

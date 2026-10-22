@@ -89,6 +89,10 @@ export function kartyaAdatta(k) {
         rogzitve: Number.isFinite(k.rogzitve) ? k.rogzitve : null }
       : null,
 
+    // ⭐ D116: mi maradt felderítetlen alatta (a program számolja — `pakli.js` `felderitetlenTudas`); a kártya nem olvassa,
+    // a `koinoPakli.js` jelöli. null: alatta mindent ismerek.
+    koinoHiany: k.hiany && typeof k.hiany === 'object' ? k.hiany : null,
+
     adatok: {
       cim: k.cim ?? '',
 
@@ -257,7 +261,9 @@ export function prototipusUtvonala(utvonal) {
       fordit: hierarchiaAdatta,
       // A `betoltes` és a `hianyzik` a lapé (újrakérdez, kiírja) — a `Pakli.js` nem tárolná.
       jel: (v) => ({ fajta: 'hierarchia', kert, kivalasztott: v?.kivalasztott ?? null, betoltes: v?.betoltes === true,
-        kitolKerni: v?.kitolKerni ?? 0, hianyzik: v?.hianyzik ?? [], pakli: (v?.pakli ?? []).length, testverek: (v?.testverek ?? []).length }),
+        kitolKerni: v?.kitolKerni ?? 0, hianyzik: v?.hianyzik ?? [], pakli: (v?.pakli ?? []).length, testverek: (v?.testverek ?? []).length,
+        // ⭐ D116: hány testvér nem ismert (a testvér-jelző mellé — a `koinoPakli.js`)
+        testverHiany: v?.testverHiany && typeof v.testverHiany === 'object' ? v.testverHiany : null }),
       horgonyt: true
     };
   }

@@ -26,6 +26,7 @@ import SikidomModal from './components/modals/SikidomModal.js';
 import KeresesModal from './components/modals/KeresesModal.js';
 import ErtesitesekModal from './components/modals/ErtesitesekModal.js';
 import ErtesitesiBeallitasModal from './components/modals/ErtesitesiBeallitasModal.js';
+import { strukturaHianyJelolese, sikidomHianyRajzolasa } from './koinoFelderitetlen.js';
 
 // ===================================
 // A PROGRAM MEGJEGYZÉSEI — útvonalanként a legutóbbi
@@ -83,19 +84,42 @@ export function megjegyzesKirajzolasa(elem, szoveg) {
  * írna (D101 ③: a Struktúra darabszám-lekérése).
  */
 function koruleIr(Osztaly, metodus, utana) {
+  ertekUtan(Osztaly, metodus, function (_ertek, ...ervek) { utana.call(this, ...ervek); });
+}
+
+/**
+ * Mint a `koruleIr`, de a koinós rész az eredeti VISSZATÉRÉSI ÉRTÉKÉT is megkapja (első érvként) — D116: a Struktúra a sorait
+ * így adja át (a letöltő metódus értéke, a modál nem tárolja).
+ */
+function ertekUtan(Osztaly, metodus, utana) {
   const eredeti = Osztaly.prototype[metodus];
   if (typeof eredeti !== 'function' || eredeti.koinoKorulirva) return;
   const uj = function (...ervek) {
     const ertek = eredeti.apply(this, ervek);
     if (ertek && typeof ertek.then === 'function') {
-      return ertek.then((x) => { utana.call(this, ...ervek); return x; });
+      return ertek.then((x) => { utana.call(this, x, ...ervek); return x; });
     }
-    utana.call(this, ...ervek);
+    utana.call(this, ertek, ...ervek);
     return ertek;
   };
   uj.koinoKorulirva = true;
   Osztaly.prototype[metodus] = uj;
 }
+
+// ===================================
+// ⭐ D116: A FELDERÍTETLEN RÉSZ — a sorok hiánya, entitásonként (a Struktúra és a Síkidom jele)
+// ===================================
+//
+// A program a Struktúra és a Síkidom soraiban megmondja, mi maradt felderítetlen egy csomópont alatt (`koinoHiany`); az
+// örökölt modálok ezt a mezőt nem viszik tovább a saját csomópontjaikba. Ezért itt jegyezzük fel (a legutóbbit, korlátosan),
+// és a modálok rajzolása UTÁN tesszük ki a jelet (`koinoFelderitetlen.js`).
+const HIANY_KORLAT = 20000;
+const hianyok = new Map();
+function hianyokFeljegyzese(parok) {
+  for (const [az, h] of parok) { hianyok.delete(az); hianyok.set(az, h); }
+  while (hianyok.size > HIANY_KORLAT) hianyok.delete(hianyok.keys().next().value);
+}
+document.addEventListener('koino:hiany', (e) => hianyokFeljegyzese(Array.isArray(e.detail) ? e.detail : []));
 
 // ===================================
 // ⭐ A TUDATPONTOK (D101, az I. csoport)
@@ -119,6 +143,18 @@ koruleIr(StrukturaModal, '_darabszamLekerese', function () {
   const szoveg = megjegyzes('struktura/darabszam');
   megjegyzesKirajzolasa(document.getElementById('struktura-folyamat'), szoveg);
   megjegyzesKirajzolasa(document.querySelector('#struktura-nezet .struktura-modal__sugo'), szoveg);
+});
+
+// ⭐ D116: a sorok hiánya (a modál nyers `fetch`-csel tölt — az `apiHelper.js` nem látja), és a jel a csomópontokon, minden
+// SVG-frissítés után (a réteg minden frissítéskor újraépül).
+ertekUtan(StrukturaModal, '_faLetoltese', function (sorok) {
+  hianyokFeljegyzese((Array.isArray(sorok) ? sorok : []).filter((s) => s && 'koinoHiany' in s)
+    .map((s) => [String(s.entitasId), s.koinoHiany ?? null]));
+});
+koruleIr(StrukturaModal, '_svgFrissitese', function () {
+  for (const g of document.querySelectorAll('#struktura-svg g.struktura-modal__csomopont[data-entitas-id]')) {
+    strukturaHianyJelolese(g, hianyok.get(g.getAttribute('data-entitas-id')) ?? null);
+  }
 });
 
 // ===================================
@@ -183,6 +219,15 @@ koruleIr(SikidomModal, '_gyerekekBetoltese', function (szuloId) {
 koruleIr(SikidomModal, '_osLancFelfuzese', function () {
   this._koinoLancMegjegyzes = megjegyzes('sikidom/oslanc');
   sikidomMegjegyzesKirajzolasa(this);
+});
+
+// ⭐ D116: a jel a síkidomokon — a prototípus menetei UTÁN, ugyanazokon az alakzatokon, amiket épp kirajzolt.
+koruleIr(SikidomModal, '_rajzolas', function () {
+  if (!this.kontextus || !hianyok.size) return;
+  for (const { cs, kep } of this._utolsoLathatoak ?? []) {
+    const h = hianyok.get(String(cs?.id));
+    if (h) sikidomHianyRajzolasa(this.kontextus, kep, h, this.rajzolo?.halvanyodas?.(kep.kepSugar) ?? 1);
+  }
 });
 
 // ===================================

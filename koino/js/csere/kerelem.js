@@ -37,7 +37,7 @@ import { azonositoAlaku, esemenyEllenorzese } from '../esemeny/esemeny.js';
 import { javaslatEntitasai } from '../allapot/szabalyok.js';
 import {
   osszPontokSzamitasa, gyerekJegyzek, reszfaLevelei, reszfaGyokere, fejlecMintai, fejlecEllenorzese, mintaHelyek,
-  MINTA_KORLAT
+  mintaHelyekOsszegre, MINTA_KORLAT, RESZFA_HOSSZ, RESZFA_PONT, RESZFA_DARAB, RESZFA_GYEREK
 } from '../allapot/osszPont.js';
 import { osszegzesAlakja } from '../esemeny/osszegzoFa.js';
 import { entitasFajljai, lenyomatUrlbol } from '../allapot/fajlIgeny.js';
@@ -74,8 +74,14 @@ export const MINTAZOTT_FEJLEC_KORLAT = 8;
 /** Egy törzsben legfeljebb ennyi fájl-lenyomat. */
 export const TORZS_KORLAT = 64;
 
-/** A pakli alapértelmezése (62. mérés): a kiválasztott ág k = 8, a legfelső 3 testvér k = 4. */
-export const MINTA_ALAP = { kivalasztott: 8, testver: 4, testverDb: 3 };
+/**
+ * A pakli alapértelmezése (62. mérés): a kiválasztott ág k = 8, a legfelső 3 testvér k = 4. ⭐ D116: és a DARAB (az ág mérete
+ * szerint) és a GYEREK (egyenletesen a gyerekek közt) szerinti minták — az eltalált gyerek születésével. A 81. mérés: egy ilyen
+ * minta 0,6–0,9 KB; a kiválasztott 2 + 1, a testvérek 1 + 1 mintájával a mély kérés +9–12% (46–47 → 51–52 KB), a gyökér egy
+ * szintje +1,6–2,2 KB — a tét kisebb, mint az össz-ponté (a darab a nézet jele, nem a sorrendé).
+ */
+export const MINTA_ALAP = { kivalasztott: 8, testver: 4, testverDb: 3, kivalasztottDarab: 2, kivalasztottGyerek: 1,
+  testverDarab: 1, testverGyerek: 1 };
 
 /**
  * Az esemény az `az` entitás LÉTREHOZÓJA-e, és ha igen, ki a szülője (null: a gyökér). ⭐ Ugyanabból az egy forrásból,
@@ -279,7 +285,8 @@ export function fejlecKepe(allapot, osszPontok) {
  * @param {Function} b.esemenyOlvas - async (azonosító) → esemény | null
  * @param {Map} [b.bemondasok] - a nem tartott entitások bemondott össz-pontja
  * @param {Object} [b.kep] - ⭐ D109 (KK1): a `fejlecKepe` (a kiszolgáló gyorsítótárából) — ha nincs, itt készül (ugyanaz az út)
- * @returns {Promise<{valasz: Object, fak: Map<string, Object>}>}
+ * @returns {Promise<{valasz: Object, fak: Map<string, Object>, letrehozoAz: Function, listazott: Set<string>}>} — D116: a
+ *   gyerekek létrehozójának azonosítója és a listázottak (a darab-minták születéseihez — `mintakValasza`)
  */
 export async function fejlecekValasza({ allapot, kulcs, n, m = false, utan = null, tartott = () => true, karbantarto,
   esemenyOlvas, bemondasok = new Map(), kep = null }) {
@@ -323,21 +330,39 @@ export async function fejlecekValasza({ allapot, kulcs, n, m = false, utan = nul
     // ⚠️ A FELKERÜLT gyerek (a szülőjét a D14 elfelejtette — `szerkezetIgazitasa`): a létrehozója más szülőt mond.
     // Ezt kimondjuk; a kérdező nem tudja ellenőrizni, hogy a régi szülő valóban elfelejtődött (D19).
     const felkerult = letrehozoSzuloje(letrehozo, x.az) !== x.sz;
+    // ⭐ D116: az alatta lévők száma (`ad`) — és ha a válaszoló maga sem tudja pontosan, hány csomópontnál bizonytalan (`adb`).
     lista.push({ az: x.az, sz: x.sz, letrehozo, osszPont: x.o.osszPont, forras: x.o.forras, bizonytalan: x.o.bizonytalan,
-      gyoker, ...(tartja ? { gy: gyerekeiOf(x.az).length } : {}), ...(felkerult ? { felkerult: true } : {}) });
+      gyoker, ...alattaMezok(x.o), ...(tartja ? { gy: gyerekeiOf(x.az).length } : {}), ...(felkerult ? { felkerult: true } : {}) });
   }
   const tartjaX = tartott(kulcs);
+  // ⭐ D116: a kérdezett maga — a gyerekszáma mellett az alatta lévők száma (a gyökérnél: a legfelső szintűek ágai együtt).
+  const kerdezett = kulcs === GYOKER_KULCS
+    ? gyerekeiOf(kulcs).reduce((a, az) => {
+      const o = osszPontok.get(az);
+      return o ? { alatta: a.alatta + 1 + o.alatta, alattaBizonytalan: a.alattaBizonytalan + o.alattaBizonytalan } : a;
+    }, { alatta: 0, alattaBizonytalan: tartjaX ? 0 : 1 })
+    : osszPontok.get(kulcs);
   const valasz = { kulcs, m: !!m, lista, teljes: kupac.meret() === 0,
-    ...(tartjaX ? { gy: gyerekeiOf(kulcs).length } : {}), ...(utan ? { utan } : {}) };
-  return { valasz, fak };
+    ...(tartjaX ? { gy: gyerekeiOf(kulcs).length } : {}), ...(kerdezett ? alattaMezok(kerdezett) : {}), ...(utan ? { utan } : {}) };
+  // ⚠️ A töredéknek nincs saját eseménye: a létrehozója a javaslat (D85/5) — mint a lista tételeinél.
+  const letrehozoAz = (az) => { const e = allapot.entitasok.get(az); return e?.toredek ? e.toredek.csoport : az; };
+  return { valasz, fak, letrehozoAz, listazott: new Set(lista.map((t) => t.az)) };
+}
+
+/** ⭐ D116: az alatta mezői a vonalon — `ad` (hány entitás van alatta) és `adb` (hány csomópontnál alsó korlát; 0-nál nincs). */
+function alattaMezok(o) {
+  if (!Number.isSafeInteger(o?.alatta) || o.alatta < 0) return {};
+  return { ad: o.alatta, ...(o.alattaBizonytalan > 0 ? { adb: o.alattaBizonytalan } : {}) };
 }
 
 /**
  * A MINTÁK: a kért helyekre a levelek bizonyítéka, és a szerzői levelek aláírt pont-eseményei (amit a kérdező még
  * nem jelzett meglévőnek). Korlátos: legfeljebb `MINTAZOTT_FEJLEC_KORLAT` fejléc, fejlécenként `MINTA_KORLAT` minta.
+ * ⭐ D116: a darab és a gyerek szerinti mintán eltalált gyerek SZÜLETÉSE is (a kérdező e nélkül elveti a fejlécet) — kivéve,
+ * ha a gyerek a listában áll (`listazott`: a létrehozója ott már megvan).
  * @returns {Promise<{mintak: Object, esemenyek: Array}>}
  */
-export async function mintakValasza({ fak, kert, esemenyOlvas, megvan = [] }) {
+export async function mintakValasza({ fak, kert, esemenyOlvas, megvan = [], letrehozoAz = (az) => az, listazott = new Set() }) {
   const mintak = {};
   const kell = new Set();
   const meglevo = new Set(Array.isArray(megvan) ? megvan.filter((x) => typeof x === 'string') : []);
@@ -345,11 +370,13 @@ export async function mintakValasza({ fak, kert, esemenyOlvas, megvan = [] }) {
   for (const [az, helyek] of tetelek.slice(0, MINTAZOTT_FEJLEC_KORLAT)) {
     const fa = fak.get(az);
     if (!fa || !Array.isArray(helyek)) continue;
-    const m = await fejlecMintai(fa, helyek.filter((r) => Number.isSafeInteger(r)).slice(0, MINTA_KORLAT));
+    // ⭐ D116: a hely szám (pont) vagy pár (darab, gyerek) — az alakját a `fejlecMintai` ellenőrzi.
+    const m = await fejlecMintai(fa, helyek.slice(0, MINTA_KORLAT));
     mintak[az] = m;
     for (const x of m) {
       const e = x.bizonyitek?.vegpont?.ertek?.e;
       if (x.kulcs.startsWith('p:') && typeof e === 'string' && !meglevo.has(e)) kell.add(e);
+      if (x.kulcs.startsWith('g:') && x.i && !listazott.has(x.kulcs.slice(2))) kell.add(letrehozoAz(x.kulcs.slice(2)));
     }
   }
   const esemenyek = [];
@@ -377,9 +404,16 @@ export function mintaKeres(valasz, { kivalasztott = null, minta = MINTA_ALAP } =
   let testver = 0;
   for (const t of lista) {
     if (Object.keys(kert).length >= MINTAZOTT_FEJLEC_KORLAT) break;
-    if (!t?.gyoker || !osszegzesAlakja(t.gyoker, 1) || kert[t.az]) continue;
-    if (kivalasztottak.has(t.az)) kert[t.az] = mintaHelyek(t.gyoker.o[0], minta.kivalasztott);
-    else if (testver < minta.testverDb) { kert[t.az] = mintaHelyek(t.gyoker.o[0], minta.testver); testver++; }
+    if (!t?.gyoker || !osszegzesAlakja(t.gyoker, RESZFA_HOSSZ) || kert[t.az]) continue;
+    // ⭐ D116: a pont szerinti helyek mellett a darab és a gyerek szerintiek (párok — `mintaHelyekOsszegre`).
+    const helyek = (k, kd, kg) => [...mintaHelyek(t.gyoker.o[RESZFA_PONT], k),
+      ...mintaHelyekOsszegre(RESZFA_DARAB, t.gyoker.o[RESZFA_DARAB], kd ?? 0),
+      ...mintaHelyekOsszegre(RESZFA_GYEREK, t.gyoker.o[RESZFA_GYEREK], kg ?? 0)];
+    if (kivalasztottak.has(t.az)) kert[t.az] = helyek(minta.kivalasztott, minta.kivalasztottDarab, minta.kivalasztottGyerek);
+    else if (testver < minta.testverDb) {
+      kert[t.az] = helyek(minta.testver, minta.testverDarab, minta.testverGyerek);
+      testver++;
+    }
   }
   return kert;
 }
@@ -399,6 +433,14 @@ export async function fejlecekEllenorzese({ valasz, kert, mintak = {}, esemenyek
   const tetelek = new Map();
   let hibas = 0, ellenorzott = 0;
   if (!valasz || typeof valasz !== 'object' || !Array.isArray(valasz.lista)) return { tetelek, hibas, ellenorzott };
+  // ⭐ D116: a darab-minták gyerekeinek születése — a minták eseményei és a lista létrehozói közül (a gyerek → az esemény).
+  const szuletesek = new Map();
+  const szuletesFelvetele = (e) => {
+    if (e?.tipus === 'GondolatLetrehozas' && azonositoAlaku(e.azonosito)) szuletesek.set(e.azonosito, e);
+    else if (e?.tipus === 'Javaslat') for (const je of javaslatEntitasai(e)) szuletesek.set(je.azonosito, e);
+  };
+  for (const e of terkep.values()) szuletesFelvetele(e);
+  for (const t of valasz.lista.slice(0, FEJLEC_KORLAT)) if (t && typeof t === 'object') szuletesFelvetele(t.letrehozo);
   const kulcs = valasz.kulcs;
   const kulcsSzulo = kulcs === GYOKER_KULCS ? null : kulcs;
   const rendbenLevok = new Set();
@@ -414,7 +456,7 @@ export async function fejlecekEllenorzese({ valasz, kert, mintak = {}, esemenyek
     if (ered.rendben && t.gy !== undefined && !(Number.isSafeInteger(t.gy) && t.gy >= 0)) ered = { rendben: false, ok: 'hibás gyerekszám' };
     if (ered.rendben && kert?.[t.az]) {
       const m = await fejlecEllenorzese({ azonosito: t.az, gyoker: t.gyoker, helyek: kert[t.az], mintak: mintak[t.az],
-        esemenyek: terkep });
+        esemenyek: terkep, szuletesek, szuloje: letrehozoSzuloje });
       if (!m.rendben) Object.assign(ered, { rendben: false, ok: m.ok });
       else Object.assign(ered, { mintazott: true, minta: m });
     }
@@ -433,6 +475,10 @@ async function tetelEllenorzese(t, helyesSzulo) {
   const hiba = (ok) => ({ rendben: false, ok });
   if (!t || typeof t !== 'object' || !azonositoAlaku(t.az)) return hiba('hibás tétel');
   if (!Number.isSafeInteger(t.osszPont) || t.osszPont < 0) return hiba('hibás össz-pont');
+  // ⭐ D116: az alatta lévők száma (és a bizonytalansága) egész, ha van.
+  if (t.ad !== undefined && !(Number.isSafeInteger(t.ad) && t.ad >= 0)) return hiba('hibás darab');
+  if (t.adb !== undefined && !(Number.isSafeInteger(t.adb) && t.adb > 0)) return hiba('hibás darab');
+  if (t.gy !== undefined && !(Number.isSafeInteger(t.gy) && t.gy >= 0)) return hiba('hibás gyerekszám');
   if (!helyesSzulo) return hiba('a tétel nem a kérdezett entitás gyereke');
   const e = t.letrehozo;
   const szulo = letrehozoSzuloje(e, t.az);
@@ -442,11 +488,15 @@ async function tetelEllenorzese(t, helyesSzulo) {
   const helyen = szulo === t.sz;
   if (!helyen && t.felkerult !== true) return hiba('a tétel nem a kérdezett entitás gyereke');
   if (t.gyoker !== null && t.gyoker !== undefined) {
-    if (!osszegzesAlakja(t.gyoker, 1)) return hiba('hibás gyökér');
-    if (t.gyoker.o[0] !== t.osszPont) return hiba('a gyökér összege nem a bemondott össz-pont');
+    if (!osszegzesAlakja(t.gyoker, RESZFA_HOSSZ)) return hiba('hibás gyökér');
+    if (t.gyoker.o[RESZFA_PONT] !== t.osszPont) return hiba('a gyökér összege nem a bemondott össz-pont');
+    // ⭐ D116: a gyökér a darabot és a gyerekszámot is köti — a bemondás nem térhet el tőle.
+    if (t.gyoker.o[RESZFA_DARAB] !== t.ad) return hiba('a gyökér darabja nem a bemondott darab');
+    if (t.gy !== undefined && t.gyoker.o[RESZFA_GYEREK] !== t.gy) return hiba('a gyökér gyerekszáma nem a bemondott gyerekszám');
   }
   return { rendben: true, osszPont: t.osszPont, forras: t.forras ?? null, gyokerVan: !!t.gyoker, sz: t.sz ?? null,
-    ...(Number.isSafeInteger(t.gy) ? { gy: t.gy } : {}), ...(helyen ? {} : { felkerult: true }) };
+    ...(Number.isSafeInteger(t.gy) ? { gy: t.gy } : {}), ...(Number.isSafeInteger(t.ad) ? { ad: t.ad } : {}),
+    ...(Number.isSafeInteger(t.adb) ? { adb: t.adb } : {}), ...(helyen ? {} : { felkerult: true }) };
 }
 
 // ===================================

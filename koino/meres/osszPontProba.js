@@ -13,7 +13,8 @@ import { probaGyujtemeny, ujEember, tagokkal } from './probaFuttato.js';
 import { allapotSzamitasa } from '../js/allapot/allapotSzamitas.js';
 import {
   osszPontokSzamitasa, gyerekJegyzek, reszfaLevelei, reszfaKarbantarto, mintaHelyek, fejlecMintai,
-  fejlecEllenorzese, reszfaGyokere, OSSZPONT_FA
+  fejlecEllenorzese, reszfaGyokere, OSSZPONT_FA, RESZFA_HOSSZ, RESZFA_DARAB, RESZFA_GYEREK, mintaHelyekOsszegre,
+  ismertAlattaSzamitasa
 } from '../js/allapot/osszPont.js';
 import { allapotGyokereListabol, azonosOsszegzes, ujAllapotFa, allapotBeallitas, allapotGyokere } from '../js/esemeny/osszegzoFa.js';
 
@@ -96,7 +97,7 @@ proba('a 20 000 mély lánc sem csordul túl (iteratív bejárás)', () => {
 // 2. A RÉSZFA LEVELEI ÉS A KARBANTARTÓ
 // ===================================
 
-proba('a részfa levelei: a szerző pontja az aláírt eseményhez kötve, az átvitt pont jelölve, a gyerekek össz-pontja; a 0 kimarad', () => {
+proba('a részfa levelei: a szerző pontja az aláírt eseményhez kötve, az átvitt pont jelölve, a gyerekek össz-pontja — D116: [pont, darab, gyerek], a 0 pontú gyerek is', () => {
   const entitasok = new Map([
     ['X', { azonosito: 'X', szulo: null, osszesPont: 7, hozzajarulok: new Map([['anna', { pont: 4 }], ['bela', { pont: 3 }]]) }],
     ent('G1', 'X', 6), ent('G2', 'X', 0, { pontokIsmeretlenek: true })
@@ -104,8 +105,9 @@ proba('a részfa levelei: a szerző pontja az aláírt eseményhez kötve, az á
   const allapot = { entitasok, pontEsemenyek: new Map([['anna|X', 'E-anna']]) };   // a béláét egyezmény vitte át
   const l = reszfaLevelei('X', allapot, osszPontokSzamitasa(entitasok));
   const k = new Map(l.map((x) => [x.kulcs, x]));
-  return l.length === 3 && k.get('p:anna').ertek.e === 'E-anna' && k.get('p:anna').osszegek[0] === 4
-    && k.get('p:bela').ertek.atvitt === true && k.get('g:G1').osszegek[0] === 6 && !k.has('g:G2');
+  return l.length === 4 && k.get('p:anna').ertek.e === 'E-anna' && k.get('p:anna').osszegek.join() === '4,0,0'
+    && k.get('p:bela').ertek.atvitt === true && k.get('g:G1').osszegek.join() === '6,1,1'
+    && k.get('g:G2').osszegek.join() === '0,1,1';
 });
 
 proba('⭐ a karbantartó a KÜLÖNBSÉGET vezeti rá — és minden lépés után ugyanaz a gyökér, mint egy friss fáé', async () => {
@@ -116,9 +118,9 @@ proba('⭐ a karbantartó a KÜLÖNBSÉGET vezeti rá — és minden lépés ut�
   for (let lepes = 0; lepes < 40; lepes++) {
     const kulcs = 'p:sz' + Math.floor(v() * 12);
     levelek = levelek.filter((l) => l.kulcs !== kulcs);
-    if (v() < 0.8) levelek.push({ kulcs, ertek: { e: 'E' + lepes }, osszegek: [1 + Math.floor(v() * 50)] });
+    if (v() < 0.8) levelek.push({ kulcs, ertek: { e: 'E' + lepes }, osszegek: [1 + Math.floor(v() * 50), 0, 0] });
     const fa = await karb.fa('X', levelek);
-    const friss = await allapotGyokereListabol(OSSZPONT_FA, 1, levelek);
+    const friss = await allapotGyokereListabol(OSSZPONT_FA, RESZFA_HOSSZ, levelek);
     if (!azonosOsszegzes(await reszfaGyokere(fa), friss)) return false;
   }
   return true;
@@ -126,7 +128,7 @@ proba('⭐ a karbantartó a KÜLÖNBSÉGET vezeti rá — és minden lépés ut�
 
 proba('a karbantartó korlátos — a legrégebben használt fa kiesik', async () => {
   const karb = reszfaKarbantarto(3);
-  for (const az of ['a', 'b', 'c', 'd', 'e']) await karb.fa(az, [{ kulcs: 'p:x', ertek: null, osszegek: [1] }]);
+  for (const az of ['a', 'b', 'c', 'd', 'e']) await karb.fa(az, [{ kulcs: 'p:x', ertek: null, osszegek: [1, 0, 0] }]);
   return karb.meret() === 3;
 });
 
@@ -175,10 +177,10 @@ proba('⭐⭐ a FELFÚJT fejléc lebukik — a hamis szerzői levelekre esik min
   // A csaló a valódi összeggel azonos többletet tesz hozzá: egy valódi (de más entitásra szóló) eseményre mutató,
   // és egy nem létező eseményre mutató hamis levelekben.
   const masik = esemenyek.find((e) => e.tipus === 'TudatpontRendezes' && e.adat.entitas !== x);
-  const fa = ujAllapotFa(OSSZPONT_FA, 1);
+  const fa = ujAllapotFa(OSSZPONT_FA, RESZFA_HOSSZ);
   for (const l of levelek) await allapotBeallitas(fa, l.kulcs, l.ertek, l.osszegek);
-  await allapotBeallitas(fa, 'p:' + masik.szerzo + 'x', { e: masik.azonosito }, [30]);
-  await allapotBeallitas(fa, 'p:' + masik.szerzo, { e: masik.azonosito }, [25]);
+  await allapotBeallitas(fa, 'p:' + masik.szerzo + 'x', { e: masik.azonosito }, [30, 0, 0]);
+  await allapotBeallitas(fa, 'p:' + masik.szerzo, { e: masik.azonosito }, [25, 0, 0]);
   const gyoker = await allapotGyokere(fa);
   const helyek = mintaHelyek(gyoker.o[0], 32);
   const mintak = await fejlecMintai(fa, helyek);
@@ -211,13 +213,13 @@ proba('⛔ az ÁTÍRT pont-esemény (az aláírás már nem stimmel) elbukik', a
   const atirt = new Map(terkep);
   const o = osszPontokSzamitasa(allapot.entitasok);
   const levelek = reszfaLevelei(x, allapot, o, gyerekJegyzek(allapot.entitasok));
-  const fa = ujAllapotFa(OSSZPONT_FA, 1);
+  const fa = ujAllapotFa(OSSZPONT_FA, RESZFA_HOSSZ);
   for (const l of levelek) {
     let osszegek = l.osszegek;
     if (l.kulcs.startsWith('p:') && l.ertek?.e) {
       const eredeti = terkep.get(l.ertek.e);
       atirt.set(l.ertek.e, { ...eredeti, adat: { ...eredeti.adat, pont: eredeti.adat.pont + 40 } });
-      osszegek = [eredeti.adat.pont + 40];
+      osszegek = [eredeti.adat.pont + 40, 0, 0];
     }
     await allapotBeallitas(fa, l.kulcs, l.ertek, osszegek);
   }
@@ -225,6 +227,82 @@ proba('⛔ az ÁTÍRT pont-esemény (az aláírás már nem stimmel) elbukik', a
   const helyek = mintaHelyek(gyoker.o[0], 32);
   const e = await fejlecEllenorzese({ azonosito: x, gyoker, helyek, mintak: await fejlecMintai(fa, helyek), esemenyek: atirt });
   return !e.rendben && /nem hiteles/.test(e.ok);
+});
+
+// ===================================
+// 4. ⭐⭐ D116: AZ ÖSSZ-DARAB ÉS A GYEREKSZÁM
+// ===================================
+
+proba('⭐ D116: az ALATTA felfelé összegződik — a bemondott ágé a bemondásból; a régi bemondás és a nem tartott csomópont kimondva bizonytalan', () => {
+  const m = new Map([ent('A', null, 5), ent('B', 'A', 3), ent('C', 'B', 2), ent('D', 'A', 1), ent('E', null, 7)]);
+  const o = osszPontokSzamitasa(m);
+  const pontos = o.get('A').alatta === 3 && o.get('B').alatta === 1 && o.get('C').alatta === 0 && o.get('E').alatta === 0
+    && [...o.values()].every((x) => x.alattaBizonytalan === 0);
+  // A B szeletét nem tartom: a bemondása az egész ágát fedi (a C — amit ismerek — nem számít kétszer).
+  const tart = (az) => az !== 'B';
+  const b = osszPontokSzamitasa(m, new Map([['B', { osszPont: 40, alatta: 50 }]]), tart);
+  const bemondott = b.get('B').alatta === 50 && b.get('A').alatta === 52 && b.get('A').alattaBizonytalan === 0;
+  // A régi (D116 előtti) bemondásban nincs darab: „nem tudom” — a szülőé alsó korlát.
+  const r = osszPontokSzamitasa(m, new Map([['B', { osszPont: 40 }]]), tart);
+  const regi = r.get('B').alattaBizonytalan === 1 && r.get('A').alattaBizonytalan === 1 && r.get('A').alatta === 2;
+  // Bemondás nélkül a nem tartott csomópont a gyerekeiből számol — alsó korlát, kimondva.
+  const n = osszPontokSzamitasa(m, new Map(), tart);
+  const nincs = n.get('B').alatta === 1 && n.get('B').alattaBizonytalan === 1 && n.get('A').alattaBizonytalan === 1;
+  // És ha a tartó maga sem tudta pontosan, a bizonytalansága felfelé megy.
+  const t2 = osszPontokSzamitasa(m, new Map([['B', { osszPont: 40, alatta: 50, alattaBizonytalan: 2 }]]), tart);
+  return pontos && bemondott && regi && nincs && t2.get('A').alattaBizonytalan === 2;
+});
+
+proba('⭐ D116: amit ISMEREK egy csomópont alatt — a helyben meglévő leszármazottak (körbiztosan)', () => {
+  const m = new Map([ent('A', null, 5), ent('B', 'A', 3), ent('C', 'B', 2), ent('D', 'A', 1), ent('P', 'Q', 1), ent('Q', 'P', 1)]);
+  const k = ismertAlattaSzamitasa(m);
+  return k.get('A') === 3 && k.get('B') === 1 && k.get('C') === 0 && k.get('D') === 0 && k.size === 6
+    && Number.isInteger(k.get('P')) && Number.isInteger(k.get('Q'));
+});
+
+/** A teszt szülő-levezetése (a kérelmezésé — `kerelem.js` — a töredéket is ismeri; itt csak gondolat van). */
+const szuloje = (e, az) => (e?.tipus === 'GondolatLetrehozas' && e.azonosito === az ? (e.adat?.szulo ?? null) : undefined);
+const szuletesei = (terkep) => new Map([...terkep.values()].filter((e) => e.tipus === 'GondolatLetrehozas').map((e) => [e.azonosito, e]));
+
+proba('⭐⭐ D116: a gyökér köti a darabot és a gyerekszámot — a BECSÜLETES darab- és gyerek-minták átmennek a születésekkel; nélkülük nem', async () => {
+  const { allapot, x, terkep } = await valodiAllapot();
+  const { fa, gyoker } = await fejlec(allapot, x);
+  const szuletesek = szuletesei(terkep);
+  const helyek = [...mintaHelyek(gyoker.o[0], 8), ...mintaHelyekOsszegre(RESZFA_DARAB, gyoker.o[RESZFA_DARAB], 8),
+    ...mintaHelyekOsszegre(RESZFA_GYEREK, gyoker.o[RESZFA_GYEREK], 4)];
+  const mintak = await fejlecMintai(fa, helyek);
+  const jo = await fejlecEllenorzese({ azonosito: x, gyoker, helyek, mintak, esemenyek: terkep, szuletesek, szuloje });
+  const nelkul = await fejlecEllenorzese({ azonosito: x, gyoker, helyek, mintak, esemenyek: terkep });
+  // Az egyezmény által áthelyezett gyerek születése más szülőt mond — kimondott korlát, nem csalás.
+  const athelyezve = await fejlecEllenorzese({ azonosito: x, gyoker, helyek, mintak, esemenyek: terkep, szuletesek,
+    szuloje: (e, az) => (szuloje(e, az) === undefined ? undefined : 'MASHOL') });
+  // X két gyereke (egyik alatt sincs semmi): [55 pont, 2 darab, 2 gyerek].
+  return gyoker.o.join() === '55,2,2' && jo.rendben && jo.darabEllenorzott === 12
+    && !nelkul.rendben && /születése nem jött meg/.test(nelkul.ok) && athelyezve.rendben && athelyezve.athelyezett === 12;
+});
+
+proba('⭐⭐ D116: a CSALÓ fa lebukik — a kitalált gyerek, a darabot hordozó szerzői levél és a felfújt gyerekszám', async () => {
+  const { allapot, x, terkep } = await valodiAllapot();
+  const levelek = reszfaLevelei(x, allapot, osszPontokSzamitasa(allapot.entitasok), gyerekJegyzek(allapot.entitasok));
+  const szuletesek = szuletesei(terkep);
+  const csalo = async (modosit) => {
+    const fa = ujAllapotFa(OSSZPONT_FA, RESZFA_HOSSZ);
+    for (const l of modosit(levelek)) await allapotBeallitas(fa, l.kulcs, l.ertek, l.osszegek);
+    const gyoker = await allapotGyokere(fa);
+    const helyek = [...mintaHelyekOsszegre(RESZFA_DARAB, gyoker.o[RESZFA_DARAB], 16),
+      ...mintaHelyekOsszegre(RESZFA_GYEREK, gyoker.o[RESZFA_GYEREK], 16)];
+    return fejlecEllenorzese({ azonosito: x, gyoker, helyek, mintak: await fejlecMintai(fa, helyek), esemenyek: terkep,
+      szuletesek, szuloje });
+  };
+  // (1) egy kitalált gyerek nagy ággal (a születése nem mutatható be)
+  const kitalalt = await csalo((l) => [...l, { kulcs: 'g:' + 'F'.repeat(43), ertek: null, osszegek: [0, 40, 1] }]);
+  // (2) a szerzői levelek darabot hordoznak (kitalált gyerek nélkül fújnák fel az ágat)
+  const szerzoi = await csalo((l) => l.map((y) => (y.kulcs.startsWith('p:') ? { ...y, osszegek: [y.osszegek[0], 20, 0] } : y)));
+  // (3) a valódi gyerek-levelek több gyereknek számítanak (a gyerekszám felfújása)
+  const gyerekszam = await csalo((l) => l.map((y) => (y.kulcs.startsWith('g:') ? { ...y, osszegek: [y.osszegek[0], 1, 9] } : y)));
+  return !kitalalt.rendben && /születése nem jött meg/.test(kitalalt.ok)
+    && !szerzoi.rendben && /darabot hordoz/.test(szerzoi.ok)
+    && !gyerekszam.rendben && /hibás gyerek-levél/.test(gyerekszam.ok);
 });
 
 export default futtatas;

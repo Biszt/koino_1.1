@@ -243,9 +243,25 @@ async function apiGet(utvonal, token = null) {
     document.dispatchEvent(new CustomEvent('koino:megjegyzes',
       { detail: { utvonal, szoveg: eredmeny.koinoMegjegyzes, betoltes: eredmeny.betoltes === true } }));
   }
+  // ⭐ D116: a felderítetlen rész jele — a sorok `koinoHiany`-ja (a Síkidom gyerekei és ős-lánca); az örökölt modál nem ismeri
+  // ezt a mezőt, a `koinoModalok.js` veszi át (az esemény viszi, a modál adat-útja érintetlen).
+  const hianyok = valaszHianyai(eredmeny);
+  if (hianyok.length) document.dispatchEvent(new CustomEvent('koino:hiany', { detail: hianyok }));
   // Metódus vég log
   console.log('apiHelper.apiGet - VÉGE', { utvonal });
   return eredmeny;
+}
+
+/** ⭐ D116: egy válasz soraiban a `koinoHiany` mezők — [entitás, hiány] párok (a sor nélküli válasznál üres). */
+function valaszHianyai(eredmeny) {
+  const ki = [];
+  if (!eredmeny || typeof eredmeny !== 'object') return ki;
+  for (const mezo of ['gyerekek', 'oslanc', 'sorok']) {
+    for (const sor of Array.isArray(eredmeny[mezo]) ? eredmeny[mezo] : []) {
+      if (sor && sor.entitasId != null && 'koinoHiany' in sor) ki.push([String(sor.entitasId), sor.koinoHiany ?? null]);
+    }
+  }
+  return ki;
 }
 
 // ===================================

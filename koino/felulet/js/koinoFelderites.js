@@ -122,11 +122,14 @@ function felderitesSora(f) {
   const cim = f.ag === 'gyoker' ? 'Az egész koinó' : (f.agCim ? html(f.agCim) : html(f.ag.slice(0, 12)) + '…');
   const fazis = f.allapot === 'fut' && f.torzs ? (f.fazis === 'torzs'
     ? ' — a törzs: ' + (f.torzsHianyzik ?? '?') + ' csomópontnak hiányzik' : ' — a fejlécek') : '';
+  // ⭐ D116: az ág teljes mérete a tartója szerint (a program jegyzi — `felderitesAllasa`); ha nem tudjuk, nem írjuk ki.
+  const osszes = Number.isSafeInteger(f.agOsszes)
+    ? ' · az ágban ' + (f.agOsszesLegalabb ? 'legalább ' : '') + f.agOsszes.toLocaleString('hu-HU') + ' entitás' : '';
   return `
     <div class="koino-felderites-sor koino-felderites-sor--${html(f.allapot)}" data-az="${html(f.az)}">
       <div class="koino-felderites-sor__cim">📷 ${cim}</div>
       <div class="koino-felderites-sor__allas">${html(ALLAPOT_NEVE[f.allapot] ?? f.allapot)}${html(fazis)} ·
-        ${f.latszik}/${f.k} csomópont · ${meretSzoveg(f.bajt)} / ${f.mb} MB · ${f.kerelmek} kérés · ${napja(f.kezdet)}
+        ${f.latszik}/${f.k} csomópont${html(osszes)} · ${meretSzoveg(f.bajt)} / ${f.mb} MB · ${f.kerelmek} kérés · ${napja(f.kezdet)}
         ${f.ok ? '<br><span class="koino-felderites-sor__ok">' + html(f.ok) + '</span>' : ''}</div>
       <div class="koino-felderites-sor__gombok">
         <button type="button" class="koino-felderites-sor__gomb" data-muvelet="ujra">Újra</button>

@@ -31,6 +31,18 @@
 // A fa egy változása logaritmikus (< 1 ms), a nulláról építés 10 000 szerzőnél ~7 s — ezért a karbantartó
 // (`reszfaKarbantarto`) a fát nem építi újra, hanem a levelek KÜLÖNBSÉGÉT vezeti rá.
 //
+// ===== ⭐⭐ D116: AZ ÖSSZ-DARAB ÉS A GYEREKSZÁM (2026-10-22, Csaba: „(B) Gyerekszám + össz-darab”) =====
+//
+// Ugyanaz a felfelé összegzés a DARABRA: alatta(X) = Σ a gyerekek (1 + alatta) — hány entitás van X alatt összesen. A
+// részfa-fa ezért három összeget visz levelenként: [pont, darab, gyerek] — a szerzői levél [pont, 0, 0], a gyerek-levél
+// [össz-pont, 1 + alatta, 1]; a gyökérben így az össz-pont, az alatta és a gyerekszám áll, és mind a hármat ugyanaz a fa köti.
+// ⭐ Ebből tudja a készülék, hogy egy csomópont alatt mennyi van, amit még nem ismer (a cím nélkül — a 9. szabály szerint a
+// koinó teljes szerkezetét senki nem tarthatja, a darabszámát irányonként igen). ⛔ A szúrópróba a darabra is kell: a DARAB
+// szerinti minta (a nagy ágra nagyobb eséllyel esik) a darabot hordozó szerzői levelet és a kitalált gyereket fogja meg, a
+// GYEREK szerinti (egyenletes a gyerekek közt) a gyerekszámot felfújó levelet — és az eltalált gyerek aláírt születése (a
+// szülője X) a válaszban jön. ⚠️ A határ ugyanaz, mint az össz-pontnál: egy valódi gyerek felfújt darabja bemondás — ott
+// ellenőrizhető, ahová a nézet lép.
+//
 // Használják: a kérelmezés (a fejléc-válasz és az ellenőrzése), a pakli, a próbák.
 
 import { randomInt } from 'node:crypto';
@@ -42,6 +54,12 @@ import { esemenyEllenorzese } from '../esemeny/esemeny.js';
 
 /** A részfa-fa típusa (a lenyomatokban — más fa-típussal nem keverhető). */
 export const OSSZPONT_FA = 'osszpont';
+
+/** ⭐ D116: a részfa-fa összegei levelenként — [pont, darab, gyerek] (a hossz a lenyomatban is benne van). */
+export const RESZFA_HOSSZ = 3;
+export const RESZFA_PONT = 0;
+export const RESZFA_DARAB = 1;
+export const RESZFA_GYEREK = 2;
 
 /** Hány részfa-fát tart a karbantartó a memóriában (a legrégebben használt megy). */
 export const RESZFA_FA_KORLAT = 256;
@@ -66,6 +84,12 @@ export function gyerekJegyzek(entitasok) {
 }
 
 const bemondasErvenyes = (b) => !!b && Number.isSafeInteger(b.osszPont) && b.osszPont >= 0;
+/** ⭐ D116: a bemondás hozza-e az alatta lévők számát (a régi — D116 előtti — bemondás nem). */
+const alattaErvenyes = (b) => Number.isSafeInteger(b?.alatta) && b.alatta >= 0;
+/** A bemondott alatta: a szám, és ha a tartó maga sem tudta pontosan, a „bizonytalan” (nem ismert hozzá: 1). */
+const bemondottAlatta = (b) => (alattaErvenyes(b)
+  ? { alatta: b.alatta, alattaBizonytalan: Number.isSafeInteger(b.alattaBizonytalan) && b.alattaBizonytalan > 0 ? b.alattaBizonytalan : 0 }
+  : { alatta: 0, alattaBizonytalan: 1 });
 
 /**
  * ⭐ AZ ÖSSZ-PONT minden ismert entitásra, felfelé összegezve.
@@ -78,12 +102,17 @@ const bemondasErvenyes = (b) => !!b && Number.isSafeInteger(b.osszPont) && b.oss
  * gyerekek” alulszámol (egy ág a fele értékén állt, és a bejáró biztos előtagja ettől hibásan bővült). Ehhez kell a
  * `tartott`; nélküle (vagy ha mindent tartok) csak a `pontokIsmeretlenek` jelzés dönt, mint eddig.
  * ⚠️ A `szulo`-lánc körbe mutathat (hibás vagy rosszindulatú esemény): a körbe eső entitás csak egyszer számít.
+ * ⭐ D116: ugyanebben a bejárásban az ALATTA (hány entitás van alatta): a bemondott a bemondásból (a régi bemondásban nincs —
+ * akkor „nem tudom”), a többi a gyerekekből; az `alattaBizonytalan` megmondja, hány csomópont gyerekeit nem ismerjük
+ * biztosan a részfában (a nem tartott, és a bemondás nélküli) — 0, ha az alatta pontos, különben alsó korlát.
  *
  * @param {Map<string, Object>} entitasok - az állapot entitásai
- * @param {Map<string, {osszPont: number}>} [bemondasok] - a nem tartott entitások bemondott össz-pontja
+ * @param {Map<string, {osszPont: number, alatta?: number, alattaBizonytalan?: number}>} [bemondasok] - a nem tartott
+ *   entitások bemondott össz-pontja (és D116 óta az alatta lévők száma)
  * @param {Function|null} [tartott] - az → tartom-e a szeletét (null: nem tudom — a régi viselkedés)
  * @returns {Map<string, {osszPont: number, sajat: number|null, forras: 'szamolt'|'bemondott'|'ismeretlen',
- *   bizonytalan: number}>} — `bizonytalan`: a részfában hány entitás pontja nem ismert és nincs bemondva
+ *   bizonytalan: number, alatta: number, alattaBizonytalan: number}>} — `bizonytalan`: a részfában hány entitás pontja
+ *   nem ismert és nincs bemondva
  */
 export function osszPontokSzamitasa(entitasok, bemondasok = new Map(), tartott = null) {
   const gyerekek = gyerekJegyzek(entitasok);
@@ -115,23 +144,62 @@ export function osszPontokSzamitasa(entitasok, bemondasok = new Map(), tartott =
       }
       folyamatban.delete(az);
       if (ismeretlen && bemondasErvenyes(bemondasok.get(az))) {
-        ki.set(az, { osszPont: bemondasok.get(az).osszPont, sajat: null, forras: 'bemondott', bizonytalan: 0 });
+        ki.set(az, { osszPont: bemondasok.get(az).osszPont, sajat: null, forras: 'bemondott', bizonytalan: 0,
+          ...bemondottAlatta(bemondasok.get(az)) });
         continue;
       }
       if (osszegzett) {
-        ki.set(az, { osszPont: bemondasok.get(az).osszPont, sajat: e.osszesPont, forras: 'osszegzett', bizonytalan: 0 });
+        ki.set(az, { osszPont: bemondasok.get(az).osszPont, sajat: e.osszesPont, forras: 'osszegzett', bizonytalan: 0,
+          ...bemondottAlatta(bemondasok.get(az)) });
         continue;
       }
       let osszPont = ismeretlen ? 0 : e.osszesPont;
       let bizonytalan = ismeretlen ? 1 : 0;
+      // ⭐ D116: a nem tartott (és nem bemondott) csomópont gyerekeit nem ismerjük biztosan — az alatta alsó korlát.
+      let alatta = 0;
+      let alattaBizonytalan = ismeretlen || (typeof tartott === 'function' && !tartott(az)) ? 1 : 0;
       for (const g of gyerekek.get(az) ?? []) {
         const gy = ki.get(g);
         if (!gy) continue;                             // körbe eső gyerek: egyszer már számított
         osszPont += gy.osszPont;
         bizonytalan += gy.bizonytalan;
+        alatta += 1 + gy.alatta;
+        alattaBizonytalan += gy.alattaBizonytalan;
       }
-      ki.set(az, ismeretlen ? { osszPont, sajat: null, forras: 'ismeretlen', bizonytalan }
-        : { osszPont, sajat: e.osszesPont, forras: 'szamolt', bizonytalan });
+      ki.set(az, ismeretlen ? { osszPont, sajat: null, forras: 'ismeretlen', bizonytalan, alatta, alattaBizonytalan }
+        : { osszPont, sajat: e.osszesPont, forras: 'szamolt', bizonytalan, alatta, alattaBizonytalan });
+    }
+  }
+  return ki;
+}
+
+/**
+ * ⭐ D116: hány entitást ISMEREK egy csomópont alatt (a helyben meglévő leszármazottak) — a bemondott alatta párja: a kettő
+ * különbsége az, amit ebben az irányban még nem derítettem fel. Iteratív, körbiztos (a körbe eső csak egyszer számít).
+ * @param {Map<string, Object>} entitasok
+ * @param {Map<string, Array<string>>} [gyerekek] - `gyerekJegyzek` (ha a hívónál már megvan)
+ * @returns {Map<string, number>}
+ */
+export function ismertAlattaSzamitasa(entitasok, gyerekek = gyerekJegyzek(entitasok)) {
+  const ki = new Map();
+  const folyamatban = new Set();
+  for (const kezdo of entitasok.keys()) {
+    if (ki.has(kezdo)) continue;
+    const verem = [[kezdo, false]];
+    while (verem.length) {
+      const [az, kesz] = verem.pop();
+      if (ki.has(az)) continue;
+      if (!kesz) {
+        if (folyamatban.has(az)) continue;
+        folyamatban.add(az);
+        verem.push([az, true]);
+        for (const g of gyerekek.get(az) ?? []) if (!ki.has(g) && !folyamatban.has(g)) verem.push([g, false]);
+        continue;
+      }
+      folyamatban.delete(az);
+      let n = 0;
+      for (const g of gyerekek.get(az) ?? []) if (ki.has(g)) n += 1 + ki.get(g);
+      ki.set(az, n);
     }
   }
   return ki;
@@ -143,7 +211,9 @@ export function osszPontokSzamitasa(entitasok, bemondasok = new Map(), tartott =
 
 /**
  * X részfájának levelei: a szerzők saját pontja (az aláírt pont-esemény azonosítójával, vagy `atvitt` jelzéssel, ha
- * a pontot egyezmény vitte át — annak nincs saját eseménye) és a gyerekek össz-pontja. A 0 összegű levél kimarad.
+ * a pontot egyezmény vitte át — annak nincs saját eseménye) és a gyerekek össz-pontja. A 0 pontú szerzői levél kimarad.
+ * ⭐ D116: minden levél három összeget visz ([pont, darab, gyerek] — `RESZFA_HOSSZ`): a szerzői [pont, 0, 0], a gyerek
+ * [össz-pont, 1 + alatta, 1] — ezért a gyerek-levél akkor is a fában van, ha az össz-pontja 0 (a darabja nem az).
  *
  * @param {string} azonosito
  * @param {Object} allapot - az állapot (`entitasok`, `pontEsemenyek`)
@@ -158,11 +228,11 @@ export function reszfaLevelei(azonosito, allapot, osszPontok, gyerekek = gyerekJ
   for (const [szerzo, h] of e.hozzajarulok) {
     if (!(h.pont > 0)) continue;
     const esemeny = allapot.pontEsemenyek?.get(szerzo + '|' + azonosito);
-    ki.push({ kulcs: 'p:' + szerzo, ertek: esemeny ? { e: esemeny } : { atvitt: true }, osszegek: [h.pont] });
+    ki.push({ kulcs: 'p:' + szerzo, ertek: esemeny ? { e: esemeny } : { atvitt: true }, osszegek: [h.pont, 0, 0] });
   }
   for (const g of gyerekek.get(azonosito) ?? []) {
-    const o = osszPontok.get(g)?.osszPont ?? 0;
-    if (o > 0) ki.push({ kulcs: 'g:' + g, ertek: null, osszegek: [o] });
+    const o = osszPontok.get(g);
+    if (o) ki.push({ kulcs: 'g:' + g, ertek: null, osszegek: [o.osszPont, 1 + (o.alatta ?? 0), 1] });
   }
   return ki;
 }
@@ -181,7 +251,7 @@ export function reszfaKarbantarto(korlat = RESZFA_FA_KORLAT) {
     async fa(azonosito, levelek) {
       let b = fak.get(azonosito);
       if (b) fak.delete(azonosito);
-      else b = { fa: ujAllapotFa(OSSZPONT_FA, 1), levelek: new Map() };
+      else b = { fa: ujAllapotFa(OSSZPONT_FA, RESZFA_HOSSZ), levelek: new Map() };
       fak.set(azonosito, b);                          // a legutóbb használt a végére
       const uj = new Map(levelek.map((l) => [l.kulcs, l]));
       for (const kulcs of [...b.levelek.keys()]) {
@@ -218,14 +288,33 @@ export function mintaHelyek(osszeg, k) {
 }
 
 /**
+ * ⭐ D116: minta-helyek egy MÁSIK összeg szerint (a darab — `RESZFA_DARAB` —, vagy a gyerek — `RESZFA_GYEREK`): a hely
+ * egy pár, [összeg, r] — a puszta szám továbbra is a pont szerinti hely (a régi alak).
+ * @returns {Array<[number, number]>}
+ */
+export function mintaHelyekOsszegre(i, osszeg, k) {
+  return mintaHelyek(osszeg, k).map((r) => [i, r]);
+}
+
+/** Egy minta-hely alakja: { i, r } — a puszta szám a pont szerinti; a pár [i, r] a többi összeg szerinti. */
+function helyAlakja(h) {
+  if (Number.isSafeInteger(h) && h >= 0) return { i: RESZFA_PONT, r: h };
+  if (Array.isArray(h) && h.length === 2 && (h[0] === RESZFA_DARAB || h[0] === RESZFA_GYEREK)
+      && Number.isSafeInteger(h[1]) && h[1] >= 0) return { i: h[0], r: h[1] };
+  return null;
+}
+
+/**
  * A TARTÓ válasza a minta-helyekre: a levelek és a bizonyítékuk (`MINTA_KORLAT` felett nem válaszol többre).
- * @returns {Promise<Array<{r: number, kulcs: string, bizonyitek: Object}>>}
+ * @returns {Promise<Array<{r: number, i?: number, kulcs: string, bizonyitek: Object}>>}
  */
 export async function fejlecMintai(fa, helyek) {
   const ki = [];
-  for (const r of (Array.isArray(helyek) ? helyek : []).slice(0, MINTA_KORLAT)) {
-    const m = await allapotSulyozottKeresese(fa, r);
-    if (m) ki.push({ r, kulcs: m.kulcs, bizonyitek: m.bizonyitek });
+  for (const h of (Array.isArray(helyek) ? helyek : []).slice(0, MINTA_KORLAT)) {
+    const hely = helyAlakja(h);
+    if (!hely) continue;
+    const m = await allapotSulyozottKeresese(fa, hely.r, hely.i);
+    if (m) ki.push({ r: hely.r, ...(hely.i ? { i: hely.i } : {}), kulcs: m.kulcs, bizonyitek: m.bizonyitek });
   }
   return ki;
 }
@@ -241,21 +330,49 @@ export async function fejlecMintai(fa, helyek) {
  * @param {Object} b.gyoker - a bemondott gyökér összegzése ({l, d, o})
  * @param {Array<number>} b.helyek - amiket a kérdező kért
  * @param {Array} b.mintak - a tartó válasza (`fejlecMintai`)
+ * ⭐ D116: a darab és a gyerek szerinti mintánál (a hely egy pár — `mintaHelyekOsszegre`) a levél alakja is kötött (a
+ * szerzői [x, 0, 0], a gyerek [x, ≥ 1, 1]), és az eltalált gyerek SZÜLETÉSE kell: hiteles, az övé, és a szülője X (ha nem
+ * X, az egyezmény helyezte át — `athelyezett`, kimondott korlát, nem csalás). ⛔ A hiányzó születés itt hiba: e nélkül egy
+ * kitalált gyerek levele átmenne (a pont-mintánál a hiányzó esemény csak kimondott, mert a levél az azonosítóját köti).
+ *
  * @param {Map<string, Object>} b.esemenyek - a kapott (vagy már meglévő) pont-események azonosító szerint
+ * @param {Map<string, Object>} [b.szuletesek] - D116: a gyerekek létrehozó eseményei (gyerek → esemény)
+ * @param {Function} [b.szuloje] - D116: (létrehozó esemény, gyerek) → a szülője (null: legfelső szintű), undefined: nem az övé
  * @returns {Promise<{rendben: boolean, ok?: string, ellenorzott: number, atvitt: number, gyerek: number,
- *   hianyzoEsemeny: number}>}
+ *   hianyzoEsemeny: number, darabEllenorzott: number, athelyezett: number}>}
  */
-export async function fejlecEllenorzese({ azonosito, gyoker, helyek, mintak, esemenyek = new Map() }) {
-  const ered = { rendben: true, ellenorzott: 0, atvitt: 0, gyerek: 0, hianyzoEsemeny: 0 };
+export async function fejlecEllenorzese({ azonosito, gyoker, helyek, mintak, esemenyek = new Map(), szuletesek = new Map(),
+  szuloje = null }) {
+  const ered = { rendben: true, ellenorzott: 0, atvitt: 0, gyerek: 0, hianyzoEsemeny: 0, darabEllenorzott: 0, athelyezett: 0 };
   const hiba = (ok) => ({ ...ered, rendben: false, ok });
   if (!Array.isArray(helyek) || !Array.isArray(mintak) || mintak.length !== helyek.length) return hiba('nem minden helyre jött minta');
   for (let i = 0; i < helyek.length; i++) {
     const m = mintak[i];
-    if (!m || m.r !== helyek[i] || typeof m.kulcs !== 'string') return hiba('a minta nem a kért helyre szól');
-    const e = await allapotSulyozottEllenorzese(OSSZPONT_FA, 1, gyoker, m.kulcs, m.bizonyitek, m.r);
+    const hely = helyAlakja(helyek[i]);
+    if (!m || !hely || m.r !== hely.r || (m.i ?? RESZFA_PONT) !== hely.i || typeof m.kulcs !== 'string') {
+      return hiba('a minta nem a kért helyre szól');
+    }
+    const e = await allapotSulyozottEllenorzese(OSSZPONT_FA, RESZFA_HOSSZ, gyoker, m.kulcs, m.bizonyitek, m.r, hely.i);
     if (!e.rendben) return hiba('hamis minta: ' + e.ok);
+    // ⭐ D116: a levél alakja — a szerzői nem hordoz darabot, a gyerek-levél egy gyerek, legalább önmaga.
+    const [, darab, gyerek] = e.osszegek;
+    if (m.kulcs.startsWith('p:') && (darab !== 0 || gyerek !== 0)) return hiba('a szerzői levél darabot hordoz');
+    if (m.kulcs.startsWith('g:') && (gyerek !== 1 || !(darab >= 1))) return hiba('hibás gyerek-levél');
+    if (m.kulcs.startsWith('g:') && hely.i !== RESZFA_PONT) {
+      const gy = m.kulcs.slice(2);
+      const sz = szuletesek.get(gy);
+      if (!sz || typeof szuloje !== 'function') return hiba('a minta gyerekének születése nem jött meg');
+      const szulo = szuloje(sz, gy);
+      if (szulo === undefined) return hiba('a születés nem a minta gyereké');
+      const al = await esemenyEllenorzese(sz);
+      if (!al.rendben) return hiba('a minta gyerekének születése nem hiteles: ' + al.ok);
+      if (szulo === azonosito) ered.darabEllenorzott++;
+      else ered.athelyezett++;
+      continue;
+    }
     if (m.kulcs.startsWith('g:')) { ered.gyerek++; continue; }
     if (!m.kulcs.startsWith('p:')) return hiba('ismeretlen levél-fajta');
+    if (hely.i !== RESZFA_PONT) return hiba('a szerzői levélre darab-minta esett');
     if (e.ertek?.atvitt === true) { ered.atvitt++; continue; }
     const esemeny = esemenyek.get(e.ertek?.e);
     if (!esemeny) { ered.hianyzoEsemeny++; continue; }
