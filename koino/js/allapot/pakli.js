@@ -485,14 +485,24 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
   // sor a legjobb-először bejárás sorrendje: ameddig a következő elem nagyobb annál, amekkora egy még nem ismert csomópont
   // legfeljebb lehet, a helyi rendezés a VÉGLEGES sorrend; utána hiányozhat valami — azt a bejáró elkéri (a tartó maga jár
   // be — J1). A többi rendezés nem monoton: az a helyben ismert részből megy, kimondva (D101/M2).
+  // ⭐ A kurzor UTÁNI rész kezdete (a lenti lapozásé is): a bejáró csak az oldal VÉGÉIG kér (D116 lelete, lent).
+  const kezdet = honnan
+    ? mind.findIndex((elem) => sorrendben(honnan, elem, irany) < 0)
+    : 0;
+  const innen = kezdet < 0 ? mind.length : kezdet;
+
   let biztos = null;
   if (rendezes === 'agazatiPont' && irany === 'csokkeno') {
     const tartottak = typeof nezet.tartott === 'function' ? await nezet.tartott() : null;
+    // ⛔ (2026-10-23, Csaba lelete: a telefon „felderítés nélkül” az egész koinót áthozta) — a bejáró eddig a TELJES sor
+    // biztosságáig kért, és a lap a `betoltes` miatt percenként újrakérdezett: egy nyitva hagyott lista az egész koinót
+    // lehúzta. A lap csak azt kéri, amit MUTAT: az oldal végéig (`szukseges`).
     const b = biztosElotag(mind.map((x) => x.azonosito), kep.entitasok, agazati, {
       tartott: tartottak ? (az) => tartottak.has(az) : () => true,
       gyokerTeljes: !tartottak,
       tudas: beallitas.fejlecTudas ?? new Map(),
-      agazat
+      agazat,
+      szukseges: innen + darab
     });
     biztos = b.biztos;
     for (const h of b.kerendo) if (hianyzik.length < MAX_DARAB && !hianyzik.some((x) => x.fajta === h.fajta && x.kulcs === h.kulcs)) hianyzik.push(h);
@@ -503,11 +513,6 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
   // ⭐ KULCS-ALAPÚ (nem sorszám-alapú) lapozás: „add azt, ami a legutóbbi elem UTÁN jön".
   // Ezért marad az illesztés milliárdos: egy későbbi, indexelt megvalósítás **oda tud
   // ugrani**, míg egy `skip=1000000` mindig végigolvasná az elejét.
-  const kezdet = honnan
-    ? mind.findIndex((elem) => sorrendben(honnan, elem, irany) < 0)
-    : 0;
-  const innen = kezdet < 0 ? mind.length : kezdet;
-
   const oldal = mind.slice(innen, innen + darab);
   const utolso = oldal[oldal.length - 1];
 
@@ -1096,6 +1101,8 @@ export async function hianyzoFelmenok(tar, koino, azonosito, beallitas = {}) {
  * @param {boolean} [b.gyokerTeljes] - a gyökér minden gyerekét ismerem-e („mindent” mód)
  * @param {Map} [b.tudas] - a fejléc-tudás: az (vagy `GYOKER_KULCS`) → { gy?, levag?: 'teljes' | { p, az } }
  * @param {string|null} [b.agazat] - az ág gyökere (null: az egész koinó)
+ * @param {number} [b.szukseges] - ⭐ hány helynek kell biztosnak lennie (amit a nézet MUTAT: az oldal vége, a Struktúra kerete,
+ *   a felderítés K-ja) — ennél tovább nem kér (2026-10-23: egy nyitott lista az egész koinót lehúzta)
  * @returns {{biztos: number, kerendo: Array<Object>}}
  */
 /**
@@ -1143,7 +1150,7 @@ function gyerekTudas(entitasok, agazati, { tartott, gyokerTeljes = false, tudas 
 }
 
 export function biztosElotag(lista, entitasok, agazati, { tartott, gyokerTeljes = false, tudas = new Map(), agazat = null,
-  elore = ELORE_KERES } = {}) {
+  elore = ELORE_KERES, szukseges = Infinity } = {}) {
   const { ertek, teljes, hatar, keres } = gyerekTudas(entitasok, agazati, { tartott, gyokerTeljes, tudas });
   const kerendo = [];
   const kerj = (az, ok) => {
@@ -1159,17 +1166,20 @@ export function biztosElotag(lista, entitasok, agazati, { tartott, gyokerTeljes 
     korlat = Infinity;
     kerj(agazat, 'az ágat még nem ismerem');
   }
+  // ⭐ Egy hely biztosságát csak az ELŐTTE álló nem teljes csomópontok rontják (egy későbbi csomópont gyereke nála kisebb):
+  // a `szukseges` helyen túl nincs mit kérni.
   let biztos = 0;
   for (const az of lista) {
     if (!(ertek(az) > korlat)) break;
     biztos++;
     if (!teljes(az)) {
       korlat = Math.max(korlat, hatar(az));
-      kerj(az, 'a gyerekeit nem ismerem mind (a sorrend innen bizonytalan)');
+      if (biztos <= szukseges) kerj(az, 'a gyerekeit nem ismerem mind (a sorrend innen bizonytalan)');
     }
   }
-  // Előre: a biztos rész utáni következők, amiknek a gyerekei hiányoznak (a sorban ők jönnek legközelebb).
-  for (let i = biztos; i < lista.length && kerendo.length < elore; i++) {
+  // Előre: a biztos rész utáni következők, amiknek a gyerekei hiányoznak (a sorban ők jönnek legközelebb) — a szükséges
+  // helyekig.
+  for (let i = biztos; i < Math.min(lista.length, szukseges) && kerendo.length < elore; i++) {
     if (ertek(lista[i]) > 0 && !teljes(lista[i])) kerj(lista[i], 'előre: a sorban a következők közt');
   }
   return { biztos, kerendo };
@@ -1230,14 +1240,16 @@ async function strukturaSorrend(tar, koino, beallitas = {}) {
   const ertek = (az) => agazati.get(az) ?? 0;
   lista.sort((a, b) => ertek(b) - ertek(a) || (a < b ? -1 : a > b ? 1 : 0));
   const tartottak = typeof nezet.tartott === 'function' ? await nezet.tartott() : null;
+  const keret = Math.max(1, Math.min(Number.isInteger(beallitas.keret) ? beallitas.keret : STRUKTURA_KERET, STRUKTURA_KERET));
+  // ⭐ A bejáró a keretig kér (a Struktúra ennyit mutat, a felderítés ennyit hoz — 2026-10-23).
   const b = biztosElotag(lista, kep.entitasok, agazati, {
     tartott: tartottak ? (az) => tartottak.has(az) : () => true,
     gyokerTeljes: !tartottak,
     tudas: beallitas.fejlecTudas ?? new Map(),
-    agazat
+    agazat,
+    szukseges: keret
   });
   for (const h of b.kerendo) if (hianyzik.length < MAX_DARAB && !hianyzik.some((x) => x.kulcs === h.kulcs)) hianyzik.push(h);
-  const keret = Math.max(1, Math.min(Number.isInteger(beallitas.keret) ? beallitas.keret : STRUKTURA_KERET, STRUKTURA_KERET));
   // ⭐ D116: a felderítetlen rész — a sorok jele és a felderítés „N / összes”-e (ugyanaz a segéd, mint a házé)
   const hianya = felderitetlenTudas(kep.entitasok, osszPontok, {
     tartott: tartottak ? (az) => tartottak.has(az) : () => true, gyokerTeljes: !tartottak, tudas: beallitas.fejlecTudas ?? new Map()

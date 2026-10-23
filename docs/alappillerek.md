@@ -1318,3 +1318,9 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     „ismert” lett volna pont és fejléc nélkül — a felderítetlen rész kisebbnek látszott (mérve: 4 helyett 2), és a D102 bejárója
     egy csomópontot teljesnek vett volna, aminek a gyerekei össz-pontját nem ismeri · Claude · `koino.js`
     (`fejlecValaszFeldolgozasa`), a parancssor-próba.
+188. **2026-10-23 · a bejáró csak addig kér, amit a nézet mutat (a D102 javítása)** → **a `biztosElotag` egy `szukseges`
+    határig kér: a lapos lista az oldal végéig, a Struktúra a keretéig, a felderítés a K-ig** · Csaba lelete: a telefon
+    „felderítés nélkül” az egész koinót (475 gondolatot) áthozta — a lapos (ágazati pont szerinti) lista bejárója a TELJES sor
+    biztosságáig kért, a lap a `betoltes` miatt percenként újrakérdezett, így egy nyitva hagyott lista a koinót lehúzta (egy
+    nagy koinóban vég nélkül); egy hely biztosságát csak az előtte álló nem teljes csomópontok rontják, a szükséges helyen
+    túl nincs mit kérni · Claude · `pakli.js` (`biztosElotag`, `pakliOldal`, `strukturaSorrend`), a próbák.

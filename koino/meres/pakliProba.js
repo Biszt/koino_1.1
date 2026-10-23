@@ -1509,6 +1509,40 @@ proba('⭐ D102: ág-szűrve az ág maga a kiindulás; a még nem ismert ágat k
     && ismeretlen.biztos === 0 && ismeretlen.kerendo[0]?.kulcs === 'Q'.repeat(43);
 });
 
+// ⭐ 2026-10-23 (Csaba lelete: a telefon egy nyitva hagyott listával az egész koinót lehúzta, „felderítés nélkül”): a bejáró
+// csak a SZÜKSÉGES helyekig kér — amit a nézet mutat. Egy hely biztosságát csak az előtte álló nem teljes csomópontok rontják,
+// tehát a szükséges helyeken túl nincs mit kérni. Rontás: a korlát kimarad → mindkét próba bukik.
+proba('⭐ a bejáró csak a SZÜKSÉGES helyekig kér (amit a nézet mutat) — az oldal végén túl nem', () => {
+  const leiras = { X: [null, 1, 200] };
+  for (let i = 0; i < 40; i++) leiras['Y' + String(i).padStart(2, '0')] = ['X', null, 100 - i];
+  const { entitasok, agazati, lista } = terkepe(leiras);
+  const b = { tartott: () => false, agazat: 'X', tudas: new Map([['X', { gy: 40 }]]) };
+  const harom = biztosElotag(lista, entitasok, agazati, { ...b, szukseges: 3 });
+  const mind = biztosElotag(lista, entitasok, agazati, b);
+  // az első három hely: X (teljes), Y00 (blokkol), Y01 (előre) — a többiért nem kér
+  return harom.kerendo.map((x) => x.kulcs).join() === 'Y00,Y01' && harom.biztos === mind.biztos
+    && mind.kerendo.length === ELORE_KERES;
+});
+
+proba('⭐ a lapos lista (ágazati pont szerint) csak az OLDAL végéig kér — a többi még nem ismert ágért nem', async () => {
+  const { tar, anna } = await ujKoino();
+  const A = await gondolat(tar, anna, 'A', 50);
+  const masik = await ujEember(KOINO);
+  const gyerekek = [];
+  for (let i = 0; i < 6; i++) {
+    const e = await masik.tesz('GondolatLetrehozas', { cim: 'gy' + i, meret: 10, szulo: A });
+    await esemenyMentese(tar, e);
+    gyerekek.push(e.azonosito);
+  }
+  // A-t tartom; a gyerekeit nem (csak a születésük és a bemondott össz-pontjuk ismert) — mind blokkol, amíg nem kérjük
+  const nezet = ujPakliNezet({ tartott: async () => new Set([A]) });
+  const bemondasok = new Map(gyerekek.map((az, i) => [az, { osszPont: 40 - i * 5 }]));
+  const oldal = await pakliOldal(tar, KOINO, { rendezes: 'agazatiPont', irany: 'csokkeno', darab: 2, nezet, bemondasok });
+  const kertGyerekek = oldal.hianyzik.filter((h) => gyerekek.includes(h.kulcs)).map((h) => h.kulcs);
+  // az oldal két helye: A és a legerősebb gyerek — csak ő kérendő (a többi öt nem)
+  return oldal.kartyak.length === 2 && kertGyerekek.join() === gyerekek[0];
+});
+
 // ===================================
 // ⭐⭐ D101 ③: A STRUKTÚRA — a fa a legerősebb ágaktól kifelé, egy keretig
 // ===================================
