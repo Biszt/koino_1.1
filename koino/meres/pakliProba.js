@@ -21,7 +21,7 @@ import {
   entitasReszletei, entitasKuszobei, hianyzoFelmenok, MAX_DARAB, RENDEZESEK, kuszobokBefele,
   pakliHierarchia, TESTVER_KORLAT,
   agHelyzete, sajatHozzarendelesek, HOZZARENDELES_KORLAT, biztosElotag, ELORE_KERES,
-  strukturaDarabszam, strukturaLap, STRUKTURA_KERET, felderitesAllasa,
+  strukturaDarabszam, strukturaLap, STRUKTURA_KERET, STRUKTURA_KERES, felderitesAllasa,
   sikidomGyerekek, sikidomOslanc, SIKIDOM_DARAB,
   keresesHelyben, KERESES_ALAP, KERESES_MAX,
   helyiStatisztika
@@ -1522,6 +1522,30 @@ proba('⭐ a bejáró csak a SZÜKSÉGES helyekig kér (amit a nézet mutat) —
   // az első három hely: X (teljes), Y00 (blokkol), Y01 (előre) — a többiért nem kér
   return harom.kerendo.map((x) => x.kulcs).join() === 'Y00,Y01' && harom.biztos === mind.biztos
     && mind.kerendo.length === ELORE_KERES;
+});
+
+// ⭐ (Csaba, 2026-10-23: „(B) Az első 200-at”) — a Struktúra magától csak az első `STRUKTURA_KERES` (200) helyig kér, a
+// felderítés a saját K-jáig. A-t tartom, 210 gyereke csak születéssel és bemondással ismert; az első 205-ről a tartó azt
+// mondta, nincs gyereke (teljes), a többiről semmit. A sor A-val kezdődik, tehát a nem teljesek a 207. helytől állnak.
+// Rontás: a Struktúra a keretéig kér → a 206. utáni gyerekeket is kéri → bukik.
+proba('⭐ a Struktúra magától csak az első 200 helyig kér — a felderítés a saját K-jáig', async () => {
+  const { tar, anna } = await ujKoino();
+  const A = await gondolat(tar, anna, 'A', 50);
+  const masik = await ujEember(KOINO);
+  const gyerekek = [];
+  for (let i = 0; i < 210; i++) {
+    const e = await masik.tesz('GondolatLetrehozas', { cim: 'gy' + i, meret: 10, szulo: A });
+    await esemenyMentese(tar, e);
+    gyerekek.push(e.azonosito);
+  }
+  const nezet = () => ujPakliNezet({ tartott: async () => new Set([A]) });
+  const bemondasok = new Map(gyerekek.map((az, i) => [az, { osszPont: 1000 - i }]));
+  const fejlecTudas = new Map(gyerekek.slice(0, 205).map((az) => [az, { gy: 0 }]));
+  const b = { bemondasok, fejlecTudas };
+  const struktura = await strukturaDarabszam(tar, KOINO, { ...b, nezet: nezet() });
+  const felderites = await felderitesAllasa(tar, KOINO, { ...b, nezet: nezet(), agazat: A, keret: 300 });
+  const kesoi = (h) => h.hianyzik.filter((x) => gyerekek.slice(205).includes(x.kulcs)).length;
+  return STRUKTURA_KERES === 200 && struktura.kerHatar === 200 && kesoi(struktura) === 0 && kesoi(felderites) > 0;
 });
 
 proba('⭐ a lapos lista (ágazati pont szerint) csak az OLDAL végéig kér — a többi még nem ismert ágért nem', async () => {

@@ -1324,3 +1324,8 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     biztosságáig kért, a lap a `betoltes` miatt percenként újrakérdezett, így egy nyitva hagyott lista a koinót lehúzta (egy
     nagy koinóban vég nélkül); egy hely biztosságát csak az előtte álló nem teljes csomópontok rontják, a szükséges helyen
     túl nincs mit kérni · Claude · `pakli.js` (`biztosElotag`, `pakliOldal`, `strukturaSorrend`), a próbák.
+189. **2026-10-23 · a Struktúra magától az első 200-ig kér (D117)** → **a Struktúra megnyitáskor annyit kér, mint egy
+    alapbeállítású felderítés (200), a keretig (5000) a már ismertet mutatja a „+N” jelekkel; a felderítés a saját K-jáig kér** ·
+    a D101 ③ a keretig kért: egy kis koinóban a Struktúra megnyitása mindent lehúzott, egy nagyban egy nézelődés több MB
+    forgalom — a tömeges elhozás a felderítés dolga · Csaba: „(B) Az első 200-at” · `pakli.js` (`STRUKTURA_KERES`,
+    `strukturaSorrend`, `felderitesAllasa`), `koino.js` (`strukturaMegjegyzes`), a próba.

@@ -54,6 +54,8 @@ import { osszPontokSzamitasa, gyerekJegyzek, ismertAlattaSzamitasa } from './oss
 // forrásból, a csere rétegéből (csak az állandó; hálózatot nem hoz).
 import { GYOKER_KULCS as GYOKER_TUDAS_KULCS } from '../csere/szeletEgyeztetes.js';
 import { pillanatkep } from './ertesites.js';
+// ⭐ (Csaba, 2026-10-23: „(B) Az első 200-at”) — a Struktúra magától annyit kér, mint egy alapbeállítású felderítés.
+import { FELDERITES_ALAP } from './felderites.js';
 
 /**
  * ⭐ D72 (2026-09-26): a javaslatok változásaiban a SZÖVEG-HIVATKOZÁS feloldása — a felület
@@ -1200,6 +1202,12 @@ export function biztosElotag(lista, entitasok, agazati, { tartott, gyokerTeljes 
 export const STRUKTURA_KERET = 5000;
 /** Egy lap legfeljebb ennyi sor (a prototípus `MAX_LAP_MERET`-je). */
 export const STRUKTURA_LAP = 2000;
+/**
+ * ⭐ A Struktúra MAGÁTÓL legfeljebb ennyi helyig kér (Csaba, 2026-10-23: „(B) Az első 200-at”) — annyit, mint egy
+ * alapbeállítású felderítés (K); a keretig (5000) azt mutatja, amit a készülék már ismer, és a „+N” jel mondja, hol van még.
+ * A tömeges elhozás a felderítés dolga. ⛔ Eddig a keretig kért: egy kis koinóban a Struktúra megnyitása az egészet lehúzta.
+ */
+export const STRUKTURA_KERES = FELDERITES_ALAP.k;
 
 /** A Struktúra sorrendje a horgonyhoz tartozó képből — az ág (ha van) szerint szűrve, a kerettel. */
 async function strukturaSorrend(tar, koino, beallitas = {}) {
@@ -1241,20 +1249,23 @@ async function strukturaSorrend(tar, koino, beallitas = {}) {
   lista.sort((a, b) => ertek(b) - ertek(a) || (a < b ? -1 : a > b ? 1 : 0));
   const tartottak = typeof nezet.tartott === 'function' ? await nezet.tartott() : null;
   const keret = Math.max(1, Math.min(Number.isInteger(beallitas.keret) ? beallitas.keret : STRUKTURA_KERET, STRUKTURA_KERET));
-  // ⭐ A bejáró a keretig kér (a Struktúra ennyit mutat, a felderítés ennyit hoz — 2026-10-23).
+  // ⭐ A bejáró meddig kér (2026-10-23): a felderítés a saját K-jáig (`szukseges`), a Struktúra magától legfeljebb az első
+  // `STRUKTURA_KERES`-ig (Csaba: „(B) Az első 200-at”).
+  const kerHatar = Number.isInteger(beallitas.szukseges) && beallitas.szukseges > 0 ? Math.min(beallitas.szukseges, keret)
+    : Math.min(keret, STRUKTURA_KERES);
   const b = biztosElotag(lista, kep.entitasok, agazati, {
     tartott: tartottak ? (az) => tartottak.has(az) : () => true,
     gyokerTeljes: !tartottak,
     tudas: beallitas.fejlecTudas ?? new Map(),
     agazat,
-    szukseges: keret
+    szukseges: kerHatar
   });
   for (const h of b.kerendo) if (hianyzik.length < MAX_DARAB && !hianyzik.some((x) => x.kulcs === h.kulcs)) hianyzik.push(h);
   // ⭐ D116: a felderítetlen rész — a sorok jele és a felderítés „N / összes”-e (ugyanaz a segéd, mint a házé)
   const hianya = felderitetlenTudas(kep.entitasok, osszPontok, {
     tartott: tartottak ? (az) => tartottak.has(az) : () => true, gyokerTeljes: !tartottak, tudas: beallitas.fejlecTudas ?? new Map()
   });
-  return { kep, agazati, lista, latszik: lista.slice(0, keret), keret, biztos: b.biztos, hianyzik, nemEldontheto,
+  return { kep, agazati, lista, latszik: lista.slice(0, keret), keret, kerHatar, biztos: b.biztos, hianyzik, nemEldontheto,
     horgony, most, agazat, hianya };
 }
 
@@ -1265,7 +1276,8 @@ async function strukturaSorrend(tar, koino, beallitas = {}) {
  * @returns {Promise<{latszik: string[], ismert: number, biztos: number, hianyzik: Array<Object>, agIsmert: boolean}>}
  */
 export async function felderitesAllasa(tar, koino, beallitas = {}) {
-  const s = await strukturaSorrend(tar, koino, beallitas);
+  // ⭐ A felderítés a saját K-jáig kér (nem a Struktúra magától kért első 200-áig).
+  const s = await strukturaSorrend(tar, koino, { ...beallitas, szukseges: beallitas.keret });
   // ⚠️ A gyökér (2026-10-19, a böngészős próba lelete): ha a tartó TELJES választ adott a gyökér szintjére (`levag: 'teljes'`),
   // a sorrend már biztos (a határ 0), de a gyerekszámot a gyökérre nem mondja — a bejáró ezért tovább kérendőnek tartja (a
   // lapnak ez jó: új legfelső szintűek jöhetnek). Egy pillanatképnek a tartó teljes válasza elég — különben az egész koinó
@@ -1294,6 +1306,8 @@ export async function strukturaDarabszam(tar, koino, beallitas = {}) {
     ismert: s.lista.length,
     latszik: s.latszik.length,
     keret: s.keret,
+    // ⭐ (2026-10-23) meddig kér magától — a megjegyzés ezen túl a felderítést ajánlja
+    kerHatar: s.kerHatar,
     biztos: Math.min(s.biztos, s.latszik.length),
     nemEldontheto: s.nemEldontheto,
     hianyzik: s.hianyzik,

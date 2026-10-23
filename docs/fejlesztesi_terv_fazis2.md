@@ -6049,6 +6049,18 @@ mintájára; a jel **a ház kártyáin, a testvér-jelzőben, a Struktúra és a
   (+9–12%), a gyökér egy szintje 2,8–3,2 → 4,8–5,0 KB. Próbák +8 (össz-pont 4, kérelem 1, pakli 2, parancssor 1), mind rontással.
   Elágazás 186–187.
 
+### D117. A STRUKTÚRA MAGÁTÓL AZ ELSŐ 200-IG KÉR (2026-10-23, Csaba: „(B) Az első 200-at”)
+
+**Az alap — Csaba lelete:** a telefon „felderítés nélkül” áthozta a koinó mind a 475 gondolatát (az első ~180-at magától —
+a ház böngészése —, a többit a többi nézet). Két ok volt: (1) a lapos (ágazati pont szerinti) lista bejárója a TELJES sor
+biztosságáig kért, és a lap percenként újrakérdezett — HIBA, javítva: a bejáró csak addig kér, amit a nézet mutat (elágazás
+188); (2) a Struktúra a terv szerint (D101 ③) a keretéig — 5000 — kért, egy kis koinóban tehát mindent. Csaba kérdése: *„a
+struktura nézetben 5000-ig nem terhelő túlságosan?”*
+
+**A döntés (B):** a Struktúra megnyitáskor magától annyit kér, mint egy alapbeállítású felderítés (`STRUKTURA_KERES` =
+`FELDERITES_ALAP.k` = 200); a keretig (5000) azt mutatja, amit a készülék már ismer, a „+N” jel (D116) mondja, hol van még, és
+a megjegyzés a felderítést ajánlja. A tömeges elhozás a felderítés dolga (a saját K-jáig kér). Próba +1, rontással. Elágazás 189.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

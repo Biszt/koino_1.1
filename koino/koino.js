@@ -2452,8 +2452,14 @@ function strukturaMegjegyzes(d, keres) {
   const reszek = ['A fa a készülékeden ismert részből épül: ' + d.ismert + ' entitás'
     + (d.ismert > d.latszik ? ', ebből a legerősebb ' + d.latszik + ' látszik (keret: ' + d.keret + ')' : '') + '.'];
   if (d.biztos < d.latszik) {
+    // ⭐ (Csaba, 2026-10-23: „(B) Az első 200-at”): a Struktúra magától csak az első `kerHatar`-ig kér — ezen túl a felderítést
+    // ajánlja (a „+N” jelek mutatják, hol van még).
+    const tovabb = Number.isInteger(d.kerHatar) && d.biztos >= d.kerHatar
+      ? ' — a Struktúra magától az első ' + d.kerHatar + '-ig kér; a többit egy felderítés hozza el (a kártya menüjéből, vagy a'
+        + ' fő menü „Az egész koinó felderítése…” pontjából), a „+N” jelek mutatják, hol van még.'
+      : elkertem;
     reszek.push((d.biztos > 0 ? 'Az első ' + d.biztos + ' biztos; utána hiányozhat egy-egy ág, amit még nem ismerek'
-      : 'Még hiányozhat egy-egy ág, amit nem ismerek') + elkertem);
+      : 'Még hiányozhat egy-egy ág, amit nem ismerek') + tovabb);
   } else if (d.hianyzik.some((h) => h.fajta === 'fejlecek')) {
     reszek.push('A fa folytatódhat azzal, amit még nem ismerek' + elkertem);
   }
