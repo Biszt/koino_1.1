@@ -91,5 +91,6 @@
 /* ⭐ Az alsó sáv fix: ami a lap alján áll, ne csússzon alá (a pakli-wrapper ezt maga is megteszi — a prototípusé). */
 #ter,
 .tovabb-sav:has(> button:not([hidden])) {
-  padding-bottom: calc(var(--space-12) + var(--space-4));
+  /* ⭐ (2026-10-23) a sáv valódi magassága (`alsoSav.js` — telefonon több sorba törik) */
+  padding-bottom: calc(var(--koino-also-sav, 4rem) + var(--space-4));
 }

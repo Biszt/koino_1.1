@@ -1620,6 +1620,15 @@ export async function ertesitesiKep(tar, koino, beallitas = {}) {
 export async function helyiStatisztika(tar, koino, beallitas = {}) {
   const esemenyek = await koinoEsemenyei(tar, koino);
   const kep = await lapKepe(tar, koino, beallitas);
+  // ⭐ (Csaba, 2026-10-23: „az alsósávon is jelezni kéne az ismeretlen entitások darabszámát, ha nem túl drága”): a gyökér
+  // szintjének felderítetlen része (D116 — a tartó bemondott darabja, mínusz amit ismerek). Ugyanaz a kör a képen, mint a
+  // többi szám (nem drágább — a 9. szabály szerint is a készülék tudásával arányos).
+  const nezet = beallitas.nezet ?? ujPakliNezet();
+  const tartottak = typeof nezet.tartott === 'function' ? await nezet.tartott() : null;
+  const tartottFn = tartottak ? (az) => tartottak.has(az) : null;
+  const gyoker = felderitetlenTudas(kep.entitasok, osszPontokSzamitasa(kep.entitasok, beallitas.bemondasok ?? new Map(), tartottFn), {
+    tartott: tartottFn ?? (() => true), gyokerTeljes: !tartottak, tudas: beallitas.fejlecTudas ?? new Map()
+  }).szamok(GYOKER);
   const db = { Gondolat: 0, Kategoria: 0, GondolatTipus: 0, Javaslat: 0, Egyezmeny: 0 };
   for (const e of kep.entitasok.values()) {
     const tipus = kartyaTipusa(e, entitasDontese(e, kep.javaslatok));
@@ -1635,7 +1644,10 @@ export async function helyiStatisztika(tar, koino, beallitas = {}) {
     kategoriakSzama: db.Kategoria,
     gondolatTipusokSzama: db.GondolatTipus,
     javaslatokSzama: db.Javaslat,
-    egyezmenyekSzama: db.Egyezmeny
+    egyezmenyekSzama: db.Egyezmeny,
+    // ⭐ (2026-10-23) hány entitás van még a koinóban, amit nem ismerek (a tartó szerint; null: nem tudom), alsó korlát-e
+    ismeretlenSzama: gyoker.osszesAlatta === null ? null : gyoker.alatta,
+    ismeretlenLegalabb: gyoker.legalabb
   };
 }
 
@@ -1696,9 +1708,11 @@ export const HOZZARENDELES_KORLAT = 100;
  *
  * @param {Object} tar
  * @param {string} koino
- * @param {Object} [beallitas] - { szerzo, ag, limit, nezet, horgony, most }
+ * ⭐ (Csaba, 2026-10-23): LAPOZVA — egy oldal legfeljebb `HOZZARENDELES_KORLAT`, a következőt a `kurzor` kéri (kulcs-alapú: a
+ * legutolsó tétel saját sorszáma és azonosítója — 5.2); a válasz `kovetkezoKurzor`-a null, ha nincs több.
+ * @param {Object} [beallitas] - { szerzo, ag, limit, kurzor, nezet, horgony, most }
  * @returns {Promise<{data: Array<Object>, count: number, osszes: number, nemEldontheto: number, szabad: number,
- *   hianyzik: Array<{fajta: string, kulcs: string, ok: string}>}>}
+ *   hianyzik: Array<{fajta: string, kulcs: string, ok: string}>, kovetkezoKurzor: string|null}>}
  */
 export async function sajatHozzarendelesek(tar, koino, beallitas = {}) {
   console.log('pakli.sajatHozzarendelesek - KEZDÉS', { ag: beallitas.ag ?? null });
@@ -1709,7 +1723,7 @@ export async function sajatHozzarendelesek(tar, koino, beallitas = {}) {
 
   const esemenyek = await koinoEsemenyei(tar, koino);
   const kep = await lapKepe(tar, koino, beallitas);
-  if (!en) return { data: [], count: 0, osszes: 0, nemEldontheto: 0, szabad: TUDATPONT_KERET, hianyzik: [] };
+  if (!en) return { data: [], count: 0, osszes: 0, nemEldontheto: 0, szabad: TUDATPONT_KERET, hianyzik: [], kovetkezoKurzor: null };
 
   // A nyertes pont-esemény sorszáma (a saját láncomban) — ez a „legutóbb rendezett” mércéje.
   const sajatSorszam = new Map();
@@ -1745,7 +1759,13 @@ export async function sajatHozzarendelesek(tar, koino, beallitas = {}) {
     });
   }
   tetelek.sort((a, b) => (b.sorszam - a.sorszam) || (a.entitasId < b.entitasId ? -1 : a.entitasId > b.entitasId ? 1 : 0));
-  const data = tetelek.slice(0, limit).map(({ sorszam, ...t }) => t);
+  // ⭐ A kurzor után (a sorrendben): kisebb sorszám, vagy azonos sorszámnál nagyobb azonosító.
+  const k = typeof beallitas.kurzor === 'string' ? /^(-?\d+):([A-Za-z0-9_-]{1,64})$/.exec(beallitas.kurzor) : null;
+  const tol = k ? tetelek.findIndex((t) => t.sorszam < Number(k[1]) || (t.sorszam === Number(k[1]) && t.entitasId > k[2])) : 0;
+  const oldal = tol < 0 ? [] : tetelek.slice(tol, tol + limit);
+  const utolso = oldal.at(-1);
+  const tobb = tol >= 0 && tol + limit < tetelek.length;
+  const data = oldal.map(({ sorszam, ...t }) => t);
 
   console.log('pakli.sajatHozzarendelesek - VÉGE', { darab: data.length, osszes: tetelek.length, nemEldontheto });
   return {
@@ -1754,7 +1774,8 @@ export async function sajatHozzarendelesek(tar, koino, beallitas = {}) {
     osszes: tetelek.length,           // ⭐ és hány van összesen (a lista felülről korlátos)
     nemEldontheto,
     szabad: TUDATPONT_KERET - szetosztottPontok(kep, en),
-    hianyzik: hianyzik.slice(0, HOZZARENDELES_KORLAT)
+    hianyzik: hianyzik.slice(0, HOZZARENDELES_KORLAT),
+    kovetkezoKurzor: tobb && utolso ? utolso.sorszam + ':' + utolso.entitasId : null
   };
 }
 

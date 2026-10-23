@@ -35,7 +35,9 @@ const INFO_AZONOSITOK = [
   'info-kategoriak-szama',
   'info-gondolattipusok-szama',
   'info-javaslatok-szama',
-  'info-egyezmenyek-szama'
+  'info-egyezmenyek-szama',
+  // ⭐ A koinós többlet (2026-10-23): amit a készülék még nem ismer (a tartó szerint)
+  'info-ismeretlen'
 ];
 
 /** „2 perce”, „3 órája” — a csere ideje emberi nyelven. */
@@ -96,6 +98,7 @@ export class AlsoSav {
   // =====================================
   init() {
     console.log('AlsoSav.init - KEZDÉS');
+    this._magassagFigyelese();
     this.tortenet = new FoOldalTortenetKezelo({
       onValtozas: (allapot) => this._tortenetGombokFrissitese(allapot)
     });
@@ -273,7 +276,11 @@ export class AlsoSav {
       this.gondolatTipusokSzama = (statisztika.gondolatTipusokSzama ?? 0).toLocaleString();
       this.javaslatokSzama = (statisztika.javaslatokSzama ?? 0).toLocaleString();
       this.egyezmenyekSzama = (statisztika.egyezmenyekSzama ?? 0).toLocaleString();
+      // ⭐ (2026-10-23) a még nem ismert entitások (a tartó szerint) — null: nem tudom
+      this.ismeretlenSzama = Number.isInteger(statisztika.ismeretlenSzama) ? statisztika.ismeretlenSzama : null;
+      this.ismeretlenLegalabb = statisztika.ismeretlenLegalabb === true;
       this.alsoSavFrissitese();
+      this._ismeretlenFelirata();
       const infok = document.querySelector('.also-sav__infok');
       if (infok && statisztika.koinoMegjegyzes) infok.title = statisztika.koinoMegjegyzes;
       console.log('AlsoSav.adatokBetoltese - VÉGE', { eemberNev: this.eemberNev, gondolatokSzama: this.gondolatokSzama });
@@ -304,6 +311,42 @@ export class AlsoSav {
         console.warn(`AlsoSav.alsoSavFrissitese - FIGYELEM: #${id} nem található`);
       }
     });
+  }
+
+  /**
+   * ⭐ (Csaba, 2026-10-23): a még nem ismert entitások — „🔭 N” (ha a tartó maga sem tudja pontosan: „N+”; ha nem tudom:
+   * „?”), a magyarázattal. A koinós többlet; a szám a programé (`helyiStatisztika` — D116).
+   */
+  _ismeretlenFelirata() {
+    const elem = document.getElementById('info-ismeretlen');
+    if (!elem) return;
+    elem.classList.remove('also-sav__info-elem--betoltes');
+    if (this.ismeretlenSzama === null) {
+      elem.textContent = '🔭 ?';
+      elem.title = 'Hogy mennyi entitás van még a koinóban, amit ez a készülék nem ismer, nem tudom — a gyökér szintjének '
+        + 'tartója még nem mondta meg.';
+    } else {
+      elem.textContent = '🔭 ' + this.ismeretlenSzama.toLocaleString() + (this.ismeretlenLegalabb ? '+' : '');
+      elem.title = (this.ismeretlenSzama === 0 && !this.ismeretlenLegalabb
+        ? 'A koinó minden entitását ismeri ez a készülék (a tartója szerint).'
+        : (this.ismeretlenLegalabb ? 'Legalább ' : '') + this.ismeretlenSzama.toLocaleString() + ' entitás van még a koinóban '
+          + '(a tartója szerint), amit ez a készülék nem ismer — böngészéssel vagy felderítéssel hozható el.');
+    }
+    elem.setAttribute('aria-label', elem.title);
+  }
+
+  /**
+   * ⭐ (Csaba, 2026-10-23: „az alsó sáv eltakarja … szeretném, ha nem takarná sehogy”): a sáv VALÓDI magassága a lapnak — a
+   * telefonon több sorba törik (a prototípus a kb. egysoros sávra hagyott helyet). A `--koino-also-sav` változóból a pakli
+   * alja és a menük helye számol (`koinoKartya.css`); a sáv átméretezését is követi.
+   */
+  _magassagFigyelese() {
+    const sav = document.querySelector('.also-sav');
+    if (!sav) return;
+    const beallit = () => document.documentElement.style.setProperty('--koino-also-sav', sav.offsetHeight + 'px');
+    beallit();
+    if (typeof ResizeObserver === 'function') new ResizeObserver(beallit).observe(sav);
+    else window.addEventListener('resize', beallit);
   }
 
   alsoSavHibaJelzes() {

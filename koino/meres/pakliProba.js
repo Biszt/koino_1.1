@@ -820,6 +820,7 @@ proba('⭐⭐ D116: a FELDERÍTETLEN RÉSZ — a kártyán, a testvéreknél, a 
   const sikidom = await sikidomGyerekek(tar, KOINO, { szulo: A, ...b });
   const agA1 = await felderitesAllasa(tar, KOINO, { agazat: A1, keret: 10, ...b });
   const egesz = await felderitesAllasa(tar, KOINO, { keret: 10, ...b });
+  const st = await helyiStatisztika(tar, KOINO, b);
   const ki = {
     // A1: 5 gyerekből 1 ismert, 12 alatta-ból 1 → 4 gyerek és 11 entitás hiányzik (pontosan)
     a1: kartya(h, A1)?.hiany?.gyerek === 4 && kartya(h, A1).hiany.alatta === 11 && kartya(h, A1).hiany.legalabb === false
@@ -842,7 +843,9 @@ proba('⭐⭐ D116: a FELDERÍTETLEN RÉSZ — a kártyán, a testvéreknél, a 
       && kartya(h, A11).szamok.leszarmazott === 0 && kartya(h, A11).szamok.leszarmazottLegalabb === true,
     // A (gyökér-szintű): 3 leszármazott ismert; a gyökér szintjén 4-ből csak ő ismert — 0 testvér, 3 hiányzik
     szamokA: kartya(gy, A)?.szamok?.leszarmazott === 3 && kartya(gy, A).szamok.testver === 0
-      && kartya(gy, A).szamok.testverHiany === 3
+      && kartya(gy, A).szamok.testverHiany === 3,
+    // ⭐ (2026-10-23) az alsó sáv: a koinóban (a gyökér tartója szerint) 30 entitás, ebből 4-et ismerek → 26 nem ismert
+    alsoSav: st.ismeretlenSzama === 26 && st.ismeretlenLegalabb === false && st.gondolatokSzama === 4
   };
   if (!Object.values(ki).every(Boolean)) console.log('    (D116 — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ')');
   return Object.values(ki).every(Boolean);
@@ -1412,6 +1415,25 @@ proba('⭐⭐ D101: a SAJÁT hozzárendeléseim — csak az enyéim, a legutóbb
     && a1.entitasTipus === 'Gondolat' && l.data[1].entitasId === f.B
     && l.szabad === 10000 - (50 + 31 + 5 + 10 + 20)
     && b.data.length === 1 && b.data[0].entitasId === f.B && b.data[0].tudatPontok === 7 && b.szabad === 10000 - 7;
+});
+
+// ⭐ (Csaba, 2026-10-23: „egyszerre csak 100 entitást listáz ki … kell hogy legyen opció arra, hogy a többit is le tudja
+// kérni”): a lista LAPOZVA — a kurzorral jövő oldalak együtt pontosan az egész sor, ismétlés nélkül, ugyanabban a
+// sorrendben; az utolsó oldal után nincs kurzor. Rontás: a kurzor nincs nézve → a második oldal az első → bukik.
+proba('⭐ a SAJÁT hozzárendeléseim LAPOZVA — a kurzoros oldalak együtt az egész sor, ismétlés nélkül', async () => {
+  const f = await kisFa();
+  const egesz = await sajatHozzarendelesek(f.tar, KOINO, { szerzo: f.anna.szerzo });
+  const oldalak = [];
+  let kurzor;
+  do {
+    const o = await sajatHozzarendelesek(f.tar, KOINO, { szerzo: f.anna.szerzo, limit: 2, kurzor });
+    oldalak.push(o);
+    kurzor = o.kovetkezoKurzor ?? undefined;
+  } while (kurzor && oldalak.length < 10);
+  const sor = oldalak.flatMap((o) => o.data.map((t) => t.entitasId));
+  return egesz.data.length === 5 && egesz.kovetkezoKurzor === null && oldalak.length === 3
+    && oldalak.map((o) => o.data.length).join() === '2,2,1' && sor.join() === egesz.data.map((t) => t.entitasId).join()
+    && oldalak.every((o) => o.osszes === 5) && oldalak[2].kovetkezoKurzor === null;
 });
 
 proba('⭐⭐ D101: ág-szűrve csak az ág alattiak; a nem eldönthetőt kihagyja, megszámolja, és a felmenőt kérendőnek mondja', async () => {

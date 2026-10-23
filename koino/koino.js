@@ -272,8 +272,8 @@ import {
   hianyzoFelmenok,
   // ⭐ A ház (D100): a hierarchikus pakli.
   pakliHierarchia,
-  // ⭐ D101: a Tudatpontok modál listája.
-  sajatHozzarendelesek,
+  // ⭐ D101: a Tudatpontok modál listája (2026-10-23 óta lapozva).
+  sajatHozzarendelesek, HOZZARENDELES_KORLAT,
   // ⭐ D101 ③: a Struktúra nézet.
   strukturaDarabszam, strukturaLap,
   // ⭐ D112 ③: a felderítés állása (a Struktúra sorrendje a háttérben).
@@ -2506,7 +2506,9 @@ function hozzarendelesMegjegyzes(lista, keres) {
         : ' — elkértem, a tartóit keresem') : '') + '.');
   }
   if (lista.osszes > lista.data.length) {
-    reszek.push('A legutóbb rendezett ' + lista.data.length + ' látszik, összesen ' + lista.osszes + ' van.');
+    // ⭐ (2026-10-23) lapozva: a többit a „További” gomb hozza (a lap a lista alá teszi)
+    reszek.push('Összesen ' + lista.osszes + ' hozzárendelésed van — a legutóbb rendezettek elöl, egyszerre legfeljebb '
+      + HOZZARENDELES_KORLAT + '; a többit a „További” gomb hozza.');
   }
   return reszek.length ? reszek.join(' ') : null;
 }
@@ -8560,7 +8562,9 @@ try {
           const lista = await sajatHozzarendelesek(olvasoTar, KOINO, {
             ...lapHorgonya, szerzo, nezet: pakliNezet,
             ag: kereses.get('agEntitasId') || null,
-            limit: Number.isInteger(limit) ? limit : undefined
+            limit: Number.isInteger(limit) ? limit : undefined,
+            // ⭐ (Csaba, 2026-10-23): a következő oldal (a „További” gomb)
+            kurzor: kereses.get('kurzor') || undefined
           });
           const keres = sajatKoino && lista.hianyzik.length ? await lapHianyzoinakElkerese(lista.hianyzik)
             : { kert: 0, fuggo: 0, celos: 0 };
@@ -8586,7 +8590,9 @@ try {
         // senki nem számolja meg (9. szabály: egy készülék terhe nem függhet a koinó méretétől) — itt a KÉSZÜLÉKEN ismert
         // rész számai állnak, a prototípus alakjában, és a program kimondja, mit jelentenek.
         if (utvonal === '/api/platform/statisztika') {
-          const st = await helyiStatisztika(olvasoTar, KOINO, { ...lapHorgonya, nezet: pakliNezet });
+          // ⭐ (2026-10-23) a bemondások és a fejléc-tudás a nem ismert entitások számához
+          const st = await helyiStatisztika(olvasoTar, KOINO, { ...lapHorgonya, nezet: pakliNezet,
+            bemondasok: sajatKoino ? await bemondasok() : new Map(), fejlecTudas: sajatKoino ? await fejlecTudas() : new Map() });
           return { adat: { success: true, ...st,
             koinoMegjegyzes: 'A készüléken ismert rész: a koinó egészét senki nem számolja meg — az e-emberek száma azoké, '
               + 'akiknek eseménye nálam van.' } };

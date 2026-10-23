@@ -1336,3 +1336,11 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     nincs meg, hanem azt is, ha már megvan”, és „csere után az alsó sáv számai nem frissülnek” — ami kérelemmel jön (böngészés,
     felderítés), az nem csere, az `utolsoUj` nem lép tőle · `pakli.js` (`kartyaSzamai`), `koino.js` (`/api/csere-allapot`
     `tudas`), `felulet/js/koinoFelderitetlen.js` (`kartyaSzamokJelolese`), `alsoSav.js`, a próbák.
+191. **2026-10-23 · az alsó sáv nem takar, a Tudatpontok lapozva, a nem ismert entitások az alsó sávon (Csaba három kérése)**
+    → **(1) a lap a sáv VALÓDI magasságát méri (`--koino-also-sav` — telefonon több sorba törik): a pakli alja ennyi helyet
+    hagy, a menük a sáv fölötti részre igazodnak (a kártya menüje a kártya rétegében nyílik, a sáv alatt — a z-index nem
+    segít); (2) a Tudatpontok lista kurzorral lapoz, a „További” gomb hozza a következő 100-at; (3) az alsó sáv a gyökér
+    szintjének felderítetlen részét is mondja („🔭 N” — a tartó szerint, a D116 darabjából)** · a prototípus egysoros sávra
+    hagyott helyet; a lista eddig 100-nál vágott; a darabszám ugyanabból a körből jön, mint a többi szám (nem drágább) · Csaba
+    · `alsoSav.js`, `koinoKartya.css`, `main.css`, `index.html`, `koinoModalok.js`, `apiHelper.js`, `pakli.js`
+    (`sajatHozzarendelesek` `kurzor`, `helyiStatisztika` `ismeretlenSzama`), `koino.js`, a próbák.

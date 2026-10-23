@@ -241,7 +241,9 @@ async function apiGet(utvonal, token = null) {
   // program elkérte, ami hiányzik — érdemes később újrakérdezni).
   if (eredmeny && typeof eredmeny === 'object' && 'koinoMegjegyzes' in eredmeny) {
     document.dispatchEvent(new CustomEvent('koino:megjegyzes',
-      { detail: { utvonal, szoveg: eredmeny.koinoMegjegyzes, betoltes: eredmeny.betoltes === true } }));
+      { detail: { utvonal, szoveg: eredmeny.koinoMegjegyzes, betoltes: eredmeny.betoltes === true,
+        // ⭐ (2026-10-23) a lapozás (a Tudatpontok „További” gombja): a következő oldal kurzora és az összes
+        kovetkezoKurzor: eredmeny.kovetkezoKurzor ?? null, osszes: Number.isInteger(eredmeny.osszes) ? eredmeny.osszes : null } }));
   }
   // ⭐ D116: a felderítetlen rész jele — a sorok `koinoHiany`-ja (a Síkidom gyerekei és ős-lánca); az örökölt modál nem ismeri
   // ezt a mezőt, a `koinoModalok.js` veszi át (az esemény viszi, a modál adat-útja érintetlen).

@@ -27,12 +27,15 @@ import KeresesModal from './components/modals/KeresesModal.js';
 import ErtesitesekModal from './components/modals/ErtesitesekModal.js';
 import ErtesitesiBeallitasModal from './components/modals/ErtesitesiBeallitasModal.js';
 import { strukturaHianyJelolese, sikidomHianyRajzolasa } from './koinoFelderitetlen.js';
+import { apiGet } from './utils/apiHelper.js';
 
 // ===================================
 // A PROGRAM MEGJEGYZÉSEI — útvonalanként a legutóbbi
 // ===================================
 
 const utolsoMegjegyzes = new Map();
+// ⭐ (2026-10-23) a lapozás útvonalanként: a következő oldal kurzora és az összes (a Tudatpontok „További” gombja)
+const utolsoLapozas = new Map();
 // ⭐ D101 ④: a Síkidom gyerek-kéréseinek `betoltes` jele, szülőnként (a gyökér szintje: 'vilag' — a modál jele).
 const SIKIDOM_VILAG = 'vilag';
 const sikidomBetoltes = new Map();
@@ -45,6 +48,7 @@ document.addEventListener('koino:megjegyzes', (e) => {
   const [ut, kerdes = ''] = utvonal.split('?');
   // ⭐ Az útvonal a kérdőjel előtti rész — a modál ugyanazt az útvonalat kérdezi más paraméterekkel is.
   utolsoMegjegyzes.set(ut, typeof szoveg === 'string' && szoveg ? szoveg : null);
+  utolsoLapozas.set(ut, { kurzor: e.detail?.kovetkezoKurzor ?? null, osszes: e.detail?.osszes ?? null });
   if (ut === 'kereses') keresesBetoltes = betoltes === true ? (new URLSearchParams(kerdes).get('q') ?? '').trim() : null;
   if (ut === 'sikidom/gyerekek') {
     sikidomBetoltes.set(new URLSearchParams(kerdes).get('szulo') || SIKIDOM_VILAG, betoltes === true);
@@ -130,7 +134,42 @@ document.addEventListener('koino:hiany', (e) => hianyokFeljegyzese(Array.isArray
 // („Ebben az ágazatban nincs tudatpontod.”) a prototípusé — a megjegyzés alatta mondja meg, ha ez nem a teljes igazság.
 koruleIr(TudatpontokModal, '_listaRenderelese', function () {
   megjegyzesKirajzolasa(document.getElementById('tudatpontok-lista'), megjegyzes('tudatpont/aktiv-hozzarendelesek'));
+  tudatpontokTovabbGombja(this);
 });
+
+// ⭐ (Csaba, 2026-10-23: „egyszerre csak 100 entitást listáz ki … kell hogy legyen opció arra, hogy a többit is le tudja
+// kérni”): a lista alá egy „További” gomb, amíg a program következő oldalt mond (`kovetkezoKurzor`). A sorokat a modál SAJÁT
+// sor-rajzolója adja (`_elemHtml`), a lista végére fűzve — a kattintásuk a modál delegált kezelőjén megy.
+const TUDATPONTOK_UT = 'tudatpont/aktiv-hozzarendelesek';
+function tudatpontokTovabbGombja(modal) {
+  const lista = document.getElementById('tudatpontok-lista');
+  if (!lista?.parentElement) return;
+  lista.parentElement.querySelector(':scope > .koino-tovabb')?.remove();
+  const l = utolsoLapozas.get(TUDATPONTOK_UT);
+  if (!l?.kurzor) return;
+  const latszik = lista.querySelectorAll('.tudatpontok-modal__elem').length;
+  const gomb = document.createElement('button');
+  gomb.type = 'button';
+  gomb.className = 'koino-tovabb';
+  gomb.textContent = 'További tudatpontok' + (Number.isInteger(l.osszes) ? ' (' + latszik + ' / ' + l.osszes + ' látszik)' : '');
+  gomb.addEventListener('click', async () => {
+    gomb.disabled = true;
+    try {
+      const ag = modal.agEntitasId ? '&agEntitasId=' + encodeURIComponent(modal.agEntitasId) : '';
+      const v = await apiGet(TUDATPONTOK_UT + '?limit=100&kurzor=' + encodeURIComponent(l.kurzor) + ag, modal.token);
+      lista.insertAdjacentHTML('beforeend', (v?.data ?? []).map((h) => modal._elemHtml(h)).join(''));
+      // a megjegyzés az első oldalé marad (az összes és a lapozás módja); a gomb a következő kurzorral újra
+      megjegyzesKirajzolasa(lista, megjegyzes(TUDATPONTOK_UT));
+      tudatpontokTovabbGombja(modal);
+    } catch (hiba) {
+      console.warn('a további tudatpontok nem jöttek meg', { hiba: hiba.message });
+      gomb.disabled = false;
+    }
+  });
+  // a megjegyzés (ha van) után, különben közvetlenül a lista után
+  const utana = lista.parentElement.querySelector(':scope > .koino-megjegyzes') ?? lista;
+  utana.insertAdjacentElement('afterend', gomb);
+}
 
 // ===================================
 // ⭐ A STRUKTÚRA (D101 ③)
