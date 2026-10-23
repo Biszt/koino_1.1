@@ -161,6 +161,19 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    lapozva („További”), az alsó sávon a még nem ismert entitások („🔭 N”) — elágazás 191. Csaba kérdésére: az össz-pont a TÉNYLEGES (a tartó bemondása), nem a helyben ismertek összege; a
    teljes szerkezet minden készüléken a 9. szabályba ütközne. ⏸️ Az IPv6 Csabánál (a kérdése:
    „miért kell?” — a válasz: nem kell, egy második út a két mobilnet közé, aminek az értéke a terepen derülne ki).
+   ⭐⭐ **A KÖVETKEZŐ PILLÉR: A KÖLTÖZÉS** (Csaba, 2026-10-23: *„akkor legyen a kőltözés, de mielött elkezdjük beszéljük át,
+   alapossan”*) — 🔍 **ÁTVIZSGÁLVA** ([`koltozes_atvizsgalas.md`](docs/koltozes_atvizsgalas.md)): a forráskód-kormányzás 4.
+   lépcsője (a D9 önfrissítése helyett), és a D66 óta a súlypontja. ✅ **D118** (Csaba, 2026-10-24: *„mind a hatot
+   elfogadom”*): **a múlt közös, a jelenlét személyes** — az új koinó a szülőjére épül (a szülő múltja a vágásig, átírás
+   nélkül, az entitások a régi nevükön), súlyt csak a költöző hoz (egy beköltözés-aláírással), a lezárt döntés múlt, a
+   nyitott a költözőkkel folytatódik, a tagság és a 2. lépcső a vágáskor öröklődik, a zártság is; **a szabályok a koinó
+   születésében, a koinó neve a születés lenyomata**; a költözés két esemény (ki- és beköltözés — a kiköltözés a pénz
+   kivezetésének helye). ⛔ **LELET (mérve, 2026-10-24):** a koinó neve ma szabad szöveg, és egy kívülálló EGYETLEN azonos
+   nevű `KoinoLetrehozas`-szal (a cserén is) az alapító — és így minden tag — döntéseit „nem ellenőrizhetővé” tette (az
+   állapot az utolsó, a tagság az első születést veszi; élő koinó ma nincs) — a D118/2 zárja. ⏸️ **Csabánál KZ1–KZ5** (a
+   paraméterek besorolása · ki hozhat létre gyermeket · ha a hozott pontok nem férnek · a hibajavítás, ami eredményt
+   változtat · a protokoll-törés). ⏭️ **Az építés ①-gyel indul** (a koinó neve és a szabályok a születésben — a lelet
+   javítása; ⚠️ a laptop–telefon próba-koinója így nem folytatható, a következő kézi próbához új koinó kell). Elágazás 192.
 2. ⏸️ **A terep 🅱️ (két mobilnetes telefon)** — Csaba (2026-10-19): *„ezt hagyjuk ki”*; előtte a telefon frissítése (lent).
 3. **Az „UTÁNA” lista** (lent).
 
@@ -287,7 +300,7 @@ D100 parancssor-próbája méri, egy végig futó felülettel) · a lap a még m
   mi hiányzik (függőségi sorrendben), és miről ágaztunk le, miért. **Új elágazásnál ide is írj.**
 - **Induláskor, ha a nagy kép kell:** [`docs/utiterv.md`](docs/utiterv.md) (mit építünk, milyen
   sorrendben, és miért) → [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
-  („HOL TARTUNK" + a D1–D117 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
+  („HOL TARTUNK" + a D1–D118 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
   `szakasz5_terv.md`). A gépezet ábrákon: [`docs/gepezet.md`](docs/gepezet.md).
 - ⚠️ **Új session-váltáskor** a fenti „SESSION-VÁLTÁS" blokkot **cseréld le**, ne fölé írj
   újat — a régit (ha kell) a napló tetejére tedd. *Így maradt 233 KB-os ez a fájl.*
@@ -310,7 +323,7 @@ D100 parancssor-próbája méri, egy végig futó felülettel) · a lap a még m
 
 ⚠️ **Zsákutcák, amiket ne javasolj újra** (mind megmérve): a Duniter-féle távolság-szabály (globális szám) · az „ingyenes elismerés" (D48) · **a gazdaság önmagában nem véd** · a horgony-kör (880 hamis horgony) · ⛔ a *„kevés kapcsolata van, tehát gyanús"* jelzés (31/41/45% téves) · ⛔ **és a `k` tanúsítás + keret vonala** (D44, D51–D53) — **tárgytalan**, a meghívás váltotta ki.
 
-A tervezési döntések (**D1–D117**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
+A tervezési döntések (**D1–D118**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 

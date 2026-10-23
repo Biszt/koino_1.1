@@ -8,6 +8,13 @@ lezárja az **N5** nyitott kérdést: hogyan hat a közösség közvetlenül a f
 > **Státusz-figyelmeztetés.** Ez elvi terv, nem megvalósítás. A leírt mechanizmusból ma
 > semmi nem fut. Amit a Fázis 1 ebből már tud, azt a záró szakasz sorolja fel.
 
+> ⚠️ **2026-09-12 óta (D66) és 2026-10-24 óta (D118) a 4. lépcső helyén a KÖLTÖZÉS áll**, nem a D9 önfrissítése: nem
+> írjuk felül azt, ahol a közösség van — az e-ember a saját utasítására költözik egy új koinóba, ami a szülőjére épül
+> (*a múlt közös, a jelenlét személyes*), és a szabályok a koinó születésében vannak, nem a programban. A kódról szóló
+> szavazás ezzel jelzés lett, a valódi döntés az, hogy ki költözik. Az alább leírt D9-es bevezetés és az alkotmány-vonal
+> (D64) **nem épül meg**; a többi (a három szint, a térkép, a fork mint normál üzemmód) érvényes. A részletek:
+> [`koltozes_atvizsgalas.md`](koltozes_atvizsgalas.md).
+
 ## Tartalomjegyzék
 
 - [A kérdés](#a-kérdés)

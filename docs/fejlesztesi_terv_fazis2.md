@@ -6061,6 +6061,41 @@ struktura nézetben 5000-ig nem terhelő túlságosan?”*
 `FELDERITES_ALAP.k` = 200); a keretig (5000) azt mutatja, amit a készülék már ismer, a „+N” jel (D116) mondja, hol van még, és
 a megjegyzés a felderítést ajánlja. A tömeges elhozás a felderítés dolga (a saját K-jáig kér). Próba +1, rontással. Elágazás 189.
 
+### D118. A KÖLTÖZÉS ALAKJA: A MÚLT KÖZÖS, A JELENLÉT SZEMÉLYES (2026-10-24, Csaba: „rendben, mind a hatot elfogadom, jöhet az átvizsgálás”)
+
+*Az átvizsgálás: [`koltozes_atvizsgalas.md`](koltozes_atvizsgalas.md). A D66 kibontása — Csaba: „akkor legyen a kőltözés,
+de mielött elkezdjük beszéljük át, alapossan.”*
+
+**A helye:** a költözés a forráskód-kormányzás ([`kormanyzas.md`](kormanyzas.md)) 4. lépcsője, a bevezetés — a D9
+önfrissítése helyett —, és a D66 óta a súlypontja: a kódról szóló szavazás legfeljebb jelzés, a valódi döntés az, hogy ki
+költözik.
+
+**A hat döntés:**
+1. **A múlt közös, a jelenlét személyes:** az új koinó a szülőjére épül (a születése megnevezi; a vágás a saját születése);
+   a szülő múltja a vágásig az új koinó múltja is, a régi aláírásokkal, átírás nélkül — az entitások a régi nevükön élnek.
+   Súlyt (pont, szavazat, érték javaslat, állásfoglalás) csak a költöző hoz; amire senki nem hozott, azt a D14 elfelejti
+   (az árvák felkerülnek); a vágás előtt lezárt döntés múlt (a szülő szabályaival, mindenki szavazatával), a nyitott jövő.
+2. **A szabályok a koinó születésében, a koinó neve a születés lenyomatából** — egy szabály-változás új koinó ugyanazzal a
+   programmal (D25 1. mód, D13/b), a szülő múltját ugyanaz a kód számolja a szülő paramétereivel, és a 15. mérés néma
+   kettéhasadása szerkezetileg megszűnik.
+3. **A tagság (és a 2. lépcső) a vágáskor öröklődik**, csak a költözőnek ad súlyt, utána csak az új koinó meghívásai — a D25
+   kivétele (*„születéskor örökölhet, utána soha”*). ⚠️ A tanúsításokat (a D25 nyitott kérdését) az „elfogadom mind”
+   szerint igennek vettük.
+4. **A vágáskor nyitott javaslatok a költözőkkel folytatódnak** (az új szabályokkal).
+5. **A zártság öröklődik:** zárt szülőnek csak zárt gyermeke lehet.
+6. **A költözés két esemény:** kiköltözés a szülőben (a saját azonosság-szeletemben — a szülő ebből tudja meg, hogy
+   született gyermeke; itt lesz a pénz kivezetése, D66/6) és beköltözés az újban (egy aláírás: a láncom a vágásig, a hozott
+   kiosztás, a tagsági csomag).
+
+⏸️ Elhalasztva: a vágáskor lezárt döntések lezárási összegzése (D95/1), mérés után. ⏸️ Csabánál: **KZ1–KZ5** (a paraméterek
+besorolása · ki hozhat létre gyermeket · ha a hozott pontok nem férnek az új keretbe · a hibajavítás, ami eredményt
+változtat · a protokoll-törés).
+
+⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
+állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal
+(a cserén is) „nem ellenőrizhetővé” tette az alapító — és így minden tag — döntéseit. A D118/2 zárja; ezért az építés első
+lépése. Elágazás 192.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

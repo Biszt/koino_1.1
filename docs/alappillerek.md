@@ -1344,3 +1344,12 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     hagyott helyet; a lista eddig 100-nál vágott; a darabszám ugyanabból a körből jön, mint a többi szám (nem drágább) · Csaba
     · `alsoSav.js`, `koinoKartya.css`, `main.css`, `index.html`, `koinoModalok.js`, `apiHelper.js`, `pakli.js`
     (`sajatHozzarendelesek` `kurzor`, `helyiStatisztika` `ismeretlenSzama`), `koino.js`, a próbák.
+192. **2026-10-24 · a költözés átvizsgálása (D66 → D118) — a múlt közös, a jelenlét személyes**
+    → **az új koinó a szülőjére épül (a szülő múltja a vágásig, átírás nélkül; az entitások a régi nevükön), súlyt csak a
+    költöző hoz (egy beköltözés-aláírással), a lezárt döntés múlt, a nyitott a költözőkkel folytatódik, a tagság és a 2.
+    lépcső a vágáskor öröklődik, a zártság is; a szabályok a koinó születésébe kerülnek, a koinó neve a születés
+    lenyomata; a költözés két esemény (ki- és beköltözés)** · a D66 egyenkénti újra-aláírása minden entitást átnevezett
+    volna, a részleges költözés lyukakat hagyott, a lezárt döntések megfordulhattak volna; egy teljes pillanatkép a 9.
+    szabályba ütközik ⛔ **lelet:** a koinó neve ma szabad szöveg, és egy kívülálló egyetlen azonos nevű születéssel (a
+    cserén is) az alapító — és minden tag — döntéseit „nem ellenőrizhetővé” tette (mérve) — a D118/2 zárja, ezért az ① az
+    első lépés · Csaba · [`koltozes_atvizsgalas.md`](koltozes_atvizsgalas.md), a fázis-2 terv D118-a.
