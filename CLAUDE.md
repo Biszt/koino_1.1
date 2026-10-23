@@ -20,10 +20,10 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 ### ▶️ SESSION-VÁLTÁS (2026-10-15) — A KÖVETKEZŐ SESSION INNEN INDUL
 
 **Az állapot:** **1258 önpróba** (59 próba-fájl; a legutóbbi teljes soron mind zöld — 2026-10-22, D116 a felderítetlen rész) · 321 fájl / 6127,4 KB (⚠️ CR nélkül mérve —
-lásd a 6. szabályt) · 0 npm-csomag · minden pusholva. ⏸️ **A telefon a `03cb46f`-en** (Csaba frissítette, 2026-10-17; a próbái akkor az internet kiesése miatt buktak — *„most nem fontos”*) — ⚠️ a
-FELDERÍTÉS kézi próbájához frissíteni kell (2026-10-22: a felderítés D112-es, és a D116 a részfa-fát is megváltoztatta — a régi
-kód az új fejléceket elveti); a parancs lent, *„Ami nyitva maradt"*. A laptopon a próbához két fa: „Felderítés-próba” (60
-gondolat) és „Nagy felderítés-próba” (400 gondolat, ≤ 8 szint, ≤ 8 testvér) — a scratchpad `felderites_fa.mjs`-ével.
+lásd a 6. szabályt) · 0 npm-csomag · minden pusholva. ✅ **A telefon friss** (Csaba 2026-10-23-án a felderítés kézi
+próbájához és a három javításhoz frissítette — *„működik”*); a parancs lent, *„Ami nyitva maradt"*. A laptopon a próbához három
+fa: „Felderítés-próba” (60 gondolat), „Nagy felderítés-próba” és „Harmadik felderítés-próba” (400–400 gondolat, ≤ 8 szint, ≤ 8
+testvér) — a scratchpad `felderites_fa.mjs`-ével.
 
 ⛔⛔ **SESSION-NYITÁSKOR („nézd át a koino_1.1 mappát") NE FUTTASS PRÓBÁT** (Csaba, 2026-10-01) — az
 átnézés OLVASÁS: a munkakönyvtár, az utolsó commitok, a dokumentáció, a kód. Lásd *A munka módja*.
