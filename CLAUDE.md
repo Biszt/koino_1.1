@@ -149,12 +149,16 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    felderítés kézi próbája előtt: „(B) Gyerekszám + össz-darab”; **81. mérés**, `darabMeres.js`): a részfa-fa három összeget visz
    ([pont, darab, gyerek]), a fejléc az alatta lévők számát is hozza (a gyökér köti, a szúrópróba a darab és a gyerek szerint is
    vesz mintát — a mély kérés +9–12%), és a felület egy segédből mondja ki, mi maradt felderítetlen (a kártyán „▾+N”, a
-   testvér-jelző alatt, a Struktúrában, a Síkidomban, a Felderítések ablakában); közben javítva: a minták születése nem kerül a
-   tárba (elágazás 186–187). Csaba kérdésére: az össz-pont a TÉNYLEGES (a tartó bemondása), nem a helyben ismertek összege; a
+   testvér-jelző alatt, a Struktúrában, a Síkidomban, a Felderítések ablakában — böngészőben végigjárva egy ideiglenes „alap”
+   készülékkel, 2026-10-23); közben javítva: a minták születése nem kerül a tárba (elágazás 186–187). Csaba kérdésére: az össz-pont a TÉNYLEGES (a tartó bemondása), nem a helyben ismertek összege; a
    teljes szerkezet minden készüléken a 9. szabályba ütközne. ⏸️ Az IPv6 Csabánál (a kérdése:
    „miért kell?” — a válasz: nem kell, egy második út a két mobilnet közé, aminek az értéke a terepen derülne ki).
 2. ⏸️ **A terep 🅱️ (két mobilnetes telefon)** — Csaba (2026-10-19): *„ezt hagyjuk ki”*; előtte a telefon frissítése (lent).
 3. **Az „UTÁNA” lista** (lent).
+
+⏸️ **Kisebb nyitottak (2026-10-23):** ⚠️ a D101 ④ Síkidom bekötés-próbája egy szűrt futásban (`KOINO_PROBA=kérelem`, 3 próba —
+közben a laptop őrjárata és felülete futott) egyszer bukott; az okát nem láttam (a kimenetet szűrve néztem — legközelebb fájlba);
+magában és újra futtatva zöld. Ugyanaz a próba, mint a 2026-10-13-i lent.
 
 ⏸️ **Kisebb nyitottak (2026-10-19):** ⚠️ a ⑦b próbájában a felület a teljes sor terhelése alatt egyszer nem írt ki semmit 15 mp alatt (magában zöld) — a `feluletet` segéd hibája most megnevezi magát (stderr, kilépési kód, eltelt idő). ✅ A ⑦b MÁSIK bukás-alakjának oka megvan és javítva (elágazás 181): az első próbálkozás egy épp újrainduló tartónál elbukott, és a régi szabály szerint a tartó a kérelem lejáratáig (2 óra) nem kapott újra esélyt — a „már próbáltuk” jel most 2 percre szól.
 

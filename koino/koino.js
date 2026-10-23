@@ -6141,10 +6141,14 @@ try {
       const sor = (t, behuz) => {
         const ered = e.tetelek.get(t.az);
         const jel = !ered?.rendben ? SZIN.nem + '✗ ' + (ered?.ok ?? 'hibás') + SZIN.vege
-          : ered.mintazott ? SZIN.jo + '✓ ellenőrizve (' + ered.minta.ellenorzott + ' minta)' + SZIN.vege
+          // ⭐ D116: az ellenőrzött minták a pont-eseményesek ÉS a darab-minták (a gyerek születésével) együtt
+          : ered.mintazott ? SZIN.jo + '✓ ellenőrizve (' + (ered.minta.ellenorzott + (ered.minta.darabEllenorzott ?? 0))
+            + ' minta)' + SZIN.vege
             : SZIN.halvany + (t.forras === 'bemondott' ? 'bemondás (a tartója sem tartja)' : 'bemondás') + SZIN.vege;
         const cim = t.letrehozo?.adat?.cim ?? (t.letrehozo?.tipus === 'Javaslat' ? '(javaslat)' : '');
+        // ⭐ D116: és hány entitás van alatta (a tartó szerint; „+”, ha ő maga sem tudja pontosan)
         kiir(behuz + SZIN.halvany + t.az.slice(0, 8) + SZIN.vege + '  ' + cim + SZIN.halvany + '  · össz-pont ' + t.osszPont
+          + (Number.isSafeInteger(t.ad) ? ' · alatta ' + t.ad + (t.adb ? '+' : '') : '')
           + (t.felkerult ? ' · felkerült' : '') + SZIN.vege + '  ' + jel);
       };
       // ⭐ D102: egy lista, össz-pont szerint csökkenően; a mélyebb tételt a szülője alá húzzuk be.
