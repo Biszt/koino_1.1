@@ -129,14 +129,15 @@
   color: var(--color-primary);
 }
 
-/* ⭐ D116: a FELDERÍTETLEN RÉSZ jele — ha a kártya alatt van még entitás, amit ez a készülék nem ismer („▾+N”). A
-   `koinoFelderitetlen.js` teszi rá; a magyarázat a `title`-ben. Halvány, mint a forrás jele (D19: nem vád). */
+/* ⭐ D116 (Csaba, 2026-10-23): a leszármazottak (▾) és a testvérek (↔) ismert száma a tudatpont-sor számainak stílusában
+   (`pakli-kartya__ikon-elem`), és mellettük a FELDERÍTETLEN rész („+N”) — halványan, mint a forrás jele (D19: nem vád). A
+   `koinoFelderitetlen.js` teszi rá; a magyarázat a `title`-ben. */
+.pakli-kartya__koino-szam { cursor: help; }
 .pakli-kartya__felderitetlen {
-  margin-left: 6px;
-  font-size: 0.85em;
+  margin-left: 3px;
+  font-size: 0.9em;
   font-style: italic;
   color: var(--color-text-faint);
-  cursor: help;
   white-space: nowrap;
 }
 

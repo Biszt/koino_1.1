@@ -92,6 +92,8 @@ export function kartyaAdatta(k) {
     // ⭐ D116: mi maradt felderítetlen alatta (a program számolja — `pakli.js` `felderitetlenTudas`); a kártya nem olvassa,
     // a `koinoPakli.js` jelöli. null: alatta mindent ismerek.
     koinoHiany: k.hiany && typeof k.hiany === 'object' ? k.hiany : null,
+    // ⭐ (Csaba, 2026-10-23): a leszármazottak és a testvérek ismert száma és a még nem ismert — a kártya fejlécére
+    koinoSzamok: k.szamok && typeof k.szamok === 'object' ? k.szamok : null,
 
     adatok: {
       cim: k.cim ?? '',

@@ -726,6 +726,20 @@ export async function pakliHierarchia(tar, koino, beallitas = {}) {
   // ⭐ D116: a felderítetlen rész — a kártyák jele és a testvér-jelző
   const hianya = felderitetlenTudas(entitasok, osszPontok, { tartott, gyokerTeljes, tudas: beallitas.fejlecTudas ?? new Map(),
     gyerekek });
+  // ⭐ (Csaba, 2026-10-23): a kártya MINDIG mutatja a leszármazottak és a testvérek ismert számát, és mellette, ami még nincs
+  // meg — nem csak a hiányt. A testvérek a szülő gyerekei (a gyökér-szintűeké a gyökér szintje) önmaga nélkül; ha a szülő nem
+  // ismert, a testvérekről nem tudunk (null).
+  const kartyaSzamai = (az) => {
+    const sz = hianya.szamok(az);
+    const szulo = entitasok.get(az)?.szulo ?? null;
+    const p = szulo && !entitasok.has(szulo) ? null : hianya.szamok(szulo ?? GYOKER);
+    return {
+      leszarmazott: sz.ismertAlatta, leszarmazottHiany: sz.alatta, leszarmazottOsszes: sz.osszesAlatta,
+      leszarmazottLegalabb: sz.legalabb,
+      testver: p ? Math.max(0, p.ismertGyerek - 1) : null, testverHiany: p ? p.gyerek : null,
+      testverOsszes: p ? p.osszesGyerek : null
+    };
+  };
   // ⭐ Az erősebb előbb, holtversenyben az azonosító (mint a kérelem fejléceinél — egy sorrend).
   const erosseg = (a, b) => (pontja(b) - pontja(a)) || (a < b ? -1 : a > b ? 1 : 0);
   const gyokerek = [...entitasok.values()].filter((e) => !e.szulo).map((e) => e.azonosito).sort(erosseg);
@@ -791,7 +805,8 @@ export async function pakliHierarchia(tar, koino, beallitas = {}) {
   const kartyaja = (az, melysegiSzint) => {
     const e = entitasok.get(az);
     const k = kartya(e, pontja(az), beallitas.szerzo, entitasok, entitasDontese(e, kep.javaslatok));
-    return { ...k, melysegiSzint, ...forrasJelolese(e, osszPontok.get(az), bemondasok, tartott), hiany: hianya(az) };
+    return { ...k, melysegiSzint, ...forrasJelolese(e, osszPontok.get(az), bemondasok, tartott), hiany: hianya(az),
+      szamok: kartyaSzamai(az) };
   };
   const lanc = [...felmenok, kivalasztott, ...bogar];
   const pakli = lanc.map((az, i) => kartyaja(az, i + 1));

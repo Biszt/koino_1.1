@@ -154,7 +154,9 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    (2026-10-23):** a telefon „felderítés nélkül” az egész koinót (475) áthozta — a lapos (ágazati) lista bejárója a TELJES sor
    biztosságáig kért és percenként újrakérdezett; javítva: a bejáró csak addig kér, amit a nézet mutat (az oldal vége, a
    Struktúra kerete, a felderítés K-ja — elágazás 188). ✅ **D117** (Csaba: „(B) Az első 200-at”): a Struktúra magától csak az
-   első 200-ig kér (mint egy alapbeállítású felderítés), a többit a „+N” jelek mutatják és a felderítés hozza (elágazás 189). Csaba kérdésére: az össz-pont a TÉNYLEGES (a tartó bemondása), nem a helyben ismertek összege; a
+   első 200-ig kér (mint egy alapbeállítású felderítés), a többit a „+N” jelek mutatják és a felderítés hozza (elágazás 189).
+   ✅ Csaba próbája után (2026-10-23): a kártyán MINDIG a leszármazottak (▾) és a testvérek (↔) ismert száma, a hiány halványan
+   mellette; az alsó sáv a kérelemmel jött tudás után is frissül (a csere-állapot `tudas` változata — elágazás 190). Csaba kérdésére: az össz-pont a TÉNYLEGES (a tartó bemondása), nem a helyben ismertek összege; a
    teljes szerkezet minden készüléken a 9. szabályba ütközne. ⏸️ Az IPv6 Csabánál (a kérdése:
    „miért kell?” — a válasz: nem kell, egy második út a két mobilnet közé, aminek az értéke a terepen derülne ki).
 2. ⏸️ **A terep 🅱️ (két mobilnetes telefon)** — Csaba (2026-10-19): *„ezt hagyjuk ki”*; előtte a telefon frissítése (lent).

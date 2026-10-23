@@ -339,6 +339,14 @@ export class AlsoSav {
         this.latottUj = uj;
         this.frissitesFugg = true;
       }
+      // ⭐ (Csaba, 2026-10-23): a készülék tudása kérelemmel is nő (böngészés, felderítés) — az nem csere, az `utolsoUj` nem lép
+      // tőle; a program a tudás változatát is mondja, és ha az lépett, ugyanígy frissítünk.
+      const tudas = a.tudas ?? null;
+      if (this.latottTudas === undefined) this.latottTudas = tudas;
+      else if (tudas !== null && tudas !== this.latottTudas) {
+        this.latottTudas = tudas;
+        this.frissitesFugg = true;
+      }
       if (this.frissitesFugg) await this._csereUtaniFrissites(false);
     } catch (hiba) {
       console.warn('AlsoSav._csereKerdezese - nem sikerült', { hiba: hiba.message });

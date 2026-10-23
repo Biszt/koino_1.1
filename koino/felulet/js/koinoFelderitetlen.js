@@ -13,6 +13,9 @@
 // ⚠️ A hiány látszik, de nem vád (D19): halvány jel és magyarázat, nem figyelmeztetés. A lap itt sem számol — csak a kapott
 // számokat mondja ki (a kivonás is a programé: `gyerek`, `alatta`).
 //
+// ⭐ (Csaba, 2026-10-23): a ház kártyáján nem csak a hiány, hanem MINDIG a leszármazottak és a testvérek ismert száma is
+// (`kartyaSzamokJelolese`), a hiány halványan mellettük.
+//
 // Használja: `koinoPakli.js` (a ház), `koinoModalok.js` (a Struktúra, a Síkidom).
 
 const szam = (n) => Number(n).toLocaleString('hu-HU');
@@ -55,26 +58,62 @@ export function hianyJele(h) {
 }
 
 /**
- * A ház kártyáján: a jel az ágazati pont mellé (a tudatpont-sorba — a kártya bájtra a prototípusé, ez a kirajzolás után
- * kerül rá). Ismételhető: a régi jelet lecseréli.
+ * ⭐ (Csaba, 2026-10-23): a ház kártyáján MINDIG a leszármazottak (▾) és a testvérek (↔) ismert száma — a tudatpont-sor
+ * számainak stílusában (`pakli-kartya__ikon-elem`, mint az ágazati pont) —, és mellettük halványan, ami még nincs meg („+N”,
+ * vagy „+?”, ha nem tudjuk). Az ágazati pont mellé kerül (a kártya bájtra a prototípusé, ez a kirajzolás után). Ismételhető:
+ * a régi jeleket lecseréli.
  * @param {HTMLElement} dom - a kártya DOM-ja
- * @param {Object|null} h - a kártya `koinoHiany`-ja
+ * @param {Object|null} sz - a kártya `koinoSzamok`-ja (`pakli.js` `kartyaSzamai`)
  */
-export function kartyaHianyJelolese(dom, h) {
+export function kartyaSzamokJelolese(dom, sz) {
   if (!dom) return;
-  dom.querySelector('.pakli-kartya__felderitetlen')?.remove();
-  const j = hianyJele(h);
-  if (!j) return;
+  dom.querySelectorAll('.pakli-kartya__koino-szam').forEach((e) => e.remove());
+  if (!sz || typeof sz !== 'object') return;
   const sor = dom.querySelector('.pakli-kartya__ikon-sor--tudatpont');
   if (!sor) return;
+  const elemek = [];
+  // ----- a leszármazottak -----
+  if (Number.isSafeInteger(sz.leszarmazott)) {
+    const hiany = sz.leszarmazottHiany > 0 ? '+' + szam(sz.leszarmazottHiany) + (sz.leszarmazottLegalabb ? '…' : '')
+      : sz.leszarmazottLegalabb ? '+?' : null;
+    const felirat = 'Leszármazottak (az ága alatt): ' + szam(sz.leszarmazott) + ' ismert ezen a készüléken'
+      + (sz.leszarmazottHiany > 0
+        ? '; a tartója szerint ' + (sz.leszarmazottLegalabb ? 'legalább ' : '') + szam(sz.leszarmazottOsszes)
+          + ' van — még nem ismert: ' + (sz.leszarmazottLegalabb ? 'legalább ' : '') + szam(sz.leszarmazottHiany)
+          + '. Böngészéssel vagy felderítéssel hozható el.'
+        : sz.leszarmazottLegalabb ? '; hogy van-e még, nem tudom — a tartója nem mondta meg.' : ' — mind megvan.');
+    elemek.push(szamElem('▾', sz.leszarmazott, hiany, felirat));
+  }
+  // ----- a testvérek -----
+  if (Number.isSafeInteger(sz.testver)) {
+    const hiany = sz.testverHiany > 0 ? '+' + szam(sz.testverHiany) : sz.testverHiany === null ? '+?' : null;
+    const felirat = 'Testvérek: ' + szam(sz.testver) + ' ismert ezen a készüléken'
+      + (sz.testverHiany > 0
+        ? '; a tartó szerint a szülőnek ' + szam(sz.testverOsszes) + ' gyereke van — még nem ismert testvér: '
+          + szam(sz.testverHiany) + '. Böngészéssel vagy felderítéssel hozható el.'
+        : sz.testverHiany === null ? '; hogy van-e még, nem tudom — a szülő tartója nem mondta meg.' : ' — mind megvan.');
+    elemek.push(szamElem('↔', sz.testver, hiany, felirat));
+  }
+  let elotte = sor.querySelector('.pakli-kartya__ikon-elem[aria-label^="Ágazati"]');
+  for (const elem of elemek) {
+    if (elotte) { elotte.insertAdjacentElement('afterend', elem); elotte = elem; } else sor.appendChild(elem);
+  }
+}
+
+/** Egy szám a tudatpont-sor stílusában (mint az ágazati pont), a hiány halványan mellette. */
+function szamElem(jel, ismert, hiany, felirat) {
   const elem = document.createElement('span');
-  elem.className = 'pakli-kartya__felderitetlen';
-  elem.textContent = '▾' + j.jel;
-  elem.title = j.felirat;
-  elem.setAttribute('aria-label', j.felirat);
-  const agazati = sor.querySelector('.pakli-kartya__ikon-elem[aria-label^="Ágazati"]');
-  if (agazati) agazati.insertAdjacentElement('afterend', elem);
-  else sor.appendChild(elem);
+  elem.className = 'pakli-kartya__ikon-elem pakli-kartya__koino-szam';
+  elem.textContent = jel + ' ' + szam(ismert);
+  if (hiany) {
+    const h = document.createElement('span');
+    h.className = 'pakli-kartya__felderitetlen';
+    h.textContent = hiany;
+    elem.appendChild(h);
+  }
+  elem.title = felirat;
+  elem.setAttribute('aria-label', felirat);
+  return elem;
 }
 
 /**

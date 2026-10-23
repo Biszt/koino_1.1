@@ -17,9 +17,9 @@
 //      a nem tartott kártya kerete szaggatott — a kártyák bájtra a prototípuséi, a jelölés a kirajzolás UTÁN kerül rájuk.
 //   3. ⭐ **A LAPOS NÉZET LAPOZÁSA (9. szabály):** a program egy oldalnyit ad, nem az egész paklit — a „További
 //      kártyák” a kurzorral kéri a következőt, és a lista végére fűzi.
-//   4. ⭐ **A FELDERÍTETLEN RÉSZ (D116):** ha egy kártya alatt van még entitás, amit ez a készülék nem ismer, a kártyán
-//      „▾+N” jel áll (a tartója szerinti számmal), és ha a kiválasztottnak van nem ismert testvére, a testvér-jelző mellett
-//      „+N testvér” — a számok a programtól (`koinoFelderitetlen.js`).
+//   4. ⭐ **A FELDERÍTETLEN RÉSZ (D116):** a kártyán a leszármazottak (▾) és a testvérek (↔) ismert száma, és mellettük
+//      halványan, ami még nincs meg (a tartója szerint — „+N”); ha a kiválasztottnak van nem ismert testvére, a testvér-jelző
+//      mellett „+N testvér” — a számok a programtól (`koinoFelderitetlen.js`).
 //
 // ⚠️ A lap itt sem számol: minden szám és jel a programtól jön; ez a fájl csak megmutatja és újrakérdez.
 //
@@ -29,7 +29,7 @@ import Pakli from './components/Pakli.js';
 import { apiGet } from './utils/apiHelper.js';
 import { eemberMentese, aktivEntitasMentese, aktivEntitasLekerese } from './utils/authHelper.js';
 import { oldalAdatta, LAPOS_OLDAL } from './kartyaAdat.js';
-import { kartyaHianyJelolese, testverHianyJelzo, testverHianyEltavolitasa } from './koinoFelderitetlen.js';
+import { kartyaSzamokJelolese, testverHianyJelzo, testverHianyEltavolitasa } from './koinoFelderitetlen.js';
 
 // ===================================
 // A CSENDES ÚJRAKÉRDEZÉS ÜTEME
@@ -441,7 +441,7 @@ export class KoinoPakli extends Pakli {
     const adat = this.allapot.paklikEsTestverek[kulcs];
     if (!adat) return '';
     const elem = (e) => [e.entitasId, e.adatok?.cim, e.hierarchikusOsszesPont, e.entitasSajatTudatpont,
-      e.koinoForras?.osszPontForras, e.koinoForras?.tartom, e.koinoHiany?.alatta ?? null, e.koinoHiany?.gyerek ?? null];
+      e.koinoForras?.osszPontForras, e.koinoForras?.tartom, JSON.stringify(e.koinoSzamok ?? null)];
     return JSON.stringify([(adat.pakli ?? []).map(elem), (adat.testverek ?? []).map(elem)]);
   }
 
@@ -468,8 +468,9 @@ export class KoinoPakli extends Pakli {
   _forrasJelolese() {
     this.kartyaPeldanyok.forEach((kartya, i) => {
       const dom = this.kartyadomElemek[i];
-      // ⭐ D116: a felderítetlen rész jele (a forrás-jeltől függetlenül — a tartott kártya alatt is lehet még nem ismert)
-      if (dom) kartyaHianyJelolese(dom, kartya?.entitas?.koinoHiany ?? null);
+      // ⭐ D116: a leszármazottak és a testvérek száma, és ami még nincs meg (a forrás-jeltől függetlenül — a tartott kártya
+      // alatt is lehet még nem ismert)
+      if (dom) kartyaSzamokJelolese(dom, kartya?.entitas?.koinoSzamok ?? null);
       const forras = kartya?.entitas?.koinoForras;
       if (!dom || !forras) return;
       dom.classList.toggle('pakli-kartya--nem-tartott', !forras.tartom);

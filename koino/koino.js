@@ -8595,7 +8595,17 @@ try {
         // egy csere újat hozott, csendben frissül. Az őrjárat írja (egy másik folyamat — `csereAllapot.js`).
         if (utvonal === '/api/csere-allapot') {
           const kep = csereAllapotKepe(await csereAllapota(KOINO).olvas(), Date.now());
-          return { adat: { success: true, adatok: { ...kep, most: Date.now() } } };
+          // ⭐ (Csaba, 2026-10-23: „csere után az alsó sáv számai nem frissülnek”): a készülék TUDÁSÁNAK változata — a tartós
+          // tár állása és az átmeneti tár változása. Ami kérelemmel jön (böngészés, felderítés), az nem csere: az `utolsoUj`
+          // nem lép tőle — a lap ebből tudja, hogy frissítsen.
+          let tudas = null;
+          if (sajatKoino) {
+            await tar.frissit?.();
+            await atmeneti.frissit();
+            const a = tar.allas?.();
+            tudas = (a ? a.n + ':' + a.g : '') + ':' + atmeneti.valtozas();
+          }
+          return { adat: { success: true, adatok: { ...kep, tudas, most: Date.now() } } };
         }
 
         // ----- EGY ENTITÁS RÉSZLETEI (5.5) — a ReszletekModal kéri -----

@@ -1329,3 +1329,10 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     a D101 ③ a keretig kért: egy kis koinóban a Struktúra megnyitása mindent lehúzott, egy nagyban egy nézelődés több MB
     forgalom — a tömeges elhozás a felderítés dolga · Csaba: „(B) Az első 200-at” · `pakli.js` (`STRUKTURA_KERES`,
     `strukturaSorrend`, `felderitesAllasa`), `koino.js` (`strukturaMegjegyzes`), a próba.
+190. **2026-10-23 · a kártya MINDIG mutatja a számokat, és az alsó sáv a kérelem után is frissül (Csaba kérése a D116 próbája
+    után)** → **a ház kártyáján a leszármazottak (▾) és a testvérek (↔) ismert száma a tudatpont-sor stílusában, mellettük
+    halványan a még nem ismert („+N”); a program a csere-állapot mellett a készülék TUDÁSÁNAK változatát is mondja (a tartós
+    tár állása + az átmeneti tár változása), és a lap erre is frissít** · Csaba: „ne csak akkor és azt írja ki, amennyi még
+    nincs meg, hanem azt is, ha már megvan”, és „csere után az alsó sáv számai nem frissülnek” — ami kérelemmel jön (böngészés,
+    felderítés), az nem csere, az `utolsoUj` nem lép tőle · `pakli.js` (`kartyaSzamai`), `koino.js` (`/api/csere-allapot`
+    `tudas`), `felulet/js/koinoFelderitetlen.js` (`kartyaSzamokJelolese`), `alsoSav.js`, a próbák.

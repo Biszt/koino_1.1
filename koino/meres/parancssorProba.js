@@ -3085,6 +3085,20 @@ proba('⭐⭐ Az alsó sáv: a futó felület látja az őrjárat körét és a 
     }
     const szamUtana = (await bFel.hiv('/api/platform/statisztika')).adat;
     const most = Date.now();
+    // ⭐ (Csaba, 2026-10-23: „csere után az alsó sáv számai nem frissülnek”) — ami KÉRELEMMEL jön (böngészés, felderítés), az
+    // nem csere: az `utolsoUj` nem lép tőle. A program a tudás változatát is mondja (`tudas`): B őrjárata leáll (csere már nem
+    // jön), A új gondolatot ír, B kérelemmel hozza el (az átmeneti tárba) → a `tudas` lép, az `utolsoUj` nem. Rontás: a
+    // `tudas` nincs a válaszban → bukik.
+    orjarat.kill();
+    await varj(800);
+    await fut(a, 'gondolat', 'D az A-tól', alap);
+    // (a parancs rövidítve írja ki az azonosítót — a teljeset A tárából)
+    const D = (await readFile(join(a, 'sajat', 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x))
+      .find((e) => e.tipus === 'GondolatLetrehozas' && e.adat?.cim === 'D az A-tól')?.azonosito ?? null;
+    const tudasElotte = (await bFel.hiv('/api/csere-allapot')).adat?.adatok;
+    const kerelemKi = tiszta(await fut(b, 'hozd', D ?? 'x', '127.0.0.1', '7466', alap)
+      .catch((h) => String(h?.message ?? h)));
+    const tudasUtana = (await bFel.hiv('/api/csere-allapot')).adat?.adatok;
     const ki = {
       elotteNemFut: elotte?.orjarat?.fut === false && elotte?.utolsoCsere === null && elotte?.utolsoUj === null,
       fut: utana?.orjarat?.fut === true && utana.orjarat.perc === 0.1,
@@ -3094,9 +3108,12 @@ proba('⭐⭐ Az alsó sáv: a futó felület látja az őrjárat körét és a 
       szamok: szamElotte?.gondolatokSzama === 1 && szamUtana?.gondolatokSzama === 2 && szamUtana?.eemberekSzama === 2
         && /készüléken ismert/.test(szamUtana?.koinoMegjegyzes ?? '')
     };
+    ki.kerelemTudas = !!D && typeof tudasElotte?.tudas === 'string' && typeof tudasUtana?.tudas === 'string'
+      && tudasUtana.tudas !== tudasElotte.tudas && tudasUtana.utolsoUj === tudasElotte.utolsoUj;
     if (!Object.values(ki).every(Boolean)) {
       process.stdout.write('  alsó sáv — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
-        + ' · ' + JSON.stringify({ elotte, utana, szamElotte, szamUtana }).slice(0, 1200) + '\n');
+        + ' · ' + JSON.stringify({ elotte, utana, szamElotte, szamUtana, D, tudasElotte: tudasElotte?.tudas,
+          tudasUtana: tudasUtana?.tudas, kerelemKi: kerelemKi.slice(-400) }).slice(-1600) + '\n');
     }
     return Object.values(ki).every(Boolean);
   } finally {

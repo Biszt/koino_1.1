@@ -832,7 +832,17 @@ proba('⭐⭐ D116: a FELDERÍTETLEN RÉSZ — a kártyán, a testvéreknél, a 
     testver: h.testverHiany?.gyerek === 0 && gy.testverHiany?.gyerek === 3 && gy.testverHiany.alatta === 26,
     struktura: sor(A1)?.koinoHiany?.alatta === 11 && sor(A)?.koinoHiany?.legalabb === true,
     sikidom: sikidom.gyerekek.find((x) => x.entitasId === A1)?.koinoHiany?.gyerek === 4,
-    felderites: agA1.agOsszes === 13 && agA1.agOsszesLegalabb === false && egesz.agOsszes === 30
+    felderites: agA1.agOsszes === 13 && agA1.agOsszesLegalabb === false && egesz.agOsszes === 30,
+    // ⭐ (Csaba, 2026-10-23) a kártya számai MINDIG: a leszármazottak és a testvérek ismert száma, és ami még nincs meg.
+    // A1: 1 leszármazottja ismert (A11), 11 hiányzik; 1 testvére (A2), és A gyerekei mind ismertek (A-t tartom)
+    szamokA1: kartya(h, A1)?.szamok?.leszarmazott === 1 && kartya(h, A1).szamok.leszarmazottHiany === 11
+      && kartya(h, A1).szamok.testver === 1 && kartya(h, A1).szamok.testverHiany === 0,
+    // A11: a szülőjének (A1) 5 gyerekéből csak ő ismert — 0 testvér, 4 hiányzik; a gyerekeiről nem tudunk
+    szamokA11: kartya(h, A11)?.szamok?.testver === 0 && kartya(h, A11).szamok.testverHiany === 4
+      && kartya(h, A11).szamok.leszarmazott === 0 && kartya(h, A11).szamok.leszarmazottLegalabb === true,
+    // A (gyökér-szintű): 3 leszármazott ismert; a gyökér szintjén 4-ből csak ő ismert — 0 testvér, 3 hiányzik
+    szamokA: kartya(gy, A)?.szamok?.leszarmazott === 3 && kartya(gy, A).szamok.testver === 0
+      && kartya(gy, A).szamok.testverHiany === 3
   };
   if (!Object.values(ki).every(Boolean)) console.log('    (D116 — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ')');
   return Object.values(ki).every(Boolean);
