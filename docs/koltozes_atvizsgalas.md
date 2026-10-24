@@ -313,3 +313,33 @@ kiköltözés kivétele (a vágás utáni, mégis kell) a ④-gyel jön.
 - ⚠️ **Ami még a név szerint szűr** (a ⑤-ben jön): az átmeneti tár (a kérelmek válaszai — egy ős-esemény oda bekerülhet, de
   az újranyitáskor kiesik), a számítás (`koinoEsemenyei` — szándékosan, a ③-ig), a lánc-ellenőrzés, az észlelő és a
   tagsági kérdező (ezek a gyermek saját szerzőiről szólnak).
+
+## 9. A ③ építési alakja — a két réteg a számításban (2026-10-24)
+
+A 4.4 a kódhoz igazítva. A számítás ma három fázis (`allapotSzamitasa` → `javaslatokSzamitasa` →
+`szerkesztesiEgyezmenyekAlkalmazasa`), és három helyen fut (a parancssor `kepetKeszit`-je, a pakli képe, egy művelet). A ③
+ezt EGY függvénybe foglalja (a koinó képe), ami a koinó-szabály (②b) szerinti bemenetet két rétegre bontja:
+
+- **A múlt rétege (a talaj):** nemzedékenként, a gyökértől lefelé — az ős vágás előtti eseményei, **az ős szabályaival**, a
+  vágás pillanatára számolva (és az ős saját múltjával, rekurzívan). Ebből a gyermekbe a **lezárt döntések** kerülnek át,
+  rögzítve (elfogadva / elvetve, az egyezménnyel — mindenki szavazatával, a szülő küszöbeivel; D118/3: nem fordulhatnak
+  meg). ⚠️ A hiányos tudás ugyanaz, mint ma (D85 T3): ami nem ismert, az `nemIsmert`.
+- **A jelen rétege:** a gyermek eseményei, és az ősökéből a **szerkezet** — a létrehozások (gondolat, kategória, javaslat
+  mint entitás) — mindenkié; a **súly** (pont, szavazat, érték javaslat, állásfoglalás) az ősökéből CSAK a költözőké, a
+  lánc-pontjukig (D118/1: súlyt csak a költöző hoz). A gyermek szabályaival; a D14 itt ítél (amire egyetlen költöző sem
+  tett pontot, az a gyermekben nem él — a múltja attól még a tárban van, és egy pont visszahozza).
+- **A végrehajtás:** a múlt rögzített és a jelen elfogadott egyezményei egy sorban (a lejárat szerint), ugyanazzal a kóddal
+  — így az entitások a vágáskori alakjukat kapják, és a jelen változásai arra épülnek.
+- **A költözők** a ③-ban paraméter (`koltozok`: szerző → lánc-pont; a létrehozóé a születéséből); a beköltözés eseménye,
+  a hozott kiosztás (KZ3) és a tagság öröklése a ④ — ezért a ③ modul-próbákkal mérhető, a teljes út (parancssor) a ④-gyel.
+- **Az ár (a 83. mérés helyett a 76. számai):** a múlt rétege egy állapot-számítás a múlt eseményein (~9 µs eseményenként,
+  76. mérés); a múlt nem változik, csak bővül (a csere hozza a késve érkezőt) → a talaj gyorsítótárban, a múlt
+  változata szerint. A 83. mérés a megépült kódon méri (a teljes képet nemzedékenként).
+
+⏸️ **Csabánál — KZ6: a vágáskor NYITOTT javaslat, amit NEM költöző tett.** A javaslattétel ma is súly (a nem tag
+javaslata nem számít — D93/1), és a D118/1 szerint súlyt csak a költöző hoz; a D118/4 szerint viszont „a nyitott
+javaslatok a költözőkkel folytatódnak”. (A) ⭐ javaslat: **nem folytatódik** — a nyitott ügy azé, aki beadta; ha nem jött
+át, a javaslata a szülőben dől el (ott a múlt része marad), és ha egy költöző fontosnak tartja, a gyermekben újra beadja
+(egy esemény). Ez következik a D118/1-ből, és nem kell külön szabály. (B) folytatódik: a javaslat a vágáskori tagságával
+számít, a költözők szavaznak róla — a gyermekben egy olyan ember javaslata dőlne el, aki ott nincs jelen (a D118/1 kivétele
+kellene hozzá). A költözők nyitott javaslatai mindkét esetben folytatódnak, a szavazataikkal és a gyermek küszöbeivel.

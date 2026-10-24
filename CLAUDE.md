@@ -193,8 +193,10 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    ✅ **②b a kapu koinó-szabálya** (elágazás 196): az ős vágás előtti eseményei a gyermek tárában és cseréjében — a
    létrehozóé a lánc-pont, mindenki másé az óra szerint; EGY segéd (`koinohozTartozik`) a `beolvasztas`-ban és a szelet
    halmazában. ⚠️ A számítás a múltat még NEM veszi figyelembe; az átmeneti tár, a lánc-ellenőrzés, az észlelő a név
-   szerint szűr (az ⑤). ⏭️ **③ a két réteg a számításban** (a múlt az ős szabályaival; a lezárt és a nyitott döntések) —
-   előtte a 83. mérés (a két réteg ára). ⚠️ A laptop–telefon próba-koinója (`sajat`, régi alak) nem folytatható — a
+   szerint szűr (az ⑤). ⏭️ **③ a két réteg a számításban** — 🔍 az építési alak az átvizsgálás 9. szakaszában (a múlt
+   rétege nemzedékenként az ős szabályaival → a lezárt döntések rögzítve; a jelen: a szerkezet mindenkié, a súly csak a
+   költözőké; a végrehajtás egy sorban); ⏸️ **Csabánál KZ6** (a vágáskor nyitott javaslat, amit NEM költöző tett — javaslat:
+   nem folytatódik). ⚠️ A laptop–telefon próba-koinója (`sajat`, régi alak) nem folytatható — a
    következő kézi próbához új koinó kell (`koino "<név>"`, a telefonon `csatlakoz <név>`). Elágazás 192–196.
 2. ⏸️ **A terep 🅱️ (két mobilnetes telefon)** — Csaba (2026-10-19): *„ezt hagyjuk ki”*; előtte a telefon frissítése (lent).
 3. **Az „UTÁNA” lista** (lent).
