@@ -356,3 +356,39 @@ javaslatok a költözőkkel folytatódnak”. (A) ⭐ javaslat: **nem folytatód
 (egy esemény). Ez következik a D118/1-ből, és nem kell külön szabály. (B) folytatódik: a javaslat a vágáskori tagságával
 számít, a költözők szavaznak róla — a gyermekben egy olyan ember javaslata dőlne el, aki ott nincs jelen (a D118/1 kivétele
 kellene hozzá). A költözők nyitott javaslatai mindkét esetben folytatódnak, a szavazataikkal és a gyermek küszöbeivel.
+
+## 10. A ④ építési alakja — a ki- és a beköltözés (2026-10-24)
+
+✅ *④a megépült (2026-10-24, elágazás 198 — `koinoLanc.js` `bekoltozesEllenorzese`, `szuloTagsagaEllenorzese` (a születésé és a
+beköltözésé egy szabály), `bekoltozesekEllenorzese` (a csomagban utazóké), `lancKoltozoi` a beköltözésekből, `jelenSzuro`;
+`tagsag.js` a beköltözés mint tagsági horgony, `HORGONY_TIPUSOK`; a próbák a `koltozesProba.js`-ben, 12 rontással).* Két lelet
+az építés közben: ⛔ ha a költöző maga is beköltözéssel került a szülőbe, a bizonyítékában egy szülőbeli beköltözés utazik — a
+kapu ezt is a születésekkel ellenőrzi (rekurzívan, nemzedékenként), különben egy hamis szülőbeli beköltözés ingyen tagságot
+adna; és ⭐ KZ3: a hozott pont-esemény a SZÜLŐ keretét és kiosztását mondta be — a gyermekben a számított összeg és a gyermek
+kerete dönt (`pontEsemenyMerlege` `hozott`; a szabály-réteg és a művelet egy szabállyal), különben a kisebb keretbe semmi nem
+férne be, akármennyit hagy el a költöző. ⏭️ ④b.
+
+A 4.5–4.6 a kódhoz igazítva, három részben: **④a az események** (a formájuk, a kapu, a költözők a képben, a tagság
+öröklése), **④b a `koltozes` parancs** (a két aláírás, az első kitöltés, a kézi út — és a két készüléken mért út), **④c a 2.
+lépcső öröklése**. Előtte, a formátum után a 82. mérés (a két esemény mérete, egy szelet örökölt múltja).
+
+- **A kiköltözés** (`Kikoltozes`, a szülőben, a költöző azonosság-szeletébe — `entitas` a szülőbeli horgonya):
+  `{ gyermek }`. A szülő ebből tudja, ki ment át (a családfa; később a pénz kivezetése — 4.8). A szülő jelene: a gyermek
+  tárába nem kerül (a vágás után van).
+- **A beköltözés** (`Bekoltozes`, a gyermekben; a saját szeletét nyitja — ez a költöző horgonya a gyermekben):
+  `{ szulo, kikoltozes, lanc: { sorszam, azonosito }, szuloTagsag: { horgony, lanc }, elhagy: [entitás…] }`. ⭐ Ugyanaz az
+  alak, mint a létrehozó születése: a költöző szülőbeli láncát FOLYTATJA a vágás előtti utolsó eseménye után (`elozo` =
+  `lanc.azonosito`, a sorszám annak +1-e — a lánc a vágásig közös, utána két ág: a szülőben a jelene, a gyermekben a
+  beköltözés). A késő költöző a vágás utáni szülőbeli tevékenységét így nem hozza (4.5). ⭐ A tagsági bizonyíték a szülőben
+  ugyanaz, mint a születésé (a lánc a szülő születése nélkül).
+- **A kapu:** a beköltözés csak a koinó születésével (a szülő neve egyezik) és a szülő születésével együtt — a bizonyíték
+  hiteles, a szülőé, a horgony a beköltözőé, tagságot ad (a vágáskor: a lánc eseményei a vágás előtt), a lánc-pont alakja
+  rendben (`elozo`, sorszám). ⛔ A tagsági csomagban utazó beköltözést a csomag ellenőrzése is így nézi — különben egy hamis
+  beköltözés egy csomagba csomagolva ingyen tagságot adna.
+- **A tagság öröklése (4.6, D118/3):** a kapun átjutott beköltözés a gyermekben tagsági horgony (mint az alapítóé): aki a
+  vágáskor a szülő tagja volt és beköltözött, tag. A lánc-típusok közé kerül (a kísérők, a csomagok, a tömörítés viszik).
+- **A költözők a képben:** a `lancKoltozoi` a létrehozó mellett a beköltözéseket is olvassa (nemzedékenként a bemenetből) —
+  a lánc-pont a beköltözés sorszáma; az `elhagy` lista entitásaira a hozott pont nem jön (KZ3 (A): elhagyni lehet, növelni
+  nem). A művelet bemondott összege ugyanígy (a saját beköltözésemből). A ③ próba-paramétere ezzel kiesik.
+- ⚠️ **A létrehozó** a KZ3-at a szülőben oldja meg: ha a hozott pontjai nem férnek a gyermek keretébe, a `koino … szulo=`
+  hibát ad (előbb a szülőben kell csökkentenie).

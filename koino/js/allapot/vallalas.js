@@ -57,7 +57,7 @@ export function vallalasSzamitasa(sajatEsemenyek, beallitas = {}) {
   for (const e of lanc) {
     if (e.sorszam !== vart) folytonos = false;
     vart = e.sorszam + 1;
-    if (e.tipus === 'Belepes' || e.tipus === 'KoinoLetrehozas') azonossag.push(e.azonosito);
+    if (e.tipus === 'Belepes' || e.tipus === 'KoinoLetrehozas' || e.tipus === 'Bekoltozes') azonossag.push(e.azonosito);   // ⭐ D118 (④a)
     if (e.tipus !== 'TudatpontRendezes') continue;
     const m = pontEsemenyMerlege(e, allas, folytonos, beallitas.tudatpontKeret);
     if (m.elvetve) continue;                     // ami nem számít, az a régi értéket hagyja érvényben

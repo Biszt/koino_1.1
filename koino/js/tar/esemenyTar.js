@@ -37,7 +37,8 @@ import { LEZARASI_OSSZEGZES, lezarasiOsszegzesAlakja } from '../allapot/lezarasi
 // ⭐ D93/2: a tagsági csomag tartalma is a kapun megy át.
 import { TAGSAGI_CSOMAG, tagsagiCsomagEllenorzese } from '../allapot/tagsag.js';
 // ⭐⭐ D118 (②a): a gyermek születésének bizonyítéka (a szülő születésével együtt).
-import { gyermekSzuleteseE, gyermekSzuletesEllenorzese, koinoNezete } from '../allapot/koinoLanc.js';
+import { gyermekSzuleteseE, gyermekSzuletesEllenorzese, koinoNezete, bekoltozesE, bekoltozesEllenorzese,
+  bekoltozesekEllenorzese } from '../allapot/koinoLanc.js';
 
 // ===================================
 // ESEMÉNY MENTÉSE
@@ -104,9 +105,11 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
   // ----- 1/a3. ⭐ D93/2: A TAGSÁGI CSOMAG — a lánc másolatai is ugyanazon a próbán, és tagságot kell adniuk -----
   if (esemeny.tipus === TAGSAGI_CSOMAG) {
     const csomag = await tagsagiCsomagEllenorzese(esemeny);
-    if (!csomag.rendben) {
-      console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: csomag.ok });
-      return { mentve: false, ok: csomag.ok };
+    // ⛔ D118 (④a): a csomagban utazó beköltözés is a születésekkel (különben egy hamis beköltözés ingyen tagságot adna).
+    const bek = csomag.rendben ? await bekoltozesekEllenorzese(esemeny.adat?.lanc, tar) : csomag;
+    if (!bek.rendben) {
+      console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: bek.ok });
+      return { mentve: false, ok: bek.ok };
     }
   }
 
@@ -114,10 +117,20 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
   // KZ2: gyermeket a szülő vágáskori tagja hozhat létre; D118/5: zárt szülőnek csak zárt gyermeke. ⚠️ Ha a szülő születése
   // még nincs a tárban, az elutasítás nem végleges — a csere és a kézi út a láncot a gyökértől hozza.
   if (gyermekSzuleteseE(esemeny)) {
-    const gy = await gyermekSzuletesEllenorzese(esemeny, (await tar.esemeny(esemeny.adat.szulo)) ?? null);
+    const gy = await gyermekSzuletesEllenorzese(esemeny, (await tar.esemeny(esemeny.adat.szulo)) ?? null, tar);
     if (!gy.rendben) {
       console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: gy.ok });
       return { mentve: false, ok: gy.ok, ...(gy.hianyzik ? { hianyzik: true } : {}) };
+    }
+  }
+
+  // ----- 1/a5. ⭐⭐ D118 (④a): A BEKÖLTÖZÉS — a koinó és a szülő születésével, a vágáskori tagsági bizonyítékkal -----
+  if (bekoltozesE(esemeny)) {
+    const bk = await bekoltozesEllenorzese(esemeny, (await tar.esemeny(esemenyKoinoja(esemeny))) ?? null,
+      (await tar.esemeny(esemeny.adat.szulo)) ?? null, tar);
+    if (!bk.rendben) {
+      console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: bk.ok });
+      return { mentve: false, ok: bk.ok, ...(bk.hianyzik ? { hianyzik: true } : {}) };
     }
   }
 

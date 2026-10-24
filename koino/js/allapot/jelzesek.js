@@ -283,7 +283,7 @@ export async function bemutatkozasok(tar, koino, horgony) {
     for (const h of horgonyai) {
       const belepese = await esemenyLekerese(tar, h);
       if (esemenyKoinoja(belepese) === koino && belepese.szerzo === szerzo
-        && (belepese.tipus === 'Belepes' || belepese.tipus === 'KoinoLetrehozas')) {
+        && (belepese.tipus === 'Belepes' || belepese.tipus === 'KoinoLetrehozas' || belepese.tipus === 'Bekoltozes')) {
         radVarHorgonyok.push(h);
         break;
       }

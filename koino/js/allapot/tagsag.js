@@ -41,7 +41,11 @@ export const PROFIL = 'Profil';
 /** Egy tagsági csomagban legfeljebb ennyi esemény (lépésenként a belépés, a meghívás, a profil + a gyökér). */
 export const CSOMAG_ESEMENY_KORLAT = 3 * (MELYSEG_KORLAT + 1) + 2;
 
-export const LANC_TIPUSOK = new Set(['KoinoLetrehozas', 'Belepes', 'Meghivas', PROFIL]);
+// ⭐⭐ D118 (④a): a BEKÖLTÖZÉS is a lánc része — a gyermekben a költöző horgonya, és tagságot ad (a szülőbeli vágáskori
+// tagsága — a kapu a szülő születésével ellenőrzi, `koinoLanc.js` `bekoltozesEllenorzese`).
+export const LANC_TIPUSOK = new Set(['KoinoLetrehozas', 'Belepes', 'Meghivas', PROFIL, 'Bekoltozes']);
+/** Az azonosság-horgonyok típusai: a koinó születése (az alapítóé), a belépés, és a beköltözés (a költözőé — D118). */
+export const HORGONY_TIPUSOK = new Set(['KoinoLetrehozas', 'Belepes', 'Bekoltozes']);
 
 /**
  * A TAGSÁGI INDEX egy esemény-halmazból (egy koinóé): a horgonyok, a horgonyonkénti meghívások és profilok — a
@@ -67,7 +71,7 @@ export function tagsagiIndex(esemenyek, koino = null) {
       if (e !== szuletes && e.azonosito !== szuletes?.azonosito) return;   // nem a koinó születése: nem horgony
       idx.horgonyok.set(e.azonosito, e);
       szerzohoz(idx, e.szerzo, e.azonosito);
-    } else if (e.tipus === 'Belepes') {
+    } else if (e.tipus === 'Belepes' || e.tipus === 'Bekoltozes') {
       idx.horgonyok.set(e.azonosito, e);
       szerzohoz(idx, e.szerzo, e.azonosito);
     } else if (e.tipus === 'Meghivas' && typeof e.entitas === 'string') {
@@ -114,6 +118,10 @@ export function horgonyTagsaga(idx, horgony, folyamatban = new Set()) {
       return veg(idx, horgony, idx.koino && e.azonosito === idx.koino.azonosito
         ? { igen: true, ok: 'a koinó létrehozója', ellenorizheto: true, melyseg: 0 }
         : { igen: false, ok: 'más koinó létrehozása', ellenorizheto: true });
+    }
+    // ⭐⭐ D118 (④a, D118/3): a beköltözés TAG — a szülő vágáskori tagja, aki beköltözött (a bizonyítékát a kapu nézte).
+    if (e.tipus === 'Bekoltozes') {
+      return veg(idx, horgony, { igen: true, ok: 'beköltözött (a szülő vágáskori tagja)', ellenorizheto: true, melyseg: 0 });
     }
     if (e.tipus !== 'Belepes') return veg(idx, horgony, { igen: false, ok: 'a horgony nem belépés', ellenorizheto: true });
     // Alapító (a létrehozás megnevezte, a belépése erre hivatkozik)?
@@ -196,7 +204,7 @@ export function tagsagiLanc(idx, horgony) {
     const e = idx.horgonyok.get(h);
     ki.push(e);
     if (r.melyseg === 0) {
-      if (e.tipus === 'Belepes' && idx.koino) ki.push(idx.koino);
+      if ((e.tipus === 'Belepes' || e.tipus === 'Bekoltozes') && idx.koino) ki.push(idx.koino);
       return [...new Map(ki.map((x) => [x.azonosito, x])).values()];
     }
     ki.push(r.meghivas);

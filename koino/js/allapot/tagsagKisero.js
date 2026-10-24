@@ -18,7 +18,7 @@
 // Használják: koino.js (a csere beállításai, a kézi út kísérői, a B1 mintáinak tagsága), a próbák.
 
 import { sajatLancEsemenyei } from '../tar/esemenyTar.js';
-import { tagsagiIndex, szerzoTagsaga, tagsagiLanc, TAGSAGI_CSOMAG, LANC_TIPUSOK } from './tagsag.js';
+import { tagsagiIndex, szerzoTagsaga, tagsagiLanc, TAGSAGI_CSOMAG, LANC_TIPUSOK, HORGONY_TIPUSOK } from './tagsag.js';
 import { tagsagiEsemenyekGyujtese } from './identitas.js';
 import { TAGSAG_KELL } from './szabalyok.js';
 import { AZONOSITO_MINTA, esemenyKoinoja } from '../esemeny/esemeny.js';
@@ -61,7 +61,7 @@ export async function szerzoTagsagaTarbol(tar, koino, szerzo, koinoSzuletes = nu
   const sajat = (await sajatLancEsemenyei(tar, szerzo)).filter((e) => esemenyKoinoja(e) === koino);
   const horgonyok = new Set();
   for (const e of sajat) {
-    if (e.tipus === 'Belepes' || e.tipus === 'KoinoLetrehozas') horgonyok.add(e.azonosito);
+    if (HORGONY_TIPUSOK.has(e.tipus)) horgonyok.add(e.azonosito);   // ⭐ D118 (④a): a beköltözés is
     if (e.tipus === TAGSAGI_CSOMAG && typeof e.entitas === 'string') horgonyok.add(e.entitas);
   }
   // ⛔ A koinó születése (a MIÉNK) az első: egy hamis koinó-létrehozás egy csomagban így nem ad tagságot (mint a kapunál).

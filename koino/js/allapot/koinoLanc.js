@@ -57,7 +57,7 @@ export function ujAlakuSzuletesE(e) {
  * @param {Object|null} szuloSzuletes - a tárból (`tar.esemeny(szulo)`)
  * @returns {Promise<{rendben: boolean, ok?: string, hianyzik?: boolean, melyseg?: number}>}
  */
-export async function gyermekSzuletesEllenorzese(szuletes, szuloSzuletes) {
+export async function gyermekSzuletesEllenorzese(szuletes, szuloSzuletes, tar = null) {
   const szulo = szuletes?.adat?.szulo;
   if (!azonositoAlaku(szulo)) return { rendben: false, ok: 'a szülő neve egy koinó-név (a születése lenyomata)' };
   if (!szuloSzuletes || !koinoSzuleteseE(szuloSzuletes, szulo)) {
@@ -67,10 +67,23 @@ export async function gyermekSzuletesEllenorzese(szuletes, szuloSzuletes) {
   if (szuloSzuletes.adat?.zart !== false && szuletes.adat?.zart === false) {
     return { rendben: false, ok: 'zárt szülőnek csak zárt gyermeke lehet (D118/5)' };
   }
-  const b = szuletes.adat.szuloTagsag;
+  return szuloTagsagaEllenorzese(szuletes.adat.szuloTagsag, szuletes.szerzo, szuloSzuletes, null, 'a létrehozó', tar);
+}
+
+/**
+ * ⭐ A TAGSÁGI BIZONYÍTÉK A SZÜLŐBEN (a gyermek születésé és a beköltözésé — egy szabály): a lánc minden eseménye hiteles,
+ * a szülőé, a lánc-típusú (a szülő születése nélkül — arra a `szulo` mutat), a horgony a szerzőé, és a szülő születésével
+ * együtt tagságot ad. ⭐ A `vagas` (a beköltözésnél a gyermek születése): a lánc minden eseménye előtte — a VÁGÁSKORI tagság
+ * (D118/3); a születésnél nincs (a bizonyíték a születésben van, tehát előtte létezett). ⛔ Ha a láncban BEKÖLTÖZÉS van (a
+ * szerző maga is költözéssel került a szülőbe), azt a tár születéseivel ellenőrizzük — rekurzívan, nemzedékenként; a tár
+ * nélkül nem ellenőrizhető (különben egy hamis szülőbeli beköltözés ingyen tagságot adna).
+ * @returns {Promise<{rendben: boolean, ok?: string, melyseg?: number}>}
+ */
+export async function szuloTagsagaEllenorzese(b, szerzo, szuloSzuletes, vagas = null, ki = 'a szerző', tar = null) {
+  const szulo = esemenyKoinoja(szuloSzuletes);
   if (!b || typeof b !== 'object' || !azonositoAlaku(b.horgony) || !Array.isArray(b.lanc)
       || b.lanc.length > SZULO_TAGSAG_KORLAT) {
-    return { rendben: false, ok: 'a gyermek születése a létrehozó tagsági bizonyítékát hozza (KZ2)' };
+    return { rendben: false, ok: 'a tagsági bizonyíték hiányzik vagy hibás (KZ2)' };
   }
   for (const x of b.lanc) {
     // ⚠️ A szülő születése nem lehet benne (arra a `szulo` mutat) — és más koinó-születés sem.
@@ -78,15 +91,70 @@ export async function gyermekSzuletesEllenorzese(szuletes, szuloSzuletes) {
         || esemenyKoinoja(x) !== szulo) {
       return { rendben: false, ok: 'a tagsági bizonyítékban idegen esemény' };
     }
+    if (vagas !== null && !(Number.isSafeInteger(x.ido) && x.ido <= vagas)) {
+      return { rendben: false, ok: 'a tagsági bizonyíték egy eseménye a vágás utáni (a vágáskori tagság számít — D118/3)' };
+    }
     const al = await esemenyEllenorzese(x);
     if (!al.rendben) return { rendben: false, ok: 'a tagsági bizonyíték egy eseménye nem hiteles: ' + al.ok };
+    if (bekoltozesE(x)) {
+      if (!tar) return { rendben: false, ok: 'a tagsági bizonyíték egy beköltözése a születések nélkül nem ellenőrizhető' };
+      const r = await bekoltozesEllenorzese(x, szuloSzuletes, (await tar.esemeny?.(x.adat?.szulo)) ?? null, tar);
+      if (!r.rendben) return { rendben: false, ok: 'a tagsági bizonyíték beköltözése nem áll meg: ' + r.ok };
+    }
   }
   const idx = tagsagiIndex([szuloSzuletes, ...b.lanc], szulo);
   const h = idx.horgonyok.get(b.horgony);
-  if (!h || h.szerzo !== szuletes.szerzo) return { rendben: false, ok: 'a tagsági bizonyíték horgonya nem a létrehozóé' };
+  if (!h || h.szerzo !== szerzo) return { rendben: false, ok: 'a tagsági bizonyíték horgonya nem ' + ki + 'é' };
   const r = horgonyTagsaga(idx, b.horgony);
-  if (!r.igen) return { rendben: false, ok: 'a létrehozó nem tagja a szülőnek (KZ2): ' + r.ok };
+  if (!r.igen) return { rendben: false, ok: ki + ' nem tagja a szülőnek (KZ2): ' + r.ok };
   return { rendben: true, melyseg: r.melyseg };
+}
+
+/**
+ * ⛔ A tagsági csomagban (vagy egy tagsági listában) utazó BEKÖLTÖZÉSEK ellenőrzése a tár születéseivel — a csomag kapuja
+ * csak az aláírást és a láncot nézi; egy hamis beköltözés különben egy csomagba csomagolva ingyen tagságot adna.
+ * @param {Array<Object>} esemenyek - a csomag lánca
+ * @param {Object} tar - `esemeny(azonosito)` (a koinó és a szülő születése)
+ * @returns {Promise<{rendben: boolean, ok?: string}>}
+ */
+export async function bekoltozesekEllenorzese(esemenyek, tar) {
+  for (const b of esemenyek ?? []) {
+    if (!bekoltozesE(b)) continue;
+    const r = await bekoltozesEllenorzese(b, (await tar?.esemeny?.(esemenyKoinoja(b))) ?? null,
+      (await tar?.esemeny?.(b.adat?.szulo)) ?? null, tar);
+    if (!r.rendben) return { rendben: false, ok: 'a csomag egy beköltözése nem áll meg: ' + r.ok };
+  }
+  return { rendben: true };
+}
+
+/** Beköltözés-e? */
+export function bekoltozesE(e) {
+  return !!e && typeof e === 'object' && e.tipus === 'Bekoltozes';
+}
+
+/**
+ * ⭐⭐ A BEKÖLTÖZÉS ELLENŐRZÉSE (a kapu, és a tagsági csomag kapuja): a koinó születése megvan, és a szülője az, amit a
+ * beköltözés mond; a szülő születése megvan; a beköltözés a szerző láncát a megnevezett (vágás előtti utolsó) szülőbeli
+ * eseménye után folytatja; és a tagsági bizonyíték a vágáskor tagságot ad a szülőben (D118/3).
+ * @param {Object} bek
+ * @param {Object|null} koinoSzuletes - a gyermek (a beköltözés koinója) születése
+ * @param {Object|null} szuloSzuletes
+ * @returns {Promise<{rendben: boolean, ok?: string, hianyzik?: boolean}>}
+ */
+export async function bekoltozesEllenorzese(bek, koinoSzuletes, szuloSzuletes, tar = null) {
+  const koino = esemenyKoinoja(bek);
+  if (!koinoSzuletes || !koinoSzuleteseE(koinoSzuletes, koino)) {
+    return { rendben: false, hianyzik: true, ok: 'a koinó születése még nincs meg (a beköltözés a vágáshoz kötött)' };
+  }
+  if (koinoSzuletes.adat?.szulo !== bek.adat?.szulo) return { rendben: false, ok: 'a beköltözés nem a koinó szülőjéből jön' };
+  if (!szuloSzuletes || !koinoSzuleteseE(szuloSzuletes, bek.adat.szulo)) {
+    return { rendben: false, hianyzik: true, ok: 'a szülő születése még nincs meg (a lánc a gyökértől jön)' };
+  }
+  const l = bek.adat.lanc;
+  if (bek.elozo !== l?.azonosito || bek.sorszam !== l?.sorszam + 1) {
+    return { rendben: false, ok: 'a beköltözés a szülőbeli láncomat a megnevezett eseménye után folytatja (4.5)' };
+  }
+  return szuloTagsagaEllenorzese(bek.adat.szuloTagsag, bek.szerzo, szuloSzuletes, koinoSzuletes.ido, 'a beköltöző', tar);
 }
 
 /**
@@ -209,12 +277,28 @@ const MINDENKIE = new Set(['GondolatLetrehozas', 'Ellentmondas']);
  * @param {Map<string, number>} [tobbi] - a legfelső költözés további költözői (a ③ próbáinak — a beköltözés a ④)
  * @returns {Array<Map<string, number>>}
  */
-export function lancKoltozoi(lanc, tobbi = null) {
+export function lancKoltozoi(lanc, tobbi = null, esemenyek = null) {
   return lanc.slice(0, -1).map((sz, k) => {
-    const m = new Map([[sz.szerzo, sz.sorszam]]);
-    if (k === 0 && tobbi) for (const [szerzo, pont] of tobbi) if (!m.has(szerzo)) m.set(szerzo, pont);
+    const m = new Map([[sz.szerzo, { pont: sz.sorszam, elhagy: new Set() }]]);
+    // ⭐⭐ ④a: a BEKÖLTÖZÉSEK (a gyermek eseményei a bemenetből) — a lánc-pont a beköltözés sorszáma (az előtte lévő
+    // szülőbeli eseményeit hozza), és az elhagyott entitásokra a hozott pont nem jön (KZ3 (A)).
+    for (const e of esemenyek ?? []) {
+      if (!bekoltozesE(e) || esemenyKoinoja(e) !== sz.azonosito || e.adat?.szulo !== lanc[k + 1].azonosito) continue;
+      if (m.has(e.szerzo)) continue;   // a létrehozó a születésével költözött; egy szerzőnek egy beköltözése számít
+      m.set(e.szerzo, { pont: e.sorszam, elhagy: new Set(Array.isArray(e.adat.elhagy) ? e.adat.elhagy : []) });
+    }
+    if (k === 0 && tobbi) {
+      for (const [szerzo, pont] of tobbi) if (!m.has(szerzo)) m.set(szerzo, { pont, elhagy: new Set() });
+    }
     return m;
   });
+}
+
+/** A jelen szűrője a lánc és a bemenet beköltözései szerint (a művelet a saját láncára hívja). */
+export function jelenSzuro(lanc, esemenyek) {
+  if (!lanc.length) return () => false;
+  const koltozok = lancKoltozoi(lanc, null, esemenyek);
+  return (e) => jelenbenSzamit(e, lanc, 0, koltozok);
 }
 
 /**
@@ -234,6 +318,11 @@ export function jelenbenSzamit(e, lanc, i, koltozok) {
   for (let n = i + 1; n < lanc.length; n++) if (lanc[n].azonosito === k) { j = n; break; }
   if (j < 0 || JELENBOL_KIZART.has(e.tipus)) return false;
   if (MINDENKIE.has(e.tipus)) return true;
-  for (let m = i; m < j; m++) if (!koltozok[m]?.has(e.szerzo)) return false;
-  return Number.isSafeInteger(e.sorszam) && e.sorszam < koltozok[j - 1].get(e.szerzo);
+  for (let m = i; m < j; m++) {
+    const k = koltozok[m]?.get(e.szerzo);
+    if (!k) return false;
+    // ⭐ KZ3 (A): amit a költöző a beköltözésekor elhagyott, arra a hozott pontja nem jön (egyik nemzedéken át sem).
+    if (e.tipus === 'TudatpontRendezes' && k.elhagy.has(e.adat?.entitas)) return false;
+  }
+  return Number.isSafeInteger(e.sorszam) && e.sorszam < koltozok[j - 1].get(e.szerzo).pont;
 }

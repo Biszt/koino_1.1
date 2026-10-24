@@ -1421,3 +1421,21 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     a többi költöző, a tagság öröklése, a vállalás, a lánc-gyökér a költözött láncon · Csaba (D118, KZ6) · `ketReteg.js`
     (új), `koinoLanc.js`, `javaslatSzamitas.js`, `esemenyTar.js` (`koinoBemenete`), `atmenetiTar.js`, `pakli.js`,
     `muveletek.js`, `koino.js`; a próbák (`ketRetegProba.js`, parancssor); a 83. mérés (`ketRetegMeres.js`).
+198. **2026-10-24 · a költözés ④a: a ki- és a beköltözés eseménye, a tagság öröklése (D118/3, /6, KZ3)**
+    → **`Kikoltozes` a szülőben (`{ gyermek }`, a költöző azonosság-szeletébe — a szülő jelene, a gyermekbe nem kerül);
+    `Bekoltozes` a gyermekben (`{ szulo, kikoltozes, lanc, szuloTagsag, elhagy }`, a saját szeletét nyitja — a költöző horgonya
+    a gyermekben): a költöző szülőbeli láncát a vágás előtti utolsó eseménye után folytatja (mint a létrehozó születése); a
+    kapu a koinó és a szülő születésével ellenőriz (a szülő egyezik, a lánc-pont alakja, a tagsági bizonyíték — egy szabály a
+    születésével, `szuloTagsagaEllenorzese` —, és a lánc eseményei a vágás előttiek: a VÁGÁSKORI tagság); a gyermekben a
+    beköltözés tagsági horgony (D118/3 — `HORGONY_TIPUSOK`, a lánc-típusok közt); a kép és a művelet a beköltözésekből tudja,
+    ki költözött (a lánc-pont, és az elhagyott entitásokra a hozott pont nem jön — KZ3 (A))** · ⛔ a tagsági csomagba
+    csomagolt hamis beköltözés ingyen tagságot adott volna — a csomag kapuja (és a társ tagsági ítélete) a születésekkel
+    ellenőrzi (`bekoltozesekEllenorzese`; a `tagsag.js`-be körkörös import lett volna) · ⚠️ a próbák építése közben: a
+    változatokat a lánc-ponton kell aláírni (`elagaztat`), és egy vak próba (a bemondott összeg mindkét szűrővel 150) — az új
+    pont az elhagyott entitásra került · ⛔ két további lelet: a bizonyítékban utazó szülőbeli beköltözés (a több nemzedékes
+    költöző) ellenőrizetlen volt — most a születésekkel, rekurzívan; és a hozott pont-esemény a szülő bemondását hordozza —
+    a gyermekben a számított összeg és a gyermek kerete dönt (`pontEsemenyMerlege` `hozott`, a szabály-réteg és a művelet
+    egy szabállyal; különben a kisebb keretbe az elhagyás után sem férne semmi) · Csaba (D118, KZ3) · `koinoLanc.js`,
+    `tagsag.js`, `szabalyok.js`, `esemeny.js` (az alak),
+    `esemenyTar.js` (a kapu), `ketReteg.js`, `muveletek.js`, `tagsagKisero.js`, `vallalas.js`, `jelzesek.js`, `koino.js`; a
+    próbák (`koltozesProba.js`).

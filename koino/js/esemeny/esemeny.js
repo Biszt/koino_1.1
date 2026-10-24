@@ -457,6 +457,28 @@ export function alakiHiba(esemeny) {
       return 'tagsági bizonyíték csak a szülőt megnevező születésen állhat';
     }
   }
+  // ⭐⭐ D118 (④a): a KÖLTÖZÉS két eseménye — az alakjuk (a bizonyítékot a kapu nézi, a koinó és a szülő születésével).
+  if (esemeny.tipus === 'Kikoltozes') {
+    if (!azonositoAlaku(esemeny.adat?.gyermek)) return 'a kiköltözés a gyermek koinó nevét mondja';
+    if (!azonositoAlaku(esemeny.entitas)) return 'a kiköltözés a saját azonosság-szeletembe szól (a horgonyomhoz)';
+  }
+  if (esemeny.tipus === 'Bekoltozes') {
+    const a = esemeny.adat ?? {};
+    if (esemeny.entitas !== null) return 'a beköltözés a saját szeletét nyitja (ez a horgonyom a gyermekben)';
+    if (!azonositoAlaku(a.szulo) || !azonositoAlaku(a.kikoltozes)) return 'a beköltözés a szülőt és a kiköltözést nevezi meg';
+    if (!a.lanc || typeof a.lanc !== 'object' || !Number.isSafeInteger(a.lanc.sorszam) || a.lanc.sorszam < 1
+        || !azonositoAlaku(a.lanc.azonosito)) {
+      return 'a beköltözés a szülőbeli láncom vágás előtti utolsó eseményét nevezi meg ({ sorszam, azonosito })';
+    }
+    const t = a.szuloTagsag;
+    if (!t || typeof t !== 'object' || Array.isArray(t) || !azonositoAlaku(t.horgony) || !Array.isArray(t.lanc)
+        || t.lanc.length > 1024) {
+      return 'a beköltözés a tagsági bizonyítékomat hozza a szülőből ({ horgony, lanc })';
+    }
+    if (a.elhagy !== undefined && (!Array.isArray(a.elhagy) || a.elhagy.length > 1024 || !a.elhagy.every(azonositoAlaku))) {
+      return 'az elhagyott pontok listája entitás-azonosítók listája';
+    }
+  }
 
   // ----- A HÁROM ÚJ MEZŐ ALAKJA -----
   // ⛔ D77 (2026-09-27, Csaba): az `entitas` nem akármilyen szöveg, hanem egy AZONOSÍTÓ — a szelet

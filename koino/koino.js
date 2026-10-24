@@ -145,7 +145,7 @@ import {
   szelet, esemenyEllenorzese, bejelentesHelyei, azonositoAlaku, esemenyKoinoja, koinoSzuleteseE, koinoSzuleteseListabol
 } from './js/esemeny/esemeny.js';
 import { szabalyokAlakiHibaja, ALAP_SZABALYOK, koinoSzabalyai } from './js/esemeny/koinoSzabalyok.js';
-import { szuletesLanc, szuloTagsagaEpitese } from './js/allapot/koinoLanc.js';
+import { szuletesLanc, szuloTagsagaEpitese, bekoltozesekEllenorzese } from './js/allapot/koinoLanc.js';
 import { koinoKepe } from './js/allapot/ketReteg.js';
 import { szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
 import { ALLASPONT_MUVELET } from './js/allapot/szabalyok.js';
@@ -491,6 +491,7 @@ async function gyermekSzuletesElokeszitese(szuloErv, { nyilt, szabalyok }) {
   }
   const lanc = (await sajatLancEsemenyei(ptar, szerzo)).filter((e) => esemenyKoinoja(e) === P);
   const horgony = lanc.find((e) => e.tipus === 'Belepes')?.azonosito
+    ?? lanc.find((e) => e.tipus === 'Bekoltozes')?.azonosito   // ⭐ ④a: a szülőbe költöztem
     ?? (pszuletes.szerzo === szerzo ? P : null);
   const szuloTagsag = horgony
     ? szuloTagsagaEpitese([pszuletes, ...await tagsagiEsemenyekGyujtese(ptar, P, horgony)], P, horgony) : null;
@@ -1093,6 +1094,9 @@ async function sajatHorgonyom() {
   const lanc = await sajatLancEsemenyei(tar, szerzo);
   const belepesem = lanc.find((e) => esemenyKoinoja(e) === KOINO && e.tipus === 'Belepes');
   if (belepesem) return belepesem.azonosito;
+  // ⭐ D118 (④a): a költözőé a beköltözése.
+  const bekoltozesem = lanc.find((e) => esemenyKoinoja(e) === KOINO && e.tipus === 'Bekoltozes');
+  if (bekoltozesem) return bekoltozesem.azonosito;
 
   const alapitasom = lanc.find((e) => esemenyKoinoja(e) === KOINO && e.tipus === 'KoinoLetrehozas');
   if (alapitasom) return alapitasom.azonosito;
@@ -1103,7 +1107,7 @@ async function sajatHorgonyom() {
 async function horgonyok() {
   const esemenyek = await koinoEsemenyei(tar, KOINO);
   return esemenyek
-    .filter((e) => e.tipus === 'Belepes' || e.tipus === 'KoinoLetrehozas')
+    .filter((e) => e.tipus === 'Belepes' || e.tipus === 'KoinoLetrehozas' || e.tipus === 'Bekoltozes')
     .map((e) => e.azonosito);
 }
 
@@ -3812,7 +3816,8 @@ async function tagsagItelete(szemely, csomag = null) {
   const lista = szuletes ? [szuletes] : [];
   if (typeof szemely.h === 'string') lista.push(...await tagsagiEsemenyekGyujtese(tar, KOINO, szemely.h));
   if (csomag && csomag.tipus === TAGSAGI_CSOMAG && csomag.szerzo === szemely.sz && esemenyKoinoja(csomag) === KOINO
-    && (await esemenyEllenorzese(csomag)).rendben && (await tagsagiCsomagEllenorzese(csomag)).rendben) {
+    && (await esemenyEllenorzese(csomag)).rendben && (await tagsagiCsomagEllenorzese(csomag)).rendben
+    && (await bekoltozesekEllenorzese(csomag.adat?.lanc, tar)).rendben) {   // ⛔ D118 (④a)
     lista.push(csomag);
   }
   const r = szerzoTagsaga(tagsagiIndex(lista, KOINO), szemely.sz);

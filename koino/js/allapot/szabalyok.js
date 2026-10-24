@@ -32,7 +32,7 @@
 
 import { lenyomatSzinkron } from '../esemeny/kanonikusAlak.js';
 import { ALAP_SZABALYOK, koinoSzabalyai } from '../esemeny/koinoSzabalyok.js';
-import { koinoSzuleteseListabol } from '../esemeny/esemeny.js';
+import { koinoSzuleteseListabol, esemenyKoinoja } from '../esemeny/esemeny.js';
 // ⭐ D93/1: a tagság (egy forrás — `tagsag.js`).
 import { tagsagiIndex, szerzoTagsaga } from './tagsag.js';
 
@@ -335,12 +335,25 @@ export function hozottSajatPontok(e) {
  * @returns {{elvetve?: string, jelzes?: string, entitas?: string, pont?: number, ujOsszeg?: number}}
  *   `elvetve`: nem számít (indoklással) · `jelzes`: számít, de nem ellenőrizhető (D19)
  */
-export function pontEsemenyMerlege(e, allas, folytonos, keret = TUDATPONT_KERET) {
+export function pontEsemenyMerlege(e, allas, folytonos, keret = TUDATPONT_KERET, hozott = false) {
   const pont = e.adat?.pont;
   const kiosztva = e.adat?.kiosztva;
 
   if (!Number.isInteger(pont) || pont < 0) {
     return { elvetve: 'a tudatpont csak nemnegatív egész szám lehet' };
+  }
+
+  // ----- ⭐⭐ D118 (④a, KZ3): A HOZOTT PONT-ESEMÉNY -----
+  // Az ős láncából jött pont-esemény a gyermek jelenében: a bemondása (és az önbizonyítása) a SZÜLŐ keretéről és kiosztásáról
+  // szól — a gyermekben a költöző elhagyhatott belőle (KZ3 (A)), és a keret más lehet. Itt a számított összeg dönt.
+  if (hozott) {
+    const regiH = allas.pontok.get(e.adat.entitas) ?? 0;
+    const ujOsszegH = allas.osszeg - regiH + pont;
+    if (ujOsszegH > keret) {
+      return { elvetve: 'a hozott pont túllépné a gyermek keretét (' + ujOsszegH + ' / ' + keret
+        + ') — KZ3: a beköltözéskor el kell hagyni belőle' };
+    }
+    return { entitas: e.adat.entitas, pont, ujOsszeg: ujOsszegH };
   }
 
   // ----- ⭐ A BEMONDOTT ÖSSZEG (D42) -----
@@ -438,7 +451,10 @@ function leszarmazottE(entitas, os, szulok) {
 export function szabalyokErvenyesitese(esemenyek) {
   // ⭐⭐ D118/2 (①b): a koinó SZABÁLYAI a születéséből (a bemenetben van — a koinó születése mindenki vállalása, D90/2);
   // ha nincs meg, a mai értékek.
-  const koinoSzabalyok = koinoSzabalyai(koinoSzuleteseListabol(esemenyek));
+  const koinoSzul = koinoSzuleteseListabol(esemenyek);
+  const koinoSzabalyok = koinoSzabalyai(koinoSzul);
+  // ⭐ D118 (④a): a koinó neve (a lenyomat-nevűé) — ami más koinóé a bemenetben, az az ősök hozott eseménye.
+  const koinoNeve = koinoSzul && koinoSzul.koino === '' ? koinoSzul.azonosito : null;
   const kivetelek = [];
   const nemEllenorizhetok = [];
   const kiesettek = new Set();   // az azonosítók, amik nem számítanak
@@ -576,7 +592,9 @@ export function szabalyokErvenyesitese(esemenyek) {
             + '. eseményétől a pontjai nem számítanak');
           continue;
         }
-        const merleg = pontEsemenyMerlege(e, { osszeg, pontok }, folytonos, koinoSzabalyok.tudatpontKeret);
+        // ⭐ D118 (④a): az ős eseménye a gyermek jelenében HOZOTT (a koinó a születése neve — a jelen bemenetében egyedül az övé).
+        const hozott = koinoNeve !== null && esemenyKoinoja(e) !== koinoNeve;
+        const merleg = pontEsemenyMerlege(e, { osszeg, pontok }, folytonos, koinoSzabalyok.tudatpontKeret, hozott);
         if (merleg.jelzes) nemEllenorizheto(e, merleg.jelzes);
         if (merleg.elvetve) {
           kivetel(e, merleg.elvetve);

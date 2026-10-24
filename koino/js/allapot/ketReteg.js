@@ -78,7 +78,8 @@ export async function koinoKepe(esemenyek, beallitas = {}) {
   const most = beallitas.most ?? Date.now();
   const lanc = koino ? lancBemenetbol(esemenyek, koino) : [];
   if (lanc.length < 2) return { ...(await haromFazis(esemenyek, koino, most, beallitas, null)), mult: null };
-  const koltozok = lancKoltozoi(lanc, beallitas.koltozok instanceof Map ? beallitas.koltozok : null);
+  // ⭐ A költözők nemzedékenként: a létrehozó (a születésével) és a beköltözők (a bemenet beköltözéseiből — ④a).
+  const koltozok = lancKoltozoi(lanc, beallitas.koltozok instanceof Map ? beallitas.koltozok : null, esemenyek);
   return nemzedekKepe(esemenyek, lanc, koltozok, 0, most, beallitas);
 }
 
