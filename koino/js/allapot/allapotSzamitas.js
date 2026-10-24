@@ -109,10 +109,11 @@ export function rendezettBemenet(esemenyek) {
  * @param {Array<Object>} esemenyek
  * @returns {{ervenyesek: Array<Object>, ellentmondasok: Array<Object>}}
  */
-export function elagazasokFeloldasa(esemenyek) {
+export function elagazasokFeloldasa(esemenyek, lancAga = null) {
   const kulcsSzerint = new Map();      // "szerzo|sorszam" → események
   for (const e of esemenyek) {
-    const kulcs = e.szerzo + '|' + e.sorszam;
+    // ⭐ D118 (⑤b): a lánc-ág szerint (a koinó képe adja) — a nem költöző ős-eseménye külön ág, nem a gyermekbeli lánca.
+    const kulcs = (lancAga ? lancAga(e) : e.szerzo) + '|' + e.sorszam;
     if (!kulcsSzerint.has(kulcs)) kulcsSzerint.set(kulcs, []);
     kulcsSzerint.get(kulcs).push(e);
   }
@@ -162,13 +163,15 @@ export function elagazasokFeloldasa(esemenyek) {
  * Megkeresi azokat az eseményeket, amelyek visszafelé lépnek a saját láncuk idejében.
  *
  * @param {Array<Object>} ervenyesek - elágazás-mentesített események
+ * @param {Function} [lancAga] - ⭐ D118 (⑤b): a lánc-ág (a nem költöző ős-eseménye külön ág — a régi ideje nem visszalépés)
  * @returns {Array<Object>} { szerzo, sorszam, ido, elozoIdo, azonosito }
  */
-export function idoEllentmondasokKeresese(ervenyesek) {
+export function idoEllentmondasokKeresese(ervenyesek, lancAga = null) {
   const szerzonkent = new Map();
   for (const e of ervenyesek) {
-    if (!szerzonkent.has(e.szerzo)) szerzonkent.set(e.szerzo, []);
-    szerzonkent.get(e.szerzo).push(e);
+    const ag = lancAga ? lancAga(e) : e.szerzo;
+    if (!szerzonkent.has(ag)) szerzonkent.set(ag, []);
+    szerzonkent.get(ag).push(e);
   }
 
   const talalatok = [];
@@ -273,8 +276,13 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
   // csak-G1-tartó így a G2-es rész bemenetét is látja, a G2 szeletének tartása nélkül.
   const rendezettek = rendezettBemenet(csomagokKibontasa(esemenyek));
 
-  const { ervenyesek, ellentmondasok } = elagazasokFeloldasa(rendezettek);
-  const { szamitok, kivetelek, nemEllenorizhetok, tagsagFuggoben } = szabalyokErvenyesitese(ervenyesek);
+  // ⭐⭐ D118 (⑤b): a szerzők LÁNC-ÁGA és a láncon ismert, de a jelenből kizárt sorszámok (a koinó képe adja — `ketReteg.js`):
+  // a nem költöző ős-eseménye külön ág (nem elágazás, nem idő-visszalépés), és a kizárt esemény helye nem hézag.
+  const lancAga = typeof beallitas.lancAga === 'function' ? beallitas.lancAga : null;
+  const ismertSorszamok = beallitas.ismertSorszamok instanceof Map ? beallitas.ismertSorszamok : null;
+  const { ervenyesek, ellentmondasok } = elagazasokFeloldasa(rendezettek, lancAga);
+  const { szamitok, kivetelek, nemEllenorizhetok, tagsagFuggoben } = szabalyokErvenyesitese(ervenyesek,
+    { lancAga, ismertSorszamok });
 
   // ----- NYERSANYAG-GYŰJTÉS -----
   const koinoAdatok = { nev: null, leiras: null };
@@ -525,7 +533,7 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
     szamitok,
     ellentmondasok,
     // Visszafelé lépő idő a saját láncban (lásd fentebb) — jelzés, nem büntetés
-    idoEllentmondasok: idoEllentmondasokKeresese(ervenyesek),
+    idoEllentmondasok: idoEllentmondasokKeresese(ervenyesek, lancAga),
     // ⭐⭐ MEDDIG ISMEREM KINEK A LÁNCÁT — a felszabadítás bizonyítékához (lásd lentebb).
     lancVegek: lancVegekSzamitasa(szamitok),
     // ⭐ A NYERS ÉRTÉK JAVASLATOK: "szerző|entitás" → küszöb-négyes. ⚠️ A KÜLÖNVÁLÁSHOZ

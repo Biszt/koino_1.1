@@ -145,7 +145,7 @@ import {
   szelet, esemenyEllenorzese, bejelentesHelyei, azonositoAlaku, esemenyKoinoja, koinoSzuleteseE, koinoSzuleteseListabol
 } from './js/esemeny/esemeny.js';
 import { szabalyokAlakiHibaja, ALAP_SZABALYOK, koinoSzabalyai, teljesSzabalyok } from './js/esemeny/koinoSzabalyok.js';
-import { szuletesLanc, szuloTagsagaEpitese, bekoltozesekEllenorzese, koinoNezete, jelenSzuro } from './js/allapot/koinoLanc.js';
+import { szuletesLanc, szuloTagsagaEpitese, bekoltozesekEllenorzese, koinoNezete, lancNezete } from './js/allapot/koinoLanc.js';
 import { koinoKepe } from './js/allapot/ketReteg.js';
 import { szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
 import { ALLASPONT_MUVELET } from './js/allapot/szabalyok.js';
@@ -1022,22 +1022,20 @@ async function keresoTarTomoritese() {
  * szeleteim, az azonosság-szeletem, és a koinó születése).
  */
 async function sajatVallalasa(allapot) {
-  return vallalasSzamitasa(await sajatJelenLancom(), { koinoSzuletes: allapot?.koino?.azonosito ?? null, ...kifutasBeallitas(),
-    tudatpontKeret: (await koinomSzabalyai(kornyezet)).tudatpontKeret, koino: KOINO });   // ⭐ D118/2: a koinó kerete
+  const { lanc, szamit } = await sajatLancomNezete();
+  return vallalasSzamitasa(lanc, { koinoSzuletes: allapot?.koino?.azonosito ?? null, ...kifutasBeallitas(),
+    tudatpontKeret: (await koinomSzabalyai(kornyezet)).tudatpontKeret, koino: KOINO, szamit });   // ⭐ D118/2: a koinó kerete
 }
 
 /**
- * ⭐⭐ D118 (⑤a): a SAJÁT láncom a koinó jelen rétege szerint — a koinó eseményei, és ha költöztem (vagy én hoztam létre),
- * az ős láncomból hozottak a lánc-pontomig (`jelenSzuro` — ugyanaz, mint a koinó képében). A vállalás ebből: a hozott
- * entitásaimat is tartom (különben a szigorú (b) alatt nem is cserélném őket).
+ * ⭐⭐ D118 (⑤a, ⑤b): a SAJÁT LÁNCOM a koinóban (`lancNezete` — ugyanaz a szabály, mint a lánc-végé és a lánc-gyökéré): a koinó
+ * eseményei, és ha költöztem (vagy én hoztam létre), az ős láncomból hozott előtag a lánc-pontomig; a `szamit` a jelen réteg
+ * (ugyanaz, mint a koinó képében). A vállalás ebből: a hozott entitásaimat is tartom (különben a szigorú (b) alatt nem is
+ * cserélném őket).
  */
-async function sajatJelenLancom() {
-  const sajat = await sajatLancEsemenyei(tar, szerzo);
-  // ⛔ Ha a születés még nem érkezett meg (a lánc üres), a koinó saját eseményei — az üres lánc jelen-szűrője mindent kizárna
-  // (mérve: a vendég saját azonosság-szelete kiesett a vállalásából, és a csak küldő út kézbesítése nem nyugtázódott).
-  const { lanc } = azonositoAlaku(KOINO) ? await koinoNezete(tar, KOINO) : { lanc: [] };
-  if (lanc.length < 2) return sajat.filter((e) => esemenyKoinoja(e) === KOINO);
-  return sajat.filter(jelenSzuro(lanc, sajat));
+async function sajatLancomNezete() {
+  const nezet = await lancNezete(tar, KOINO, szerzo);
+  return { lanc: (await sajatLancEsemenyei(tar, szerzo)).filter(nezet.tagja), szamit: nezet.szamit };
 }
 
 /**
@@ -3527,9 +3525,10 @@ async function reszvetelHalmazom(kf) {
 async function ketFokAllapota(allapot = null) {
   // ⚠️ A teljes állapot nélkül (a csere minden munkájában fut): a koinó születését a tagsági láncom adja.
   const szuletes = allapot?.koino?.azonosito ?? (await koinoSzuletese())?.azonosito ?? null;
-  const vallalas = vallalasSzamitasa(await sajatJelenLancom(),
+  const sajatLancom = await sajatLancomNezete();
+  const vallalas = vallalasSzamitasa(sajatLancom.lanc,
     { koinoSzuletes: szuletes, ...kifutasBeallitas(), tudatpontKeret: (await koinomSzabalyai(kornyezet)).tudatpontKeret,
-      koino: KOINO });   // ⭐ D118 (⑤a): a hozott pontjaimmal
+      koino: KOINO, szamit: sajatLancom.szamit });   // ⭐ D118 (⑤a): a hozott pontjaimmal
   const tarolo = osszegzesTarolo(KOINO);
   const t = await tarolo.olvas();
   const jegyzek = new Map((await tar.szeletek()).map((x) => [x.szelet, x.db + x.bejelentes]));
@@ -5336,8 +5335,13 @@ try {
       }
       if (ksz.adat?.szulo !== KOINO) throw new Error('A(z) ' + rovidAzonosito(K) + ' nem ennek a koinónak a gyermeke.');
       if (ksz.szerzo === szerzo) throw new Error('A gyermek létrehozója vagy: a születéseddel már beköltöztél.');
-      if ((await sajatLancEsemenyei(ktar, szerzo)).some((e) => e.tipus === 'Bekoltozes')) {
-        throw new Error('Már beköltöztél ebbe a gyermekbe.');
+      const gyermekbeliLancom = (await sajatLancEsemenyei(ktar, szerzo)).filter((e) => esemenyKoinoja(e) === K);
+      if (gyermekbeliLancom.some((e) => e.tipus === 'Bekoltozes')) throw new Error('Már beköltöztél ebbe a gyermekbe.');
+      // ⛔ D118 (⑤b): a beköltözés a gyermekbeli láncom ELSŐ eseménye (4.5) — aki ott már nem költözőként él (meghívással), az
+      // nem költözhet: a két lánc elágazna. ⚠️ A kiköltözés ELŐTT mondjuk ki (az a szülőben megtörténne).
+      if (gyermekbeliLancom.length) {
+        throw new Error('A gyermekben már van saját láncod (nem költözőként léptél be: ' + gyermekbeliLancom.length
+          + ' eseményed) — a beköltözés a gyermekbeli láncod első eseménye lenne, ezért költözni már nem lehet.');
       }
       const vagas = ksz.ido;
       // ----- a lánc-pontom: a vágás előtti utolsó eseményem (a szülő tárában) -----

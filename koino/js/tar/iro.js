@@ -48,7 +48,8 @@ import { resolve, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { rm } from 'node:fs/promises';
 
-import { esemenyMentese, lancVege } from './esemenyTar.js';
+import { esemenyMentese, ujSajatHelye } from './esemenyTar.js';
+import { esemenyKoinoja } from '../esemeny/esemeny.js';
 
 // Egy kérés legfeljebb ennyi ideig vár az íróra. ⚠️ Az író sorban dolgozik: egy nagy csere
 // közben a kérés sorra vár — ezért nem pár ezredmásodperc.
@@ -197,7 +198,8 @@ export function iroTarNyitasa(belso, { mappa, jelez = () => {} }) {
 
       if (ujSajat) {
         // ⭐ A SAJÁT ÚJ ESEMÉNY CSAK A LÁNC VÉGÉRE: ez zárja ki az elágazást.
-        const veg = await lancVege(belso, esemeny.szerzo);
+        // ⭐ D118 (⑤b): a koinóbeli láncom vége (a nem költöző gyermekbeli lánca 1-ről indul; a beköltözésé a lánc-pontja után).
+        const veg = await ujSajatHelye(belso, esemeny.szerzo, esemenyKoinoja(esemeny), esemeny.tipus, esemeny.adat);
         if (esemeny.sorszam !== veg.sorszam || (esemeny.elozo ?? null) !== veg.elozo) {
           throw kodosHiba('ELAVULT', 'elavult lánc-vég (a ' + esemeny.sorszam
             + '. helyre szánt esemény — a lánc vége most a ' + veg.sorszam + '. hely)');

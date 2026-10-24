@@ -38,7 +38,7 @@ import { LEZARASI_OSSZEGZES, lezarasiOsszegzesAlakja } from '../allapot/lezarasi
 import { TAGSAGI_CSOMAG, tagsagiCsomagEllenorzese } from '../allapot/tagsag.js';
 // ⭐⭐ D118 (②a): a gyermek születésének bizonyítéka (a szülő születésével együtt).
 import { gyermekSzuleteseE, gyermekSzuletesEllenorzese, koinoNezete, bekoltozesE, bekoltozesEllenorzese,
-  bekoltozesekEllenorzese } from '../allapot/koinoLanc.js';
+  bekoltozesekEllenorzese, lancNezete } from '../allapot/koinoLanc.js';
 
 // ===================================
 // ESEMÉNY MENTÉSE
@@ -371,6 +371,35 @@ export async function horgonyok(tar, koino, entitas, sajatSzerzo, darab = 1) {
 // ===================================
 // A SAJÁT LÁNC VÉGE — a következő esemény helye
 // ===================================
+
+/**
+ * ⭐⭐ D118 (⑤b): HOVA KERÜL a szerző új saját eseménye egy koinóban — a koinóbeli LÁNCA végére (`koinoLanc.js`
+ * `lancNezete`: a koinó saját eseményei, és ha költözött, a hozott előtag); a beköltözésé a saját adatából (a szülőbeli
+ * lánc-pontja után — a láncom ott még nem a gyermeké, a kapu ellenőrizte). ⛔ A nem költöző szülőbeli múltja nem a
+ * gyermekbeli lánca: az ott 1-ről indul (különben a tár legnagyobb sorszáma után folytatná, akármelyik koinóé — és ha a
+ * múltja később érkezik, a két lánc azonos sorszámai elágazásnak látszanának). A művelet és az író (az ELAVULT) ezt hívja.
+ * @param {Object} tar
+ * @param {string} szerzo
+ * @param {string} koino
+ * @param {string|null} [tipus]
+ * @param {Object|null} [adat]
+ * @returns {Promise<{elozo: string|null, sorszam: number}>}
+ */
+export async function ujSajatHelye(tar, szerzo, koino, tipus = null, adat = null) {
+  if (tipus === 'Bekoltozes' && typeof adat?.lanc?.azonosito === 'string' && Number.isSafeInteger(adat.lanc.sorszam)) {
+    return { elozo: adat.lanc.azonosito, sorszam: adat.lanc.sorszam + 1 };
+  }
+  // ⭐ A koinó SZÜLETÉSE (új alakban a koinó-mezője üres — a koinó még nincs): a helyét a hívó adja a tárral — a gyermekéé a
+  // létrehozó szülőbeli láncának vége után (`koino.js` `ujKoinoSzuletese` az ideiglenes tárba csak azt teszi), a szülő
+  // nélkülié 1. ⛔ A koinó láncán keresve semmit nem találna (mérve: a gyermek születése 1-es sorszámot kapott, és a
+  // létrehozó hozott múltja nem jutott át a kapun).
+  if (tipus === 'KoinoLetrehozas') return lancVege(tar, szerzo);
+  const nezet = await lancNezete(tar, koino, szerzo);
+  const lanc = (await sajatLancEsemenyei(tar, szerzo)).filter(nezet.tagja);
+  if (!lanc.length) return { elozo: null, sorszam: 1 };
+  const utolso = lanc[lanc.length - 1];
+  return { elozo: utolso.azonosito, sorszam: utolso.sorszam + 1 };
+}
 
 /**
  * Megmondja, hova fűzzük a következő saját eseményt.

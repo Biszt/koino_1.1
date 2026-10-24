@@ -294,11 +294,60 @@ export function lancKoltozoi(lanc, tobbi = null, esemenyek = null) {
   });
 }
 
-/** A jelen szűrője a lánc és a bemenet beköltözései szerint (a művelet a saját láncára hívja). */
-export function jelenSzuro(lanc, esemenyek) {
-  if (!lanc.length) return () => false;
-  const koltozok = lancKoltozoi(lanc, null, esemenyek);
-  return (e) => jelenbenSzamit(e, lanc, 0, koltozok);
+/** Melyik nemzedék (`lanc` indexe, `i` után) a `k` nevű koinó — -1, ha egyik sem. */
+function nemzedeke(lanc, i, k) {
+  for (let n = i + 1; n < lanc.length; n++) if (lanc[n].azonosito === k) return n;
+  return -1;
+}
+
+/**
+ * ⭐⭐ D118 (⑤b): a `lanc[i]` koinóban a szerző LÁNCÁNAK része-e az esemény — a koinó saját eseménye igen; az ősé, ha a
+ * szerzője minden nemzedéken át költözött, és az esemény a lánc-pontja előtt van (a hozott előtag). ⛔ A nem költöző
+ * ős-eseménye NEM: az a múlt szerkezete, a gyermekbeli lánca külön indul (4.5: „a beköltözés a láncom első eseménye ott”) —
+ * különben a két lánc azonos sorszámai elágazásnak látszanának.
+ * @param {Object} e
+ * @param {Array<Object>} lanc
+ * @param {number} i
+ * @param {Array<Map<string, Object>>} koltozok - `lancKoltozoi`
+ */
+export function lancbanVan(e, lanc, i, koltozok) {
+  if (!e || typeof e !== 'object') return false;
+  const k = esemenyKoinoja(e);
+  if (k === lanc[i]?.azonosito) return true;
+  const j = nemzedeke(lanc, i, k);
+  if (j < 0) return false;
+  for (let m = i; m < j; m++) if (!koltozok[m]?.get(e.szerzo)) return false;
+  return Number.isSafeInteger(e.sorszam) && e.sorszam < koltozok[j - 1].get(e.szerzo).pont;
+}
+
+/**
+ * ⭐⭐ D118 (⑤b): A SZERZŐ LÁNCA EGY KOINÓBAN, a tár szerint — melyik esemény tartozik hozzá (`tagja`: `lancbanVan`), melyik
+ * számít a kiosztásba (`szamit`: a jelen réteg — `jelenbenSzamit`; a kizárt típusok és az elhagyott pontok nélkül), és melyik
+ * HOZOTT (`hozott`: más koinóé — a kiosztásban a számított összeggel, mint a szabály-rétegben). A `kulcs` a nézet lenyomata
+ * (a gyorsítótár ehhez köt: ha a szerző azóta költözött, más a lánca). Szülő nélküli (és régi alakú) koinóban a koinó saját
+ * eseményei. A lánc-vég, a lánc-gyökér, a művelet összege és a lánc-ellenőrzés ezt hívja — egy szabály.
+ * @param {Object} tar
+ * @param {string} koino
+ * @param {string} szerzo
+ * @returns {Promise<{tagja: Function, szamit: Function, hozott: Function, kulcs: string}>}
+ */
+export async function lancNezete(tar, koino, szerzo) {
+  const sajat = (e) => esemenyKoinoja(e) === koino;
+  const egyszeru = { tagja: sajat, szamit: sajat, hozott: () => false, kulcs: '' };
+  if (!azonositoAlaku(koino) || typeof tar?.szerzoLanca !== 'function') return egyszeru;
+  const { lanc } = await koinoNezete(tar, koino);
+  if (lanc.length < 2) return egyszeru;
+  const koltozok = lancKoltozoi(lanc, null, await tar.szerzoLanca(szerzo));
+  const kulcs = lanc.map((sz) => sz.azonosito).join(',') + '|' + koltozok.map((m) => {
+    const k = m.get(szerzo);
+    return k ? k.pont + ':' + [...k.elhagy].sort().join(',') : '-';
+  }).join(';');
+  return {
+    tagja: (e) => lancbanVan(e, lanc, 0, koltozok),
+    szamit: (e) => jelenbenSzamit(e, lanc, 0, koltozok),
+    hozott: (e) => !sajat(e),
+    kulcs
+  };
 }
 
 /**
@@ -314,15 +363,14 @@ export function jelenbenSzamit(e, lanc, i, koltozok) {
   if (!e || typeof e !== 'object') return false;
   const k = esemenyKoinoja(e);
   if (k === lanc[i]?.azonosito) return true;
-  let j = -1;
-  for (let n = i + 1; n < lanc.length; n++) if (lanc[n].azonosito === k) { j = n; break; }
+  const j = nemzedeke(lanc, i, k);
   if (j < 0 || JELENBOL_KIZART.has(e.tipus)) return false;
   if (MINDENKIE.has(e.tipus)) return true;
-  for (let m = i; m < j; m++) {
-    const k = koltozok[m]?.get(e.szerzo);
-    if (!k) return false;
-    // ⭐ KZ3 (A): amit a költöző a beköltözésekor elhagyott, arra a hozott pontja nem jön (egyik nemzedéken át sem).
-    if (e.tipus === 'TudatpontRendezes' && k.elhagy.has(e.adat?.entitas)) return false;
+  // ⭐ D118 (⑤b): a súly a szerző LÁNCÁN van (a hozott előtag — `lancbanVan`), egy szabállyal a lánc-véggel és a lánc-gyökérrel.
+  if (!lancbanVan(e, lanc, i, koltozok)) return false;
+  // ⭐ KZ3 (A): amit a költöző a beköltözésekor elhagyott, arra a hozott pontja nem jön (egyik nemzedéken át sem).
+  if (e.tipus === 'TudatpontRendezes') {
+    for (let m = i; m < j; m++) if (koltozok[m].get(e.szerzo).elhagy.has(e.adat?.entitas)) return false;
   }
-  return Number.isSafeInteger(e.sorszam) && e.sorszam < koltozok[j - 1].get(e.szerzo).pont;
+  return true;
 }

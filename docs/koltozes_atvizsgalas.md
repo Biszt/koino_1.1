@@ -261,7 +261,7 @@ Most csak a két fél szerkezete épül; a pénz mezői később hozzáadhatók,
 4. ✅ **④ A ki- és a beköltözés** (a lánc megkötése, a kiosztás átvétele, a tagság és a 2. lépcső öröklése), a `koltozes`
    parancs és a kézi út — 2026-10-24, a 10. szakasz (④a–④c); elágazás 198–200; 82. mérés.
 5. 🚧 **⑤ A többi réteg bekötése** (vállalás, gyökér-darab, kereső-réteg, felderítés, értesítés, lánc-ellenőrzés) — a 11.
-   szakasz: ✅ ⑤a (elágazás 201), ⏭️ ⑤b a lánc.
+   szakasz: ✅ ⑤a (elágazás 201), ✅ ⑤b a lánc (elágazás 202).
 6. **⑥ A felület** (a belépő tér családfája, „Költözés…” a fő menüben).
 
 *Amit ez nem old meg:* a koinók egyesítését, a pénzt (csak a helyét), és a protokoll-törést (KZ5).
@@ -438,7 +438,8 @@ lánc-gyökér, a lánc-ellenőrzés, a folytonosság, a nem költöző lánca).
   a hozott gondolatok születése a gyermek gyökér-darabjaiba esik, mert a darab a gyermek gyökeréhez bejelentett születésekből
   számol); a felderítés és az értesítés a koinó KÉPÉBŐL dolgozik (a pakli `koinoKepe`-t hív), tehát a hozott entitásokat látja.
 
-⏭️ *⑤b — a lánc a költözött láncon (mérve, 2026-10-24, a scratchpad `m5b.mjs` és `m5b_nem.mjs`):*
+✅ *⑤b megépült (2026-10-25, elágazás 202) — a három lelet (mérve 2026-10-24, a scratchpad `m5b.mjs` és `m5b_nem.mjs`),
+és az építés alakja:*
 - ⛔ **A költöző gyermekbeli eseményének nincs lánc-gyökere.** A lánc-gyökér (`lancGyoker.js` `allapotIg`) a koinó nevére
   szűrve járja a láncot, a költöző lánca viszont a szülőbeli előtagjával kezdődik — az 1. sorszámon nem talál semmit
   („a saját lánc nem ép”), és null-t ír. A D81 önbizonyítása és a D98 lánc-ellenőrzése így a költözőkre nem működik: a
@@ -462,3 +463,22 @@ lánc-gyökér, a lánc-ellenőrzés, a folytonosság, a nem költöző lánca).
   oldala. ⚠️ A beköltözés (és a gyermek születése) maga nem hordoz lánc-gyökeret: a nézet a költözéssel változik, a
   folytonosság a költözésen át nem vádolható (a következő esemény már a hozott kiosztást köti). ⚠️ Aki a gyermekben már
   nem költözőként él, utána nem költözhet (a beköltözés a láncának első eseménye lenne) — a `koltozes` ezt kimondja.
+- ✅ **Az építés** (egy szabály — `koinoLanc.js` `lancbanVan`, `lancNezete`: `tagja` · `szamit` · `hozott` · `kulcs`): a
+  lánc-vég (`esemenyTar.js` `ujSajatHelye` — a művelet és az író ELAVULT-ja is; a beköltözésé a saját adatából), a
+  lánc-gyökér (`lancGyoker.js` `allapotIg` — a gyorsítótár a nézet kulcsához köt; `lancAllapotaLancbol` nézettel), a
+  művelet összege (`sajatKiosztott` — a folytonosság a láncon, a súly a jelen szerint), a vállalás (`szamit`), a koinó képe
+  (`ketReteg.js`: nemzedékenként a lánc-ág — `allapotSzamitas.js` `elagazasokFeloldasa`, `idoEllentmondasokKeresese`, a
+  szabály-réteg láncai — és az ismert, de kizárt sorszámok: a szabály-réteg `ismertHezag`-a), a lánc-ellenőrzés két
+  oldala (`szerzoNalam`, `lancFejtol`, a teljes kiosztás-lista a nézettel), és a `koltozes` őre a kiköltözés ELŐTT.
+  *A próbák:* 4 modul-próba (a lánc-gyökér és a hazug bemondás tagsági csomaggal; a nem költöző lánca és a megérkező
+  múltja; a születés nélküli lánc; a lánc-ellenőrzés a hozott előtagon) és a ④b parancssor-próbája (E nem költöző: a
+  gyermekbeli belépése 1-es sorszámú — a szülőbeli múltja a gyermek tárában —, és nem költözhet; a kiköltözés sem történik
+  meg) — 13 rontással. ⛔ *Az építés két lelete:* a születés nélkül (a vendég a csere előtt) a lánc a koinó saját eseményei
+  — a ③ óta a művelet bemondott összege ilyenkor a korábbi pontjaimat kihagyta (a ⑤a teljes sora a vállalásnál találta meg,
+  a ⑤b zárja a műveletben is); és a koinó SZÜLETÉSÉNEK helyét a hívó adja a tárral (a gyermeké a létrehozó szülőbeli
+  láncának vége után) — az első alakban a koinó láncán keresve 1-es sorszámot kapott, és a létrehozó hozott múltja nem jutott
+  át a kapun (a ④b próba mérte).
+- ⚠️ *Ami marad:* az elágazás- és a folytonosság-VÁD (`Ellentmondas`) a gyermekben csak a gyermek eseményeiről szólhat — a
+  hozott előtagon (két szülőbeli esemény azonos sorszámon) a kapu ma nem fogad el bizonyítékot (a lánc-ellenőrzés ott
+  csak a meglévőt igazolja, a hamisat nem vádolja); és a beköltözéskor a hozott kiosztás (a következő esemény előképe)
+  csak annál ellenőrizhető, aki a hozott előtagot is tartja.

@@ -448,7 +448,18 @@ function leszarmazottE(entitas, os, szulok) {
   return false;
 }
 
-export function szabalyokErvenyesitese(esemenyek) {
+export function szabalyokErvenyesitese(esemenyek, beallitas = {}) {
+  // ⭐⭐ D118 (⑤b): a koinó képe adja — a láncok a lánc-ág szerint (a nem költöző ős-eseménye külön ág), és a láncon ismert,
+  // de a jelen rétegből kizárt sorszámok (a költöző hozott tagsági csomagja, az ős születése, az elhagyott pontja) nem hézagok.
+  const lancAga = typeof beallitas.lancAga === 'function' ? beallitas.lancAga : (e) => e.szerzo;
+  const ismertSorszamok = beallitas.ismertSorszamok instanceof Map ? beallitas.ismertSorszamok : null;
+  /** A [tol, ig) sorszámok mind ismertek-e a szerző láncán (csak a jelen réteg hagyta ki őket)? */
+  const ismertHezag = (szerzo, tol, ig) => {
+    const ism = ismertSorszamok?.get(szerzo);
+    if (!ism || ig <= tol) return false;
+    for (let s = tol; s < ig; s++) if (!ism.has(s)) return false;
+    return true;
+  };
   // ⭐⭐ D118/2 (①b): a koinó SZABÁLYAI a születéséből (a bemenetben van — a koinó születése mindenki vállalása, D90/2);
   // ha nincs meg, a mai értékek.
   const koinoSzul = koinoSzuleteseListabol(esemenyek);
@@ -524,9 +535,13 @@ export function szabalyokErvenyesitese(esemenyek) {
   // minden szabály itt dől el — nem az események beérkezési sorrendjében, és nem az
   // órán, amit hazudni lehet.
   const szerzonkent = new Map();
+  const lancok = new Map();              // ⭐ D118 (⑤b): lánc-ág → események (a tagság szerzőnként marad)
   for (const e of esemenyek) {
     if (!szerzonkent.has(e.szerzo)) szerzonkent.set(e.szerzo, []);
     szerzonkent.get(e.szerzo).push(e);
+    const ag = lancAga(e);
+    if (!lancok.has(ag)) lancok.set(ag, []);
+    lancok.get(ag).push(e);
   }
 
   // ----- ⭐ D80: A BIZONYÍTOTT ELLENTMONDÁSOK — szerzőnként a legkorábbi vádpont -----
@@ -563,7 +578,7 @@ export function szabalyokErvenyesitese(esemenyek) {
     }
   }
 
-  for (const lanc of szerzonkent.values()) {
+  for (const lanc of lancok.values()) {
     const rendezett = [...lanc].sort((a, b) => a.sorszam - b.sorszam);
     const pontok = new Map();            // entitás → a szerző jelenlegi pontja rajta
     let osszeg = 0;                      // mennyit osztott ki eddig összesen
@@ -576,7 +591,7 @@ export function szabalyokErvenyesitese(esemenyek) {
     let vartSorszam = 1;
 
     for (const e of rendezett) {
-      if (e.sorszam !== vartSorszam) folytonos = false;
+      if (e.sorszam !== vartSorszam && !ismertHezag(e.szerzo, vartSorszam, e.sorszam)) folytonos = false;
       vartSorszam = e.sorszam + 1;
       // ⭐ D93/1: ami a tagság miatt már kiesett, azt a többi szabály nem nézi (nem könyveljük, nem vádoljuk kétszer).
       if (kiesettek.has(e.azonosito)) continue;

@@ -24,7 +24,7 @@
 import { allapotSzamitasa } from './allapotSzamitas.js';
 import { javaslatokSzamitasa } from './javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from './szerkesztesiVegrehajtas.js';
-import { lancKoltozoi, jelenbenSzamit } from './koinoLanc.js';
+import { lancKoltozoi, jelenbenSzamit, lancbanVan } from './koinoLanc.js';
 import { esemenyKoinoja, azonositoAlaku, koinoSzuleteseE } from '../esemeny/esemeny.js';
 import { lenyomatSzinkron } from '../esemeny/kanonikusAlak.js';
 
@@ -94,7 +94,18 @@ async function nemzedekKepe(esemenyek, lanc, koltozok, i, most, beallitas) {
     rogzitettek = new Map([...mult.javaslatok].filter(([, j]) => j.statusz !== 'folyamatban'));
   }
   const bemenet = esemenyek.filter((e) => jelenbenSzamit(e, lanc, i, koltozok));
-  const kep = await haromFazis(bemenet, lanc[i].azonosito, most, beallitas, rogzitettek);
+  // ⭐⭐ D118 (⑤b): a szerzők LÁNCA ebben a nemzedékben (`lancbanVan`) — a láncon kívüli ős-esemény (a nem költöző múltja) külön
+  // ág: nem elágazás és nem idő-visszalépés a gyermekbeli láncához képest; és a láncon lévő, de a jelenből kizárt esemény (a
+  // tagsági csomag, az ős születése, az elhagyott pont) ismert sorszám, nem hézag — különben a költöző hazug bemondása csak
+  // jelzés volna (mérve).
+  const lancAga = (e) => (lancbanVan(e, lanc, i, koltozok) ? e.szerzo : e.szerzo + '|' + esemenyKoinoja(e));
+  const ismertSorszamok = new Map();
+  for (const e of esemenyek) {
+    if (!lancbanVan(e, lanc, i, koltozok) || jelenbenSzamit(e, lanc, i, koltozok)) continue;
+    if (!ismertSorszamok.has(e.szerzo)) ismertSorszamok.set(e.szerzo, new Set());
+    ismertSorszamok.get(e.szerzo).add(e.sorszam);
+  }
+  const kep = await haromFazis(bemenet, lanc[i].azonosito, most, { ...beallitas, lancAga, ismertSorszamok }, rogzitettek);
   return { ...kep, mult };
 }
 
@@ -121,7 +132,8 @@ async function haromFazis(bemenet, koino, most, beallitas, rogzitettek) {
   const allapot = allapotSzamitasa(bemenet, {
     ...(koino ? { koino } : {}),
     ...(beallitas.csakAtmeneti ? { csakAtmeneti: beallitas.csakAtmeneti } : {}),
-    ...(beallitas.nemTartott ? { nemTartott: beallitas.nemTartott } : {})
+    ...(beallitas.nemTartott ? { nemTartott: beallitas.nemTartott } : {}),
+    ...(beallitas.lancAga ? { lancAga: beallitas.lancAga, ismertSorszamok: beallitas.ismertSorszamok } : {})
   });
   const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, most, {
     ...(beallitas.osszegzesek ? { osszegzesek: beallitas.osszegzesek } : {}),

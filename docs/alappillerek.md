@@ -1471,3 +1471,18 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     próbája mérte); ilyenkor a koinó saját eseményei (a művelet összegében a ③ óta ugyanez — a ⑤b zárja) · Csaba (D118) ·
     `vallalas.js`, `keresoTar.js`,
     `kereses.js`, `atmenetiTar.js`, `koino.js`; a próbák (`koltozesProba.js`, a ④b parancssor-próbája), 8 rontással.
+202. **2026-10-25 · a költözés ⑤b: a szerző LÁNCA a koinóban (D118, 4.5)**
+    → **egy szabály (`koinoLanc.js` `lancbanVan`, `lancNezete`): a szerző lánca egy koinóban a koinó saját eseményei, és ha
+    költözött, az ős láncából hozott előtag (a lánc-pontja előtt) — a nem költöző szülőbeli eseménye NEM a gyermekbeli
+    lánca, csak a múlt szerkezete; erre épül a lánc-vég (a nem költöző gyermekbeli lánca 1-ről indul — a művelet és az író
+    is), a lánc-gyökér (a napló a teljes láncot fedi, a kiosztás a jelen szerint), a koinó képe (a láncon kívüli ős-esemény
+    külön lánc-ág: nem elágazás, nem idő-visszalépés; a láncon lévő, de a jelenből kizárt esemény ismert sorszám, nem
+    hézag), a lánc-ellenőrzés két oldala; a `koltozes` a kiköltözés ELŐTT elutasítja, aki a gyermekben már nem költözőként
+    él** · mérve (2026-10-24): a költöző gyermekbeli eseményeinek nem volt lánc-gyökere (az 1. sorszámon „nem ép”), a hazug
+    bemondása egy szülőbeli tagsági csomag mellett csak jelzés volt, és ⛔⛔ a nem költöző gyermekbeli gondolata eltűnt,
+    amikor a szülőbeli múltja megérkezett (az elágazás-feloldás a kisebb azonosítót tartotta meg) — két készülék más képet
+    számolt volna · ⚠️ a beköltözés nem horgonyoz (a nézet vele változik); a VÁD a hozott előtagon még nem fogadott · Csaba
+    (D118 — a 4.5–4.6 következménye) · `koinoLanc.js`, `esemenyTar.js`, `iro.js`, `lancGyoker.js`, `muveletek.js`,
+    `allapotSzamitas.js`, `szabalyok.js`, `ketReteg.js`, `lancEllenorzes.js`, `vallalas.js`, `koino.js`; a próbák
+    (`koltozesProba.js`, a ④b parancssor-próbája), 13 rontással; az építés közben: a születés nélküli lánc (a ③ óta a
+    művelet összege a korábbi pontjaimat kihagyta) és a koinó születésének helye (a hívó tára adja).

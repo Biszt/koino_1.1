@@ -17,11 +17,13 @@ import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import { esemenyMentese, koinoBemenete } from '../js/tar/esemenyTar.js';
 import { koinoKepe } from '../js/allapot/ketReteg.js';
 import { tagsagiIndex, szerzoTagsaga, tagsagiLanc, TAGSAGI_CSOMAG } from '../js/allapot/tagsag.js';
-import { tudatpontRendezese } from '../js/muveletek.js';
+import { tudatpontRendezese, belepes, meghivas, gondolatLetrehozasa } from '../js/muveletek.js';
 import { lepcso2E, tanusithatE, ujIdentitasNezet } from '../js/allapot/identitas.js';
 import { beolvasztas } from '../js/csere/csere.js';
 import { vallalasSzamitasa } from '../js/allapot/vallalas.js';
-import { jelenSzuro, szuletesLanc } from '../js/allapot/koinoLanc.js';
+import { lancNezete } from '../js/allapot/koinoLanc.js';
+import { lancGyokerLancbol, azonosLancGyoker, koinoKerete } from '../js/allapot/lancGyoker.js';
+import { lancKerdesek, lancKiszolgalo, lancValaszokFeldolgozasa, memoriaLancTarolo } from '../js/allapot/lancEllenorzes.js';
 import { bejegyzesekEpitese, bejegyzesTartalma, keresoTarNyitasa, bejegyzesBefogadasa } from '../js/tar/keresoTar.js';
 import { atmenetiTarNyitasa } from '../js/tar/atmenetiTar.js';
 import { helyTalalatai, talalatokEllenorzese } from '../js/csere/kereses.js';
@@ -39,8 +41,9 @@ const VAGAS = T0 + 10 * NAP;
  * @param {Object} [b]
  * @param {Array<string>} [b.elhagy] - B a beköltözéskor elhagyja (KZ3)
  * @param {boolean} [b.kesoMeghivas] - B meghívása a vágás UTÁN (nem vágáskori tag)
+ * @param {boolean} [b.csomag] - ⑤b: B a szülőben egy tagsági csomagot is kiad (a jelen rétegből kizárt típus a láncában)
  */
-async function koltozes({ elhagy, kesoMeghivas = false, gyermekKeret = null } = {}) {
+async function koltozes({ elhagy, kesoMeghivas = false, gyermekKeret = null, csomag = false } = {}) {
   const A = await ujEember('');
   const P = await A.tesz('KoinoLetrehozas', { nev: 'Szülő', leiras: null, alapitok: [], zart: true,
     szabalyok: teljesSzabalyok() }, T0);
@@ -51,9 +54,10 @@ async function koltozes({ elhagy, kesoMeghivas = false, gyermekKeret = null } = 
     { entitas: bBe.azonosito });
   const Y = await B.tesz('GondolatLetrehozas', { cim: 'Y', meret: 10 }, T0 + 100);
   const yp = await B.tesz('TudatpontRendezes', { entitas: Y.azonosito, pont: 100 }, T0 + 101);
+  const tcs = csomag ? await B.tesz('TagsagiCsomag', { lanc: [P, bBe, bM] }, T0 + 150, { entitas: bBe.azonosito }) : null;
   const W = await B.tesz('GondolatLetrehozas', { cim: 'W', meret: 10 }, T0 + 200);
   const wp = await B.tesz('TudatpontRendezes', { entitas: W.azonosito, pont: 100 }, T0 + 201);
-  const p = [P, bBe, bM, Y, yp, W, wp];
+  const p = [P, bBe, bM, Y, yp, ...(tcs ? [tcs] : []), W, wp];
   const c = wp;   // B vágás előtti utolsó szülőbeli eseménye
   // ----- a gyermek (A, a vágáskor) -----
   A.koinotValt('');
@@ -385,9 +389,11 @@ proba('⭐⭐ D118 (⑤a): a vállalás a hozott entitásokra — a beköltöző
     const elhagyva = await el.B.elagaztat('Bekoltozes', { ...el.bek.adat, elhagy: [el.Y.azonosito] });
     const tar = await tarba(el, elhagyva);
     const sajat = await tar.szerzoLanca(el.B.szerzo);
-    const { lanc } = await szuletesLanc(tar, el.K.azonosito);
-    const jelen = sajat.filter(jelenSzuro(lanc, sajat));
-    const v = vallalasSzamitasa(jelen, { koino: el.K.azonosito, tudatpontKeret: 150, koinoSzuletes: el.K.azonosito });
+    // ⭐ ⑤b: a láncom (a hozott előtaggal) és a jelen réteg szűrője — mint a parancssorban (`sajatLancomNezete`)
+    const { nezet, lanc } = await bLanca(tar, el);
+    const jelen = lanc.filter(nezet.szamit);
+    const v = vallalasSzamitasa(lanc, { koino: el.K.azonosito, tudatpontKeret: 150, koinoSzuletes: el.K.azonosito,
+      szamit: nezet.szamit });
     // ⚠️ A próba nem vak: a csak gyermekbeli lánc (a régi szűrő) a hozottakat nem látná, a bemondás szerinti mérleg (a
     // szülőben 200) a W-t a 150-es keret fölöttinek látná.
     const regi = vallalasSzamitasa(sajat.filter((e) => e.koino === el.K.azonosito), { tudatpontKeret: 150 });
@@ -438,5 +444,116 @@ proba('⭐ D118 (⑤a): az átmeneti tár az ős eseményét is megtartja (a ké
   await ujra.frissit?.();
   return atm.mind().some((e) => e.azonosito === s.Y.azonosito) && ujra.mind().some((e) => e.azonosito === s.Y.azonosito);
 });
+
+// ===================================
+// 8. ⭐⭐ ⑤b — A LÁNC A KÖLTÖZÖTT LÁNCON
+// ===================================
+
+/** B láncának eseményei a koinóban (a hozott előtaggal), sorszám szerint. */
+async function bLanca(tar, s) {
+  const nezet = await lancNezete(tar, s.K.azonosito, s.B.szerzo);
+  return { nezet, lanc: (await tar.szerzoLanca(s.B.szerzo)).filter(nezet.tagja).sort((a, b) => a.sorszam - b.sorszam) };
+}
+
+proba('⭐⭐ D118 (⑤b): a költöző gyermekbeli eseménye LÁNC-GYÖKERET hordoz — a napló a szülőbeli előtagot is fedi, a kiosztás a hozott (az elhagyott nélkül); és a hazug bemondása a hozott tagsági csomag mellett is ELVETVE, nem csak jelzés',
+  async () => {
+    const el = await koltozes({ csomag: true });
+    const elhagyva = await el.B.elagaztat('Bekoltozes', { ...el.bek.adat, elhagy: [el.Y.azonosito] });
+    const tar = await tarba(el, elhagyva);
+    const kornyezet = { koino: el.K.azonosito, kulcspar: el.B.kulcspar, szerzo: el.B.szerzo, tar };
+    const uj = await tudatpontRendezese(kornyezet, el.Y.azonosito, 30);
+    const g = uj?.lancGyoker;
+    // A gyorsítótáras út és a teljes újraszámolás a láncból ugyanazt adja.
+    const { nezet, lanc } = await bLanca(tar, el);
+    const vart = await lancGyokerLancbol(lanc.filter((e) => e.sorszam < uj.sorszam), await koinoKerete(tar, el.K.azonosito), nezet);
+    // A hazug: W 10-re — a valódi összeg 30 + 10 = 40, ő 90-et mond (lánc-gyökér nélkül, a láncát folytatva).
+    // ⚠️ A próba nem vak: B szülőbeli láncában egy tagsági csomag áll (a jelenből kizárt típus) — ha a helye hézagnak
+    // látszana, a lánc „nem folytonos”, és a hazug bemondás csak jelzés volna.
+    const hazug = await esemenyLetrehozasa({ koino: el.K.azonosito, tipus: 'TudatpontRendezes',
+      adat: { entitas: el.W.azonosito, pont: 10, kiosztva: 90 }, elozo: uj.azonosito, sorszam: uj.sorszam + 1, ido: uj.ido + 1,
+      entitas: el.W.azonosito, entitasSorszam: 9, latott: [] }, el.B.kulcspar);
+    if (!(await esemenyMentese(tar, hazug)).mentve) return false;
+    const kep = await koinoKepe(await koinoBemenete(tar, el.K.azonosito), { koino: el.K.azonosito, most: uj.ido + NAP });
+    const kivetel = kep.allapot.kivetelek.find((x) => x.azonosito === hazug.azonosito);
+    const ok = !!g && g.naplo?.d === uj.sorszam - 1 && g.kiosztas?.o?.[0] === 100 && azonosLancGyoker(g, vart)
+      && !!uj.adat.bizonyitek && uj.adat.kiosztva === 130 && lanc.some((e) => e.tipus === 'TagsagiCsomag')
+      && !kep.allapot.kivetelek.some((x) => x.azonosito === uj.azonosito)
+      && !kep.allapot.nemEllenorizhetok.some((x) => x.azonosito === uj.azonosito)
+      && /ellentmond a saját láncának/.test(kivetel?.ok ?? '');
+    if (!ok) process.stderr.write('    (' + JSON.stringify({ g: !!g, d: g?.naplo?.d, o: g?.kiosztas?.o, sorszam: uj?.sorszam,
+      kiosztva: uj?.adat?.kiosztva, kivetel: kivetel?.ok ?? null,
+      jelzes: kep.allapot.nemEllenorizhetok.find((x) => x.azonosito === hazug.azonosito)?.ok ?? null }) + ')\n');
+    return ok;
+  });
+
+proba('⛔⛔ D118 (⑤b): a NEM KÖLTÖZŐ gyermekbeli lánca 1-ről indul (a szülőbeli múltja nem a lánca) — és ha a múltja a gyermek tárában van, a gyermekbeli gondolata megmarad: nem elágazás, nem idő-visszalépés',
+  async () => {
+    const s = await koltozes();
+    // N a szülőben él (belépés, egy gondolat a vágás előtt), de nem költözik.
+    const N = await ujEember(s.P.azonosito);
+    const nBe = await N.tesz('Belepes', {}, T0 + 20);
+    const nG = await N.tesz('GondolatLetrehozas', { cim: 'N szülőbeli', meret: 10 }, T0 + 30);
+    const tar = await tarba(s, nBe, nG);
+    // A gyermekben (a művelettel): N belép, A (a létrehozó) meghívja, N gondolatot ír és pontot tesz rá.
+    const kornyezetN = { koino: s.K.azonosito, kulcspar: N.kulcspar, szerzo: N.szerzo, tar };
+    const kornyezetA = { koino: s.K.azonosito, kulcspar: s.A.kulcspar, szerzo: s.A.szerzo, tar };
+    const kBe = await belepes(kornyezetN);
+    await meghivas(kornyezetA, { kit: N.szerzo, horgonya: kBe.azonosito, sajatBelepes: s.K.azonosito });
+    const kG = await gondolatLetrehozasa(kornyezetN, { cim: 'N gyermekbeli' });
+    const kGp = await tudatpontRendezese(kornyezetN, kG.azonosito, 40);
+    const kep = await koinoKepe(await koinoBemenete(tar, s.K.azonosito), { koino: s.K.azonosito, most: kGp.ido + NAP });
+    // ⚠️ A próba nem vak: a gyermekbeli gondolat és a szülőbeli ugyanazt a sorszámot viseli (2) — egy lánc-ágon elágazás
+    // lenne (és a kisebb azonosító nyerne), az idő pedig visszalépne.
+    const ok = kBe.sorszam === 1 && (kBe.elozo ?? null) === null && kG.sorszam === nG.sorszam
+      && kep.allapot.entitasok.get(kG.azonosito)?.osszesPont === 40
+      && !kep.allapot.ellentmondasok.some((x) => x.szerzo === N.szerzo)
+      && !kep.allapot.idoEllentmondasok.some((x) => x.szerzo === N.szerzo);
+    if (!ok) process.stderr.write('    (' + JSON.stringify({ kBe: kBe.sorszam, kG: kG.sorszam, nG: nG.sorszam,
+      pont: kep.allapot.entitasok.get(kG.azonosito)?.osszesPont ?? null,
+      elagazas: kep.allapot.ellentmondasok.filter((x) => x.szerzo === N.szerzo).length,
+      ido: kep.allapot.idoEllentmondasok.filter((x) => x.szerzo === N.szerzo).length }) + ')\n');
+    return ok;
+  });
+
+proba('⛔ D118 (⑤b): ha a koinó születése még NEM érkezett meg, a láncom a koinó saját eseményei — a bemondott összeg a korábbi pontjaimmal (a ③ óta az üres lánc jelen-szűrője mindent kizárt)',
+  async () => {
+    const A = await ujEember('');
+    const P = await A.tesz('KoinoLetrehozas', { nev: 'Szülő', leiras: null, alapitok: [], zart: true,
+      szabalyok: teljesSzabalyok() }, T0);
+    const B = await ujEember(P.azonosito);
+    const tar = await ujTar(P.azonosito);   // a születés nélkül (a vendég a csere előtt lép be)
+    const k = { koino: P.azonosito, kulcspar: B.kulcspar, szerzo: B.szerzo, tar };
+    await belepes(k);
+    const g1 = await gondolatLetrehozasa(k, { cim: 'Első' });
+    await tudatpontRendezese(k, g1.azonosito, 30);
+    const g2 = await gondolatLetrehozasa(k, { cim: 'Második' });
+    const p2 = await tudatpontRendezese(k, g2.azonosito, 20);
+    const { lanc } = await bLanca(tar, { K: P, B });
+    const ok = !(await tar.esemeny(P.azonosito)) && p2.adat.kiosztva === 50 && lanc.length === 5 && p2.sorszam === 5;
+    if (!ok) process.stderr.write('    (' + JSON.stringify({ kiosztva: p2.adat.kiosztva, lanc: lanc.length, sorszam: p2.sorszam }) + ')\n');
+    return ok;
+  });
+
+proba('⭐⭐ D118 (⑤b): a LÁNC-ELLENŐRZÉS a költözött láncon — a kérdező a hozott előtagról is kérdez, a szerző felel, minden igazolódik; a teljes kiosztás-lista a hozott (az elhagyott nélkül)',
+  async () => {
+    const el = await koltozes({ csomag: true });
+    const elhagyva = await el.B.elagaztat('Bekoltozes', { ...el.bek.adat, elhagy: [el.W.azonosito] });
+    const tar = await tarba(el, elhagyva);
+    await tudatpontRendezese({ koino: el.K.azonosito, kulcspar: el.B.kulcspar, szerzo: el.B.szerzo, tar }, el.Y.azonosito, 30);
+    const kerdesek = await lancKerdesek({ tar, koino: el.K.azonosito, tarolo: memoriaLancTarolo(), veletlen: () => 0 },
+      [el.B.szerzo]);
+    const valaszok = await lancKiszolgalo({ tar, koino: el.K.azonosito }).valasz(kerdesek);
+    const tarolo = memoriaLancTarolo();
+    const r = await lancValaszokFeldolgozasa({ tar, koino: el.K.azonosito, tarolo }, kerdesek, valaszok);
+    const q = kerdesek[0];
+    const v = valaszok[0];
+    // ⚠️ A lista nem vak: a nézet nélkül a szülőbeli W 100 (az elhagyott) is benne volna.
+    const ok = kerdesek.length === 1 && q.i.some(([s]) => s <= el.c.sorszam) && v?.f === 1
+      && r.igazolt === q.i.length + 1 && r.leletek.length === 0 && r.fuggo === 0
+      && JSON.stringify(v?.k) === JSON.stringify([[el.Y.azonosito, 100]]);
+    if (!ok) process.stderr.write('    (' + JSON.stringify({ kerdesek: kerdesek.length, i: q?.i?.map((t) => t[0]), f: v?.f ?? null,
+      r, k: v?.k ?? null }) + ')\n');
+    return ok;
+  });
 
 export default futtatas;

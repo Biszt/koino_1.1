@@ -593,11 +593,13 @@ proba('⭐⭐ D118 (④b): a költözés két készüléken — kiköltözés a 
     const a = await ujKeszulek();
     const b = await ujKeszulek();
     const c = await ujKeszulek();
+    const e = await ujKeszulek();
     const G = { KOINO_AZONOSITO: 'gyermek' };
     try {
       await fut(a, 'koino', 'Költöző szülő', 'nyilt');
       const P = await koinoNeve(a);
       await taggaTesziKeszulek(a, b);
+      await taggaTesziKeszulek(a, e, 'e');                      // ⑤b: E a szülő tagja — nem költözik
       await fut(a, 'kivisz', join(a, 'szulo.jsonl'));
       await fut(b, 'behoz', join(a, 'szulo.jsonl'));            // B a szülő születését is ismeri (a tagsága így bizonyítható)
       const y = azonosito(await fut(b, 'gondolat', 'YBTOL'), 'Létrejött:');
@@ -618,6 +620,14 @@ proba('⭐⭐ D118 (④b): a költözés két készüléken — kiköltözés a 
       // a nem tag (C) a szülő születését ismeri, de nem költözhet
       await fut(c, 'behoz', join(a, 'gyermek.jsonl'), G);
       const nemTag = await fut(c, 'koltozes', 'gyermek').catch((h) => String(h?.message ?? h));
+      // ⭐ ⑤b: E nem költözik, a gyermekben belép (a szülőbeli múltja a gyermek tárában is ott van): a gyermekbeli lánca 1-ről
+      // indul — és utána nem költözhet (a beköltözés a láncának első eseménye lenne; a kiköltözés sem történik meg)
+      await fut(e, 'behoz', join(a, 'szulo.jsonl'));
+      await fut(e, 'behoz', join(a, 'gyermek.jsonl'), G);
+      await fut(e, 'kivisz', join(e, 'e-szulo.jsonl'), 'sajat');
+      await fut(e, 'behoz', join(e, 'e-szulo.jsonl'), G);
+      await fut(e, 'belep', G);
+      const eKoltozes = await fut(e, 'koltozes', 'gyermek').catch((h) => String(h?.message ?? h));
       // a kisebb keretű gyermekbe (50) B hozott 100-a nem fér (A, a létrehozó, 50-et hoz — az még befér)
       await fut(a, 'koino', 'Kicsi gyermek', 'szulo=sajat', 'nyilt', 'tudatpontKeret=50', { KOINO_AZONOSITO: 'kicsi' });
       await fut(a, 'kivisz', join(a, 'kicsi.jsonl'), { KOINO_AZONOSITO: 'kicsi' });
@@ -645,6 +655,8 @@ proba('⭐⭐ D118 (④b): a költözés két készüléken — kiköltözés a 
       const dK = await lemez(d, K);
       await rm(d, { recursive: true, force: true });
       const bTagsag = await fut(b, 'tagsag', G);
+      const eK = await lemez(e, K);
+      const eBe = eK.find((x) => x.tipus === 'Belepes' && x.koino === K);
       // ⭐ ⑤a: B a hozott gondolatát a gyermekben TARTJA (a vállalása a hozott pontjaiból — nincs „nem tartod”)
       const bAllapot = await fut(b, G);
       const bY = (bAllapot.match(/YBTOL[^\n]*\n[^\n]*/) ?? [''])[0];
@@ -662,12 +674,15 @@ proba('⭐⭐ D118 (④b): a költözés két készüléken — kiköltözés a 
         && /gondolataim [1-9]\d* bejegyzése/.test(felajanl) && /[1-9]\d* új bejegyzés/.test(keresoBe) && !/ELUTASÍTVA/.test(keresoBe)
         && dK.some((e) => e.adat?.cim === 'YBTOL')
         && /tagságod itt nem bizonyítható/.test(nemTag) && (await lemez(c, K)).every((e) => e.tipus !== 'Bekoltozes')
-        && /nem férnek a gyermek keretébe/.test(kicsi);
+        && /nem férnek a gyermek keretébe/.test(kicsi)
+        && eBe?.sorszam === 1 && (eBe?.elozo ?? null) === null
+        && eK.some((x) => x.tipus === 'Belepes' && x.koino === P && x.szerzo === eBe?.szerzo)   // a múlt ott van (nem vak)
+        && /már van saját láncod/.test(eKoltozes) && (await lemez(e, P)).every((x) => x.tipus !== 'Kikoltozes');
       if (!ok) process.stderr.write('    (a kimenetek: ' + JSON.stringify({ koltozes, nemTag, kicsi, aAllapot: aAllapot.slice(0, 700),
-        bTagsag: bTagsag.slice(0, 200), bY, felajanl, keresoBe }) + ')\n');
+        bTagsag: bTagsag.slice(0, 200), bY, felajanl, keresoBe, eKoltozes, eBe: eBe ? [eBe.sorszam, eBe.elozo] : null }) + ')\n');
       return ok;
     } finally {
-      for (const h of [a, b, c]) await rm(h, { recursive: true, force: true });
+      for (const h of [a, b, c, e]) await rm(h, { recursive: true, force: true });
     }
   });
 

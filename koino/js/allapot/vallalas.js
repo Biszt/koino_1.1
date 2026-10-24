@@ -43,6 +43,8 @@ export const KIFUTAS = 24 * 3600 * 1000;
  * @param {number} [beallitas.tudatpontKeret] - ⭐ D118/2: a koinó kerete (a születéséből; alapból a mai érték)
  * @param {string} [beallitas.koino] - ⭐ D118 (⑤a): a koinó neve — a más koinóé (az ős láncomból hozott) pont-esemény a
  *        számított összeggel számít (`pontEsemenyMerlege` `hozott` — mint a szabály-rétegben)
+ * @param {Function} [beallitas.szamit] - ⭐ D118 (⑤b): mely eseményeim számítanak (a jelen réteg — `lancNezete`); a többi a
+ *        láncom része (a folytonossághoz), de nem vállalás
  * @returns {{szeletek: Set<string>, pontok: Map<string, number>, azonossag: Array<string>,
  *            koinoSzuletes: string|null, kifuto: Map<string, number>}} a `kifuto`: a pont nélkül, de még kifutásban
  *            tartott szeletek → mikor jár le a kifutásuk
@@ -60,6 +62,7 @@ export function vallalasSzamitasa(sajatEsemenyek, beallitas = {}) {
   for (const e of lanc) {
     if (e.sorszam !== vart) folytonos = false;
     vart = e.sorszam + 1;
+    if (typeof beallitas.szamit === 'function' && !beallitas.szamit(e)) continue;   // ⭐ D118 (⑤b)
     if (e.tipus === 'Belepes' || e.tipus === 'KoinoLetrehozas' || e.tipus === 'Bekoltozes') azonossag.push(e.azonosito);   // ⭐ D118 (④a)
     if (e.tipus !== 'TudatpontRendezes') continue;
     const m = pontEsemenyMerlege(e, allas, folytonos, beallitas.tudatpontKeret,

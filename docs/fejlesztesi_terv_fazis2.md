@@ -6103,8 +6103,9 @@ vágáskori tagsági bizonyítékkal), a tagság öröklése (a beköltözés ta
 (KZ3 (A): az elhagyott pontok); elágazás 198. ✅ **A ④b:** a `koltozes` parancs (a kiköltözés, az első kitöltés, a beköltözés,
 a kézi út) és a létrehozó első kitöltése; elágazás 199, 82. mérés. ✅ **A ④c:** a 2. lépcső és a tanúsítás joga a szülőből,
 a vágáskori állapot szerint, a szülő szabályaival; a gyermek születése nem alapító kör (4.2); elágazás 200. ✅ **A ⑤a:** a
-vállalás, a kereső-réteg és az átmeneti tár a hozott entitásokra (elágazás 201). ⏭️ ⑤b: a lánc a költözött láncon (a
-lánc-gyökér, a lánc-ellenőrzés, a folytonosság, a nem költöző lánca — három lelet, az átvizsgálás 11. szakasza).
+vállalás, a kereső-réteg és az átmeneti tár a hozott entitásokra (elágazás 201). ✅ **A ⑤b:** a szerző LÁNCA a koinóban egy
+szabállyal (a költözőé a hozott előtaggal; a nem költöző gyermekbeli lánca 1-ről indul) — a lánc-vég, a lánc-gyökér, a
+koinó képe (a lánc-ág, az ismert sorszámok), a lánc-ellenőrzés; elágazás 202. ⏭️ ⑥ a felület.
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal

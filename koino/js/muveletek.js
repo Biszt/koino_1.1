@@ -29,7 +29,7 @@ import { lancUjEsemenyhez } from './allapot/lancGyoker.js';
 // ⭐ D80: az ellentmondás bizonyítéka — a bejelentés előtt magunk is ellenőrizzük.
 import { ellentmondasEllenorzese } from './allapot/ellentmondas.js';
 import { esemenyLetrehozasa, esemenyKoinoja, azonositoAlaku } from './esemeny/esemeny.js';
-import { koinoNezete, jelenSzuro } from './allapot/koinoLanc.js';   // ⭐ D118 (③): a jelen réteg szerint
+import { lancNezete } from './allapot/koinoLanc.js';   // ⭐ D118 (③, ⑤b): a szerző lánca a koinóban, a jelen réteg szerint
 import { koinoSzabalyai, teljesSzabalyok } from './esemeny/koinoSzabalyok.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import { szovegDarabra } from './esemeny/szovegDarab.js';
@@ -41,7 +41,7 @@ import {
   lepcso2E, ervenyesTanusitasaim, alapitoHorgony, ujIdentitasNezet, LEPCSO_BEMONDAS
 } from './allapot/identitas.js';
 import {
-  esemenyMentese, lancVege, sajatLancEsemenyei,
+  esemenyMentese, ujSajatHelye, sajatLancEsemenyei,
   kovetkezoEntitasSorszam, horgonyok, esemenyLekerese, entitasEsemenyei, koinoEsemenyei
 } from './tar/esemenyTar.js';
 import { allapotSzamitasa } from './allapot/allapotSzamitas.js';
@@ -236,7 +236,8 @@ const ELAVULT_PROBAK = 20;
  */
 async function esemenyAlairasa(kornyezet, tipus, adat, beallitas) {
   const { entitas = null, horgonyozzunk = false } = beallitas;
-  const veg = await lancVege(kornyezet.tar, kornyezet.szerzo);
+  // ⭐ D118 (⑤b): a koinóbeli láncom végére (a nem költöző gyermekbeli lánca 1-ről indul; a beköltözés a lánc-pontja után).
+  const veg = await ujSajatHelye(kornyezet.tar, kornyezet.szerzo, kornyezet.koino, tipus, adat);
 
   // A saját szeletét nyitó eseménynél az entitás-sorszám mindig 1 — nincs mihez képest
   // hányadiknak lennie, hiszen a szelet most keletkezik.
@@ -273,8 +274,11 @@ async function esemenyAlairasa(kornyezet, tipus, adat, beallitas) {
   // ⭐ D85 T3 előfeltétele: a JAVASLAT is — érintettenként a javaslattevő pontjára.
   const szavazatKulcsok = (tipus === 'Szavazat' || tipus === 'Javaslat') && Array.isArray(beallitas.bizonyitekKulcsok)
     && beallitas.bizonyitekKulcsok.length ? beallitas.bizonyitekKulcsok : null;
-  const { lancGyoker, bizonyitek } = await lancUjEsemenyhez(kornyezet.tar, kornyezet.koino, kornyezet.szerzo,
-    veg.sorszam, kornyezet.lancTarolo ?? null, pontEntitas ?? szavazatKulcsok);
+  // ⭐ D118 (⑤b): a BEKÖLTÖZÉS nem horgonyoz — a lánc nézete a beköltözéssel változik (előtte a szülőbeli előtag még nem a
+  // gyermekbeli láncom), a következő eseményem már a hozott kiosztást köti.
+  const { lancGyoker, bizonyitek } = tipus === 'Bekoltozes' ? { lancGyoker: null, bizonyitek: null }
+    : await lancUjEsemenyhez(kornyezet.tar, kornyezet.koino, kornyezet.szerzo,
+      veg.sorszam, kornyezet.lancTarolo ?? null, pontEntitas ?? szavazatKulcsok);
   const vegsoAdat = (pontEntitas || szavazatKulcsok) && bizonyitek ? { ...adat, bizonyitek } : adat;
   return esemenyLetrehozasa(
     { koino: kornyezet.koino, tipus, adat: vegsoAdat, entitas, entitasSorszam, latott, lancGyoker,
@@ -308,11 +312,10 @@ async function sajatKiosztott(kornyezet, entitas) {
   // ugyanaz a szabály, amit a szabály-réteg a koinó képében lát (`jelenbenSzamit`), különben a bemondott összeg
   // ellentmondana a láncomnak.
   // ⭐ ④a: a saját beköltözésem (a láncomban) mondja meg, mit hozok — a lánc-pontot és az elhagyott pontokat.
-  const sajatLanc = await sajatLancEsemenyei(kornyezet.tar, kornyezet.szerzo);
-  const jelen = azonositoAlaku(kornyezet.koino)
-    ? jelenSzuro((await koinoNezete(kornyezet.tar, kornyezet.koino)).lanc, sajatLanc)
-    : (e) => esemenyKoinoja(e) === kornyezet.koino;
-  const lanc = sajatLanc.filter(jelen);
+  // ⭐ D118 (⑤b): a LÁNCOM (a hozott előtaggal) adja a folytonosságot, a jelen réteg a súlyt — mint a szabály-rétegben, ahol a
+  // láncon lévő, de a jelenből kizárt esemény ismert sorszám, nem hézag.
+  const nezet = await lancNezete(kornyezet.tar, kornyezet.koino, kornyezet.szerzo);
+  const lanc = (await sajatLancEsemenyei(kornyezet.tar, kornyezet.szerzo)).filter(nezet.tagja);
   // ⭐ D118/2: a keret a koinóé (a születéséből) — ugyanaz, amit a szabály-réteg használ.
   const keret = (await koinomSzabalyai(kornyezet)).tudatpontKeret;
 
@@ -325,14 +328,14 @@ async function sajatKiosztott(kornyezet, entitas) {
   for (const e of lanc) {
     if (e.sorszam !== vartSorszam) folytonos = false;
     vartSorszam = e.sorszam + 1;
-    if (e.tipus !== 'TudatpontRendezes') continue;
+    if (e.tipus !== 'TudatpontRendezes' || !nezet.szamit(e)) continue;
 
     // ⛔⛔ UGYANAZ AZ ÍTÉLET, NEM A MÁSOLATA (2026-09-26, 43. mérés): a szabály-réteg
     // függvényét hívjuk. Egy korábbi saját másolat az ELVETETT bemondást (pl. egy régi,
     // `kiosztva` nélküli eseményt) beleszámolta — és onnantól minden új pont-eseményünk
     // „ellentmondott a saját láncának".
     // ⭐ D118 (④a): a hozott (az ős láncából jött) pont-esemény a számított összeggel — ugyanaz, mint a szabály-rétegben.
-    const merleg = pontEsemenyMerlege(e, allas, folytonos, keret, esemenyKoinoja(e) !== kornyezet.koino);
+    const merleg = pontEsemenyMerlege(e, allas, folytonos, keret, nezet.hozott(e));
     if (merleg.elvetve) continue;   // ami nem számít, az a régi értéket hagyja érvényben
     allas.pontok.set(merleg.entitas, merleg.pont);
     allas.osszeg = merleg.ujOsszeg;
