@@ -157,10 +157,14 @@ function javasoltCim(e, g) {
  * @param {Object} b - `bejegyzesAlakja` kimenete
  * @param {string} koino
  * @param {number} [most] - a tartó órája
+ * @param {Set<string>} [osok] - ⭐ D118 (⑤a): a koinó őseinek nevei — a hozott entitás bejegyzése az ős eseményeit hordozza
+ *        (a születését, a költözők hozott pontjait); a szerzők tagságát a tartó külön nézi (④b — a nem költöző nem tag)
  * @returns {{rendben: boolean, ok?: string, cim?: string, hely?: bigint, frissesseg?: number}}
  */
-export function bejegyzesTartalma(b, koino, most = Date.now()) {
-  if (!b.esemenyek.every((e) => esemenyKoinoja(e) === koino)) return { rendben: false, ok: 'más koinó eseménye' };
+export function bejegyzesTartalma(b, koino, most = Date.now(), osok = null) {
+  if (!b.esemenyek.every((e) => esemenyKoinoja(e) === koino || osok?.has(esemenyKoinoja(e)))) {
+    return { rendben: false, ok: 'más koinó eseménye' };
+  }
   const szuletes = b.esemenyek.find((e) => e.azonosito === b.g);
   if (!szuletes || szuletes.tipus !== 'GondolatLetrehozas' || typeof szuletes.adat?.cim !== 'string'
     || !KERESHETO_TIPUSOK.includes(szuletes.adat.tipus ?? 'Gondolat')) {
@@ -242,6 +246,8 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
   const korlat = beallitas.korlat ?? KERESO_KORLAT;
   const most = beallitas.most ?? (() => Date.now());
   const tagE = typeof beallitas.tagE === 'function' ? beallitas.tagE : null;
+  // ⭐ D118 (⑤a): a koinó őseinek nevei (függvény — a lánc később is megjöhet)
+  const osok = () => (typeof beallitas.osok === 'function' ? beallitas.osok() : beallitas.osok) ?? null;
   /** ⭐ ④b: minden szerzője ellenőrzött tag-e? (mindet megkérdezzük — a nem tudottak így mind a függő kérdések közé kerülnek) */
   const mindTag = async (b) => {
     if (!tagE) return true;
@@ -347,7 +353,7 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
       try { j = JSON.parse(sor); } catch { continue; }
       const b = bejegyzesAlakja(j?.b);
       if (!b) continue;
-      const t = bejegyzesTartalma(b, koino, most());
+      const t = bejegyzesTartalma(b, koino, most(), osok());
       if (!t.rendben) continue;
       // ⭐ ④b: a függő jel a sorból (a régi, jel nélküli sor függő, ha van tagság-ellenőrző — a `fuggokFrissitese` emeli)
       memoriaba(b, t, Buffer.byteLength(sor) + 1, Number.isInteger(j.erkezett) ? j.erkezett : 0, tagE ? j.f !== 0 : false);
@@ -423,7 +429,7 @@ export async function keresoTarNyitasa(koino, mappa, beallitas = {}) {
     async felvesz(nyers) {
       const b = bejegyzesAlakja(nyers);
       if (!b) return { uj: false, ok: 'nem bejegyzés alakú' };
-      const t = bejegyzesTartalma(b, koino, most());
+      const t = bejegyzesTartalma(b, koino, most(), osok());
       if (!t.rendben) return { uj: false, ok: t.ok };
       const erkezett = most();
       // ⭐ ④b: a szerzők tagsága — ha valamelyik nem ellenőrzött, a bejegyzés FÜGGŐ (nem kerül az indexbe, nem megy tovább).

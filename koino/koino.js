@@ -145,7 +145,7 @@ import {
   szelet, esemenyEllenorzese, bejelentesHelyei, azonositoAlaku, esemenyKoinoja, koinoSzuleteseE, koinoSzuleteseListabol
 } from './js/esemeny/esemeny.js';
 import { szabalyokAlakiHibaja, ALAP_SZABALYOK, koinoSzabalyai, teljesSzabalyok } from './js/esemeny/koinoSzabalyok.js';
-import { szuletesLanc, szuloTagsagaEpitese, bekoltozesekEllenorzese } from './js/allapot/koinoLanc.js';
+import { szuletesLanc, szuloTagsagaEpitese, bekoltozesekEllenorzese, koinoNezete, jelenSzuro } from './js/allapot/koinoLanc.js';
 import { koinoKepe } from './js/allapot/ketReteg.js';
 import { szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
 import { ALLASPONT_MUVELET } from './js/allapot/szabalyok.js';
@@ -582,11 +582,22 @@ function behozandoKoinoja(szoveg) {
 }
 // ⭐⭐ B/2 (D75): AZ ÁTMENETI TÁR — amit csak láttam (a `hozd` válasza): eldobható, a legrégebben megnézett megy.
 const atmeneti = await atmenetiTarNyitasa(KOINO, join(alapHely(), KOINO));
+// ⭐ D118 (⑤a): a koinó őseinek nevei (a születések láncából — a kereső-réteg ellenőrzéseihez); frissül, ahogy a lánc megjön.
+let koinoOseiEmlek = new Set();
+async function koinoOsei() {
+  if (!azonositoAlaku(KOINO)) return koinoOseiEmlek;
+  const { lanc } = await koinoNezete(tar, KOINO);
+  koinoOseiEmlek = new Set(lanc.slice(1).map((e) => e.azonosito));
+  return koinoOseiEmlek;
+}
+await koinoOsei().catch(() => null);
 // ⭐⭐ D107 L1 (a kereső-réteg ③): A KERESŐ-TÁR — a régióm bejegyzései; puha állapot, a koinó állapotába NEM számít
 // (a csomagok pont-eseményei más gondolatokról szólnak — `keresoTar.js`).
 // ⭐ ④b (K3): a tagság-ellenőrző a tagsági kérdező (lent) — a nem tudott szerző a függő tagság-kérdések közé is felkerül, és a
 // következő csere tagsági köre elhozza a csomagját (D95/2).
-const keresoTar = await keresoTarNyitasa(KOINO, join(alapHely(), KOINO), { tagE: (sz) => tagsagKerdes.tagE(sz) });
+const keresoTar = await keresoTarNyitasa(KOINO, join(alapHely(), KOINO), { tagE: (sz) => tagsagKerdes.tagE(sz),
+  // ⭐ D118 (⑤a): a hozott entitás bejegyzése az ős eseményeit hordozza (a születését, a költözők pontjait)
+  osok: () => koinoOseiEmlek });
 
 /**
  * ⭐ Az ÁTMENETI tár mint cél (a `hozd`, a függő szelet-kérelem): ami a TARTÓS táramban már megvan (pl. a szelettel jött
@@ -709,7 +720,7 @@ async function keresesValaszFeldolgozasa(kerdes, hely, v) {
   const kiseroBe = (v.kiserok ?? []).filter((e) => e && typeof e === 'object' && esemenyKoinoja(e) === KOINO
     && (e.tipus === TAGSAGI_CSOMAG || LANC_TIPUSOK.has(e.tipus)));
   if (kiseroBe.length) await beolvasztas(tar, kiseroBe, KOINO);
-  const ellenorzott = talalatokEllenorzese(v.talalatok, { kerdes, koino: KOINO, hely });
+  const ellenorzott = talalatokEllenorzese(v.talalatok, { kerdes, koino: KOINO, hely, osok: await koinoOsei() });
   const jok = [];
   let tagsagNelkul = 0;
   for (const t of ellenorzott) {
@@ -1011,9 +1022,22 @@ async function keresoTarTomoritese() {
  * szeleteim, az azonosság-szeletem, és a koinó születése).
  */
 async function sajatVallalasa(allapot) {
-  const lanc = (await sajatLancEsemenyei(tar, szerzo)).filter((e) => esemenyKoinoja(e) === KOINO);
-  return vallalasSzamitasa(lanc, { koinoSzuletes: allapot?.koino?.azonosito ?? null, ...kifutasBeallitas(),
-    tudatpontKeret: (await koinomSzabalyai(kornyezet)).tudatpontKeret });   // ⭐ D118/2: a koinó kerete
+  return vallalasSzamitasa(await sajatJelenLancom(), { koinoSzuletes: allapot?.koino?.azonosito ?? null, ...kifutasBeallitas(),
+    tudatpontKeret: (await koinomSzabalyai(kornyezet)).tudatpontKeret, koino: KOINO });   // ⭐ D118/2: a koinó kerete
+}
+
+/**
+ * ⭐⭐ D118 (⑤a): a SAJÁT láncom a koinó jelen rétege szerint — a koinó eseményei, és ha költöztem (vagy én hoztam létre),
+ * az ős láncomból hozottak a lánc-pontomig (`jelenSzuro` — ugyanaz, mint a koinó képében). A vállalás ebből: a hozott
+ * entitásaimat is tartom (különben a szigorú (b) alatt nem is cserélném őket).
+ */
+async function sajatJelenLancom() {
+  const sajat = await sajatLancEsemenyei(tar, szerzo);
+  // ⛔ Ha a születés még nem érkezett meg (a lánc üres), a koinó saját eseményei — az üres lánc jelen-szűrője mindent kizárna
+  // (mérve: a vendég saját azonosság-szelete kiesett a vállalásából, és a csak küldő út kézbesítése nem nyugtázódott).
+  const { lanc } = azonositoAlaku(KOINO) ? await koinoNezete(tar, KOINO) : { lanc: [] };
+  if (lanc.length < 2) return sajat.filter((e) => esemenyKoinoja(e) === KOINO);
+  return sajat.filter(jelenSzuro(lanc, sajat));
 }
 
 /**
@@ -3339,7 +3363,8 @@ function kerelemKiszolgaloja() {
     async kereses(k) {
       await keresoTar.frissit();
       const hely = kerdesHelye(k.k, k.s, BigInt('0x' + k.darab));
-      const talalatok = helyTalalatai(keresoTar.helyBejegyzesei(hely), { kerdes: k.kerdes, n: k.n, koino: KOINO });
+      const talalatok = helyTalalatai(keresoTar.helyBejegyzesei(hely), { kerdes: k.kerdes, n: k.n, koino: KOINO,
+        osok: await koinoOsei() });
       const meret = keresoTar.helyMerete(hely);
       const cel = Number(process.env.KOINO_KERESO_FIOK_CEL) > 0 ? Number(process.env.KOINO_KERESO_FIOK_CEL) : KERESO_FIOK_CEL;
       const t = osztodasMelysege(meret, cel);
@@ -3502,8 +3527,9 @@ async function reszvetelHalmazom(kf) {
 async function ketFokAllapota(allapot = null) {
   // ⚠️ A teljes állapot nélkül (a csere minden munkájában fut): a koinó születését a tagsági láncom adja.
   const szuletes = allapot?.koino?.azonosito ?? (await koinoSzuletese())?.azonosito ?? null;
-  const vallalas = vallalasSzamitasa((await sajatLancEsemenyei(tar, szerzo)).filter((e) => esemenyKoinoja(e) === KOINO),
-    { koinoSzuletes: szuletes, ...kifutasBeallitas(), tudatpontKeret: (await koinomSzabalyai(kornyezet)).tudatpontKeret });
+  const vallalas = vallalasSzamitasa(await sajatJelenLancom(),
+    { koinoSzuletes: szuletes, ...kifutasBeallitas(), tudatpontKeret: (await koinomSzabalyai(kornyezet)).tudatpontKeret,
+      koino: KOINO });   // ⭐ D118 (⑤a): a hozott pontjaimmal
   const tarolo = osszegzesTarolo(KOINO);
   const t = await tarolo.olvas();
   const jegyzek = new Map((await tar.szeletek()).map((x) => [x.szelet, x.db + x.bejelentes]));

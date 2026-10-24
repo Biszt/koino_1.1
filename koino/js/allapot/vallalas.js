@@ -27,6 +27,7 @@
 // Használják: koino.js (a `vallalas` parancs, a `hozd`, a jelzés), a próbák.
 
 import { pontEsemenyMerlege } from './szabalyok.js';
+import { esemenyKoinoja } from '../esemeny/esemeny.js';   // ⭐ D118 (⑤a)
 
 /** ⭐ D104: a pont levétele után ennyi ideig tartom még a szeletet (a többiek későbbi változásaiért). */
 export const KIFUTAS = 24 * 3600 * 1000;
@@ -40,6 +41,8 @@ export const KIFUTAS = 24 * 3600 * 1000;
  * @param {number} [beallitas.most] - a mostani idő (a kifutáshoz; alapból `Date.now()`)
  * @param {number} [beallitas.kifutas] - a kifutás hossza ms-ban (alapból `KIFUTAS`; 0: nincs kifutás)
  * @param {number} [beallitas.tudatpontKeret] - ⭐ D118/2: a koinó kerete (a születéséből; alapból a mai érték)
+ * @param {string} [beallitas.koino] - ⭐ D118 (⑤a): a koinó neve — a más koinóé (az ős láncomból hozott) pont-esemény a
+ *        számított összeggel számít (`pontEsemenyMerlege` `hozott` — mint a szabály-rétegben)
  * @returns {{szeletek: Set<string>, pontok: Map<string, number>, azonossag: Array<string>,
  *            koinoSzuletes: string|null, kifuto: Map<string, number>}} a `kifuto`: a pont nélkül, de még kifutásban
  *            tartott szeletek → mikor jár le a kifutásuk
@@ -59,7 +62,8 @@ export function vallalasSzamitasa(sajatEsemenyek, beallitas = {}) {
     vart = e.sorszam + 1;
     if (e.tipus === 'Belepes' || e.tipus === 'KoinoLetrehozas' || e.tipus === 'Bekoltozes') azonossag.push(e.azonosito);   // ⭐ D118 (④a)
     if (e.tipus !== 'TudatpontRendezes') continue;
-    const m = pontEsemenyMerlege(e, allas, folytonos, beallitas.tudatpontKeret);
+    const m = pontEsemenyMerlege(e, allas, folytonos, beallitas.tudatpontKeret,
+      typeof beallitas.koino === 'string' && esemenyKoinoja(e) !== beallitas.koino);
     if (m.elvetve) continue;                     // ami nem számít, az a régi értéket hagyja érvényben
     const elozo = allas.pontok.get(m.entitas) ?? 0;
     allas.pontok.set(m.entitas, m.pont);

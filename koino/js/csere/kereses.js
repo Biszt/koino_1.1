@@ -75,12 +75,13 @@ export function osztottMinta(s, veletlen = Math.random) {
  * ⭐ A TARTÓ válasza egy helyre: az INDEXELT bejegyzések közül a kérdésre illők (a teljes kérdésre szűrve), a legfrissebbek
  * elöl, legfeljebb `n`; a hely mérete (az indexeltek száma), és ha a cél fölött van, az osztódás mélysége.
  * @param {Array<Object>} bejegyzesek - a tartó indexelt bejegyzései ezen a helyen
- * @param {{kerdes: string, n?: number, koino: string, most?: number}} b
+ * @param {{kerdes: string, n?: number, koino: string, most?: number, osok?: Set<string>}} b - ⭐ D118 (⑤a): `osok` — a koinó
+ *        őseinek nevei (a hozott entitás bejegyzése az ős eseményeit hordozza)
  */
-export function helyTalalatai(bejegyzesek, { kerdes, n = KERESES_TALALAT_KORLAT, koino, most = Date.now() }) {
+export function helyTalalatai(bejegyzesek, { kerdes, n = KERESES_TALALAT_KORLAT, koino, most = Date.now(), osok = null }) {
   const illok = [];
   for (const b of bejegyzesek) {
-    const t = bejegyzesTartalma(b, koino, most);
+    const t = bejegyzesTartalma(b, koino, most, osok);   // ⭐ D118 (⑤a): a hozott entitásé is
     if (t.rendben && cimIllik(t.cim, kerdes)) illok.push({ b, frissesseg: t.frissesseg });
   }
   illok.sort((x, y) => y.frissesseg - x.frissesseg);
@@ -114,15 +115,16 @@ export function keresesValaszAlakja(u) {
  * ⭐ A KÉRDEZŐ ELLENŐRZÉSE: a találatok közül, ami alakra és tartalomra jó, a kérdezett helyre esik, és a kérdésre illik —
  * gondolatonként egyszer (a frissebb), a cím forrásával. A csomag aláírásait a hívó ellenőrzi (a kapun).
  * @param {Array<*>} talalatok
- * @param {{kerdes: string, koino: string, hely?: bigint|null, most?: number}} b
+ * @param {{kerdes: string, koino: string, hely?: bigint|null, most?: number, osok?: Set<string>}} b - ⭐ D118 (⑤a): `osok`
+ *        mint a `helyTalalatai`-nál
  * @returns {Array<{g: string, cim: string, cimForrasa: 'szuletes'|'javaslat', frissesseg: number, b: Object}>}
  */
-export function talalatokEllenorzese(talalatok, { kerdes, koino, hely = null, most = Date.now() }) {
+export function talalatokEllenorzese(talalatok, { kerdes, koino, hely = null, most = Date.now(), osok = null }) {
   const ki = new Map();
   for (const nyers of talalatok ?? []) {
     const b = bejegyzesAlakja(nyers);
     if (!b) continue;
-    const t = bejegyzesTartalma(b, koino, most);
+    const t = bejegyzesTartalma(b, koino, most, osok);   // ⭐ D118 (⑤a): a hozott entitásé is
     if (!t.rendben || !cimIllik(t.cim, kerdes)) continue;
     if (hely !== null && t.hely !== hely) continue;
     const forras = b.esemenyek.some((e) => e.tipus === 'Javaslat') ? 'javaslat' : 'szuletes';

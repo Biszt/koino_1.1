@@ -1459,3 +1459,15 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     nézettel a szülő kérdése a gyermek tanúsítás-számával futott volna (a próba mérte: a gyermek 1, a szülő 3) · ⚠️ a D94
     szúrópróba a szülőbeli bemondásokat követi — a nagy zárványú költöző a gyermekben „nem ellenőrizhető”, amíg azok nincsenek
     meg · Csaba (D118) · `identitas.js`; a próbák (`koltozesProba.js`).
+201. **2026-10-24 · a költözés ⑤a: a vállalás, a kereső-réteg és az átmeneti tár a hozott entitásokra (D118, 4.7)**
+    → **a saját láncom a koinó jelen rétege szerint (a vállalás a hozott pontjaimból, a számított összeggel — mint a
+    szabály-rétegben); a kereső-bejegyzés, a tartó találata és a kérdező ellenőrzése az ősök neveit is a koinóénak veszi; az
+    átmeneti tár olvasása nem szűr a koinó nevére (a kapun átjutott ős-esemény megmarad)** · eddig a beköltöző a hozott
+    gondolatait a gyermekben „nem tartod”-nak látta (a szigorú (b) alatt nem is cserélte volna), a hozott gondolat
+    kereső-bejegyzése „más koinó eseménye” volt, az átmeneti tárból az ős eseménye az újranyitáskor eltűnt · ⭐ a 4.7 „újra kell
+    indexelni” pontja: a költözők a gyermekben felajánlják (két tag-tulajdonos — a nem költöző nem tag) · ⏭️ ⑤b: a lánc a
+    költözött láncon (három lelet, mérve — az átvizsgálás 11. szakasza) · ⛔ a teljes sor lelete: a még meg nem érkezett
+    születésnél a lánc üres, és a jelen szűrője mindent kizárt (a vendég azonosság-szelete kiesett a vállalásából — a D95/3
+    próbája mérte); ilyenkor a koinó saját eseményei (a művelet összegében a ③ óta ugyanez — a ⑤b zárja) · Csaba (D118) ·
+    `vallalas.js`, `keresoTar.js`,
+    `kereses.js`, `atmenetiTar.js`, `koino.js`; a próbák (`koltozesProba.js`, a ④b parancssor-próbája), 8 rontással.

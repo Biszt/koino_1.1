@@ -260,7 +260,8 @@ Most csak a két fél szerkezete épül; a pénz mezői később hozzáadhatók,
    szakasz; elágazás 197; 83. mérés.
 4. ✅ **④ A ki- és a beköltözés** (a lánc megkötése, a kiosztás átvétele, a tagság és a 2. lépcső öröklése), a `koltozes`
    parancs és a kézi út — 2026-10-24, a 10. szakasz (④a–④c); elágazás 198–200; 82. mérés.
-5. **⑤ A többi réteg bekötése** (vállalás, gyökér-darab, kereső-réteg, felderítés, értesítés, lánc-ellenőrzés).
+5. 🚧 **⑤ A többi réteg bekötése** (vállalás, gyökér-darab, kereső-réteg, felderítés, értesítés, lánc-ellenőrzés) — a 11.
+   szakasz: ✅ ⑤a (elágazás 201), ⏭️ ⑤b a lánc.
 6. **⑥ A felület** (a belépő tér családfája, „Költözés…” a fő menüben).
 
 *Amit ez nem old meg:* a koinók egyesítését, a pénzt (csak a helyét), és a protokoll-törést (KZ5).
@@ -378,7 +379,7 @@ tanúsítások ezen felül számítanak (a szúrópróba sétája is a szülőbe
 alapító kör — se a létrehozó, se a születésben megnevezett alapító nem kap hatalmat a születéssel (eddig a gyermek
 létrehozója „alapító kör” volt: tanúsíthatott és 2. lépcsős volt, akármi volt a szülőben). 4 rontással.* ⚠️ Ami marad: a
 szúrópróba (D94) a szülőben a szülőbeli 2. lépcső-bemondásokat követi — ha azok nincsenek a gyermek tárában, a nagy
-zárványú költöző „nem ellenőrizhető” (a kis zárvány teljes ellenőrzéssel megy). ⏭️ ⑤ a többi réteg.
+zárványú költöző „nem ellenőrizhető” (a kis zárvány teljes ellenőrzéssel megy). ⏭️ ⑤ a többi réteg (a 11. szakasz).
 
 A 4.5–4.6 a kódhoz igazítva, három részben: **④a az események** (a formájuk, a kapu, a költözők a képben, a tagság
 öröklése), **④b a `koltozes` parancs** (a két aláírás, az első kitöltés, a kézi út — és a két készüléken mért út), **④c a 2.
@@ -404,3 +405,60 @@ lépcső öröklése**. Előtte, a formátum után a 82. mérés (a két esemén
   nem). A művelet bemondott összege ugyanígy (a saját beköltözésemből). A ③ próba-paramétere ezzel kiesik.
 - ⚠️ **A létrehozó** a KZ3-at a szülőben oldja meg: ha a hozott pontjai nem férnek a gyermek keretébe, a `koino … szulo=`
   hibát ad (előbb a szülőben kell csökkentenie).
+
+## 11. Az ⑤ építési alakja — a többi réteg a hozott entitásokra (2026-10-24)
+
+A ③–④ után a koinó KÉPE a költözőkkel számol, de a többi réteg még a koinó nevére szűrt: ami az ős láncából jött, azt nem
+látta a gyermekhez tartozónak. Két részben: **⑤a a vállalás, a kereső-réteg és az átmeneti tár**, **⑤b a lánc** (a
+lánc-gyökér, a lánc-ellenőrzés, a folytonosság, a nem költöző lánca).
+
+✅ *⑤a megépült (2026-10-24, elágazás 201).*
+- **A vállalás** (`vallalas.js`, `koino.js` `sajatJelenLancom`): a saját láncom a koinó jelen rétege szerint (`jelenSzuro` —
+  ugyanaz, mint a képben), és a más koinóé (hozott) pont-esemény a SZÁMÍTOTT összeggel (`pontEsemenyMerlege` `hozott`, mint a
+  szabály-rétegben). Eddig a beköltöző a hozott gondolatait a gyermekben „nem tartod”-nak látta — a szigorú (b) alatt így
+  nem is cserélte volna őket; a kisebb keretű gyermekben a szülőbeli bemondás (200 a 150-be) még a hozott pontokat is
+  elvetette volna.
+- **A kereső-réteg** (`keresoTar.js` `bejegyzesTartalma`, `kereses.js` `helyTalalatai` / `talalatokEllenorzese`, `koino.js`
+  `koinoOsei`): a hozott gondolat bejegyzése az ős eseményeit hordozza (a születését, a költözők pontjait) — a tartó, a
+  kereső-tár és a kérdező az ősök neveit is a koinóénak veszi (a születések láncából). A szerzők tagságát a ④b külön nézi (a
+  nem költöző nem tag a gyermekben, a bejegyzése így függő marad). Eddig minden hozott gondolat bejegyzése „más koinó
+  eseménye” volt — a 4.7 „újra kell indexelni” pontja így valósul meg: a költözők a gyermekben felajánlják.
+- **Az átmeneti tár** (`atmenetiTar.js`): az olvasás nem szűr a koinó nevére — a fájlba csak a kapun (a koinó-szabály
+  szerint) átjutott esemény kerül, és abban az ős vágás előtti eseménye is lehet (egy kérelem válasza). Eddig az újranyitáskor
+  eltűnt.
+- *A próbák:* 3 modul-próba (a vállalás a kisebb kerettel és az elhagyással; a kereső-bejegyzés a tiszta ellenőrzésen, a
+  kereső-tár útján és a kérdés két oldalán; az átmeneti tár újranyitva) és a ④b parancssor-próbája (B a gyermekben tartja a
+  hozott gondolatát; a kereső-bejegyzését fájlban felajánlja, A a kereső-tárába veszi) — 8 rontással, mind bukik.
+- ⛔ *A teljes sor lelete (javítva):* ha a készülék még nem kapta meg a koinó születését (a vendég a csere előtt lép be), a
+  lánc üres, és a jelen szűrője üres láncnál MINDENT kizár — a vendég saját azonosság-szelete kiesett a vállalásából, és a
+  csak küldő út kézbesítése nem nyugtázódott (a D95/3 parancssor-próbája mérte). A vállalás ilyenkor a koinó saját
+  eseményeiből. ⚠️ Ugyanez a ③ óta a művelet bemondott összegében is (`muveletek.js` `sajatKiosztott` — a születés nélkül a
+  korábbi pontjaim nem számítanak bele); a ⑤b `lancNezete`-je zárja.
+- ⚠️ *Ami az ⑤-ből a kód olvasása szerint már a ③–④-gyel kész (külön próbával még NEM mérve):* a gyökér-darab és a kereső-régió a koinó nevével sózott (a gyermeknek sajátja van —
+  a hozott gondolatok születése a gyermek gyökér-darabjaiba esik, mert a darab a gyermek gyökeréhez bejelentett születésekből
+  számol); a felderítés és az értesítés a koinó KÉPÉBŐL dolgozik (a pakli `koinoKepe`-t hív), tehát a hozott entitásokat látja.
+
+⏭️ *⑤b — a lánc a költözött láncon (mérve, 2026-10-24, a scratchpad `m5b.mjs` és `m5b_nem.mjs`):*
+- ⛔ **A költöző gyermekbeli eseményének nincs lánc-gyökere.** A lánc-gyökér (`lancGyoker.js` `allapotIg`) a koinó nevére
+  szűrve járja a láncot, a költöző lánca viszont a szülőbeli előtagjával kezdődik — az 1. sorszámon nem talál semmit
+  („a saját lánc nem ép”), és null-t ír. A D81 önbizonyítása és a D98 lánc-ellenőrzése így a költözőkre nem működik: a
+  lánc-ellenőrzés szerzői oldala (`lancFejtol`) ugyanígy szűr, nem felel.
+- ⛔ **A költöző hazug bemondása a gyermekben csak jelzés.** A jelen réteg kihagyja a lánc egyes eseményeit (a tagsági
+  csomagot, az ős születését, az elhagyott pontokat), és a szabály-réteg a kihagyott sorszámot HÉZAGNAK látja — onnantól a
+  lánc „nem folytonos”, és egy rossz bemondás csak „nem ellenőrizhető” (mérve: egy tagsági csomag a szülőben elég hozzá; a ③
+  ezt a létrehozó-alapítónál már jelezte).
+- ⛔⛔ **A nem költöző gyermekbeli lánca ütközik a szülőbeli múltjával.** Aki a vágáskor a szülő tagja volt, de nem költözött,
+  és a gyermekben meghívással lesz tag (4.6 (3)), annak a készüléke a gyermekben 1-ről kezdi a láncát (a szülőbeli múltja
+  még nincs a gyermek tárában). Amikor a múlt megérkezik, a szülőbeli gondolata (szerkezet — a jelenben mindenkié) és a
+  gyermekbeli eseménye ugyanazt a sorszámot viseli, és az elágazás-feloldás (a kisebb azonosító nyer) az egyiket eldobja —
+  mérve: a gyermekbeli gondolata a pontjaival együtt eltűnt. Két készülék így más képet számolna (aki a múltat már látja, és
+  aki még nem). A lánc-vég (`lancVege`) ráadásul a tár legnagyobb sorszáma után folytatná, akármelyik koinóé.
+- ⭐ **Az alak (a 4.5 és a 4.6 következménye — „a beköltözés a láncom első eseménye ott”):** a szerző LÁNCA egy koinóban a
+  koinó saját eseményei, és ha költözött, az ős láncából hozott előtag (a lánc-pontja előtt — `lancbanVan`); a nem költöző
+  szülőbeli eseménye NEM a gyermekbeli lánca, csak a múlt szerkezete. Erre épül: a lánc-vég (a nem költöző gyermekbeli
+  lánca 1-ről indul), az elágazás-feloldás és az idő-ellentmondás (a láncon kívüli ős-esemény külön ág, nem elágazás), a
+  szabály-réteg folytonossága (a láncon lévő, de a jelenből kizárt esemény ismert, nem hézag), a lánc-gyökér (a napló a
+  teljes láncot fedi, a kiosztás a jelen réteg szerint — a hozott pontokkal, az elhagyottak nélkül), a lánc-ellenőrzés két
+  oldala. ⚠️ A beköltözés (és a gyermek születése) maga nem hordoz lánc-gyökeret: a nézet a költözéssel változik, a
+  folytonosság a költözésen át nem vádolható (a következő esemény már a hozott kiosztást köti). ⚠️ Aki a gyermekben már
+  nem költözőként él, utána nem költözhet (a beköltözés a láncának első eseménye lenne) — a `koltozes` ezt kimondja.

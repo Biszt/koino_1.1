@@ -112,7 +112,10 @@ export async function atmenetiTarNyitasa(koino, mappa, beallitas = {}) {
       if (!sor.trim()) continue;
       let e;
       try { e = JSON.parse(sor); } catch { continue; }
-      if (alakiHiba(e) || esemenyKoinoja(e) !== koino || szelet(e) !== kulcs) continue;
+      // ⭐ D118 (⑤a): a koinó nevére NEM szűrünk — a fájlba csak a kapun (`beolvasztas` — a koinó-szabály szerint) átjutott
+      // esemény kerül, és abban az ős vágás előtti eseménye is lehet (a kérelem válasza). A koinó eseményeit az olvasó választja
+      // ki (`ketTarBemenete`, a szelet halmaza).
+      if (alakiHiba(e) || szelet(e) !== kulcs) continue;
       felvesz(e, Buffer.byteLength(sor, 'utf8') + 1);
     }
     return honnan + utolsoSorveg + 1;

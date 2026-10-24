@@ -645,6 +645,12 @@ proba('⭐⭐ D118 (④b): a költözés két készüléken — kiköltözés a 
       const dK = await lemez(d, K);
       await rm(d, { recursive: true, force: true });
       const bTagsag = await fut(b, 'tagsag', G);
+      // ⭐ ⑤a: B a hozott gondolatát a gyermekben TARTJA (a vállalása a hozott pontjaiból — nincs „nem tartod”)
+      const bAllapot = await fut(b, G);
+      const bY = (bAllapot.match(/YBTOL[^\n]*\n[^\n]*/) ?? [''])[0];
+      // ⭐ ⑤a: a hozott gondolat kereső-bejegyzése (az ős eseményeivel) — B felajánlja fájlban, A a kereső-tárába veszi
+      const felajanl = await fut(b, 'kereso', 'felajanl', join(b, 'kereso.jsonl'), G);
+      const keresoBe = await fut(a, 'kereso', 'behoz', join(b, 'kereso.jsonl'), G);
       const ok = /Kiköltöztél/.test(koltozes) && !!bSzerzo
         && bP.some((e) => e.tipus === 'Kikoltozes' && e.szerzo === bSzerzo && e.adat?.gyermek === K)
         && bK.some((e) => e.adat?.cim === 'YBTOL') && aK.some((e) => e.tipus === 'Bekoltozes' && e.szerzo === bSzerzo)
@@ -652,11 +658,13 @@ proba('⭐⭐ D118 (④b): a költözés két készüléken — kiköltözés a 
         && aK.some((e) => e.adat?.cim === 'YBTOL')
         && /YBTOL[\s\S]*?összes pont: 150/.test(aAllapot)
         && /beköltözött/.test(bTagsag) && dK.some((e) => e.tipus === 'Bekoltozes' && e.szerzo === bSzerzo)
+        && /összes pont/.test(bY) && !/nem tartod/.test(bY)
+        && /gondolataim [1-9]\d* bejegyzése/.test(felajanl) && /[1-9]\d* új bejegyzés/.test(keresoBe) && !/ELUTASÍTVA/.test(keresoBe)
         && dK.some((e) => e.adat?.cim === 'YBTOL')
         && /tagságod itt nem bizonyítható/.test(nemTag) && (await lemez(c, K)).every((e) => e.tipus !== 'Bekoltozes')
         && /nem férnek a gyermek keretébe/.test(kicsi);
       if (!ok) process.stderr.write('    (a kimenetek: ' + JSON.stringify({ koltozes, nemTag, kicsi, aAllapot: aAllapot.slice(0, 700),
-        bTagsag: bTagsag.slice(0, 200) }) + ')\n');
+        bTagsag: bTagsag.slice(0, 200), bY, felajanl, keresoBe }) + ')\n');
       return ok;
     } finally {
       for (const h of [a, b, c]) await rm(h, { recursive: true, force: true });

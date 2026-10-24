@@ -20,6 +20,11 @@ import { tagsagiIndex, szerzoTagsaga, tagsagiLanc, TAGSAGI_CSOMAG } from '../js/
 import { tudatpontRendezese } from '../js/muveletek.js';
 import { lepcso2E, tanusithatE, ujIdentitasNezet } from '../js/allapot/identitas.js';
 import { beolvasztas } from '../js/csere/csere.js';
+import { vallalasSzamitasa } from '../js/allapot/vallalas.js';
+import { jelenSzuro, szuletesLanc } from '../js/allapot/koinoLanc.js';
+import { bejegyzesekEpitese, bejegyzesTartalma, keresoTarNyitasa, bejegyzesBefogadasa } from '../js/tar/keresoTar.js';
+import { atmenetiTarNyitasa } from '../js/tar/atmenetiTar.js';
+import { helyTalalatai, talalatokEllenorzese } from '../js/csere/kereses.js';
 import { teljesSzabalyok } from '../js/esemeny/koinoSzabalyok.js';
 
 const { proba, futtatas } = probaGyujtemeny('A beköltözés (D118 ④a)');
@@ -369,5 +374,69 @@ proba('⛔ D118 (④c, 4.2): a gyermek létrehozója NEM kap hatalmat a szület�
     // ⚠️ A próba nem vak: a régi szabály a születés horgonyát és a megnevezett alapítót is az alapító körbe sorolta volna.
     return l.igen === false && t.igen === false && !/alapító kör/.test(l.ok) && nl.igen === false && !/alapító kör/.test(nl.ok);
   });
+
+// ===================================
+// 7. ⭐⭐ ⑤a — A TÖBBI RÉTEG A HOZOTT ENTITÁSOKRA
+// ===================================
+
+proba('⭐⭐ D118 (⑤a): a vállalás a hozott entitásokra — a beköltöző tartja őket (a kisebb keretnél is, a számított összeggel), amit elhagyott, azt nem',
+  async () => {
+    const el = await koltozes({ gyermekKeret: 150 });
+    const elhagyva = await el.B.elagaztat('Bekoltozes', { ...el.bek.adat, elhagy: [el.Y.azonosito] });
+    const tar = await tarba(el, elhagyva);
+    const sajat = await tar.szerzoLanca(el.B.szerzo);
+    const { lanc } = await szuletesLanc(tar, el.K.azonosito);
+    const jelen = sajat.filter(jelenSzuro(lanc, sajat));
+    const v = vallalasSzamitasa(jelen, { koino: el.K.azonosito, tudatpontKeret: 150, koinoSzuletes: el.K.azonosito });
+    // ⚠️ A próba nem vak: a csak gyermekbeli lánc (a régi szűrő) a hozottakat nem látná, a bemondás szerinti mérleg (a
+    // szülőben 200) a W-t a 150-es keret fölöttinek látná.
+    const regi = vallalasSzamitasa(sajat.filter((e) => e.koino === el.K.azonosito), { tudatpontKeret: 150 });
+    const bemondassal = vallalasSzamitasa(jelen, { tudatpontKeret: 150 });
+    return v.szeletek.has(el.W.azonosito) && !v.szeletek.has(el.Y.azonosito) && v.szeletek.has(elhagyva.azonosito)
+      && !regi.szeletek.has(el.W.azonosito) && !bemondassal.szeletek.has(el.W.azonosito);
+  });
+
+proba('⭐ D118 (⑤a): a hozott entitás kereső-bejegyzése a gyermekben — az ősök eseményeivel elfogadott, nélkülük „más koinó eseménye”',
+  async () => {
+    const A = await ujEember('');
+    const P = await A.tesz('KoinoLetrehozas', { nev: 'Szülő', leiras: null, alapitok: [], zart: true, szabalyok: teljesSzabalyok() }, T0);
+    A.koinotValt(P.azonosito);
+    const B = await ujEember(P.azonosito);
+    const g = await B.tesz('GondolatLetrehozas', { cim: 'Közösségi kert', meret: 10 }, T0 + 10);
+    const bp = await B.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 100 }, T0 + 11);
+    const ap = await A.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 50 }, T0 + 12);
+    const b = bejegyzesekEpitese({ szuletes: g, pontEsemenyek: [bp, ap] })[0];
+    if (!b) return false;
+    const K = 'K'.repeat(43);
+    const vele = bejegyzesTartalma({ ...b, m: null }, K, T0 + 100, new Set([P.azonosito]));
+    const nelkule = bejegyzesTartalma({ ...b, m: null }, K, T0 + 100);
+    // ⭐ A kereső-tár útja is (a kapu, a felvétel, az index): az ősök neveivel a régióban, nélkülük nem.
+    const nyit = async (osok) => keresoTarNyitasa(K, await mkdtemp(join(tmpdir(), 'koino-koltozes-kt-')),
+      { most: () => T0 + 100, ...(osok ? { osok: () => osok } : {}) });
+    const kt = await nyit(new Set([P.azonosito]));
+    const be = await bejegyzesBefogadasa(kt, { ...b, m: null });
+    const kt2 = await nyit(null);
+    const be2 = await bejegyzesBefogadasa(kt2, { ...b, m: null });
+    // ⭐ És a kérdés két oldala: a tartó találata és a kérdező ellenőrzése.
+    const kerdes = { kerdes: 'közösségi', koino: K, most: T0 + 100 };
+    const talal = helyTalalatai([{ ...b, m: null }], { ...kerdes, osok: new Set([P.azonosito]) });
+    const ellenor = talalatokEllenorzese(talal, { ...kerdes, osok: new Set([P.azonosito]) });
+    const ok = vele.rendben === true && !nelkule.rendben && /más koinó/.test(nelkule.ok)
+      && be.uj === true && kt.regioHalmaza(0, 0n).includes(be.azonosito) && !be2.uj && kt2.darab() === 0
+      && talal.length === 1 && helyTalalatai([{ ...b, m: null }], kerdes).length === 0
+      && ellenor.length === 1 && talalatokEllenorzese(talal, kerdes).length === 0;
+    if (!ok) process.stderr.write('    (' + JSON.stringify([vele.ok, be.ok, be2.ok]) + ')\n');
+    return ok;
+  });
+
+proba('⭐ D118 (⑤a): az átmeneti tár az ős eseményét is megtartja (a kérelem válasza) — az újranyitás után is', async () => {
+  const s = await koltozes();
+  const mappa = await mkdtemp(join(tmpdir(), 'koino-koltozes-atm-'));
+  const atm = await atmenetiTarNyitasa(s.K.azonosito, mappa);
+  await atm.hozzafuz(s.Y);
+  const ujra = await atmenetiTarNyitasa(s.K.azonosito, mappa);
+  await ujra.frissit?.();
+  return atm.mind().some((e) => e.azonosito === s.Y.azonosito) && ujra.mind().some((e) => e.azonosito === s.Y.azonosito);
+});
 
 export default futtatas;
