@@ -18,6 +18,8 @@ import { esemenyMentese, koinoBemenete } from '../js/tar/esemenyTar.js';
 import { koinoKepe } from '../js/allapot/ketReteg.js';
 import { tagsagiIndex, szerzoTagsaga, tagsagiLanc, TAGSAGI_CSOMAG } from '../js/allapot/tagsag.js';
 import { tudatpontRendezese } from '../js/muveletek.js';
+import { lepcso2E, tanusithatE, ujIdentitasNezet } from '../js/allapot/identitas.js';
+import { beolvasztas } from '../js/csere/csere.js';
 import { teljesSzabalyok } from '../js/esemeny/koinoSzabalyok.js';
 
 const { proba, futtatas } = probaGyujtemeny('A beköltözés (D118 ④a)');
@@ -265,6 +267,107 @@ proba('⛔⛔ D118 (④a): a bizonyítékban utazó szülőbeli beköltözést a
     const hamis = await esemenyMentese(tar, eKB);
     const valodi = await esemenyMentese(tar, bKB);
     return !hamis.mentve && /beköltözése nem áll meg/.test(hamis.ok) && valodi.mentve === true;
+  });
+
+// ===================================
+// 6. ⭐⭐ ④c — A 2. LÉPCSŐ ÖRÖKLÉSE (4.6) és az alapító a gyermekben (4.2)
+// ===================================
+//
+// A szülőben háromtagú alapító kör (A, A2, A3); M-et ők hárman tanúsítják (2. lépcsős), N-et senki. A hozza létre a
+// gyermeket, M és N beköltözik. A gyermekben: A és M a szülőbeli állapotát hozza (2. lépcsős, A tanúsíthat is — a szülőben
+// alapító kör); N nem; és ⛔ B2 (a szülő tagja, de nem 2. lépcsős) gyermekében B2 a létrehozóként NEM kap hatalmat (4.2:
+// az alapító nem a fa gyökere). A vágás után N-nek adott tanúsítás nem öröklődik (a kapu nem engedi a gyermekbe).
+
+async function lepcsosSzulo() {
+  const A = await ujEember('');
+  const A2 = await ujEember('');
+  const A3 = await ujEember('');
+  const P = await A.tesz('KoinoLetrehozas', { nev: 'Szülő', leiras: null, alapitok: [A2.szerzo, A3.szerzo], zart: true,
+    szabalyok: teljesSzabalyok() }, T0);
+  for (const x of [A, A2, A3]) x.koinotValt(P.azonosito);
+  const p = [P];
+  const a2Be = await A2.tesz('Belepes', { alapitas: P.azonosito }, T0 + 1);
+  const a3Be = await A3.tesz('Belepes', { alapitas: P.azonosito }, T0 + 2);
+  p.push(a2Be, a3Be);
+  const tag = async (ido) => {
+    const x = await ujEember(P.azonosito);
+    const be = await x.tesz('Belepes', {}, ido);
+    const m = await A.tesz('Meghivas', { kit: x.szerzo, sajatBelepes: P.azonosito }, ido + 1, { entitas: be.azonosito });
+    p.push(be, m);
+    return { x, be, m };
+  };
+  const M = await tag(T0 + 10);
+  const N = await tag(T0 + 20);
+  const B2 = await tag(T0 + 30);
+  // M tanúsítása a három alapítótól (az alapító kör tanúsíthat — bemondás nélkül)
+  for (const [ki, h] of [[A, P.azonosito], [A2, a2Be.azonosito], [A3, a3Be.azonosito]]) {
+    p.push(await ki.tesz('Tanusitas', { kit: M.x.szerzo, sajatBelepes: h }, T0 + 100, { entitas: M.be.azonosito }));
+  }
+  return { A, A2, A3, P, M, N, B2, p, a2Be, a3Be };
+}
+
+/** A gyermek (`ki` hozza létre, a szülőbeli horgonyával) és a beköltözők. */
+async function lepcsosGyermek(s, ki, kiHorgony, kiLanc, beko = [], szabalyok = {}) {
+  ki.koinotValt('');
+  const K = await ki.tesz('KoinoLetrehozas', { nev: 'Gyermek', leiras: null, alapitok: [], zart: true, szulo: s.P.azonosito,
+    szuloTagsag: { horgony: kiHorgony, lanc: kiLanc }, szabalyok: teljesSzabalyok(szabalyok) }, VAGAS);
+  ki.koinotValt(s.P.azonosito);
+  const k = [K];
+  for (const t of beko) {
+    t.x.koinotValt(K.azonosito);
+    k.push(await t.x.tesz('Bekoltozes', { szulo: s.P.azonosito, kikoltozes: s.P.azonosito,
+      lanc: { sorszam: t.be.sorszam, azonosito: t.be.azonosito }, szuloTagsag: { horgony: t.be.azonosito, lanc: [t.be, t.m] } },
+    VAGAS + 100));
+    t.x.koinotValt(s.P.azonosito);
+  }
+  return { K, k };
+}
+
+proba('⭐⭐ D118 (④c): a 2. lépcső a vágáskori állapotból öröklődik — A (alapító kör) és M (3 tanúsítás) igen, N nem; a vágás utáni tanúsítás nem számít',
+  async () => {
+    const s = await lepcsosSzulo();
+    // N EGY tanúsítást kap a szülőben (a vágás előtt): a szülő szabálya (3) szerint nem 2. lépcsős — ⚠️ a gyermeké 1, és ha a
+    // szülő kérdése a gyermek szabályával futna, N tévesen örökölne (a próba így a szülő szabályát is méri).
+    s.p.push(await s.A.tesz('Tanusitas', { kit: s.N.x.szerzo, sajatBelepes: s.P.azonosito }, T0 + 200, { entitas: s.N.be.azonosito }));
+    // ⚠️ M és N beköltözése: a lánc-pontjuk az utolsó vágás előtti eseményük (a belépésük — a tanúsítás másoké)
+    const { K, k } = await lepcsosGyermek(s, s.A, s.P.azonosito, [], [s.M, s.N], { tanusitasKell: 1 });
+    // a vágás után N-nek adott tanúsítás (a szülőben)
+    const utana = await s.A.tesz('Tanusitas', { kit: s.N.x.szerzo, sajatBelepes: s.P.azonosito }, VAGAS + 1000,
+      { entitas: s.N.be.azonosito });
+    const tar = await ujTar(K.azonosito);
+    const r = await beolvasztas(tar, [...s.p, ...k, utana], K.azonosito);
+    if (r.elutasitva.length) { process.stderr.write('    (elutasítva: ' + JSON.stringify(r.elutasitva) + ')\n'); return false; }
+    const mBek = k.find((e) => e.szerzo === s.M.x.szerzo);
+    const nBek = k.find((e) => e.szerzo === s.N.x.szerzo);
+    const aL = await lepcso2E(tar, K.azonosito, K.azonosito, ujIdentitasNezet());
+    const aT = await tanusithatE(tar, K.azonosito, K.azonosito, ujIdentitasNezet());
+    const mL = await lepcso2E(tar, K.azonosito, mBek.azonosito, ujIdentitasNezet());
+    const mT = await tanusithatE(tar, K.azonosito, mBek.azonosito, ujIdentitasNezet());
+    const nL = await lepcso2E(tar, K.azonosito, nBek.azonosito, ujIdentitasNezet());
+    const ok = aL.igen && /örökölt/.test(aL.ok) && aT.igen && mL.igen && /örökölt/.test(mL.ok) && !mT.igen && !nL.igen
+      && r.idegen >= 1;
+    if (!ok) process.stderr.write('    (' + JSON.stringify({ aL: aL.ok, aT: aT.ok, mL: mL.ok, mT: mT.ok, nL: nL.ok, idegen: r.idegen }) + ')\n');
+    return ok;
+  });
+
+proba('⛔ D118 (④c, 4.2): a gyermek létrehozója NEM kap hatalmat a születéssel — aki a szülőben nem 2. lépcsős, a gyermekében sem az, és nem tanúsíthat',
+  async () => {
+    const s = await lepcsosSzulo();
+    // B2 gyermeke, és benne N mint MEGNEVEZETT alapító (a belépése a gyermek születésére hivatkozik)
+    s.B2.x.koinotValt('');
+    const K = await s.B2.x.tesz('KoinoLetrehozas', { nev: 'Gyermek', leiras: null, alapitok: [s.N.x.szerzo], zart: true,
+      szulo: s.P.azonosito, szuloTagsag: { horgony: s.B2.be.azonosito, lanc: [s.B2.be, s.B2.m] }, szabalyok: teljesSzabalyok() },
+    VAGAS);
+    s.N.x.koinotValt(K.azonosito);
+    const nAlap = await s.N.x.tesz('Belepes', { alapitas: K.azonosito }, VAGAS + 10);
+    const tar = await ujTar(K.azonosito);
+    const r = await beolvasztas(tar, [...s.p, K, nAlap], K.azonosito);
+    if (r.elutasitva.length) { process.stderr.write('    (elutasítva: ' + JSON.stringify(r.elutasitva) + ')\n'); return false; }
+    const l = await lepcso2E(tar, K.azonosito, K.azonosito, ujIdentitasNezet());
+    const t = await tanusithatE(tar, K.azonosito, K.azonosito, ujIdentitasNezet());
+    const nl = await lepcso2E(tar, K.azonosito, nAlap.azonosito, ujIdentitasNezet());
+    // ⚠️ A próba nem vak: a régi szabály a születés horgonyát és a megnevezett alapítót is az alapító körbe sorolta volna.
+    return l.igen === false && t.igen === false && !/alapító kör/.test(l.ok) && nl.igen === false && !/alapító kör/.test(nl.ok);
   });
 
 export default futtatas;

@@ -258,8 +258,8 @@ Most csak a két fél szerkezete épül; a pénz mezői később hozzáadhatók,
    (2026-10-24 — ②a és ②b, a 8. szakasz; elágazás 195–196).
 3. ✅ **③ A két réteg a számításban** (a múlt az ős szabályaival; a talaj; a lezárt és a nyitott döntések) — 2026-10-24, a 9.
    szakasz; elágazás 197; 83. mérés.
-4. **④ A ki- és a beköltözés** (a lánc megkötése, a kiosztás átvétele, a tagság és a 2. lépcső öröklése), a `koltozes`
-   parancs és a kézi út.
+4. ✅ **④ A ki- és a beköltözés** (a lánc megkötése, a kiosztás átvétele, a tagság és a 2. lépcső öröklése), a `koltozes`
+   parancs és a kézi út — 2026-10-24, a 10. szakasz (④a–④c); elágazás 198–200; 82. mérés.
 5. **⑤ A többi réteg bekötése** (vállalás, gyökér-darab, kereső-réteg, felderítés, értesítés, lánc-ellenőrzés).
 6. **⑥ A felület** (a belépő tér családfája, „Költözés…” a fő menüben).
 
@@ -370,7 +370,15 @@ férne be, akármennyit hagy el a költöző. ✅ *④b megépült (2026-10-24, 
 [fájl]`, `muveletek.js` `kikoltozes` / `bekoltozes`, `koino.js` `hozottMult` — a létrehozóé és a beköltözőé egy segéd; két
 készüléken mérve, 7 rontással; a 82. mérés).* ⭐ Az építés közben: **a létrehozó első kitöltése** is kell (a `koino … szulo=`
 a láncát és a hozott szeletei múltját is a gyermekbe viszi — eddig a ③ próbája kézzel pótolta), és a létrehozó KZ3-a a
-parancsban (ha a hozott pontjai nem férnek, hiba). ⏭️ ④c: a 2. lépcső öröklése.
+parancsban (ha a hozott pontjai nem férnek, hiba). ✅ *④c megépült (2026-10-24, elágazás 200 — `identitas.js`
+`oroklesForrasa`, `szuloNezete`): a beköltözött (a horgonya a beköltözése) és a létrehozó (a horgonya a gyermek születése)
+tanúsíthat-e és 2. lépcsős-e kérdése a SZÜLŐBEN folytatódik, a szülőbeli horgonyára, a szülő szabályaival (külön nézet) — a
+gyermek tárában a szülő eseményei a kapu miatt vágás előttiek, tehát ez a vágáskori állapot; a gyermekben szerzett
+tanúsítások ezen felül számítanak (a szúrópróba sétája is a szülőben folytatódik). ⛔ És a 4.2: a gyermek születése nem
+alapító kör — se a létrehozó, se a születésben megnevezett alapító nem kap hatalmat a születéssel (eddig a gyermek
+létrehozója „alapító kör” volt: tanúsíthatott és 2. lépcsős volt, akármi volt a szülőben). 4 rontással.* ⚠️ Ami marad: a
+szúrópróba (D94) a szülőben a szülőbeli 2. lépcső-bemondásokat követi — ha azok nincsenek a gyermek tárában, a nagy
+zárványú költöző „nem ellenőrizhető” (a kis zárvány teljes ellenőrzéssel megy). ⏭️ ⑤ a többi réteg.
 
 A 4.5–4.6 a kódhoz igazítva, három részben: **④a az események** (a formájuk, a kapu, a költözők a képben, a tagság
 öröklése), **④b a `koltozes` parancs** (a két aláírás, az első kitöltés, a kézi út — és a két készüléken mért út), **④c a 2.

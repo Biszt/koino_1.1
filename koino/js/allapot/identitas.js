@@ -283,6 +283,37 @@ const KERDES_NEVE = { tag: 'tagE', tanusithat: 'tanusithatE', lepcso2: 'lepcso2E
  * leírni — a napló így minden kimenetet megmutat (gyorsítótár, kör, hiányzó horgony,
  * alapító kör, végső döntés), és nem csak azt, hogy „hamis".
  */
+// ===================================
+// ⭐⭐ D118 (④c): AZ ÖRÖKÖLT ÁLLAPOT — a gyermekben a beköltözött és a létrehozó a szülőbeli (vágáskori) állapotát hozza
+// ===================================
+//
+// A gyermekben a beköltözött horgonya a beköltözése, a létrehozóé a gyermek születése; mindkettő megnevezi a szülőbeli
+// horgonyát (`szuloTagsag.horgony`). A tanúsíthat-e és a 2. lépcsős-e kérdés ilyenkor a SZÜLŐBEN folytatódik, a szülő
+// szabályaival — a gyermek tárában a szülő eseményei a kapu miatt a vágás előttiek, tehát ez a VÁGÁSKORI állapot (D118/3,
+// 4.6; a D25 kivétele: születéskor örökölhet, utána soha). A gyermekben szerzett tanúsítások ezen felül számítanak.
+// ⛔ És az alapító kör a gyermekben nem kap hatalmat (4.2): a létrehozó maga is örökölt tag, nem a fa gyökere.
+
+/** Az örökölt állapot forrása: a szülő koinó és a szülőbeli horgony — vagy null. */
+function oroklesForrasa(e) {
+  if (!e || typeof e !== 'object') return null;
+  const gyermekSzuletes = e.tipus === 'KoinoLetrehozas' && typeof e.adat?.szulo === 'string';
+  if (e.tipus !== 'Bekoltozes' && !gyermekSzuletes) return null;
+  const szulo = e.adat?.szulo;
+  const horgony = e.adat?.szuloTagsag?.horgony;
+  return azonositoAlaku(szulo) && azonositoAlaku(horgony) ? { szulo, horgony } : null;
+}
+
+/** A szülő kérdéseihez külön nézet (a szülő szabályai mások lehetnek — `nezetSzabalyai` nézetenként egyszer tölt). */
+function szuloNezete(nezet, szulo) {
+  nezet.szuloNezetek ??= new Map();
+  let n = nezet.szuloNezetek.get(szulo);
+  if (!n) {
+    n = ujIdentitasNezet({ keret: nezet.keret, setak: nezet.setak, valaszto: nezet.valaszto });
+    nezet.szuloNezetek.set(szulo, n);
+  }
+  return n;
+}
+
 async function kerdes(kulcs, tar, koino, horgony, nezet, vizsgalat) {
   const nev = 'identitas.' + (KERDES_NEVE[kulcs] ?? kulcs);
   console.log(nev + ' - KEZDÉS', { horgony });
@@ -328,6 +359,22 @@ async function kerdes(kulcs, tar, koino, horgony, nezet, vizsgalat) {
       return vege({ igen: false, ok: 'a horgony egy MÁSIK koinóhoz tartozik', ellenorizheto: true });
     }
 
+    // ----- ⭐⭐ D118 (④c): AZ ÖRÖKÖLT ÁLLAPOT — a szülőben, a vágáskor -----
+    const orokles = oroklesForrasa(esemeny);
+    let oroklesOka = null;
+    if (orokles) {
+      const fv = kulcs === 'tanusithat' ? tanusithatE : kulcs === 'lepcso2' ? lepcso2E : null;
+      if (fv) {
+        const r = await fv(tar, orokles.szulo, orokles.horgony, szuloNezete(nezet, orokles.szulo));
+        if (r.igen) {
+          const eredmeny = { ...r, ok: 'a szülőből örökölt (a vágáskor): ' + r.ok, orokolt: true };
+          nezet.igenek.set(gyorsKulcs, eredmeny);
+          return vege(eredmeny);
+        }
+        oroklesOka = r;
+      }
+    }
+
     // ----- ⭐ AZ ALAPESET: AZ ALAPÍTÓ KÖR -----
     // Mind a három kérdésre IGEN: az alapítók tagok, tanúsíthatnak, és 2. lépcsősök.
     // ⚠️ Enélkül a 2. lépcső EL SEM TUDNA INDULNI (lásd `alapitoE`).
@@ -335,11 +382,16 @@ async function kerdes(kulcs, tar, koino, horgony, nezet, vizsgalat) {
       return vege({ igen: true, ok: 'alapító kör', ellenorizheto: true });
     }
 
-    if (esemeny.tipus !== 'Belepes') {
+    if (esemeny.tipus !== 'Belepes' && !orokles) {
       return vege({ igen: false, ok: 'a horgony nem belépési esemény', ellenorizheto: true });
     }
 
+    // ⭐ D118 (④c): ha nem örökölte, a gyermekben szerzett állítások döntenek (a beköltözés és a gyermek születése is horgony).
     const eredmeny = await vizsgalat(esemeny);
+    if (!eredmeny.igen && oroklesOka) {
+      return vege({ ...eredmeny, ok: eredmeny.ok + ' · a szülőből nem örökölt: ' + oroklesOka.ok,
+        ellenorizheto: eredmeny.ellenorizheto && oroklesOka.ellenorizheto !== false });
+    }
     if (eredmeny.igen) nezet.igenek.set(gyorsKulcs, eredmeny);
     return vege(eredmeny);
   } finally {
@@ -369,7 +421,8 @@ async function kerdes(kulcs, tar, koino, horgony, nezet, vizsgalat) {
 async function alapitoE(tar, koino, horgony, esemeny, nezet) {
   // Ő maga hozta létre a koinót. ⭐ D118/2: és ez a koinó születése (lenyomat-nevű koinónál csak az az esemény, amelyiknek
   // az azonosítója maga a név — egy második, azonos nevű születés nem alapító).
-  if (esemeny.tipus === 'KoinoLetrehozas') return koinoSzuleteseE(esemeny, koino);
+  // ⛔ D118 (④c, 4.2): a GYERMEK létrehozója nem alapító kör — a szülőbeli állapotát hozza (`oroklesForrasa`).
+  if (esemeny.tipus === 'KoinoLetrehozas') return koinoSzuleteseE(esemeny, koino) && typeof esemeny.adat?.szulo !== 'string';
   if (esemeny.tipus !== 'Belepes') return false;
 
   // Megnevezett alapító: a belépése az alapítás eseményére hivatkozik.
@@ -380,6 +433,8 @@ async function alapitoE(tar, koino, horgony, esemeny, nezet) {
   nezet.olvasasok++;
   if (!alapitasEsemeny) return false;
   if (!koinoSzuleteseE(alapitasEsemeny, koino)) return false;
+  // ⛔ D118 (④c, 4.2): a gyermek születése alapító kört sem nevezhet meg (a hatalom nem a születésből jön, hanem a szülőből).
+  if (typeof alapitasEsemeny.adat?.szulo === 'string') return false;
 
   // ⚠️ És tényleg őt nevezték meg — nem elég ráhivatkozni.
   const alapitok = alapitasEsemeny.adat?.alapitok;
@@ -813,7 +868,13 @@ async function setaCsomopont(tar, koino, horgony, nezet, teljes) {
   if (!e) return { hianyzik: true, ok: 'hiányzik egy horgony-esemény' };
   if (esemenyKoinoja(e) !== koino) return { bukott: true, ok: 'egy horgony más koinóé' };
   if (await alapitoE(tar, koino, horgony, e, nezet)) return { cel: true, ok: 'alapító kör' };
-  if (e.tipus !== 'Belepes') return { bukott: true, ok: 'egy horgony nem belépés' };
+  // ⭐ D118 (④c): az örökölt horgonynál a séta a szülőben folytatódik (a vágáskori állapot).
+  const orokles = oroklesForrasa(e);
+  if (orokles) {
+    const r = await lepcso2E(tar, orokles.szulo, orokles.horgony, szuloNezete(nezet, orokles.szulo));
+    if (r.igen) return { cel: true, ok: 'a szülőből örökölt' };
+  }
+  if (e.tipus !== 'Belepes' && !orokles) return { bukott: true, ok: 'egy horgony nem belépés' };
   if (nezet.igenek.get('lepcso2|' + horgony)?.igen) return { cel: true, ok: 'már igazolt' };
 
   const b = await lepcsoBemondasa(tar, koino, horgony, e, nezet);
@@ -910,7 +971,7 @@ export async function alapitoHorgony(tar, koino, horgony) {
 export async function ervenyesTanusitasaim(tar, koino, horgony, nezet = ujIdentitasNezet()) {
   await nezetSzabalyai(tar, koino, nezet);   // ⭐ D118/2
   const e = await esemenyLekerese(tar, horgony);
-  if (!e || e.tipus !== 'Belepes') return [];
+  if (!e || (e.tipus !== 'Belepes' && !oroklesForrasa(e))) return [];   // ⭐ D118 (④c): a beköltözés is horgony
   const kivalasztott = new Map();
   for (const t of await entitasEsemenyei(tar, koino, horgony)) {
     if (t.tipus !== 'Tanusitas' || kivalasztott.has(t.szerzo)) continue;

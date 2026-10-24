@@ -1450,3 +1450,12 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     csere ELŐTT kell mérni (a csere a létrehozó kitöltéséből is elhozza), egy rontás maga volt hibás (a modul szintjén
     `return` — szintaktikai hiba, ami semmit nem mért) · Csaba (D118) · `muveletek.js`, `koino.js`; a parancssor-próbák; a
     82. mérés (`koltozesMeres.js`).
+200. **2026-10-24 · a költözés ④c: a 2. lépcső öröklése, és az alapító a gyermekben (D118/3, 4.2, 4.6)**
+    → **a beköltözött és a gyermek létrehozója a tanúsíthat-e és a 2. lépcsős-e kérdésre a szülőbeli (vágáskori) állapotát
+    hozza: a kérdés a szülőben folytatódik, a szülőbeli horgonyára, a SZÜLŐ szabályaival (külön nézet — a tanúsítás-szám más
+    lehet); a gyermekben szerzett tanúsítások ezen felül számítanak; a szúrópróba sétája is a szülőben folytatódik; ⛔ a
+    gyermek születése nem alapító kör (se a létrehozó, se a megnevezett alapító)** · eddig a gyermek létrehozója a születéssel
+    alapító kör lett — tanúsíthatott és 2. lépcsős volt, akármi volt a szülőben (a 4.2 kimondta, hogy nem így); egy közös
+    nézettel a szülő kérdése a gyermek tanúsítás-számával futott volna (a próba mérte: a gyermek 1, a szülő 3) · ⚠️ a D94
+    szúrópróba a szülőbeli bemondásokat követi — a nagy zárványú költöző a gyermekben „nem ellenőrizhető”, amíg azok nincsenek
+    meg · Csaba (D118) · `identitas.js`; a próbák (`koltozesProba.js`).
