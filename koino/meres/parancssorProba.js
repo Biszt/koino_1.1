@@ -505,6 +505,41 @@ proba('⭐⭐ D118 (②a): a gyermek születése — a szülő szabályaival és
     }
   });
 
+// ⭐⭐ D118 (②b): A KAPU KOINÓ-SZABÁLYA a parancssoron és a cserén. Az A a szülőben ír egy gondolatot a gyermek születése
+// ELŐTT és egyet UTÁNA; a szülő kivitele a gyermekbe behozva csak az elsőt adja (a második a szülő jelene — „másik koinóé”),
+// és a csere (két „mindent” készülék) ugyanígy viszi tovább a B-nek. Viselkedést mérünk (a két lemezt). ⚠️ A számítás még
+// nem veszi figyelembe a múltat (a ③) — itt csak az, hogy a múlt odaér, a jelen nem.
+proba('⭐⭐ D118 (②b): a szülő vágás előtti múltja a gyermek tárába kerül — a kézi úton és a cserén is —, a vágás utáni nem',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const G = { KOINO_AZONOSITO: 'gyermek' };
+    try {
+      await fut(a, 'koino', 'Nyílt szülő', 'nyilt');
+      await fut(a, 'gondolat', 'ELOTTE');
+      await fut(a, 'koino', 'Nyílt gyermek', 'szulo=sajat', 'nyilt', G);
+      const C = await koinoNeve(a, 'gyermek');
+      if (!C) return false;
+      await fut(a, 'gondolat', 'UTANA');
+      await fut(a, 'kivisz', join(a, 'szulo.jsonl'));
+      const behozas = await fut(a, 'behoz', join(a, 'szulo.jsonl'), G);
+      await fut(a, 'kiszolgalas', 'mindent', G);
+      await fut(b, 'csatlakoz', C, G);
+      await fut(b, 'kiszolgalas', 'mindent', G);
+      await csereKor(a, b, 7800, G);
+      const cimek = async (hely) => (await readFile(join(hely, C, 'esemenyek.jsonl'), 'utf8').catch(() => '')).split('\n')
+        .filter(Boolean).map((x) => JSON.parse(x)).filter((e) => e.tipus === 'GondolatLetrehozas').map((e) => e.adat?.cim);
+      const aCimek = await cimek(a);
+      const bCimek = await cimek(b);
+      const ok = aCimek.includes('ELOTTE') && !aCimek.includes('UTANA') && /MÁSIK koinóé/.test(behozas)
+        && bCimek.includes('ELOTTE') && !bCimek.includes('UTANA');
+      if (!ok) process.stderr.write('    (a kimenetek: ' + JSON.stringify({ aCimek, bCimek, behozas: behozas.slice(-300) }) + ')\n');
+      return ok;
+    } finally {
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ===================================
 // ⭐⭐ B/1–B/2: A `hozd` AZ ÁTMENETI TÁRBA — és a pontom után a tartósba lép elő (2026-10-03)
 // ===================================

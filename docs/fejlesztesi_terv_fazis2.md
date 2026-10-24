@@ -6096,7 +6096,8 @@ születés lenyomata (elágazás 193), és a szabályai a születésében — a 
 `ALAP_SZABALYOK` soha nem változik (elágazás 194; a 15. mérés megismételve: a régi alakú koinó hasad, az új nem). ⛔ A
 meghívó-szám nem szabály, hanem a modell része, rögzítve 1 (Csaba, 2026-10-24: *„igen, maradjon 1 egyenlőre”*). ✅ **A ②a (2026-10-24):** a gyermek születése (`szulo` + a létrehozó tagsági bizonyítéka a szülőben — KZ2; zárt szülőnek
 csak zárt gyermeke; a szülő szabályait örökli; a létrehozó szülőbeli láncát folytatja), a születések lánca a gyökértől a
-cserében és a kézi úton (elágazás 195). ⏭️ ②b: a kapu koinó-szabálya.
+cserében és a kézi úton (elágazás 195). ✅ **A ②b:** a kapu koinó-szabálya — az ős vágás előtti eseményei a gyermek tárában
+és cseréjében (a létrehozóé a lánc-pont, mindenki másé az óra szerint; elágazás 196). ⏭️ ③: a két réteg a számításban.
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal

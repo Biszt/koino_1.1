@@ -1396,3 +1396,13 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     óra szerint · Csaba (D118, KZ2) · `koinoLanc.js` (új), `esemeny.js` (az alak), `esemenyTar.js` (a kapu), `csere.js`
     (`beolvasztas`), `vonal.js` (a születés-szelet), `tarsEmlekezet.js`, `fajlCsere.js`, `muveletek.js`, `koino.js`
     (`gyermekSzuletesElokeszitese`, `koinoSzuletesLanca`, `behozandoKoinoja`); a próbák (`koinoLancProba.js`, parancssor).
+196. **2026-10-24 · a költözés ②b: a kapu koinó-szabálya (D118/1 — 4.3)**
+    → **egy esemény a koinó táráé, ha a koinóé, ha a születések láncán van, vagy ha egy ős eseménye a vágása előtt — a
+    létrehozóé a LÁNC-PONT szerint (a sorszáma a gyermek születéséé alatt), mindenki másé az ÓRA szerint (`ido` ≤ a tőle
+    örökölt nemzedék születése); EGY segéd (`koinohozTartozik`, a nézet `koinoNezete` — a teljes lánc nézete megmarad), és
+    ugyanezt hívja a hálózat és a kézi út kapuja (`beolvasztas`) és a szelet halmaza (`egyeztetettEsemenyek`) — a csere két
+    névvel egy szeletben** · a halmaz szabálya a kapuéval egyezik (különben minden cserében újraküldés — 40. mérés); a
+    létrehozó óra szerinti vágása egy óra-csúszásnál a vágás utáni szülőbeli eseményét is beengedné, ugyanazzal a
+    sorszámmal, mint a gyermekbeli folytatás (elágazás) · ⚠️ a számítás a múltat még nem veszi figyelembe (a ③); az átmeneti
+    tár, a lánc-ellenőrzés, az észlelő és a tagsági kérdező a név szerint szűr (a ⑤) · Csaba (D118) · `koinoLanc.js`,
+    `csere.js`, `szeletEgyeztetes.js`; a próbák (`koinoLancProba.js`, parancssor).

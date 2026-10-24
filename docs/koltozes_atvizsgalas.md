@@ -253,8 +253,9 @@ Most csak a két fél szerkezete épül; a pénz mezői később hozzáadhatók,
    (`eredmenyek.md` 15.): a régi alakú koinó a program-állandó átírásával kettéhasad, az új alakú nem — és a mérés egy
    hibát is talált (a keret második vizsgálata még az állandót nézte; javítva, próbával). ⚠️ A laptop–telefon
    próba-koinója (`sajat`) így nem folytatható (régi alakú események is vannak benne) — a következő kézi próbához új koinó
-   kell, és a telefon frissítése. ⏭️ **②.**
-2. **② A gyermek születése** (szülő, vágás, zártság) **és a kapu koinó-szabálya**, a csere két névvel egy szeletben.
+   kell, és a telefon frissítése.
+2. ✅ **② A gyermek születése** (szülő, vágás, zártság) **és a kapu koinó-szabálya**, a csere két névvel egy szeletben
+   (2026-10-24 — ②a és ②b, a 8. szakasz; elágazás 195–196).
 3. **③ A két réteg a számításban** (a múlt az ős szabályaival; a talaj; a lezárt és a nyitott döntések).
 4. **④ A ki- és a beköltözés** (a lánc megkötése, a kiosztás átvétele, a tagság és a 2. lépcső öröklése), a `koltozes`
    parancs és a kézi út.
@@ -299,9 +300,16 @@ parancssorban, 13 rontással.)*
   szerint** jönnek (a sorszám a pont alatt), nem az óra szerint — különben egy óra-csúszás a vágás utáni szülőbeli
   eseményét is beengedné, ugyanazzal a sorszámmal, mint a gyermekbeli folytatás (elágazás). Az óra a nem költözőké (4.3).
 
-**②b — a kapu koinó-szabálya** (4.3). Egy esemény a gyermek tárába tartozik, ha a gyermeké; vagy a lánc egy ősének
+**②b — a kapu koinó-szabálya** (4.3). ✅ *(2026-10-24, elágazás 196 — `koinoLanc.js` `koinoNezete`, `koinohozTartozik`; a
+próbák a `koinoLancProba.js`-ben és a parancssorban, 6 rontással.)* Egy esemény a gyermek tárába tartozik, ha a gyermeké; vagy a lánc egy ősének
 születése; vagy egy ős eseménye a vágása előtt (`ido` ≤ annak a nemzedéknek a születése, amelyik tőle örökölt). Ez EGY
 segéd (`koinohozTartozik`), és mindenütt ezt hívja, ahol ma a koinó nevére szűrünk a hálózat és a kézi út kapujában
 (`beolvasztas`) és a szelet halmazában (`szeletEgyeztetes.js` — a csere két névvel egy szeletben); ⚠️ a halmaz szabálya
 a kapuéval egyezik (különben két készülék minden cserében újraküldené, amit a másik elvet — a 40. mérés tanulsága). A
 kiköltözés kivétele (a vágás utáni, mégis kell) a ④-gyel jön.
+- ⭐ **A létrehozóé a lánc-pont szerint** (a sorszáma a gyermek születéséé alatt — a ②a-ból), mindenki másé az óra
+  szerint; több nemzedéknél minden ős a saját vágásáig (a tőle örökölt nemzedék születéséig). A nézet a koinó nevéből
+  következik (a lánc lenyomatokkal kötött): ha egyszer teljes, megmarad (`koinoNezete`).
+- ⚠️ **Ami még a név szerint szűr** (a ⑤-ben jön): az átmeneti tár (a kérelmek válaszai — egy ős-esemény oda bekerülhet, de
+  az újranyitáskor kiesik), a számítás (`koinoEsemenyei` — szándékosan, a ③-ig), a lánc-ellenőrzés, az észlelő és a
+  tagsági kérdező (ezek a gyermek saját szerzőiről szólnak).

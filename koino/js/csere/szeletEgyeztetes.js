@@ -30,6 +30,7 @@
 // Használja: csere/vonal.js (a párbeszéd), a próbák.
 
 import { alakiHiba, szelet, bejelentesHelyei, azonositoAlaku, esemenyKoinoja } from '../esemeny/esemeny.js';
+import { koinoNezete } from '../allapot/koinoLanc.js';   // ⭐ D118 (②b): a koinó-szabály
 import { rendezettHalmaz, halmazLenyomata } from '../esemeny/halmaz.js';
 import { gyokerDarabBol, gyokerLenyomata, darabbaEsik } from './cimjegyzek.js';
 
@@ -76,10 +77,13 @@ export async function egyeztetettEsemenyek(tar, koino, kulcs) {
   const s = tarKulcsa(kulcs);
   const sajat = s === '' ? [] : await tar.szeletEsemenyei(s);
   const bejelentettek = await tar.bejelentesek(s);
+  // ⭐⭐ D118 (②b): a koinó-szabály — UGYANAZ, mint a kapué (`beolvasztas`): az ős vágás előtti eseményei is a halmazban
+  // (a csere két névvel egy szeletben). ⚠️ Ha a kettő eltérne, két készülék minden cserében újraküldené, amit a másik elvet.
+  const tartozik = azonositoAlaku(koino) ? (await koinoNezete(tar, koino)).tartozik : (e) => esemenyKoinoja(e) === koino;
   const lattuk = new Set();
   const ki = [];
   for (const e of [...sajat, ...bejelentettek]) {
-    if (lattuk.has(e.azonosito) || esemenyKoinoja(e) !== koino || alakiHiba(e) !== null) continue;
+    if (lattuk.has(e.azonosito) || !tartozik(e) || alakiHiba(e) !== null) continue;
     lattuk.add(e.azonosito);
     ki.push(e);
   }

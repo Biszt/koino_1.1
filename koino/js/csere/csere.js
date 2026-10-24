@@ -31,7 +31,7 @@
 import { lenyomat } from '../esemeny/kanonikusAlak.js';
 import { alakiHiba, esemenyKoinoja, azonositoAlaku } from '../esemeny/esemeny.js';
 import { koinoEsemenyei, esemenyMentese } from '../tar/esemenyTar.js';
-import { szuletesLanc, ujAlakuSzuletesE } from '../allapot/koinoLanc.js';
+import { koinoNezete, ujAlakuSzuletesE } from '../allapot/koinoLanc.js';
 
 // ===================================
 // ⛔⛔ AMIT EGYETLEN MAI KAPU SEM ENGED BE, AZT NEM HIRDETJÜK (2026-09-24, 40. mérés)
@@ -337,17 +337,20 @@ export async function beolvasztas(tar, esemenyek, koino) {
   // ⭐ D82: a MOST bekerült események azonosítói — az észlelő ezek körül keres (a hívóé).
   const ujAzonositok = [];
 
-  // ----- ⭐⭐ D118 (②a): A SZÜLETÉSEK LÁNCA — a koinó őseinek születése is a koinóé -----
-  // A lánc a koinó születésétől a `szulo` mutatókon a gyökérig, a tárból és a most kapottakból együtt; ezek a születések
-  // (más koinó-névvel) bejönnek, és ELŐRE kerülnek, a gyökértől — a kapu a gyermek születését csak a szülőével ellenőrizheti.
-  const lancSzuletesek = new Set();
+  // ----- ⭐⭐ D118 (②a–b): A KOINÓ-SZABÁLY — a koinó őseinek születése és vágás előtti eseményei is a koinóé -----
+  // A lánc a koinó születésétől a `szulo` mutatókon a gyökérig, a tárból és a most kapottakból együtt (`koinoNezete`); a
+  // lánc születései (más koinó-névvel) ELŐRE kerülnek, a gyökértől — a kapu a gyermek születését csak a szülőével
+  // ellenőrizheti. Ami nem tartozik a koinóba (`tartozik`), az idegen.
+  let tartozik = (e) => esemenyKoinoja(e) === koino;
   let sorban = esemenyek;
   if (koino !== undefined && azonositoAlaku(koino)) {
     const kapott = new Map(esemenyek.filter(ujAlakuSzuletesE).map((e) => [e.azonosito, e]));
+    const nezet = await koinoNezete(tar, koino, kapott.size ? kapott : null);
+    tartozik = nezet.tartozik;
     if (kapott.size) {
-      const { lanc } = await szuletesLanc(tar, koino, kapott);
-      for (const e of lanc) lancSzuletesek.add(e.azonosito);
-      const elore = [...lanc].reverse().filter((e) => kapott.get(e.azonosito) === e);
+      const elore = [];
+      for (const az of nezet.szuletesek) if (kapott.has(az)) elore.push(kapott.get(az));
+      elore.reverse();   // a nézet születései a gyermektől a gyökér felé
       const eloreSet = new Set(elore);
       sorban = [...elore, ...esemenyek.filter((e) => !eloreSet.has(e))];
     }
@@ -355,7 +358,7 @@ export async function beolvasztas(tar, esemenyek, koino) {
 
   for (const esemeny of sorban) {
     // ----- IDEGEN KOINO: be sem visszük a kapuig -----
-    if (koino !== undefined && esemenyKoinoja(esemeny) !== koino && !lancSzuletesek.has(esemeny?.azonosito)) {
+    if (koino !== undefined && !tartozik(esemeny)) {
       idegen++;
       console.warn('beolvasztas - IDEGEN koino eseménye, kihagyva', {
         vart: koino, kapott: esemeny?.koino

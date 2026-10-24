@@ -16,8 +16,9 @@ import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import { esemenyMentese } from '../js/tar/esemenyTar.js';
 import { beolvasztas } from '../js/csere/csere.js';
 import {
-  gyermekSzuletesEllenorzese, szuloTagsagaEpitese, szuletesLanc, gyermekSzuleteseE
+  gyermekSzuletesEllenorzese, szuloTagsagaEpitese, szuletesLanc, gyermekSzuleteseE, koinoNezete
 } from '../js/allapot/koinoLanc.js';
+import { egyeztetettEsemenyek, GYOKER_KULCS } from '../js/csere/szeletEgyeztetes.js';
 
 const { proba, futtatas } = probaGyujtemeny('A gyermek születése és a születések lánca (D118 ②a)');
 
@@ -188,6 +189,81 @@ proba('⭐⭐ D118 (②a): a beolvasztás a lánc születéseit akármilyen sorr
     return r.uj === 3 && r.idegen === 1 && tarban.join() === [G, P, C].map((e) => e.azonosito).join()
       && r2.uj === 0 && r2.idegen === 1 && r2.elutasitva.some((x) => x.azonosito === C.azonosito)
       && r3.uj === 3;
+  });
+
+// ===================================
+// 5. ⭐⭐ ②b — A KAPU KOINÓ-SZABÁLYA: az ős vágás előtti eseményei a gyermekbe tartoznak
+// ===================================
+//
+// Egy esemény a gyermeké, ha a gyermeké; vagy a lánc egy születése; vagy egy ős eseménye a vágása előtt — a nem költözőé
+// az óra szerint (`ido` ≤ annak a nemzedéknek a születése, amelyik tőle örökölt), ⭐ a létrehozóé a LÁNC-PONT szerint (a
+// sorszáma a gyermek születéséé alatt): az óra-csúszás így sem engedheti be a vágás utáni szülőbeli eseményét, ami a
+// gyermekbeli folytatással egy sorszámot viselne.
+
+/** Három nemzedék két szereplővel: az `ember` hozza létre mindet; a `tag` a P-ben ír a vágás előtt és után. */
+async function nemzedekekTaggal() {
+  const ember = await ujEember('');
+  const kezdet = Date.UTC(2026, 0, 1);
+  ember.koinotValt('');
+  const G = await ember.tesz('KoinoLetrehozas', { nev: 'Nagyszülő', leiras: null, alapitok: [], zart: true }, kezdet);
+  ember.koinotValt(G.azonosito);
+  const gElotte = await ember.tesz('GondolatLetrehozas', { cim: 'G előtte', meret: 10 }, kezdet + 10);
+  ember.koinotValt('');
+  const P = await ember.tesz('KoinoLetrehozas', { nev: 'Szülő', leiras: null, alapitok: [], zart: true, szulo: G.azonosito,
+    szuloTagsag: { horgony: G.azonosito, lanc: [] } }, kezdet + 100);
+  ember.koinotValt(G.azonosito);
+  const gUtana = await ember.tesz('GondolatLetrehozas', { cim: 'G utána', meret: 10 }, kezdet + 150);
+  ember.koinotValt(P.azonosito);
+  const tag = await ujEember(P.azonosito);
+  const be = await tag.tesz('Belepes', {}, kezdet + 200);
+  const m = await ember.tesz('Meghivas', { kit: tag.szerzo, sajatBelepes: P.azonosito }, kezdet + 210, { entitas: be.azonosito });
+  const tElotte = await tag.tesz('GondolatLetrehozas', { cim: 'P előtte', meret: 10 }, kezdet + 300);
+  const eElotte = await ember.tesz('GondolatLetrehozas', { cim: 'P a létrehozótól', meret: 10 }, kezdet + 310);
+  ember.koinotValt('');
+  const C = await ember.tesz('KoinoLetrehozas', { nev: 'Gyermek', leiras: null, alapitok: [], zart: true, szulo: P.azonosito,
+    szuloTagsag: { horgony: P.azonosito, lanc: [] } }, kezdet + 400);
+  ember.koinotValt(P.azonosito);
+  const tUtana = await tag.tesz('GondolatLetrehozas', { cim: 'P utána', meret: 10 }, kezdet + 500);
+  // ⛔ A létrehozó vágás UTÁNI szülőbeli eseménye — az órája szerint a vágás ELŐTT (csúszik): a szülőben ugyanarról a
+  // pontról folytatja a láncát, mint a gyermek születése (azonos sorszám és `elozo` — `elagaztat`).
+  const eUtanaCsuszo = await ember.elagaztat('GondolatLetrehozas', { cim: 'P a létrehozótól, utána', meret: 10 }, kezdet + 350);
+  ember.koinotValt(C.azonosito);
+  const cSajat = await ember.tesz('GondolatLetrehozas', { cim: 'C saját', meret: 10 }, kezdet + 600);
+  return { G, P, C, gElotte, gUtana, be, m, tElotte, eElotte, tUtana, eUtanaCsuszo, cSajat };
+}
+
+proba('⭐⭐ ②b: a koinó-szabály — az ős vágás előtti eseménye a gyermeké (a nem költözőé az óra, a létrehozóé a lánc-pont szerint), a vágás utáni nem',
+  async () => {
+    const n = await nemzedekekTaggal();
+    const tar = await ujTar(n.C.azonosito);
+    for (const e of [n.G, n.P, n.C]) if (!(await esemenyMentese(tar, e)).mentve) return false;
+    const { tartozik } = await koinoNezete(tar, n.C.azonosito);
+    const masAlapito = await ujEember('');
+    const mas = await ujKoino(masAlapito, { nev: 'Más' });
+    const masGondolat = await masAlapito.tesz('GondolatLetrehozas', { cim: 'Más', meret: 10 });
+    const igen = [n.G, n.P, n.C, n.cSajat, n.gElotte, n.be, n.m, n.tElotte, n.eElotte];
+    const nem = [n.gUtana, n.tUtana, n.eUtanaCsuszo, mas, masGondolat];
+    // ⚠️ A csúszó esemény órája a vágás ELŐTT van — a lánc-pont nélkül átjutna (a próba így nem vak).
+    if (!(n.eUtanaCsuszo.ido < n.C.ido) || n.eUtanaCsuszo.sorszam !== n.C.sorszam) return false;
+    return igen.every((e) => tartozik(e) === true) && nem.every((e) => tartozik(e) === false);
+  });
+
+proba('⭐⭐ ②b: a beolvasztás a gyermek tárába a vágás előtti ős-eseményeket veszi be (a többi idegen), és a szelet halmaza ugyanezt mondja',
+  async () => {
+    const n = await nemzedekekTaggal();
+    const tar = await ujTar(n.C.azonosito);
+    const r = await beolvasztas(tar, [n.C, n.P, n.G, n.gElotte, n.gUtana, n.be, n.m, n.tElotte, n.eElotte, n.tUtana, n.eUtanaCsuszo,
+      n.cSajat], n.C.azonosito);
+    const tarban = new Set((await tar.betolt()).map((e) => e.azonosito));
+    const vart = [n.G, n.P, n.C, n.gElotte, n.be, n.m, n.tElotte, n.eElotte, n.cSajat];
+    // A szelet halmaza: a tag „P előtte” gondolatának szelete (a születése a saját szelete) — ⚠️ a halmaz szabálya a kapuéval
+    // egyezik, különben két készülék minden cserében újraküldené, amit a másik elvet.
+    const halmaz = (await egyeztetettEsemenyek(tar, n.C.azonosito, n.tElotte.azonosito)).map((e) => e.azonosito);
+    const gyoker = (await egyeztetettEsemenyek(tar, n.C.azonosito, GYOKER_KULCS)).map((e) => e.azonosito);
+    return r.uj === vart.length && r.idegen === 3 && vart.every((e) => tarban.has(e.azonosito))
+      && !tarban.has(n.tUtana.azonosito) && !tarban.has(n.eUtanaCsuszo.azonosito)
+      && halmaz.includes(n.tElotte.azonosito)
+      && gyoker.includes(n.tElotte.azonosito) && gyoker.includes(n.cSajat.azonosito) && gyoker.includes(n.gElotte.azonosito);
   });
 
 export default futtatas;
