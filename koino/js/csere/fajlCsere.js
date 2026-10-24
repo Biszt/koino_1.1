@@ -46,7 +46,8 @@
 //
 // Használják: `koino.js` (a `kivisz` és a `behoz` parancs).
 
-import { esemenyKoinoja } from '../esemeny/esemeny.js';
+import { esemenyKoinoja, azonositoAlaku } from '../esemeny/esemeny.js';
+import { szuletesLanc } from '../allapot/koinoLanc.js';   // ⭐ D118 (②a)
 import { koinoEsemenyei, sajatLancEsemenyei } from '../tar/esemenyTar.js';
 import { egyeztetettEsemenyek, vonalKulcsa } from './szeletEgyeztetes.js';
 import { beolvasztas } from './csere.js';
@@ -110,6 +111,12 @@ export async function kivitelSzovege(tar, koino, beallitas = {}) {
     // a `koinoEsemenyei` fejléce kimond. Kis koinónál ez a helyes és legegyszerűbb válasz
     // („add ide az egészet, viszem"); nagyban a másik két hatókör a járható út.
     esemenyek = await koinoEsemenyei(tar, koino);
+    // ⭐⭐ D118 (②a): a koinó őseinek születése is utazik (a gyökértől, előre) — a túloldal kapuja a gyermek születését csak
+    // a szülőével ellenőrizheti.
+    if (azonositoAlaku(koino)) {
+      const osok = (await szuletesLanc(tar, koino)).lanc.slice(1).reverse();
+      if (osok.length) esemenyek = [...osok, ...esemenyek];
+    }
 
   } else {
     // ⭐ EGY ENTITÁS SZELETE — szintén célzott kérdés, a szelet-mutatóból. ⭐ D85: UGYANAZ a halmaz,

@@ -50,6 +50,7 @@
 // foglalat-szerű kapcsolatot kap (a UDP-résen: `udpVonal.js` → `udpKapcsolat`).
 
 import { koinoSzuleteseE } from '../esemeny/esemeny.js';
+import { ujAlakuSzuletesE } from '../allapot/koinoLanc.js';   // ⭐ D118 (②a)
 import { beolvasztas } from './csere.js';
 // ⭐ A C 7–8. pontja (2026-09-27): a csere szeletenként, tartomány-egyeztetéssel (D74).
 import { egyeztetesNyitasa, egyeztetesLepese } from './tartomany.js';
@@ -243,6 +244,8 @@ function uzenetSor(kapcsolat) {
  *   darabonként cserélődik
  * @param {Function} [beallitas.reszvetelHalmaz] - ⭐ D97/1: async () → a részvételi halmazom (Set), vagy null („minden”)
  * @param {Object} [beallitas.halmazTar] - ⭐ D97/1: { sajatNaplo(kulcsok), tarsOlvas(aláíró), tarsIr(aláíró, ismert) }
+ * @param {Array<Object>} [beallitas.koinoSzuletesLanc] - ⭐ D118 (②a): a koinó születéseinek lánca a gyökértől (az utolsó a
+ *        `koinoSzuletes`) — a születés-szelet ezt hordozza; ha nincs, csak a koinó születését
  * @param {Object} [beallitas.koinoSzuletes] - ⭐ D96: a koinó `KoinoLetrehozas` eseménye (ha ismert) — mindenki részt vesz
  *   benne, a halmaza egyedül ez az esemény
  * @returns {Promise<Object>} { korok, uj, kuldott, masKoino, kivulrolIgyLatszom, … ,
@@ -297,17 +300,25 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   const szuletesEsemeny = beallitas.koinoSzuletes && typeof beallitas.koinoSzuletes === 'object'
     && koinoSzuleteseE(beallitas.koinoSzuletes, koino)
     && ervenyesKulcs(beallitas.koinoSzuletes.azonosito) ? beallitas.koinoSzuletes : null;
+  // ⭐⭐ D118 (②a): a születés-szelet a koinó születéseinek TELJES LÁNCÁT hordozza (a gyökértől a koinóig — a hívó adja,
+  // `koinoSzuletesLanc`; az utolsó maga a koinó születése) — a gyermek kapuja a szülőjét csak így ellenőrizheti.
+  const szuletesLanca = !szuletesEsemeny ? []
+    : Array.isArray(beallitas.koinoSzuletesLanc) && beallitas.koinoSzuletesLanc.length
+      && beallitas.koinoSzuletesLanc[beallitas.koinoSzuletesLanc.length - 1]?.azonosito === szuletesEsemeny.azonosito
+      ? beallitas.koinoSzuletesLanc.filter((e) => e && typeof e === 'object' && ervenyesKulcs(e.azonosito))
+      : [szuletesEsemeny];
+  const szuletesAzonositok = rendezettHalmaz(szuletesLanca.map((e) => e.azonosito));
   const szuletesPar = szuletesEsemeny
-    ? KOINO_SZULETES_KULCS + ':' + await halmazLenyomata(rendezettHalmaz([szuletesEsemeny.azonosito])) : null;
+    ? KOINO_SZULETES_KULCS + ':' + await halmazLenyomata(szuletesAzonositok) : null;
   /** A résztvevő szeletek párjai (a szűrő szerint) + a koinó születésének párja (ha ismerem). */
   const parokSzamitasa = async (szuro) => {
     const p = await szeletParok(tar, koino, szuro);
     return szuletesPar ? rendezettHalmaz([...p, szuletesPar]) : p;
   };
-  const halmazOf = async (k) => (k === KOINO_SZULETES_KULCS ? (szuletesEsemeny ? [szuletesEsemeny.azonosito] : [])
+  const halmazOf = async (k) => (k === KOINO_SZULETES_KULCS ? szuletesAzonositok
     : keresoRegioBol(k) ? regioHalmazOf(k)
     : egyeztetesiHalmaz(tar, koino, k));
-  const esemenyekOf = async (k) => (k === KOINO_SZULETES_KULCS ? (szuletesEsemeny ? [szuletesEsemeny] : [])
+  const esemenyekOf = async (k) => (k === KOINO_SZULETES_KULCS ? szuletesLanca
     : egyeztetettEsemenyek(tar, koino, k));
 
   // ⭐ Amit a társtól megtudtunk a fájlokról (5.7) — a hívó dolga elrakni.
@@ -1143,7 +1154,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     if (emlekezetTar) {
       try {
         sajatV = valtozottKulcsok(tar, await emlekezetTar.olvas(kapottTablaKulcs.alairo), {
-          szuletes: szuletesEsemeny?.azonosito ?? null,
+          szuletes: szuletesAzonositok,   // ⭐ D118 (②a): a születések lánca
           szuro: (k) => reszvesz(k) && (kozos ? kozos.szuro(k) : true)
         });
       } catch (hiba) {
@@ -1371,8 +1382,10 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   const megengedett = new Set([...egyeztetendo, ...vartSzeletek]);
   // ⭐ D96: a koinó születésének kulcsán csak EZ a koinó létrehozása jöhet — ⭐ D118/2: lenyomat-nevű koinónál csak az az
   // esemény, amelyiknek az azonosítója maga a név (egy második, azonos nevű születés így nem jut át — a lelet).
+  // ⭐⭐ D118 (②a): és az új alakú ős-születések — hogy a koinó láncán vannak-e, azt a `beolvasztas` dönti el (a lánc a
+  // kapott születésekből és a tárból együtt követhető; ami nincs rajta, az idegen).
   const atveheto = erkezett.filter((e) => e && typeof e === 'object' && (szeletbeTartozik(e, megengedett)
-    || (megengedett.has(KOINO_SZULETES_KULCS) && koinoSzuleteseE(e, koino))));
+    || (megengedett.has(KOINO_SZULETES_KULCS) && (koinoSzuleteseE(e, koino) || ujAlakuSzuletesE(e)))));
   const beolvasztva = await beolvasztas(tar, atveheto, koino);
   uj += beolvasztva.uj;
   ujAzonositok = [...ujAzonositok, ...beolvasztva.ujAzonositok];

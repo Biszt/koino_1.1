@@ -1382,3 +1382,17 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     `identitas.js`, `lancGyoker.js`, `lancEllenorzes.js`, `ellentmondas.js`, `eszlelo.js`, `esemenyTar.js`, `vallalas.js`,
     `allapotSzamitas.js`, `muveletek.js`, `pakli.js`, `koino.js`, `verzioMeres.js`; a próbák (esemény, szabály, döntés,
     identitás, lánc-gyökér, parancssor).
+195. **2026-10-24 · a költözés ②a: a gyermek születése és a születések lánca (D118/1, /5, KZ2)**
+    → **a születés `szulo` (a szülő neve) és `szuloTagsag` (a létrehozó horgonya és tagsági lánca a szülőben, a szülő
+    születése NÉLKÜL) mezőt kaphat; a kapu a szülő születésével együtt ellenőriz (a lánc hiteles, a szülőé, a horgony a
+    létrehozóé, tagságot ad; zárt szülőnek csak zárt gyermeke), és ha a szülő születése még nincs meg, nem véglegesen
+    utasít el; a születések lánca a `szulo` mutatókon a gyökérig — a koinó születés-szelete és a kézi út a teljes láncot
+    viszi a gyökértől, a beolvasztás a kapott születésekből és a tárból együtt követi (ami nincs rajta, idegen), egy fájl
+    koinója a lánc legfiatalabbja; `koino "<név>" … szulo=<szülő>`: a szülő szabályait és zártságát örökli (ami nincs
+    megadva, az a szülőé), és a gyermek születése a létrehozó szülőbeli láncát folytatja** · ha a szülő születése a
+    bizonyítékban volna, egymásba ágyazva minden őst hozná (egy esemény, ami a történettel nő — 9. szabály); egy új, 1-es
+    sorszámú lánc a szülőbelivel ütközne, amint a múlt a gyermekbe ér (elágazás — a létrehozó a saját láncát vádolná;
+    építés közben derült ki) · ⚠️ a ②b-re: a létrehozó és a költözők szülőbeli eseményei a lánc-pont szerint jönnek, nem az
+    óra szerint · Csaba (D118, KZ2) · `koinoLanc.js` (új), `esemeny.js` (az alak), `esemenyTar.js` (a kapu), `csere.js`
+    (`beolvasztas`), `vonal.js` (a születés-szelet), `tarsEmlekezet.js`, `fajlCsere.js`, `muveletek.js`, `koino.js`
+    (`gyermekSzuletesElokeszitese`, `koinoSzuletesLanca`, `behozandoKoinoja`); a próbák (`koinoLancProba.js`, parancssor).

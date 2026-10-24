@@ -64,6 +64,8 @@ import lancGyoker from './lancGyokerProba.js';
 import ellentmondas from './ellentmondasProba.js';
 // ⭐ Az észlelő (D82) — a beérkezett események körül bizonyítható ellentmondások.
 import eszlelo from './eszleloProba.js';
+// ⭐⭐ D118 (a költözés ②a): a gyermek születése és a születések lánca
+import koinoLanc from './koinoLancProba.js';
 // ⭐ A döntési csomag (D85 T3, a (B)) — a csak-G1-nézet a csomaggal ugyanazt számolja.
 import dontesiCsomag from './dontesiCsomagProba.js';
 // ⭐ A csere titkosítása (D89/1) — a kriptográfia, és hogy a lehallgató semmit nem lát.
@@ -156,7 +158,8 @@ const PROBAK = [
   { nev: 'osszegzofa', futtat: osszegzoFa },
   { nev: 'lancgyoker', futtat: lancGyoker },
   { nev: 'ellentmondas', futtat: ellentmondas },
-  { nev: 'eszlelo', futtat: eszlelo }
+  { nev: 'eszlelo', futtat: eszlelo },
+  { nev: 'koinolanc', futtat: koinoLanc }
 ];
 
 // ===== A CSOPORTOK (Csaba, 2026-10-01) =====
@@ -179,7 +182,7 @@ const CSOPORTOK = {
   // a kanonikus alak, a kulcs, az aláírt esemény és a tár (az íróval)
   alap: ['kanonikus', 'kulcs', 'esemeny', 'tar', 'iro', 'atmeneti', 'keresotar', 'keresomegujitas'],
   // események → állapot: entitások, döntéshozatal, szabályok, egyezmények, tagság
-  allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'dontesicsomag', 'lezarasiosszegzes', 'osszpont', 'felszabaditas', 'identitas', 'tagsag', 'ertesites', 'felderites'],
+  allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'dontesicsomag', 'lezarasiosszegzes', 'osszpont', 'felszabaditas', 'identitas', 'tagsag', 'ertesites', 'felderites', 'koinolanc'],
   // a felületnek felelő réteg
   felulet: ['kapu', 'pakli', 'ter', 'csereallapot'],
   // két készülék között: a párbeszéd, a kézi út, a társak, a kapu, a kötések, a tábla, a DHT

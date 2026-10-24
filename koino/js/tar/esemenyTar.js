@@ -36,6 +36,8 @@ import { CSOMAG_TIPUS, dontesiCsomagEllenorzese } from '../allapot/dontesiCsomag
 import { LEZARASI_OSSZEGZES, lezarasiOsszegzesAlakja } from '../allapot/lezarasiOsszegzes.js';
 // ⭐ D93/2: a tagsági csomag tartalma is a kapun megy át.
 import { TAGSAGI_CSOMAG, tagsagiCsomagEllenorzese } from '../allapot/tagsag.js';
+// ⭐⭐ D118 (②a): a gyermek születésének bizonyítéka (a szülő születésével együtt).
+import { gyermekSzuleteseE, gyermekSzuletesEllenorzese } from '../allapot/koinoLanc.js';
 
 // ===================================
 // ESEMÉNY MENTÉSE
@@ -105,6 +107,17 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
     if (!csomag.rendben) {
       console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: csomag.ok });
       return { mentve: false, ok: csomag.ok };
+    }
+  }
+
+  // ----- 1/a4. ⭐⭐ D118 (②a): A GYERMEK SZÜLETÉSE — a szülő születésével együtt, a létrehozó tagsági bizonyítékával -----
+  // KZ2: gyermeket a szülő vágáskori tagja hozhat létre; D118/5: zárt szülőnek csak zárt gyermeke. ⚠️ Ha a szülő születése
+  // még nincs a tárban, az elutasítás nem végleges — a csere és a kézi út a láncot a gyökértől hozza.
+  if (gyermekSzuleteseE(esemeny)) {
+    const gy = await gyermekSzuletesEllenorzese(esemeny, (await tar.esemeny(esemeny.adat.szulo)) ?? null);
+    if (!gy.rendben) {
+      console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: gy.ok });
+      return { mentve: false, ok: gy.ok, ...(gy.hianyzik ? { hianyzik: true } : {}) };
     }
   }
 

@@ -144,7 +144,8 @@ import { koinoEsemenyei, sajatLancEsemenyei, esemenyLekerese, esemenyMentese, en
 import {
   szelet, esemenyEllenorzese, bejelentesHelyei, azonositoAlaku, esemenyKoinoja, koinoSzuleteseE, koinoSzuleteseListabol
 } from './js/esemeny/esemeny.js';
-import { szabalyokAlakiHibaja, ALAP_SZABALYOK } from './js/esemeny/koinoSzabalyok.js';
+import { szabalyokAlakiHibaja, ALAP_SZABALYOK, koinoSzabalyai } from './js/esemeny/koinoSzabalyok.js';
+import { szuletesLanc, szuloTagsagaEpitese } from './js/allapot/koinoLanc.js';
 import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
 import { ALLASPONT_MUVELET } from './js/allapot/szabalyok.js';
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
@@ -444,18 +445,69 @@ const tar = await koinoTaraNyitasa(KOINO);
  * mappájába mentjük, ugyanazon a kapun. Ugyanaz a művelet (`koinoLetrehozasa`), csak a koinó-mezője üres.
  * @returns {Promise<Object>} a születés eseménye (`azonosito` = a koinó neve)
  */
-async function ujKoinoSzuletese(nev, leiras, beallitas) {
+async function ujKoinoSzuletese(nev, leiras, beallitas, osSzuletesek = [], lancVeg = null) {
   const ideiglenes = await mkdtemp(join(tmpdir(), 'koino-szuletes-'));
   try {
     const ures = await esemenyTarNyitasa('uj', ideiglenes);
+    // ⭐ D118 (②a): a gyermek születését a kapu csak a szülőével ellenőrizheti — a lánc a gyökértől előre megy.
+    for (const e of osSzuletesek) await esemenyMentese(ures, e);
+    // ⭐⭐ D118 (②a, 4.5): a gyermek születése a létrehozó SZÜLŐBELI láncát folytatja (a vágás előtti utolsó eseménye után)
+    // — a lánca a vágásig közös. ⛔ Új lánc (1-es sorszám) a szülőbeli 1-essel ütközne, amint a múltja a gyermekbe ér
+    // (elágazás — a saját becsületes láncát vádolná).
+    if (lancVeg) {
+      const mv = await esemenyMentese(ures, lancVeg);
+      if (!mv.mentve) throw new Error('A szülőbeli láncod vége nem olvasható be: ' + mv.ok);
+    }
     const szuletes = await koinoLetrehozasa({ koino: '', kulcspar, szerzo, tar: ures }, nev, leiras, undefined, beallitas);
     const cel = await koinoTaraNyitasa(szuletes.azonosito);
+    for (const e of osSzuletesek) {
+      const mo = await esemenyMentese(cel, e);
+      if (!mo.mentve) throw new Error('A szülő születés-lánca nem menthető: ' + mo.ok);
+    }
     const m = await esemenyMentese(cel, szuletes);
     if (!m.mentve) throw new Error('A koinó születése nem menthető: ' + m.ok);
     return szuletes;
   } finally {
     await rm(ideiglenes, { recursive: true, force: true });
   }
+}
+
+/**
+ * ⭐⭐ D118 (②a): EGY GYERMEK SZÜLETÉSÉNEK ELŐKÉSZÍTÉSE ezen a készüléken — a szülő a neve vagy egy becenév. KZ2: a
+ * létrehozó a szülő (bizonyítható) tagja — a tagsági lánca a szülő tárából (`szuloTagsagaEpitese`); D118/5: zárt szülőnek
+ * csak zárt gyermeke; ⭐ a szabályok a szülőéi, amit a hívó nem változtat (a költözés jellemzően egy szabályért születik).
+ * @returns {Promise<{szulo: string, szuloSzuletes: Object, szuloTagsag: Object, szabalyok: Object, zart: boolean,
+ *   osSzuletesek: Array<Object>}>} az `osSzuletesek` a szülő lánca a gyökértől
+ */
+async function gyermekSzuletesElokeszitese(szuloErv, { nyilt, szabalyok }) {
+  const P = azonositoAlaku(szuloErv) ? szuloErv : await koinoBecenevFeloldasa(szuloErv);
+  if (!azonositoAlaku(P)) {
+    throw new Error('A szülő egy új alakú koinó neve (vagy a becenevéje) lehet: ' + szuloErv);
+  }
+  const ptar = await esemenyTarNyitasa(P);
+  const pszuletes = (await ptar.esemeny(P)) ?? null;
+  if (!pszuletes || !koinoSzuleteseE(pszuletes, P)) {
+    throw new Error('A szülő (' + rovidAzonosito(P) + ') születése nincs meg ezen a készüléken — előbb csatlakozz hozzá.');
+  }
+  const lanc = (await sajatLancEsemenyei(ptar, szerzo)).filter((e) => esemenyKoinoja(e) === P);
+  const horgony = lanc.find((e) => e.tipus === 'Belepes')?.azonosito
+    ?? (pszuletes.szerzo === szerzo ? P : null);
+  const szuloTagsag = horgony
+    ? szuloTagsagaEpitese([pszuletes, ...await tagsagiEsemenyekGyujtese(ptar, P, horgony)], P, horgony) : null;
+  if (!szuloTagsag) {
+    throw new Error('Gyermeket a szülő tagja hozhat létre (KZ2) — a tagságod a szülőben ezen a készüléken nem'
+      + ' bizonyítható (tagsag, belep, meghiv).');
+  }
+  const zart = pszuletes.adat?.zart !== false;
+  if (zart && nyilt) throw new Error('Zárt szülőnek csak zárt gyermeke lehet (D118/5) — hagyd el a „nyilt” szót.');
+  const sz = koinoSzabalyai(pszuletes);
+  const egyesitett = { ...sz, ...szabalyok, alapKuszobok: { ...sz.alapKuszobok, ...(szabalyok.alapKuszobok ?? {}) } };
+  const { lanc: osok, teljes } = await szuletesLanc(ptar, P);
+  if (!teljes) throw new Error('A szülő születés-lánca nincs meg teljesen ezen a készüléken.');
+  return { szulo: P, szuloSzuletes: pszuletes, szuloTagsag, szabalyok: egyesitett, zart: zart || !nyilt,
+    osSzuletesek: [...osok].reverse(),
+    // ⭐ a létrehozó lánca a szülő tárában — a vége (a gyermek születése ezt folytatja)
+    lancVeg: (await sajatLancEsemenyei(ptar, szerzo)).at(-1) ?? null };
 }
 
 /** ⭐ D118/2 (①b): a koinó szabályai egy sorban (`kulcs=érték`, a küszöbök is). */
@@ -470,6 +522,7 @@ function szabalyokSzovege(sz) {
  */
 function behozandoKoinoja(szoveg) {
   const koinok = new Set();
+  const szulok = new Map();   // ⭐ D118 (②a): születés → a szülője (a lánc ős-születései más koinó-nevűek)
   for (const sor of String(szoveg).split('\n')) {
     if (!sor.trim()) continue;
     let e;
@@ -477,8 +530,17 @@ function behozandoKoinoja(szoveg) {
     if (!e || typeof e !== 'object' || typeof e.tipus !== 'string' || typeof e.koino !== 'string') continue;
     const k = esemenyKoinoja(e);
     if (azonositoAlaku(k)) koinok.add(k);
+    if (e.tipus === 'KoinoLetrehozas' && e.koino === '' && azonositoAlaku(e.azonosito)) szulok.set(e.azonosito, e.adat?.szulo ?? null);
   }
-  return koinok.size === 1 ? [...koinok][0] : null;
+  if (koinok.size === 1) return [...koinok][0];
+  // ⭐ D118 (②a): egy születés-lánc a fájlban — a koinó a lánc legfiatalabbja (akit senki nem nevez szülőnek), ha minden
+  // más koinó-név az ő ősei közt van.
+  const szuloNevek = new Set([...szulok.values()].filter(Boolean));
+  const fiatalok = [...koinok].filter((k) => szulok.has(k) && !szuloNevek.has(k));
+  if (fiatalok.length !== 1) return null;
+  const osok = new Set();
+  for (let k = fiatalok[0]; k && !osok.has(k); k = szulok.get(k) ?? null) osok.add(k);
+  return [...koinok].every((k) => osok.has(k)) ? fiatalok[0] : null;
 }
 // ⭐⭐ B/2 (D75): AZ ÁTMENETI TÁR — amit csak láttam (a `hozd` válasza): eldobható, a legrégebben megnézett megy.
 const atmeneti = await atmenetiTarNyitasa(KOINO, join(alapHely(), KOINO));
@@ -3568,6 +3630,8 @@ async function ketFokBeallitasai(allapot = null) {
     lancTars: (alairo, sz) => lancTarsFeljegyzese(lancEllenorzesTarolo(KOINO), alairo, sz),
     // ⭐ D96: a koinó születése mint ESEMÉNY — mindenkihez eljut (a szelete csak az alapítóé).
     koinoSzuletes: await koinoSzuletese(),
+    // ⭐⭐ D118 (②a): …és a születések LÁNCA a gyökértől (a gyermek kapuja a szülőjét csak így ellenőrizheti).
+    koinoSzuletesLanc: await koinoSzuletesLanca(),
     osszegzoSzeletek: kerdo.lista, osszegzesMintaKerdesek: kerdo.mintaKerdesek, osszegzesFogadas: kerdo.fogadas,
     osszegzesValasz: tarto.valasz, osszegzesMintak: tarto.mintak,
     kuldoSzeletek: (szabad) => kuldo.lista(szabad), kuldoKerem: fogado.kerem
@@ -3663,6 +3727,14 @@ async function azonossagKotese(alairo, sz, h) {
  */
 async function koinoSzuletese() {
   if (koinoSzuletesEmlek?.esemeny) return koinoSzuletesEmlek.esemeny;
+  // ⭐ D118/2: a lenyomat-nevű koinó születése egy kérdés — az azonosítója maga a név.
+  if (azonositoAlaku(KOINO)) {
+    const e = (await tar.esemeny(KOINO)) ?? null;
+    if (e && koinoSzuleteseE(e, KOINO)) {
+      koinoSzuletesEmlek = { esemeny: e, ido: Date.now(), n: tar.allas?.()?.n ?? null };
+      return e;
+    }
+  }
   // ⚠️ A „nincs” is emlék (10 percig): a táras keresés drága, és a születés ritkán érkezik. ⛔ DE CSAK AMÍG A TÁR NEM
   // VÁLTOZOTT (2026-10-09, a 72. mérés terepen): a hosszan futó őrjárat különben a cserében megkapott születést 10 percig
   // nem vette figyelembe — a társ minden körben újraküldte (~6 KB körönként).
@@ -3682,6 +3754,15 @@ async function koinoSzuletese() {
   if (!k) k = koinoSzuleteseListabol(await koinoEsemenyei(tar, KOINO), KOINO);
   koinoSzuletesEmlek = { esemeny: k, ido: Date.now(), n: tar.allas?.()?.n ?? null };
   return k;
+}
+
+/** ⭐⭐ D118 (②a): a koinó születéseinek lánca a GYÖKÉRTŐL a koinóig (a tárból; ami még hiányzik, az nincs benne). */
+async function koinoSzuletesLanca() {
+  if (!azonositoAlaku(KOINO)) {
+    const k = await koinoSzuletese();
+    return k ? [k] : [];
+  }
+  return [...(await szuletesLanc(tar, KOINO)).lanc].reverse();
 }
 
 /**
@@ -5112,6 +5193,13 @@ try {
             + ' csatlakozás: csatlakoz <a koinó neve>');
         } else {
           kiir('A koinó neve (ezt add meg annak, aki csatlakozik): ' + KOINO);
+          // ⭐ D118 (②a): a szülő (ha van) — a születések láncából
+          const { lanc: osok } = await szuletesLanc(tar, KOINO);
+          if (osok[0]?.adat?.szulo) {
+            const p = osok[1];
+            kiir('A szülője: ' + osok[0].adat.szulo + (p ? ' („' + (p.adat?.nev ?? '?') + '”)' : ' (a születése még nem jött meg)')
+              + ' · nemzedék: ' + osok.length);
+          }
           // ⭐ D118/2 (①b): a szabályai a születéséből (ha még nem jött meg, a mai értékek)
           kiir('A szabályai: ' + szabalyokSzovege(await koinomSzabalyai(kornyezet)));
           kiir(SZIN.halvany + 'Ezen a készüléken a becenév: ' + KOINO_BECENEV + ' · a másik készüléken: csatlakoz ' + KOINO
@@ -5140,13 +5228,23 @@ try {
       }
       const szabalyHiba = szabalyokAlakiHibaja(Object.keys(szabalyok).length ? szabalyok : undefined);
       if (szabalyHiba) throw new Error('A koinó szabályai: ' + szabalyHiba);
+      // ⭐⭐ D118 (②a): szulo=<a szülő neve vagy becenéve> — a GYERMEK születése (a szülő szabályaival, zártságával).
+      const szuloErv = tobbi.find((x) => x.startsWith('szulo='));
+      const gyermek = szuloErv ? await gyermekSzuletesElokeszitese(szuloErv.slice(6), { nyilt, szabalyok }) : null;
       const szuletes = await ujKoinoSzuletese(nev, tobbi.find((x) => x !== 'nyilt' && !/^[A-Za-z]+=/.test(x)),
-        { zart: !nyilt, profil, szabalyok });
+        gyermek
+          ? { zart: gyermek.zart, profil, szabalyok: gyermek.szabalyok, szulo: gyermek.szulo, szuloTagsag: gyermek.szuloTagsag }
+          : { zart: !nyilt, profil, szabalyok },
+        gyermek?.osSzuletesek ?? [], gyermek?.lancVeg ?? null);
       await koinoBecenevKijelolese(KOINO_BECENEV, szuletes.azonosito);
       if (profil.length) kiir(SZIN.halvany + 'Kötelező profil-mezők: ' + profil.join(', ') + ' (a meghívó tanúsítja — D28/2)' + SZIN.vege);
       kiir('A koino létrejött: ' + nev + (nyilt ? ' (NYÍLT — bárki olvashatja, aki eljut egy tagjához)'
         : ' (ZÁRT — a tartalmát csak tagnak adjuk ki; a betartatás az identitás-lépéssel jön)'));
       kiir('  A koinó neve: ' + szuletes.azonosito);
+      if (gyermek) {
+        kiir('  A szülője: ' + gyermek.szulo + ' („' + (gyermek.szuloSzuletes.adat?.nev ?? '?') + '”) — a vágás a'
+          + ' születés pillanata; a költözés (a múlt és a súly) a következő lépésekkel jön');
+      }
       kiir('  A szabályai: ' + szabalyokSzovege(szuletes.adat.szabalyok));
       kiir(SZIN.halvany + '  Ezen a készüléken a „' + KOINO_BECENEV + '” becenév; a másik készüléken: csatlakoz '
         + szuletes.azonosito + SZIN.vege);

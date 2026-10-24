@@ -443,6 +443,19 @@ export function alakiHiba(esemeny) {
   if (esemeny.tipus === 'KoinoLetrehozas') {
     const hiba = szabalyokAlakiHibaja(esemeny.adat?.szabalyok);
     if (hiba) return hiba;
+    // ⭐⭐ D118 (②a): a GYERMEK születése a szülő nevét (a születése lenyomatát) és a létrehozó tagsági bizonyítékát hozza
+    // — csak új alakban. Itt az alak; a bizonyítékot a kapu a szülő születésével együtt ellenőrzi (`koinoLanc.js`).
+    const sz = esemeny.adat?.szulo;
+    const t = esemeny.adat?.szuloTagsag;
+    if (sz !== undefined) {
+      if (esemeny.koino !== '' || !azonositoAlaku(sz)) return 'a szülő csak egy új alakú születés neve lehet (a lenyomata)';
+      if (!t || typeof t !== 'object' || Array.isArray(t) || !azonositoAlaku(t.horgony) || !Array.isArray(t.lanc)
+          || t.lanc.length > 1024) {
+        return 'a gyermek születése a létrehozó tagsági bizonyítékát hozza ({ horgony, lanc })';
+      }
+    } else if (t !== undefined) {
+      return 'tagsági bizonyíték csak a szülőt megnevező születésen állhat';
+    }
   }
 
   // ----- A HÁROM ÚJ MEZŐ ALAKJA -----

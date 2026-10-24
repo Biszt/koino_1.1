@@ -368,7 +368,9 @@ export function koinoLetrehozasa(kornyezet, nev, leiras, alapitok, beallitas = {
     ...(Array.isArray(beallitas.profil) && beallitas.profil.length ? { profil: [...beallitas.profil] } : {}),
     // ⭐⭐ D118/2 (①b): a koinó SZABÁLYAI — MIND (a megadottak a mai értékek helyén), hogy egy későbbi program alapértéke ne
     // írhassa át őket; a kapu ellenőrzi (`koinoSzabalyok.js`). Nem változtatható: egy másik szabály egy másik koinó (a költözés).
-    szabalyok: teljesSzabalyok(beallitas.szabalyok)
+    szabalyok: teljesSzabalyok(beallitas.szabalyok),
+    // ⭐⭐ D118 (②a): a GYERMEK születése a szülő nevét és a létrehozó tagsági bizonyítékát hozza (KZ2 — `koinoLanc.js`).
+    ...(beallitas.szulo ? { szulo: beallitas.szulo, szuloTagsag: beallitas.szuloTagsag } : {})
   });
 }
 

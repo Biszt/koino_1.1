@@ -450,6 +450,61 @@ proba('⭐⭐ D118/2 (①b): a születés szabályai a parancssoron — 500-as k
     }
   });
 
+// ⭐⭐ D118 (②a): A GYERMEK SZÜLETÉSE a parancssoron és a MÁSIK készüléken. Az A a szülő alapítója, és létrehozza a
+// gyermekét (`szulo=sajat`): a gyermek a szülő szabályait örökli (a 800-as keretet), a megadottat felülírja (66%), a
+// zártságát is (a `nyilt` hibát ad). A B csatlakozik a gyermekhez, és a csere a születések láncát a gyökértől hozza (a
+// lemezén előbb a szülő, aztán a gyermek); a kézi út (`kivisz` → `behoz`) egy friss készüléken ugyanígy, és a koinó a lánc
+// legfiatalabbja. A szülő nem tagja (aki a szülő születését egy fájlból ismeri) nem hozhat létre gyermeket (KZ2).
+// Viselkedést mérünk (a lemezeket és a beceneveket).
+proba('⭐⭐ D118 (②a): a gyermek születése — a szülő szabályaival és zártságával; a csere és a kézi út a láncot a gyökértől viszi; a nem tag nem hozhat létre gyermeket',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const d = await ujKeszulek();
+    const n = await ujKeszulek();
+    const G = { KOINO_AZONOSITO: 'gyermek' };
+    try {
+      await fut(a, 'koino', 'Szülő', 'tudatpontKeret=800');
+      const P = await koinoNeve(a);
+      // ⭐ A létrehozó lánca a szülőben a születésen túl is tart — a gyermek születése a VÉGÉT folytatja (4.5).
+      await fut(a, 'gondolat', 'ELOTTE');
+      const nyiltHiba = await fut(a, 'koino', 'Nyílt gyermek', 'szulo=sajat', 'nyilt', G).catch((h) => String(h?.message ?? h));
+      const kiiras = await fut(a, 'koino', 'Gyermek', 'szulo=sajat', 'elfogadasiKuszob=66', G);
+      const C = await koinoNeve(a, 'gyermek');
+      if (!P || !C || C === P) return false;
+      const lemez = async (hely) => (await readFile(join(hely, C, 'esemenyek.jsonl'), 'utf8').catch(() => ''))
+        .split('\n').filter(Boolean).map((x) => JSON.parse(x));
+      const szuletesei = (esemenyek) => esemenyek.filter((e) => e.tipus === 'KoinoLetrehozas').map((e) => e.azonosito).join();
+      const cSzul = (await lemez(a)).find((e) => e.azonosito === C);
+      const pLanc = (await readFile(join(a, P, 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x))
+        .filter((e) => e.szerzo === cSzul?.szerzo).sort((x, y) => x.sorszam - y.sorszam);
+      const folytatja = pLanc.length >= 3 && cSzul.sorszam === pLanc.at(-1).sorszam + 1 && cSzul.elozo === pLanc.at(-1).azonosito;
+      // A B a gyermekhez csatlakozik — a csere hozza a láncot.
+      await fut(b, 'csatlakoz', C, G);
+      await csereKor(a, b, 7799, G);
+      const bSzuletesei = szuletesei(await lemez(b));
+      // A kézi út egy friss készüléken (a becenév magától a gyermeké lesz).
+      await fut(a, 'kivisz', join(a, 'gyermek.jsonl'), G);
+      await fut(d, 'behoz', join(a, 'gyermek.jsonl'));
+      const dSzuletesei = szuletesei(await lemez(d));
+      // A nem tag: a szülő születését egy fájlból ismeri, de nem hívta meg senki.
+      await fut(a, 'kivisz', join(a, 'szulo.jsonl'));
+      await fut(n, 'behoz', join(a, 'szulo.jsonl'));
+      const nemTag = await fut(n, 'koino', 'Nem tag gyermeke', 'szulo=sajat', { KOINO_AZONOSITO: 'gy2' })
+        .catch((h) => String(h?.message ?? h));
+      const ok = /Zárt szülőnek csak zárt gyermeke/.test(nyiltHiba) && /A szülője: /.test(kiiras) && folytatja
+        && cSzul?.adat?.szulo === P && cSzul.adat.zart === true && cSzul.adat.szabalyok?.tudatpontKeret === 800
+        && cSzul.adat.szabalyok?.alapKuszobok?.elfogadasiKuszob === 66
+        && bSzuletesei === [P, C].join() && (await koinoNeve(d)) === C && dSzuletesei === [P, C].join()
+        && (await koinoNeve(n)) === P && /szülő tagja hozhat létre/.test(nemTag) && (await koinoNeve(n, 'gy2')) === null;
+      if (!ok) process.stderr.write('    (a kimenetek: ' + JSON.stringify({ nyiltHiba, kiiras: kiiras.slice(-300), szulo: cSzul?.adat?.szulo === P,
+        szabalyok: cSzul?.adat?.szabalyok, b: bSzuletesei, d: dSzuletesei, dNeve: await koinoNeve(d), nemTag }) + ')\n');
+      return ok;
+    } finally {
+      for (const h of [a, b, d, n]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ===================================
 // ⭐⭐ B/1–B/2: A `hozd` AZ ÁTMENETI TÁRBA — és a pontom után a tartósba lép elő (2026-10-03)
 // ===================================

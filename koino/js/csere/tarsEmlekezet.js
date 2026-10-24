@@ -97,8 +97,10 @@ export function valtozottKulcsok(tar, feljegyzes, { szuletes = null, szuro = () 
     const k = vonalKulcsa(s);
     if (ervenyesKulcs(k) && szuro(k)) kulcsok.add(k);
   }
-  // ⚠️ A koinó születésének párja a szűrőtől függetlenül a párok közt van (mindenki részt vesz benne — D96).
-  if (szuletes && v.azonositok.includes(szuletes)) kulcsok.add(KOINO_SZULETES_KULCS);
+  // ⚠️ A koinó születésének párja a szűrőtől függetlenül a párok közt van (mindenki részt vesz benne — D96). ⭐ D118 (②a):
+  // a pár a születések LÁNCÁÉ — ha bármelyik tagja most jött, a pár változott.
+  const szuletesek = Array.isArray(szuletes) ? szuletes : szuletes ? [szuletes] : [];
+  if (szuletesek.some((az) => v.azonositok.includes(az))) kulcsok.add(KOINO_SZULETES_KULCS);
   for (const k of f.r) kulcsok.add(k);
   if (kulcsok.size > VALTOZOTT_KORLAT) return null;
   return [...kulcsok].sort();

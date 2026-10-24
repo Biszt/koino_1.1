@@ -29,8 +29,9 @@
 // Használják: a csere-vonal (`beolvasztas`), a kézi út (`fajlCsere.js`) és a csereProba.js.
 
 import { lenyomat } from '../esemeny/kanonikusAlak.js';
-import { alakiHiba, esemenyKoinoja } from '../esemeny/esemeny.js';
+import { alakiHiba, esemenyKoinoja, azonositoAlaku } from '../esemeny/esemeny.js';
 import { koinoEsemenyei, esemenyMentese } from '../tar/esemenyTar.js';
+import { szuletesLanc, ujAlakuSzuletesE } from '../allapot/koinoLanc.js';
 
 // ===================================
 // ⛔⛔ AMIT EGYETLEN MAI KAPU SEM ENGED BE, AZT NEM HIRDETJÜK (2026-09-24, 40. mérés)
@@ -336,9 +337,25 @@ export async function beolvasztas(tar, esemenyek, koino) {
   // ⭐ D82: a MOST bekerült események azonosítói — az észlelő ezek körül keres (a hívóé).
   const ujAzonositok = [];
 
-  for (const esemeny of esemenyek) {
+  // ----- ⭐⭐ D118 (②a): A SZÜLETÉSEK LÁNCA — a koinó őseinek születése is a koinóé -----
+  // A lánc a koinó születésétől a `szulo` mutatókon a gyökérig, a tárból és a most kapottakból együtt; ezek a születések
+  // (más koinó-névvel) bejönnek, és ELŐRE kerülnek, a gyökértől — a kapu a gyermek születését csak a szülőével ellenőrizheti.
+  const lancSzuletesek = new Set();
+  let sorban = esemenyek;
+  if (koino !== undefined && azonositoAlaku(koino)) {
+    const kapott = new Map(esemenyek.filter(ujAlakuSzuletesE).map((e) => [e.azonosito, e]));
+    if (kapott.size) {
+      const { lanc } = await szuletesLanc(tar, koino, kapott);
+      for (const e of lanc) lancSzuletesek.add(e.azonosito);
+      const elore = [...lanc].reverse().filter((e) => kapott.get(e.azonosito) === e);
+      const eloreSet = new Set(elore);
+      sorban = [...elore, ...esemenyek.filter((e) => !eloreSet.has(e))];
+    }
+  }
+
+  for (const esemeny of sorban) {
     // ----- IDEGEN KOINO: be sem visszük a kapuig -----
-    if (koino !== undefined && esemenyKoinoja(esemeny) !== koino) {
+    if (koino !== undefined && esemenyKoinoja(esemeny) !== koino && !lancSzuletesek.has(esemeny?.azonosito)) {
       idegen++;
       console.warn('beolvasztas - IDEGEN koino eseménye, kihagyva', {
         vart: koino, kapott: esemeny?.koino

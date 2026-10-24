@@ -262,3 +262,46 @@ Most csak a két fél szerkezete épül; a pénz mezői később hozzáadhatók,
 6. **⑥ A felület** (a belépő tér családfája, „Költözés…” a fő menüben).
 
 *Amit ez nem old meg:* a koinók egyesítését, a pénzt (csak a helyét), és a protokoll-törést (KZ5).
+
+## 8. A ② építési alakja (2026-10-24)
+
+A 4.2–4.3 és a 4.7 első pontja, a kódhoz igazítva. Két rész: **②a a gyermek születése** (és a születések lánca), **②b a
+kapu koinó-szabálya** (az ős vágás előtti eseményei a gyermek tárában és cseréjében). A számítás még NEM veszi őket
+figyelembe — az a ③ (a két réteg); a ②-ben a gyermek állapota ugyanaz, mintha szülő nélkül született volna, csak a
+múltja már megérkezhet.
+
+**②a — a gyermek születése.** ✅ *(2026-10-24, elágazás 195 — `koinoLanc.js`; a próbák a `koinoLancProba.js`-ben és a
+parancssorban, 13 rontással.)*
+- A születés új mezői: `szulo` (a szülő koinó neve) és `szuloTagsag` — **a létrehozó tagsági bizonyítéka a szülőben**
+  (KZ2): a horgonya és a tagsági lánca a szülő eseményeiből (ugyanaz, amit a `TagsagiCsomag` visz), **a szülő születése
+  nélkül** — arra a `szulo` mutat. ⭐ Így a születés mérete nem nő a nemzedékekkel (ha a szülő születése benne volna, az a
+  sajátját is hozná: egymásba ágyazva minden ős — egyetlen esemény, ami a koinó történetével nő, a 9. szabályba ütközik).
+- **A kapu** (`esemenyMentese`): a gyermek születése csak akkor kerül a tárba, ha a szülő születése már ott van, és a
+  bizonyíték megáll — a lánc minden eseménye hiteles és a szülőé, a horgony a létrehozóé, és a szülő születésével együtt
+  tagságot ad; ⛔ és a zárt szülő gyermeke csak zárt lehet (D118/5 — a 4.2 szerint a kapu elveti). Ha a szülő születése
+  még nincs meg, az elutasítás nem végleges: a csere legközelebb újra hozza (a lánc a gyökértől jön, lent).
+- **A születések lánca:** a gyermek születésétől a `szulo` mutatókon a gyökérig. A koinó születés-szelete
+  (`KOINO_SZULETES_KULCS`, D96) mostantól a TELJES láncot hordozza, **a gyökértől** (így a fogadó kapuja a szülőt a
+  gyermek előtt kapja); a fogadó a lánc születéseit akkor veszi be, ha a koinója láncán vannak (a láncot a kapott
+  születésekből és a tárából együtt követi). A lánc a vállalás része (D90/2: a koinó születése mindenkié — a tömörítés
+  sem viheti el), és a kézi út (`kivisz` / `behoz`) is viszi; egy fájl koinója a lánc legfiatalabb tagja.
+- **A létrehozás:** `koino "<név>" … szulo=<a szülő neve vagy becenéve>` — a készülék, ami a szülőben tag; ⭐ a gyermek a
+  szülő SZABÁLYAIT örökli (ami nincs megadva, az a szülőé, nem a mai érték — a költözés célja jellemzően egy szabály
+  változtatása), és a szülő zártságát (zárt szülőnél a `nyilt` hibát ad). A gyermek tárába a szülő születés-lánca is
+  bekerül.
+- ⛔ **A vágás a gyermek születésének ideje** (`ido`, a létrehozó órája — 4.3). A létrehozó tagsági láncára nincs időfeltétel:
+  a lánc eseményei a születésben vannak, tehát a születés előtt léteztek (oksági bizonyíték, óra nélkül).
+- ⭐ **A gyermek születése a létrehozó szülőbeli LÁNCÁT folytatja** (az `elozo` a vágás előtti utolsó eseménye, a sorszám
+  annak +1-e — 4.5: a lánc a vágásig közös). ⛔ Egy új, 1-es sorszámú lánc a szülőbeli 1-essel ütközne, amint a múlt a
+  gyermekbe ér: a gyermekben elágazásnak látszana, és a létrehozó a saját becsületes láncát vádolná (építés közben vettem
+  észre: az első változat véletlenül a szülő születését folytatta, mert az az ideiglenes tárban volt).
+- ⚠️ **A ②b-re ebből egy szigorítás:** a létrehozó (és a ④-ben a költözők) szülőbeli eseményei a gyermekbe a **lánc-pont
+  szerint** jönnek (a sorszám a pont alatt), nem az óra szerint — különben egy óra-csúszás a vágás utáni szülőbeli
+  eseményét is beengedné, ugyanazzal a sorszámmal, mint a gyermekbeli folytatás (elágazás). Az óra a nem költözőké (4.3).
+
+**②b — a kapu koinó-szabálya** (4.3). Egy esemény a gyermek tárába tartozik, ha a gyermeké; vagy a lánc egy ősének
+születése; vagy egy ős eseménye a vágása előtt (`ido` ≤ annak a nemzedéknek a születése, amelyik tőle örökölt). Ez EGY
+segéd (`koinohozTartozik`), és mindenütt ezt hívja, ahol ma a koinó nevére szűrünk a hálózat és a kézi út kapujában
+(`beolvasztas`) és a szelet halmazában (`szeletEgyeztetes.js` — a csere két névvel egy szeletben); ⚠️ a halmaz szabálya
+a kapuéval egyezik (különben két készülék minden cserében újraküldené, amit a másik elvet — a 40. mérés tanulsága). A
+kiköltözés kivétele (a vágás utáni, mégis kell) a ④-gyel jön.
