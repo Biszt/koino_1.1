@@ -1353,3 +1353,16 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     szabályba ütközik ⛔ **lelet:** a koinó neve ma szabad szöveg, és egy kívülálló egyetlen azonos nevű születéssel (a
     cserén is) az alapító — és minden tag — döntéseit „nem ellenőrizhetővé” tette (mérve) — a D118/2 zárja, ezért az ① az
     első lépés · Csaba · [`koltozes_atvizsgalas.md`](koltozes_atvizsgalas.md), a fázis-2 terv D118-a.
+193. **2026-10-24 · a költözés ①a: a koinó neve a születés lenyomata (D118/2; KZ1–KZ5 elfogadva)**
+    → **az új alakú `KoinoLetrehozas` koinó-mezője üres, a koinó neve a születés azonosítója, minden más esemény ezt viszi;
+    a kód minden koinó-hasonlítása egy segédet hív (`esemenyKoinoja`), a születést EGY szabály választja (`koinoSzuleteseE` /
+    `koinoSzuleteseListabol` — lenyomat-nevű koinónál csak az az esemény, amelyiknek az azonosítója maga a név); a kapu
+    elveti a lenyomat-nevet mondó születést és az üres koinó-nevű nem-születést; a `KOINO_AZONOSITO` helyi becenév
+    (`becenevek.json`), a mappa a koinó neve; `koino` (új alakban, argumentum nélkül a név), `csatlakoz <név>`, a `behoz`
+    egyértelmű fájlnál csatlakozik** · a lelet (192.): a szabad név mellett egy kívülálló egyetlen azonos nevű születéssel
+    az alapító és minden tag döntéseit „nem ellenőrizhetővé” tette; a három választási hely (az állapot az utolsót, a
+    tagság az elsőt, a kapu a saját láncból) eltért · ⚠️ a régi alak (szabad név) csak a próbák és a régi adat kedvéért él,
+    lenyomat-nevű koinóra soha nem vonatkozik; a csatlakozó előbb `csatlakoz`-ik, aztán `belep` (a belépés a koinó nevére
+    szól) · Csaba · `esemeny.js`, `tagsag.js`, `allapotSzamitas.js`, `identitas.js`, `ter.js`, `vonal.js`, `fajlTar.js`
+    (`koinoBecenevFeloldasa` / `Kijelolese`), `koino.js`, és a koinó-hasonlítások 18 fájlban; a próbák (`koinoMappa`,
+    `koinoNeve` a parancssor-próbában).

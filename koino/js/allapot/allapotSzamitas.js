@@ -31,6 +31,7 @@
 
 import { szabalyokErvenyesitese, erintettek, elsoErintett, javaslatEntitasai } from './szabalyok.js';
 import { csomagokKibontasa } from './dontesiCsomag.js';
+import { koinoSzuleteseListabol } from '../esemeny/esemeny.js';
 
 // ===================================
 // A BEMENET RENDEZÉSE — a determinizmus EGYETLEN forrása
@@ -276,6 +277,10 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
 
   // ----- NYERSANYAG-GYŰJTÉS -----
   const koinoAdatok = { nev: null, leiras: null };
+  // ⭐⭐ D118/2: a koinó születése EGY szabállyal (`koinoSzuleteseListabol` — a tagság, a kapu, a belépő tér ugyanezt
+  // hívja). ⛔ Eddig a rendezett sor UTOLSÓ születése írta felül a koinó adatait — egy második, azonos nevű születés így
+  // a koinó nevét és zártságát is átvette (a lelet).
+  const koinoSzuletes = koinoSzuleteseListabol(szamitok, beallitas.koino ?? null);
   const letrehozasok = new Map();        // entitás azonosító → a létrehozó esemény
   const pontok = utolsoNyer();           // "szerzo|entitas" → pontszám
   const ertekJavaslatok = utolsoNyer();  // "szerzo|entitas" → küszöb-négyes
@@ -285,6 +290,7 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
 
       // ----- A KOINO MAGA -----
       case 'KoinoLetrehozas':
+        if (e !== koinoSzuletes) break;
         koinoAdatok.nev = e.adat.nev;
         // ⭐ D90/2: a koinó születése mindenki vállalása — ehhez kell az azonosítója (`vallalas.js`).
         koinoAdatok.azonosito = e.azonosito;

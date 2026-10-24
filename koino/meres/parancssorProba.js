@@ -88,12 +88,31 @@ function azonosito(kimenet, elozmeny) {
 const varj = (mp) => new Promise((t) => setTimeout(t, mp));
 
 /**
+ * ⭐ D118/2: a készülék koinójának NEVE (a születés lenyomata) a becenévből — a `becenevek.json`-ból (a `koino`, a
+ * `csatlakoz` és a `behoz` jegyzi); ha a becenév nincs jegyezve, null.
+ */
+async function koinoNeve(hely, becenev = 'sajat') {
+  try {
+    const az = JSON.parse(await readFile(join(hely, 'becenevek.json'), 'utf8'))?.[becenev];
+    return typeof az === 'string' ? az : null;
+  } catch { return null; }
+}
+
+/** ⭐ D118/2: a készülék koinójának mappája — a koinó neve (a lenyomat); ha nincs jegyezve, maga a becenév (a régi alak). */
+async function koinoMappa(hely, becenev = 'sajat') {
+  return join(hely, (await koinoNeve(hely, becenev)) ?? becenev);
+}
+
+/**
  * ⭐ D93/1: a vendég készüléket TAGGÁ teszi a parancssorból — belép, a belépése (az azonosság-szelete) a gazdához jut,
  * a gazda meghívja, és a meghívással együtt az azonosság-szelet visszamegy. Csak azt a szeletet viszi (a próbák
  * szándéka, hogy ki mit tart, így nem sérül). ⚠️ A vendégnek már ismernie kell a koinót, ha a gazda nem alapító.
  * @returns {Promise<string>} a vendég horgonya
  */
 async function taggaTesziKeszulek(gazda, vendeg, nev = 'tag') {
+  // ⭐ D118/2: a belépés a koinó NEVÉRE szól — ha a vendég még nem tudja, melyik koinóról van szó, előbb csatlakozik.
+  const k = await koinoNeve(gazda);
+  if (k && !(await koinoNeve(vendeg))) await fut(vendeg, 'csatlakoz', k);
   const horgony = teljesAzonosito(await fut(vendeg, 'belep'));
   const be = join(vendeg, nev + '-belepes.jsonl');
   const vissza = join(gazda, nev + '-meghivas.jsonl');
@@ -136,6 +155,13 @@ function teljesAzonosito(kimenet) {
  * frissen érkezett eseményeket. *(Ugyanaz a fajta ütközés, mint két párhuzamos `mind.js`.)*
  */
 async function csereKor(gazda, vendeg, port, kornyezet = {}) {
+  // ⭐ D118/2: a vendég előbb csatlakozik a gazda koinójához, ha még nem tudja, melyikről van szó (a valódi menet is ez).
+  // (Mindkét irányban: amelyik fél nem tudja, a másikéhoz csatlakozik.)
+  const becenev = kornyezet.KOINO_AZONOSITO ?? 'sajat';
+  const kg = await koinoNeve(gazda, becenev);
+  const kv = await koinoNeve(vendeg, becenev);
+  if (kg && !kv) await fut(vendeg, 'csatlakoz', kg, kornyezet);
+  if (kv && !kg) await fut(gazda, 'csatlakoz', kv, kornyezet);
   const figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
     env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '', ...kornyezet },
     stdio: 'ignore'
@@ -308,6 +334,72 @@ proba('⭐ D89/2: a `koino` parancs alapból ZÁRT, `nyilt` szóval NYÍLT koin�
   });
 
 // ===================================
+// ⛔⛔ D118/2 — A LELET A PARANCSSORON: a második születés nem veszi át a koinót (2026-10-24)
+// ===================================
+//
+// A lelet (`docs/koltozes_atvizsgalas.md` 3.): a szabad koinó-név mellett egy kívülálló egyetlen, azonos nevű
+// `KoinoLetrehozas`-szal — kézi úton és a cserén is — az alapító (és így minden tag) döntéseit „nem ellenőrizhetővé” tette.
+// Az új alakban a koinó neve a születés lenyomata. Itt hat támadó kulccsal (hogy valamelyik a valódi alapító elé
+// rendeződjön) két fajta hamis születés jön a kézi úton: a K nevet mondó régi alakú (a kapu elveti) és egy új alakú (az
+// MÁSIK koinó — kimarad). VISELKEDÉST mérünk: a lemezen egyetlen születés marad, a gondolat pontja számít, a név a valódi.
+proba('⛔⛔ D118/2 (a lelet): a második születés a kézi úton sem veszi át a koinót — a lemezen egy születés, a pont számít',
+  async () => {
+    const a = await ujKeszulek();
+    try {
+      await fut(a, 'koino', 'Valódi koinó', 'nyilt');
+      const K = await koinoNeve(a);
+      if (!K) return false;
+      const g = azonosito(await fut(a, 'gondolat', 'VALÓDI GONDOLAT'), 'Létrejött:');
+      if (!g) return false;
+      const sorok = [];
+      for (let i = 0; i < 6; i++) {
+        const kp = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+        const adat = { nev: 'Hamis koinó', leiras: null, alapitok: [], zart: false };
+        sorok.push(JSON.stringify(await esemenyLetrehozasa({ koino: K, tipus: 'KoinoLetrehozas', adat, elozo: null, sorszam: 1 }, kp)));
+        sorok.push(JSON.stringify(await esemenyLetrehozasa({ koino: '', tipus: 'KoinoLetrehozas', adat, elozo: null, sorszam: 1 }, kp)));
+      }
+      const f = join(a, 'hamis.jsonl');
+      await writeFile(f, sorok.join('\n') + '\n', 'utf8');
+      const be = await fut(a, 'behoz', f);
+      const lemez = (await readFile(join(await koinoMappa(a), 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean)
+        .map((x) => JSON.parse(x));
+      const kep = await fut(a, 'allapot');
+      return lemez.filter((e) => e.tipus === 'KoinoLetrehozas').length === 1
+        && /ELUTASÍTVA/.test(be) && /MÁSIK koinóé/.test(be)
+        && /^Valódi koinó/m.test(kep) && /VALÓDI GONDOLAT/.test(kep) && /összes pont: 100/.test(kep);
+    } finally {
+      await rm(a, { recursive: true, force: true });
+    }
+  });
+
+// ⭐ D118/2: a CSATLAKOZÁS a koinó nevével — a becenév jegyzett lesz, a csere hozza a születést és a többit (nyílt
+// koinóban), és a `koino` parancs egy jegyzett becenév alá nem hoz létre második koinót.
+proba('⭐ D118/2: a `csatlakoz <név>` után a csere hozza a koinót — és egy jegyzett becenév alá nem születik második koinó',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    try {
+      await fut(a, 'koino', 'Csatlakozás-próba', 'nyilt');
+      const K = await koinoNeve(a);
+      if (!K) return false;
+      const g = azonosito(await fut(a, 'gondolat', 'A KÖZÖS GONDOLAT'), 'Létrejött:');
+      const masodik = await fut(a, 'koino', 'Második').catch((h) => String(h?.message ?? h));
+      const nevKiiras = await fut(a, 'koino');
+      await fut(b, 'csatlakoz', K);
+      await csereKor(a, b, 7795);
+      const bLemez = (await readFile(join(b, K, 'esemenyek.jsonl'), 'utf8').catch(() => '')).split('\n').filter(Boolean)
+        .map((x) => JSON.parse(x));
+      return !!g && (await koinoNeve(b)) === K && (await koinoNeve(a)) === K
+        && bLemez.some((e) => e.tipus === 'KoinoLetrehozas' && e.azonosito === K)
+        && bLemez.some((e) => e.tipus === 'GondolatLetrehozas' && e.adat?.cim === 'A KÖZÖS GONDOLAT')
+        && /már egy koinóé/.test(masodik) && nevKiiras.includes(K);
+    } finally {
+      await rm(a, { recursive: true, force: true });
+      await rm(b, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ B/1–B/2: A `hozd` AZ ÁTMENETI TÁRBA — és a pontom után a tartósba lép elő (2026-10-03)
 // ===================================
 //
@@ -345,11 +437,9 @@ proba('⭐⭐ B/1–B/2: a `hozd` a nem vállalt gondolatot az ÁTMENETI tárba 
       await varj(800);
 
       // A koinó mappája a vendégnél (az egyetlen, amiben tár van).
-      const koinoMappa = join(vendeg, (await readdir(vendeg, { withFileTypes: true }))
-        .filter((d) => d.isDirectory() && d.name !== 'fajlok').map((d) => d.name)
-        .find(Boolean));
-      const tartosban = async () => (await readFile(join(koinoMappa, 'esemenyek.jsonl'), 'utf8')).includes(gTeljes);
-      const atmenetiben = async () => (await readdir(join(koinoMappa, 'atmeneti'))).includes(gTeljes + '.jsonl');
+      const kMappa = await koinoMappa(vendeg);   // ⭐ D118/2: a koinó mappája a neve (a lenyomat)
+      const tartosban = async () => (await readFile(join(kMappa, 'esemenyek.jsonl'), 'utf8')).includes(gTeljes);
+      const atmenetiben = async () => (await readdir(join(kMappa, 'atmeneti'))).includes(gTeljes + '.jsonl');
 
       const elotte = { tartos: await tartosban(), atmeneti: await atmenetiben() };
       const kep = await fut(vendeg, 'allapot');
@@ -439,9 +529,8 @@ proba('⭐⭐ D95/1, D95/3: a NAGY szeletet B összegezve tartja — a lezárás
       const bEsemenyek = await lemez(b);
       const pontEsemeny = (lista, pont) => lista.some((e) => e.tipus === 'TudatpontRendezes' && e.adat?.pont === pont
         && e.entitas?.startsWith(g));
-      const koinoMappa = join(b, (await readdir(b, { withFileTypes: true }))
-        .filter((d) => d.isDirectory() && d.name !== 'fajlok').map((d) => d.name).find(Boolean));
-      const t = JSON.parse(await readFile(join(koinoMappa, 'osszegzesek.json'), 'utf8'));
+      const kMappa = await koinoMappa(b);   // ⭐ D118/2: a koinó mappája a neve (a lenyomat)
+      const t = JSON.parse(await readFile(join(kMappa, 'osszegzesek.json'), 'utf8'));
       const gTeljes = Object.keys(t.szeletek).find((k) => k.startsWith(g));
       const aKep = await fut(a, 'allapot');
       const bKep = await fut(b, 'allapot');
@@ -538,6 +627,7 @@ proba('⭐⭐ D95/3: a meghívás a csak küldő úton megy — A feljegyzi a k�
     const tiszta = (x) => x.replace(/\x1b\[[0-9;]*m/g, '');
     try {
       await fut(a, 'koino', 'Küldő');
+      await fut(b, 'csatlakoz', await koinoNeve(a));      // ⭐ D118/2: a belépés a koinó nevére szól
       const horgony = teljesAzonosito(await fut(b, 'belep'));
       await fut(b, 'kivisz', join(b, 'be.jsonl'), horgony);
       await fut(a, 'behoz', join(b, 'be.jsonl'));
@@ -547,10 +637,9 @@ proba('⭐⭐ D95/3: a meghívás a csak küldő úton megy — A feljegyzi a k�
       const meghivas = (await readFile(join(a, 'mind.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x))
         .find((e) => e.tipus === 'Meghivas').azonosito;
       await csereKor(a, b, port);
-      const koinoMappa = join(a, (await readdir(a, { withFileTypes: true }))
-        .filter((d) => d.isDirectory() && d.name !== 'fajlok').map((d) => d.name).find(Boolean));
+      const aMappa = await koinoMappa(a);
       let kezbesites = {};
-      try { kezbesites = JSON.parse(await readFile(join(koinoMappa, 'kezbesites.json'), 'utf8')).kezbesitve ?? {}; } catch { /* nincs */ }
+      try { kezbesites = JSON.parse(await readFile(join(aMappa, 'kezbesites.json'), 'utf8')).kezbesitve ?? {}; } catch { /* nincs */ }
       await fut(b, 'kivisz', join(b, 'mind.jsonl'));
       const bNal = (await readFile(join(b, 'mind.jsonl'), 'utf8')).includes(meghivas);
       const varoUtana = tiszta(await fut(a, 'vallalas'));
@@ -703,7 +792,7 @@ proba('⭐⭐ D97/2: az őrjárat a vállalt szeletem TARTÓJÁT is felkeresi (a
       let megjott = false;
       for (let i = 0; i < 40 && !megjott; i++) {
         await varj(500);
-        megjott = (await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8').catch(() => '')).includes(uj);
+        megjott = (await readFile(join(await koinoMappa(b), 'esemenyek.jsonl'), 'utf8').catch(() => '')).includes(uj);
       }
       const ki = { tanulta, megjott };
       if (!Object.values(ki).every(Boolean)) process.stdout.write('  raj a körben — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + '\n');
@@ -735,15 +824,15 @@ proba('⭐⭐ D98/1: a csere végén a társ alatt feljegyződik a tár állása
       await csereKor(a, b, 7961);
       await csereKor(a, b, 7961);
       const feljegyzes = async (h) => {
-        try { return Object.values(JSON.parse(await readFile(join(h, 'sajat', 'emlekezet.json'), 'utf8')).tarsak ?? {}); }
+        try { return Object.values(JSON.parse(await readFile(join(await koinoMappa(h), 'emlekezet.json'), 'utf8')).tarsak ?? {}); }
         catch { return []; }
       };
-      const sorok = async (h) => (await readFile(join(h, 'sajat', 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean).length;
+      const sorok = async (h) => (await readFile(join(await koinoMappa(h), 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean).length;
       const aElotte = await feljegyzes(a), bElotte = await feljegyzes(b);
       const g = azonosito(await fut(a, 'gondolat', 'Az emlékezet után'), 'Létrejött:');
       await csereKor(a, b, 7961);
       const aUtana = await feljegyzes(a), bUtana = await feljegyzes(b);
-      const bTar = await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8');
+      const bTar = await readFile(join(await koinoMappa(b), 'esemenyek.jsonl'), 'utf8');
       const ki = {
         elotteFeljegyezve: aElotte.length === 1 && bElotte.length === 1 && bElotte[0].n === (await sorok(b)) - 2,
         megjott: !!g && bTar.includes(g),
@@ -794,7 +883,7 @@ proba('⭐⭐ D99: a társ, akivel a fél körön belül már cseréltünk, és 
     const kihagyasA = (naplo.a.match(/nem hívok/g) ?? []).length;
     const g = azonosito(await fut(a, 'gondolat', 'D99 újdonság'), 'Létrejött:');
     await varj(14000);
-    const bTar = await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8');
+    const bTar = await readFile(join(await koinoMappa(b), 'esemenyek.jsonl'), 'utf8');
     const elbukott = (naplo.a + naplo.b).match(/elbukott/g)?.length ?? 0;
     const ki = { kihagy: kihagyasA >= 2, nincsElakadas: elbukott === 0, atjutott: !!g && bTar.includes(g) };
     if (!Object.values(ki).every(Boolean)) {
@@ -827,7 +916,7 @@ proba('⛔ az „alap” készülék a csak születéséből ismert gondolatot i
     await fut(a, 'koino', 'Vállalás', 'próba', 'nyilt');
     const g = azonosito(await fut(a, 'gondolat', 'Csak a születése jön'), 'Létrejött:');
     await csereKor(a, b, 7965, alap);
-    const olvas = async (m) => (await readFile(join(m, 'sajat', 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean)
+    const olvas = async (m) => (await readFile(join(await koinoMappa(m), 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean)
       .map((x) => JSON.parse(x));
     const bElotte = await olvas(b);
     const aPontja = (await olvas(a)).find((e) => e.tipus === 'TudatpontRendezes');
@@ -868,6 +957,7 @@ proba('⛔ a hosszan futó vendég a cserében megkapott koinó-születést azon
   let figyelo = null;
   try {
     await fut(gazda, 'koino', 'Születés', 'próba', 'nyilt');
+    await fut(vendeg, 'csatlakoz', await koinoNeve(gazda));   // ⭐ D118/2
     figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', '7964'], {
       env: { ...process.env, KOINO_ADAT: vendeg, KOINO_NAPLO: '' }, stdio: 'ignore'
     });
@@ -921,7 +1011,7 @@ proba('⭐⭐ D98/2–4: a két ágú szerző eseményei egy harmadik készülé
       await fut(a2, 'pont', g, '9');                         // a B ág: X 7. eseménye
       await csereKor(a1, h, 7962, alap);
       await csereKor(a2, h, 7963, alap);
-      const olvas = async (m) => (await readFile(join(m, 'sajat', 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean)
+      const olvas = async (m) => (await readFile(join(await koinoMappa(m), 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean)
         .map((x) => JSON.parse(x));
       const esemenyek = await olvas(h);
       const x = esemenyek.find((e) => e.tipus === 'KoinoLetrehozas')?.szerzo;
@@ -933,7 +1023,7 @@ proba('⭐⭐ D98/2–4: a két ágú szerző eseményei egy harmadik készülé
       const bAg = a2Esemenyei.find((e) => e.szerzo === x && e.sorszam === aAg.sorszam && e.azonosito !== aAg.azonosito);
       const vad = esemenyek.find((e) => e.tipus === 'Ellentmondas' && e.adat?.fajta === 'elagazas' && e.adat?.kit === x);
       let feljegyzes = null;
-      try { feljegyzes = JSON.parse(await readFile(join(h, 'sajat', 'lancellenorzes.json'), 'utf8')); } catch { feljegyzes = null; }
+      try { feljegyzes = JSON.parse(await readFile(join(await koinoMappa(h), 'lancellenorzes.json'), 'utf8')); } catch { feljegyzes = null; }
       const ki = {
         // H-nál X két ágának eseményei KÜLÖNBÖZŐ sorszámon: az A ág k.-a (A1-től) és a B ág k+1.-e (A2-től)
         kulonSorszamon: !!aAg && !!bFej && !!bAg && bFej.sorszam === aAg.sorszam + 1
@@ -980,17 +1070,17 @@ proba('⭐⭐ D75/1: a visszavett vállalás a TÖMÖRÍTÉSSEL az átmeneti tá
       await fut(b, 'pont', g, '0');                         // a vállalás visszavéve
       // ⭐ D104: a kifutás alatt a tömörítés megtartja (a szelet még vállalt) …
       await fut(b, 'tomorit', kornyezet);
-      const kifutasban = await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8');
+      const kifutasban = await readFile(join(await koinoMappa(b), 'esemenyek.jsonl'), 'utf8');
       // … a kifutás után (mintha letelt volna) már kiviszi.
       const lejart = { ...kornyezet, KOINO_KIFUTAS: '0' };
       const proba = tiszta(await fut(b, 'tomorit', 'proba', lejart));
-      const elotte = await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8');
+      const elotte = await readFile(join(await koinoMappa(b), 'esemenyek.jsonl'), 'utf8');
       const kesz = tiszta(await fut(b, 'tomorit', lejart));
-      const tartos = await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8');
-      const atmeneti = (await readdir(join(b, 'sajat', 'atmeneti')).catch(() => []));
+      const tartos = await readFile(join(await koinoMappa(b), 'esemenyek.jsonl'), 'utf8');
+      const atmeneti = (await readdir(join(await koinoMappa(b), 'atmeneti')).catch(() => []));
       let atmenetiTartalom = '';
       // ⚠️ Fájlonként sortöréssel: a `megnezett.json` végén nincs, és a következő fájl első sora különben hozzáragadna.
-      for (const f of atmeneti) atmenetiTartalom += (await readFile(join(b, 'sajat', 'atmeneti', f), 'utf8')) + '\n';
+      for (const f of atmeneti) atmenetiTartalom += (await readFile(join(await koinoMappa(b), 'atmeneti', f), 'utf8')) + '\n';
       // ⚠️ Azonosító szerint nézzük, nem szövegként: B saját pont-eseményei a `latott` mezőben hivatkoznak A eseményére.
       const azonositok = (szoveg) => new Set(szoveg.split('\n').filter((x) => x.trim().startsWith('{"'))
         .map((x) => { try { return JSON.parse(x).azonosito; } catch { return null; } }));
@@ -1084,13 +1174,13 @@ proba('⭐⭐ D92: a `kerelem fejlecek` az átmeneti tárba hozza a fejlécet (m
       });
       await varj(2000);
       const fejlecek = await fut(vendeg, 'kerelem', 'fejlecek', 'gyoker', '127.0.0.1', String(port));
-      const tartosEsemenyek = await readFile(join(vendeg, 'sajat', 'esemenyek.jsonl'), 'utf8').catch(() => '');
-      const atmenetiben = (await readdir(join(vendeg, 'sajat', 'atmeneti')).catch(() => [])).includes(gTeljes + '.jsonl');
+      const tartosEsemenyek = await readFile(join(await koinoMappa(vendeg), 'esemenyek.jsonl'), 'utf8').catch(() => '');
+      const atmenetiben = (await readdir(join(await koinoMappa(vendeg), 'atmeneti')).catch(() => [])).includes(gTeljes + '.jsonl');
       const torzs = await fut(vendeg, 'kerelem', 'torzs', gTeljes, '127.0.0.1', String(port));
       figyelo.kill();
       figyelo = null;
       await varj(800);
-      const blob = fajlBlobTarolo('sajat', vendeg);
+      const blob = fajlBlobTarolo((await koinoNeve(vendeg)) ?? 'sajat', vendeg);   // ⭐ D118/2: a mappa a koinó neve
       const szovegMegvan = !!szovegLenyomat && await blob.van(szovegLenyomat);
       const kep = await fut(vendeg, 'allapot');
 
@@ -1160,7 +1250,7 @@ proba('⭐⭐ D92/1: a KOPOGTATÁS végig — a cím nélküli kérés függő l
       let megjott = false;
       for (let i = 0; i < 60 && !megjott; i++) {
         await varj(500);
-        megjott = (await readdir(join(R, 'sajat', 'atmeneti')).catch(() => [])).includes(gTeljes + '.jsonl');
+        megjott = (await readdir(join(await koinoMappa(R), 'atmeneti')).catch(() => [])).includes(gTeljes + '.jsonl');
       }
       await varj(1000);
       const allas = await fut(R, 'kerelem', dht);
@@ -1235,7 +1325,7 @@ proba('⭐⭐ D92/1 (c): a TOVÁBBADÁS — R → P → H, a válasz lépésenk�
       let megjott = false;
       for (let i = 0; i < 90 && !megjott; i++) {
         await varj(500);
-        megjott = (await readdir(join(R, 'sajat', 'atmeneti')).catch(() => [])).includes(gTeljes + '.jsonl');
+        megjott = (await readdir(join(await koinoMappa(R), 'atmeneti')).catch(() => [])).includes(gTeljes + '.jsonl');
       }
       await varj(1000);
       const allas = await fut(R, 'kerelem', helyben);
@@ -1336,7 +1426,7 @@ proba('⭐⭐ D93/3: ZÁRT KOINÓ — a nem tag csak a születést kapja, a gazd
     const vendeg = await ujKeszulek();
     const nyGazda = await ujKeszulek();
     const nyVendeg = await ujKeszulek();
-    const lemezen = async (hely, szoveg) => (await readFile(join(hely, 'sajat', 'esemenyek.jsonl'), 'utf8').catch(() => ''))
+    const lemezen = async (hely, szoveg) => (await readFile(join(await koinoMappa(hely), 'esemenyek.jsonl'), 'utf8').catch(() => ''))
       .includes(szoveg);
     try {
       await fut(gazda, 'koino', 'Zárt próba');
@@ -1347,6 +1437,7 @@ proba('⭐⭐ D93/3: ZÁRT KOINÓ — a nem tag csak a születést kapja, a gazd
       const cimetKapott = async () => (await readFile(join(vendeg, 'udpcimek.json'), 'utf8').catch(() => ''))
         .includes('203.0.113.55');
       await idegenCim();
+      await fut(vendeg, 'csatlakoz', await koinoNeve(gazda));   // ⭐ D118/2
       const horgony = teljesAzonosito(await fut(vendeg, 'belep'));
       await csereKor(gazda, vendeg, 7691);
       const elotte = {
@@ -1385,7 +1476,7 @@ proba('⭐⭐ D93/3: A TAGSÁGI CSOMAG A KÉZFOGÁSBAN — két tag, aki a mási
     const A = await ujKeszulek();
     const B = await ujKeszulek();
     const D = await ujKeszulek();
-    const lemezen = async (hely, szoveg) => (await readFile(join(hely, 'sajat', 'esemenyek.jsonl'), 'utf8').catch(() => ''))
+    const lemezen = async (hely, szoveg) => (await readFile(join(await koinoMappa(hely), 'esemenyek.jsonl'), 'utf8').catch(() => ''))
       .includes(szoveg);
     try {
       await fut(A, 'koino', 'Csomag-próba');
@@ -1501,8 +1592,8 @@ proba('⭐⭐ D91/3: a címjegyzék a DHT-n — csak a beállítással hirdet sz
       figyelo = null;
       await varj(800);
       // ⚠️ NÉV SZERINT (az alapértelmezett koinó, `sajat`): a (3) ág a vendégnél egy `masik-koino` mappát is nyitott.
-      const koinoMappa = join(vendeg, 'sajat');
-      const megjott = (await readdir(join(koinoMappa, 'atmeneti')).catch(() => [])).includes(gTeljes + '.jsonl');
+      const vMappa = await koinoMappa(vendeg);   // ⭐ D118/2: a mappa a koinó neve
+      const megjott = (await readdir(join(vMappa, 'atmeneti')).catch(() => [])).includes(gTeljes + '.jsonl');
 
       const cim = new RegExp('127\\.0\\.0\\.1 ' + port);
       const jo = {
@@ -1647,7 +1738,8 @@ proba('⭐⭐⭐ A TELJES IDENTITÁS-KÖR KÉZZEL: belep → csere → meghiv �
   try {
     await fut(alapito, 'koino', 'Próba koinó');
 
-    // ⭐ Az újonc MEGNYITJA a saját azonosság-szeletét. Ez még NEM tagság.
+    // ⭐ Az újonc MEGNYITJA a saját azonosság-szeletét. Ez még NEM tagság. ⭐ D118/2: előbb megtudja a koinó nevét.
+    await fut(ujonc, 'csatlakoz', await koinoNeve(alapito));
     const horgony = teljesAzonosito(await fut(ujonc, 'belep'));
     if (!horgony) return false;
 
@@ -1812,7 +1904,7 @@ proba('⭐⭐ A PROGRAM A PILLANATKÉPPEL NYIT — és ugyanazt számolja, mint 
     const kesobbiFajl = join(egyik, 'kesobbi.jsonl');
     await esemenyFajl(nagyFajl, nagy);
     await esemenyFajl(kesobbiFajl, kesobbi);
-    const kep = join(egyik, 'sajat', 'mutato.json');
+    const kep = join(await koinoMappa(egyik), 'mutato.json');
     const vanKep = () => readFile(kep, 'utf8').then(() => true, () => false);
 
     await fut(egyik, 'behoz', nagyFajl);
@@ -1838,7 +1930,7 @@ proba('⭐⭐ A PROGRAM A PILLANATKÉPPEL NYIT — és ugyanazt számolja, mint 
     // ⚠️ A második `behoz` megnyitása ott is képet írna — a mérce előtt eldobjuk.
     await fut(masik, 'behoz', nagyFajl);
     await fut(masik, 'behoz', kesobbiFajl);
-    await rm(join(masik, 'sajat', 'mutato.json'), { force: true });
+    await rm(join(await koinoMappa(masik), 'mutato.json'), { force: true });
     const masikLatja = ujjlenyomatai(await fut(masik, 'ujjlenyomat'));
 
     // ⭐ A BUKÁS MEGNEVEZI MAGÁT: melyik feltétel nem teljesült (egyszer a teljes sorban bukott,
@@ -1881,9 +1973,9 @@ proba('⭐⭐ A LÁNC-GYÖKÉR AZ ÉLES ÚTON — a kézi parancsok eseményei a
     await fut(hely, 'pont', azonosito(elso, 'Létrejött:'), '30');
     await fut(hely, 'gondolat', 'Masodik');
     await fut(hely, 'pont', azonosito(elso, 'Létrejött:'), '12');
-    const sorok = (await readFile(join(hely, 'sajat', 'esemenyek.jsonl'), 'utf8'))
+    const sorok = (await readFile(join(await koinoMappa(hely), 'esemenyek.jsonl'), 'utf8'))
       .split('\n').filter((s) => s.trim()).map((s) => JSON.parse(s)).sort((a, b) => a.sorszam - b.sorszam);
-    const gyorsitotar = JSON.parse(await readFile(join(hely, 'sajat', 'lanc.json'), 'utf8'));
+    const gyorsitotar = JSON.parse(await readFile(join(await koinoMappa(hely), 'lanc.json'), 'utf8'));
     for (let i = 0; i < sorok.length; i++) {
       if (!sorok[i].lancGyoker || !azonosLancGyoker(sorok[i].lancGyoker, await lancGyokerLancbol(sorok.slice(0, i)))) {
         console.log('    (hibás gyökér a(z) ' + sorok[i].sorszam + '. eseményben)');
@@ -1941,7 +2033,7 @@ proba('⭐⭐ AZ ELLENTMONDÁS A KÉZI ÚTON — az ép vád a másik készülé
     const fajl = join(vevo, 'bizonyitek.jsonl');
     await writeFile(fajl, [...lanc, ep, hamis].map((e) => JSON.stringify(e)).join('\n') + '\n');
     const kimenet = await fut(vevo, 'behoz', fajl);
-    const lemezen = new Set((await readFile(join(vevo, 'sajat', 'esemenyek.jsonl'), 'utf8'))
+    const lemezen = new Set((await readFile(join(await koinoMappa(vevo), 'esemenyek.jsonl'), 'utf8'))
       .split('\n').filter((x) => x.trim()).map((x) => JSON.parse(x).azonosito));
     return lemezen.has(hazug.azonosito) && lemezen.has(ep.azonosito) && !lemezen.has(hamis.azonosito)
       && kimenet.includes('Behozva');
@@ -1980,7 +2072,7 @@ async function csaloKoino(hely, beallitas = {}) {
 
 /** A lemezen álló `Ellentmondas` események. */
 async function ellentmondasokALemezen(hely) {
-  return (await readFile(join(hely, 'sajat', 'esemenyek.jsonl'), 'utf8')).split('\n').filter((x) => x.trim())
+  return (await readFile(join(await koinoMappa(hely), 'esemenyek.jsonl'), 'utf8')).split('\n').filter((x) => x.trim())
     .map((x) => JSON.parse(x)).filter((e) => e.tipus === 'Ellentmondas');
 }
 
@@ -2153,11 +2245,12 @@ proba('⭐⭐ D100: a lap hierarchikus paklija elkéri, ami hiányzik — az őr
       body: JSON.stringify({ cim: 'A gerenda', szuloId: gTeljes, kezdoTudatpont: 10 }) });
     aFelulet.kill();
     await varj(500);
+    await fut(b, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(b, 'tars', '127.0.0.1', '7968', 'A');
     await csereKor(a, b, 7968, alap);
     await feluletInditasa(7970);
     const elotte = await lekeres(7970);
-    const kerelmek = JSON.parse(await readFile(join(b, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '{}'));
+    const kerelmek = JSON.parse(await readFile(join(await koinoMappa(b), 'kerelmek.json'), 'utf8').catch(() => '{}'));
     // A figyel, B őrjárata (6 mp-es körrel) elhozza a függő kérelmeket.
     const figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', '7968'], { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: 'ignore' });
     futok.push(figyelo);
@@ -2211,6 +2304,7 @@ proba('⭐ D100: a csatlakozó készülék kézi cseréje CSERE marad, ha a gazd
     await fut(a, 'koino', 'Csatlakozás', 'próba', 'nyilt');
     await fut(a, 'gondolat', 'A CSATLAKOZÓ LÁSSA');
     const felvetel = await fut(a, 'kerelem', 'fejlecek', 'gyoker', nincsDht);
+    await fut(b, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(b, 'tars', '127.0.0.1', '7976', 'A');
     await csereKor(a, b, 7976, nincsDht);
     const ki = {
@@ -2248,7 +2342,8 @@ proba('⭐⭐⭐ A FELÜLET KOINÓT VÁLT: a tér egy MÁSIK koino pakliját hoz
     // ----- A TÉR LÁTJA MINDKETTŐT, és KIMONDJA a határát -----
     const ter = await hiv('/api/ter');
     if (ter.adat.koinok !== 2 || ter.adat.csakAmitIsmerunk !== true) return false;
-    if (ter.adat.aktiv !== 'sajat') return false;
+    // ⭐ D118/2: az aktív koinó a NEVE (a lenyomat) — a becenév csak helyi
+    if (ter.adat.aktiv !== await koinoNeve(hely)) return false;
 
     // ----- AZ INDULÓ KOINO PAKLIJA -----
     const elso = await hiv('/api/pakli?darab=5');
@@ -2257,7 +2352,7 @@ proba('⭐⭐⭐ A FELÜLET KOINÓT VÁLT: a tér egy MÁSIK koino pakliját hoz
     // ----- ⭐ VÁLTÁS — és a pakli MÁSIK koinóé lesz -----
     const valt = await hiv('/api/ter/valt',
       { method: 'POST', body: JSON.stringify({ koino: 'kert' }) });
-    if (valt.adat?.data?.aktiv !== 'kert') return false;
+    if (valt.adat?.data?.aktiv !== await koinoNeve(hely, 'kert')) return false;   // a becenévvel is lehet váltani
 
     const masodik = await hiv('/api/pakli?darab=5');
     // ⛔ EZ A LÉNYEG: más koino, más pakli — ugyanabban a folyamatban.
@@ -2288,7 +2383,7 @@ proba('⛔ NEM LÉTEZŐ koinóra nem lehet váltani — és az állapot nem mozd
     // A tér továbbra is EGY koinót ismer, és a pakli a régi.
     const ter = await hiv('/api/ter');
     const pakli = await hiv('/api/pakli?darab=5');
-    return ter.adat.koinok === 1 && ter.adat.aktiv === 'sajat'
+    return ter.adat.koinok === 1 && ter.adat.aktiv === await koinoNeve(hely)   // ⭐ D118/2: a koinó neve
       && pakli.adat.kartyak.some((k) => k.cim === 'KOZOS KUT');
   } finally {
     if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
@@ -2347,7 +2442,7 @@ proba('⭐ D101: a Tudatpontok és az ág-szűrt Rendezés a lapon — a saját 
     const sajat = await hiv('/api/eember/sajat-adatok');
     const agP = await hiv('/api/tudatpont/aktiv-hozzarendelesek?limit=100&agEntitasId=' + P);
     const agR = await hiv('/api/tudatpont/aktiv-hozzarendelesek?limit=100&agEntitasId=' + R);
-    const kerelmek = JSON.parse(await readFile(join(b, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '{}'));
+    const kerelmek = JSON.parse(await readFile(join(await koinoMappa(b), 'kerelmek.json'), 'utf8').catch(() => '{}'));
     const ki = {
       sajatja: mind.adat.data?.length === 1 && mind.adat.data[0].entitasId === C && mind.adat.data[0].tudatPontok === 5
         && mind.adat.data[0].entitasCim === 'C levél',
@@ -2555,6 +2650,7 @@ proba('⭐⭐ D102: a bejáró a lapon — két ág mélyen, egy sorozatban, és
     aFel.folyamat.kill();
     await varj(500);
     if (!R1 || !P1 || !C1 || !R2 || !P2) return false;
+    await fut(b, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(b, 'tars', '127.0.0.1', '7495', 'A', alap);
     await csereKor(a, b, 7495, alap);
     const figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', '7495'], { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
@@ -2566,7 +2662,7 @@ proba('⭐⭐ D102: a bejáró a lapon — két ág mélyen, egy sorozatban, és
     futok.push(bFel.folyamat);
     const lista = () => bFel.hiv('/api/pakli?rendezes=agazatiPont&irany=csokkeno&darab=20');
     const elotte = await lista();
-    const kerelmek = JSON.parse(await readFile(join(b, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '{}'));
+    const kerelmek = JSON.parse(await readFile(join(await koinoMappa(b), 'kerelmek.json'), 'utf8').catch(() => '{}'));
     const orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', '7496'], { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
     futok.push(orjarat);
     await varj(25000);
@@ -2575,7 +2671,7 @@ proba('⭐⭐ D102: a bejáró a lapon — két ág mélyen, egy sorozatban, és
     await varj(1000);
     // ⭐ UGYANAZ a felület-folyamat kérdez, ami az őrjárat előtt is futott.
     const utana = await lista();
-    const kesz = JSON.parse(await readFile(join(b, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '{}')).kesz ?? [];
+    const kesz = JSON.parse(await readFile(join(await koinoMappa(b), 'kerelmek.json'), 'utf8').catch(() => '{}')).kesz ?? [];
     const azok = (x) => (x.adat?.kartyak ?? []).map((k) => k.azonosito);
     const melyek = (kerelmek.fuggo ?? []).filter((x) => x.fajta === 'fejlecek' && x.m === true).map((x) => x.kulcs);
     const megjott = kesz.filter((x) => x.fajta === 'fejlecek' && String(x.eredmeny).startsWith('megjött') && [R1, R2].includes(x.kulcs));
@@ -2642,6 +2738,7 @@ proba('⭐⭐ D101 ④: a Síkidom a lapon — a nem tartott síkidom gyerekei �
     aFel.folyamat.kill();
     await varj(500);
     if (!R1 || !P1 || !C1 || !R2) return false;
+    await fut(b, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(b, 'tars', '127.0.0.1', '7471', 'A', alap);
     await csereKor(a, b, 7471, alap);
     const figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', '7471'], { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
@@ -2655,7 +2752,7 @@ proba('⭐⭐ D101 ④: a Síkidom a lapon — a nem tartott síkidom gyerekei �
     const gyokerElotte = await gyerekei(null);
     const r1Elotte = await gyerekei(R1);
     const lancElotte = await bFel.hiv('/api/sikidom/oslanc?entitas=' + C1);
-    const kerelmek = JSON.parse(await readFile(join(b, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '{}'));
+    const kerelmek = JSON.parse(await readFile(join(await koinoMappa(b), 'kerelmek.json'), 'utf8').catch(() => '{}'));
     const orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', '7473'], { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
     futok.push(orjarat);
     await varj(25000);
@@ -2728,6 +2825,7 @@ proba('⭐⭐ D101 ⑥: az értesítések a lapon — a postafiók a készülék
       body: JSON.stringify({ entitasId: R, entitasTipus: 'Gondolat', ertesitesTipusok: ['ujGyerekEntitas'] }) });
     const alapvonal = await bFel.hiv('/api/ertesitesek?lap=1&lapMeret=20');
     // A megismeri a koinót és R-t (a gyökér-darabbal), aztán gyereket ír alá
+    await fut(a, 'csatlakoz', await koinoNeve(b));   // ⭐ D118/2
     await fut(a, 'tars', '127.0.0.1', '7475', 'B', alap);
     await csereKor(b, a, 7475, alap);
     const aFel = await feluletet(a, 7476, alap);
@@ -2809,6 +2907,7 @@ proba('⭐⭐ D103: a készülék saját értesítése — az őrjárat számolj
     bFel.folyamat.kill();
     await varj(500);
     // A megismeri a koinót és R-t, és gyereket ír alá
+    await fut(a, 'csatlakoz', await koinoNeve(b));   // ⭐ D118/2
     await fut(a, 'tars', '127.0.0.1', '7470', 'B', alap);
     await csereKor(b, a, 7470, alap);
     const aFel = await feluletet(a, 7479, alap);
@@ -2922,6 +3021,7 @@ proba('⭐⭐ D109: a kiszolgálási keret — a kötés mindig kap, az idegen a
     await fut(a, 'koino', 'Keret', 'próba', 'nyilt');
     await fut(a, 'gondolat', 'ELSO');
     // B háromszor cserél A-val → a rendszeres társa, a KÖTÉSE lesz (a tábla-kulcsa alatt)
+    await fut(b, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(b, 'tars', '127.0.0.1', String(port), 'A');
     for (let i = 0; i < 3; i++) await csereKor(a, b, port);
     // A végig futó tartó, szűk kerettel — a saját beállításából (a „mindent” mód megmarad)
@@ -2936,8 +3036,9 @@ proba('⭐⭐ D109: a kiszolgálási keret — a kötés mindig kap, az idegen a
     const cKi = [];
     for (let i = 0; i < 3; i++) cKi.push(tiszta(await kerdez(c)));
     // C (idegen, a keret fölött) cserélni is próbál — a nyitás után `KESOBB`, tiszta vég
+    await fut(c, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     const cCsere = tiszta(await fut(c, 'csere', '127.0.0.1', String(port)).catch((h) => String(h?.message ?? h)));
-    const cTara = await readFile(join(c, 'sajat', 'esemenyek.jsonl'), 'utf8').catch(() => '');
+    const cTara = await readFile(join(await koinoMappa(c), 'esemenyek.jsonl'), 'utf8').catch(() => '');
     await varj(300);
     const allas = tiszta(await fut(a, 'kiszolgalas'));
     const kapott = (x) => /FEJLÉCEK: a gyökér/.test(x) && /ELSO/.test(x);
@@ -3054,11 +3155,13 @@ proba('⭐⭐ Az alsó sáv: a futó felület látja az őrjárat körét és a 
     const elotte = (await bFel.hiv('/api/csere-allapot')).adat?.adatok;
     const szamElotte = (await bFel.hiv('/api/platform/statisztika')).adat;
     // A megismeri a koinót és R-t (egy kézi csere B-vel), és gyereket ír alá.
+    await fut(a, 'csatlakoz', await koinoNeve(b));   // ⭐ D118/2
     await fut(a, 'tars', '127.0.0.1', '7466', 'B', alap);
     const bFigyel = spawn(process.execPath, [KOINO_JS, 'figyel', '7466'],
       { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' });
     futok.push(bFigyel);
     await varj(2000);
+    await fut(a, 'csatlakoz', await koinoNeve(b));   // ⭐ D118/2
     await fut(a, 'csere', '127.0.0.1', '7466', alap);
     bFigyel.kill();
     await varj(1000);
@@ -3093,7 +3196,7 @@ proba('⭐⭐ Az alsó sáv: a futó felület látja az őrjárat körét és a 
     await varj(800);
     await fut(a, 'gondolat', 'D az A-tól', alap);
     // (a parancs rövidítve írja ki az azonosítót — a teljeset A tárából)
-    const D = (await readFile(join(a, 'sajat', 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x))
+    const D = (await readFile(join(await koinoMappa(a), 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x))
       .find((e) => e.tipus === 'GondolatLetrehozas' && e.adat?.cim === 'D az A-tól')?.azonosito ?? null;
     const tudasElotte = (await bFel.hiv('/api/csere-allapot')).adat?.adatok;
     const kerelemKi = tiszta(await fut(b, 'hozd', D ?? 'x', '127.0.0.1', '7466', alap)
@@ -3538,7 +3641,7 @@ proba('⭐⭐⭐ A KÉP MEGÉRKEZIK A MÁSIK KÉSZÜLÉKRE — több szeletben, 
       // ⭐ ÉS A LÉNYEG: a vendégnél megvan, és BÁJTRA ugyanaz.
       const fajlok = await fut(vendeg, 'fajlok');
       const nala = await readFile(
-        join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat));
+        join(await koinoMappa(vendeg), 'fajlok', fel.adat.lenyomat));
 
       return /2 \/ 2 megvan/.test(fajlok)
         && Buffer.from(nala).equals(kep);
@@ -3583,7 +3686,7 @@ proba('⭐⭐ D84/1: a TÖRZSET csak a vállaló szolgálja ki — a pontját le
         await varj(1500);
         await fut(vendeg, 'csere', '127.0.0.1', String(port), { KOINO_KISZOLGALAS: 'alap' });
         await fut(vendeg, 'csere', '127.0.0.1', String(port), { KOINO_KISZOLGALAS: 'alap' });
-        return !!(await readFile(join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat)).catch(() => null));
+        return !!(await readFile(join(await koinoMappa(vendeg), 'fajlok', fel.adat.lenyomat)).catch(() => null));
       } finally {
         if (felulet) felulet.folyamat.kill();
         if (figyelo) { figyelo.kill(); await varj(800); }
@@ -3672,7 +3775,7 @@ proba('⭐⭐⭐ AZ ŐRJÁRAT MAGÁTÓL ELHOZZA A KÉPET — kézi parancs nélk
     }
 
     // ⭐ ÉS A LÉNYEG: a vendégnél megvan, BÁJTRA ugyanaz — magától.
-    const nala = await readFile(join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat));
+    const nala = await readFile(join(await koinoMappa(vendeg), 'fajlok', fel.adat.lenyomat));
     return Buffer.from(nala).equals(kep);
   } finally {
     if (felulet) felulet.folyamat.kill();
@@ -3711,15 +3814,15 @@ proba('⭐⭐ D114 (T2 (B)): az őrjárat a BEFEJEZETLEN fájl ismert tartóját
     await fut(vendeg, 'behoz', join(gazda, 'mind.jsonl'));
     const l = fel.adat.lenyomat;
     // A kép félúton: az első szelet a részleges mappában (egy megszakadt korábbi letöltés).
-    await mkdir(join(vendeg, 'sajat', 'fajlok', 'reszleges', l), { recursive: true });
-    await writeFile(join(vendeg, 'sajat', 'fajlok', 'reszleges', l, '0'), kep.subarray(0, 64 * 1024));
+    await mkdir(join(await koinoMappa(vendeg), 'fajlok', 'reszleges', l), { recursive: true });
+    await writeFile(join(await koinoMappa(vendeg), 'fajlok', 'reszleges', l, '0'), kep.subarray(0, 64 * 1024));
 
     figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
       env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore' });
     await varj(2000);
     // A birtoklás jegyzete: a gazda tartja (a tábla-aláírójával és a címével — ahogy egy korábbi csere feljegyezte).
     const alairo = JSON.parse(await readFile(join(gazda, 'tabla-kulcs.json'), 'utf8')).alairoNyilvanos;
-    await writeFile(join(vendeg, 'sajat', 'fajlbirtoklas.json'), JSON.stringify({
+    await writeFile(join(await koinoMappa(vendeg), 'fajlbirtoklas.json'), JSON.stringify({
       [l]: { tarsak: { [alairo]: Date.now() }, cimek: { [alairo]: '127.0.0.1:' + port } } }));
 
     let kimenet = '';
@@ -3727,9 +3830,9 @@ proba('⭐⭐ D114 (T2 (B)): az őrjárat a BEFEJEZETLEN fájl ismert tartóját
       env: { ...process.env, KOINO_ADAT: vendeg, KOINO_NAPLO: '' }, stdio: ['ignore', 'pipe', 'pipe'] });
     orjarat.stdout.on('data', (d) => { kimenet += d; });
     orjarat.stderr.on('data', (d) => { kimenet += d; });
-    const nala = async () => readFile(join(vendeg, 'sajat', 'fajlok', l)).catch(() => null);
+    const nala = async () => readFile(join(await koinoMappa(vendeg), 'fajlok', l)).catch(() => null);
     // ⭐ A megjött fájl jegyzete törlődik (a tanulság tárgytalan — a `koino.js` forrás-tudása).
-    const jegyzetben = async () => !!JSON.parse(await readFile(join(vendeg, 'sajat', 'fajlbirtoklas.json'), 'utf8').catch(() => '{}'))[l];
+    const jegyzetben = async () => !!JSON.parse(await readFile(join(await koinoMappa(vendeg), 'fajlbirtoklas.json'), 'utf8').catch(() => '{}'))[l];
     const kezd = Date.now();
     while (Date.now() - kezd < 20000 && (!(await nala()) || await jegyzetben())) await varj(500);
     orjarat.kill(); orjarat = null;
@@ -3773,9 +3876,9 @@ proba('⭐ D109 (KK4): a fájl-randevú kiküldött bájtjai a kiszolgálási ke
       env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore' });
     await varj(2000);
     const ki = await fut(vendeg, 'csere', '127.0.0.1', String(port));
-    const megjott = await readFile(join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat)).catch(() => null);
+    const megjott = await readFile(join(await koinoMappa(vendeg), 'fajlok', fel.adat.lenyomat)).catch(() => null);
     await varj(500);
-    const allas = JSON.parse(await readFile(join(gazda, 'sajat', 'keret.json'), 'utf8').catch(() => '{}'));
+    const allas = JSON.parse(await readFile(join(await koinoMappa(gazda), 'keret.json'), 'utf8').catch(() => '{}'));
     const bajt = allas.osszes?.bajt ?? 0;
     if (!megjott) throw new Error('a kép nem jött meg — a csere: ' + ki.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ').slice(-400));
     if (bajt < kep.length) process.stdout.write('  a gazda keret-állása: ' + bajt + ' bájt (a kép ' + kep.length + ')\n');
@@ -3809,7 +3912,7 @@ proba('⭐⭐ a kopogás SAJÁT ütemben: a lassú háttér (tábla, házimunka)
     const kezdetek = [];
     const kezd = Date.now();
     while (Date.now() - kezd < 32000) {
-      const a = JSON.parse(await readFile(join(hely, 'sajat', 'csere.json'), 'utf8').catch(() => '{}'));
+      const a = JSON.parse(await readFile(join(await koinoMappa(hely), 'csere.json'), 'utf8').catch(() => '{}'));
       const k = a?.kor?.kezdet;
       if (Number.isFinite(k) && k !== kezdetek.at(-1)) kezdetek.push(k);
       await varj(250);
@@ -3841,7 +3944,7 @@ proba('⭐⭐ a kopogás saját üteme: az ablak végéig kopogó kör után a k
     const kezdetek = [];
     const kezd = Date.now();
     while (Date.now() - kezd < 32000) {
-      const a = JSON.parse(await readFile(join(hely, 'sajat', 'csere.json'), 'utf8').catch(() => '{}'));
+      const a = JSON.parse(await readFile(join(await koinoMappa(hely), 'csere.json'), 'utf8').catch(() => '{}'));
       const k = a?.kor?.kezdet;
       if (Number.isFinite(k) && k !== kezdetek.at(-1)) kezdetek.push(k);
       await varj(250);
@@ -3891,13 +3994,14 @@ proba('⭐⭐ D116: a felderítetlen rész — a darab a vonalon (mintákkal), a
       { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: 'ignore' });
     await varj(1500);
     const kornyezet = { KOINO_KISZOLGALAS: 'alap' };
+    await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     const elso = tiszta(await fut(d, 'kerelem', 'fejlecek', 'gyoker', '127.0.0.1', String(PA), '10', kornyezet));
     const masodik = tiszta(await fut(d, 'kerelem', 'fejlecek', X, '127.0.0.1', String(PA), '2', kornyezet));
     figyelo.kill();
     figyelo = null;
     await varj(800);
-    const bemondasok = JSON.parse(await readFile(join(d, 'sajat', 'osszpontok.json'), 'utf8').catch(() => '{}'));
-    const tudas = JSON.parse(await readFile(join(d, 'sajat', 'fejlectudas.json'), 'utf8').catch(() => '{}'));
+    const bemondasok = JSON.parse(await readFile(join(await koinoMappa(d), 'osszpontok.json'), 'utf8').catch(() => '{}'));
+    const tudas = JSON.parse(await readFile(join(await koinoMappa(d), 'fejlectudas.json'), 'utf8').catch(() => '{}'));
     fel = await feluletet(d, PD, kornyezet);
     const h = (await fel.hiv('/api/pakli/hierarchikus?entitas=' + X)).adat;
     const kartya = (az) => [...(h?.pakli ?? []), ...(h?.testverek ?? [])].find((k) => k.azonosito === az);
@@ -4187,7 +4291,7 @@ proba('⛔⛔ A FUTÓ POSTALÁDA AZ ÍRÓ — öt egyszerre futó kézi parancs 
       const kimenetek = await Promise.all([1, 2, 3, 4, 5].map((i) =>
         fut(hely, 'gondolat', 'EGYSZERRE ' + i)));
 
-      const sorok = (await readFile(join(hely, 'sajat', 'esemenyek.jsonl'), 'utf8'))
+      const sorok = (await readFile(join(await koinoMappa(hely), 'esemenyek.jsonl'), 'utf8'))
         .split('\n').filter((s) => s.trim()).map((s) => JSON.parse(s));
       const cimek = new Set(sorok.filter((e) => e.tipus === 'GondolatLetrehozas')
         .map((e) => e.adat?.cim));
@@ -5063,6 +5167,7 @@ proba('⭐⭐⭐ A SAJÁT friss címünket a rés után feljegyezzük', async ()
       stdio: ['ignore', 'pipe', 'pipe']
     });
     figyel(a, 'a');
+    await fut(masik, 'csatlakoz', await koinoNeve(egyik));   // ⭐ D118/2
     b = spawn(process.execPath, [KOINO_JS, 'pajzsfuro', '127.0.0.1', '7456', '7457'], {
       env: { ...process.env, KOINO_ADAT: masik, KOINO_NAPLO: '' },
       stdio: ['ignore', 'pipe', 'pipe']
@@ -5228,6 +5333,7 @@ proba('⭐⭐ A BEMUTATKOZÁS ÁLLÁSA LÁTSZIK: előbb FÜGGŐBEN, a válasz ut
     try {
       await fut(anna, 'koino', 'Bemutatkozás koinó');
       const annaHorgony = teljesAzonosito(await fut(anna, 'belep', 'alapitas'));
+      await fut(bela, 'csatlakoz', await koinoNeve(anna));   // ⭐ D118/2
       const belaHorgony = teljesAzonosito(await fut(bela, 'belep'));
       if (!annaHorgony || !belaHorgony) return false;
 
@@ -5296,6 +5402,8 @@ proba('⛔⛔ D71 AZ ŐRJÁRATBAN: egy azonos IP-jű IDEGEN nem teszi elértté 
     let a = null, b = null, c = null;
     try {
       await fut(A, 'koino', 'Kotes proba');
+      await fut(B, 'csatlakoz', await koinoNeve(A));   // ⭐ D118/2: mindhárom ugyanabban a koinóban
+      await fut(C, 'csatlakoz', await koinoNeve(A));
       await fut(B, 'tars', '127.0.0.1', String(PA), 'A');
       await fut(C, 'tars', '127.0.0.1', String(PA), 'A');
 
@@ -5373,7 +5481,7 @@ proba('⭐⭐⭐ D72: A SZÖVEG KÜLÖN DARAB — az esemény nem hordozza, a m�
       await fut(gazda, 'gondolat', 'A CÍM', 'EZ A SZÖVEG KÜLÖN DARAB');
 
       // (1) Az esemény-fájlban NINCS a szöveg — csak a hivatkozás.
-      const esemenyFajl = await readFile(join(gazda, 'sajat', 'esemenyek.jsonl'), 'utf8');
+      const esemenyFajl = await readFile(join(await koinoMappa(gazda), 'esemenyek.jsonl'), 'utf8');
       if (esemenyFajl.includes('EZ A SZÖVEG KÜLÖN DARAB')) throw new Error('a szöveg az eseményben maradt');
       if (!(await fut(gazda)).includes('EZ A SZÖVEG KÜLÖN DARAB')) throw new Error('a gazda nem mutatja a saját szövegét');
 
@@ -5448,12 +5556,14 @@ proba('⭐⭐ A kereső-réteg kézi útja: felajanl → behoz → kivisz → be
     await fut(a, 'behoz', join(b, 'sajat.jsonl'));
     const f3 = join(a, 'felajanlas.jsonl');
     const felajanl = tiszta(await fut(a, 'kereso', 'felajanl', f3));
+    await fut(c, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     const cBe = tiszta(await fut(c, 'kereso', 'behoz', f3));
     const cAll = tiszta(await fut(c, 'kereso'));
     const cKoino = tiszta(await fut(c));
     // a hamis: a születés címe átírva (az aláírás már nem illik rá)
     const hamis = join(c, 'hamis.jsonl');
     await writeFile(hamis, (await readFile(f3, 'utf8')).replaceAll('Közös park a faluban', 'Hamis park a faluban'), 'utf8');
+    await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     const dHamis = tiszta(await fut(d, 'kereso', 'behoz', hamis));
     const f5 = join(c, 'tovabb.jsonl');
     await fut(c, 'kereso', 'kivisz', f5);
@@ -5463,6 +5573,7 @@ proba('⭐⭐ A kereső-réteg kézi útja: felajanl → behoz → kivisz → be
     const kiseroNelkul = join(c, 'kisero-nelkul.jsonl');
     await writeFile(kiseroNelkul, (await readFile(f3, 'utf8')).split('\n').filter((x) => x && !x.startsWith('{"kisero"'))
       .join('\n') + '\n', 'utf8');
+    await fut(e, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(e, 'kereso', 'behoz', kiseroNelkul);
     const eAll = tiszta(await fut(e, 'kereso'));
     const ki = {
@@ -5512,12 +5623,14 @@ proba('⭐⭐ ③b: a csere a kereső-régiót is egyezteti — a postaláda ker
     await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
     await fut(a, 'behoz', join(b, 'sajat.jsonl'));
     await fut(a, 'kereso', 'felajanl', join(a, 'felajanlas.jsonl'));
+    await fut(c, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(c, 'kereso', 'behoz', join(a, 'felajanlas.jsonl'));
     await fut(c, 'tars', '127.0.0.1', String(port), 'D');
     await csereKor(d, c, port);
     // ⭐ ④b: a LEMEZEN (a `kereso` parancs maga is újraértékel, az elfedné): a futó postaláda a csere után az indexbe emelte.
-    const dIndexben = (await readFile(join(d, 'sajat', 'kereso', 'bejegyzesek.jsonl'), 'utf8').catch(() => ''))
+    const dIndexben = (await readFile(join(await koinoMappa(d), 'kereso', 'bejegyzesek.jsonl'), 'utf8').catch(() => ''))
       .split('\n').filter((x) => /"f":0/.test(x)).length;
+    await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     const dAll = tiszta(await fut(d, 'kereso'));
     const dKoino = (await readdir(d, { withFileTypes: true })).filter((x) => x.isDirectory() && x.name !== 'fajlok')
       .map((x) => x.name);
@@ -5571,6 +5684,8 @@ proba('⭐⭐ ③c: a régió tartói a DHT-n találják meg egymást — társ-
     await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
     await fut(a, 'behoz', join(b, 'sajat.jsonl'));
     await fut(a, 'kereso', 'felajanl', join(a, 'felajanlas.jsonl'));
+    await fut(c, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
+    await fut(d, 'csatlakoz', await koinoNeve(a));
     await fut(c, 'kereso', 'behoz', join(a, 'felajanlas.jsonl'));
     // C előbb hirdet (a címjegyzék-köre az első körben fut), utána D — D a régió témáján megtalálja C-t.
     let cKimenet = '', dKimenet = '';
@@ -5579,7 +5694,7 @@ proba('⭐⭐ ③c: a régió tartói a DHT-n találják meg egymást — társ-
     for (let i = 0; i < 60 && !/címjegyzék:/.test(cKimenet); i++) await varj(250);
     od = orjarat(d, PD);
     od.stdout.on('data', (x) => { dKimenet += x; });
-    const dFajl = join(d, 'sajat', 'kereso', 'bejegyzesek.jsonl');
+    const dFajl = join(await koinoMappa(d), 'kereso', 'bejegyzesek.jsonl');
     let db = 0;
     for (let i = 0; i < 120 && db < 5; i++) {
       await varj(500);
@@ -5635,13 +5750,16 @@ proba('⭐⭐ D110: az üres készülék a társaitól tanulja a kereső-régió
     await fut(a, 'behoz', join(b, 'sajat.jsonl'));
     const f = join(a, 'felajanlas.jsonl');
     await fut(a, 'kereso', 'felajanl', f);
+    await fut(c1, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(c1, 'kereso', 'behoz', f);
+    await fut(c2, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(c2, 'kereso', 'behoz', f);
     const melyseg = (x) => Number((tiszta(x).match(/a régióim \((\d+)\. mélység/) ?? [])[1]);
     const m1 = melyseg(await fut(c1, 'kereso', cel));
     const m2 = melyseg(await fut(c2, 'kereso', cel));
     const vart = Math.max(0, Math.min(m1, m2) - 1);
     if (!(vart >= 1)) throw new Error('a véletlen nem adott elég mély társat: ' + m1 + ', ' + m2);
+    await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     const elotte = melyseg(await fut(d, 'kereso', cel));
     await csereKor(c1, d, port, cel);
     await csereKor(c2, d, port, cel);
@@ -5687,15 +5805,16 @@ proba('⭐⭐ ④c: a felajánlás közvetlenül egy tartónak — a kísérőkk
     await fut(b, 'pont', g2, '10');
     await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
     await fut(a, 'behoz', join(b, 'sajat.jsonl'));
+    await fut(c, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)],
       { env: { ...process.env, KOINO_ADAT: c, KOINO_NAPLO: '', KOINO_KERESO_FIOK_CEL: '1' }, stdio: 'ignore' });
     await varj(1500);
     const elso = tiszta(await fut(a, 'kereso', 'felajanl', '127.0.0.1', String(port)));
     await varj(500);
-    const jegyzek = JSON.parse(await readFile(join(a, 'sajat', 'felajanlasok.json'), 'utf8').catch(() => '{}'));
+    const jegyzek = JSON.parse(await readFile(join(await koinoMappa(a), 'felajanlasok.json'), 'utf8').catch(() => '{}'));
     const masodik = tiszta(await fut(a, 'kereso', 'felajanl', '127.0.0.1', String(port)));
     await varj(500);
-    const cSorok = (await readFile(join(c, 'sajat', 'kereso', 'bejegyzesek.jsonl'), 'utf8').catch(() => '')).split('\n').filter(Boolean);
+    const cSorok = (await readFile(join(await koinoMappa(c), 'kereso', 'bejegyzesek.jsonl'), 'utf8').catch(() => '')).split('\n').filter(Boolean);
     const mely = cSorok.filter((x) => /"k":"p:park","s":1/.test(x)).length;
     const indexben = cSorok.filter((x) => /"f":0/.test(x)).length;
     const ki = {
@@ -5746,12 +5865,13 @@ proba('⭐⭐ ④c: az automatikus felajánlás — az őrjárat a DHT-n megtal�
     await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
     await fut(a, 'behoz', join(b, 'sajat.jsonl'));
     let cKimenet = '', aKimenet = '';
+    await fut(c, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     oc = orjarat(c, PC);
     oc.stdout.on('data', (x) => { cKimenet += x; });
     for (let i = 0; i < 60 && !/címjegyzék:/.test(cKimenet); i++) await varj(250);
     oa = orjarat(a, PA);
     oa.stdout.on('data', (x) => { aKimenet += x; });
-    const cFajl = join(c, 'sajat', 'kereso', 'bejegyzesek.jsonl');
+    const cFajl = join(await koinoMappa(c), 'kereso', 'bejegyzesek.jsonl');
     let db = 0;
     for (let i = 0; i < 160 && db < 5; i++) {
       await varj(500);
@@ -5806,12 +5926,15 @@ proba('⭐⭐ ⑤: a kérdés közvetlenül egy tartónál — a találat ellen�
     await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
     await fut(a, 'behoz', join(b, 'sajat.jsonl'));
     await fut(a, 'kereso', 'felajanl', join(a, 'f.jsonl'));
+    await fut(c, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(c, 'kereso', 'behoz', join(a, 'f.jsonl'));
     await figyelj();
+    await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     const park = tiszta(await fut(d, 'kereso', 'keres', 'park', '127.0.0.1', String(port)));
     const iskola = tiszta(await fut(d, 'kereso', 'keres', 'iskola', '127.0.0.1', String(port)));
-    const dAtmeneti = (await readdir(join(d, 'sajat', 'atmeneti')).catch(() => [])).join(' ');
+    const dAtmeneti = (await readdir(join(await koinoMappa(d), 'atmeneti')).catch(() => [])).join(' ');
     await figyelj({ KOINO_KERESES_KISEROK: '0' });
+    await fut(e, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     const kiseroNelkul = tiszta(await fut(e, 'kereso', 'keres', 'park', '127.0.0.1', String(port)));
     const ki = {
       park: /Közös park a faluban/.test(park) && /1 találat/.test(park),
@@ -5856,12 +5979,14 @@ proba('⭐⭐ ⑤: a kérdés a DHT-n talált tartónál — cím nélkül, a r�
     await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
     await fut(a, 'behoz', join(b, 'sajat.jsonl'));
     await fut(a, 'kereso', 'felajanl', join(a, 'f.jsonl'));
+    await fut(c, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(c, 'kereso', 'behoz', join(a, 'f.jsonl'));
     let cKimenet = '';
     oc = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(PC)],
       { env: { ...process.env, KOINO_ADAT: c, KOINO_NAPLO: '', ...dht }, stdio: ['ignore', 'pipe', 'pipe'] });
     oc.stdout.on('data', (x) => { cKimenet += x; });
     for (let i = 0; i < 60 && !/címjegyzék:/.test(cKimenet); i++) await varj(250);
+    await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     const park = tiszta(await fut(d, 'kereso', 'keres', 'park', dht));
     const ki = { park: /Közös park a faluban/.test(park) && /1 találat/.test(park) };
     if (!ki.park) process.stdout.write('  ⑤ kérdés a DHT-n — ami bukott: park · ' + JSON.stringify({ park: park.slice(-400) }) + '\n');
@@ -5903,12 +6028,14 @@ proba('⭐⭐ ⑦: a felület a hálózaton is keres — a háttérben, és a ta
     await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
     await fut(a, 'behoz', join(b, 'sajat.jsonl'));
     await fut(a, 'kereso', 'felajanl', join(a, 'f.jsonl'));
+    await fut(c, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(c, 'kereso', 'behoz', join(a, 'f.jsonl'));
     let cKimenet = '';
     oc = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(PC)],
       { env: { ...process.env, KOINO_ADAT: c, KOINO_NAPLO: '', ...dht }, stdio: ['ignore', 'pipe', 'pipe'] });
     oc.stdout.on('data', (x) => { cKimenet += x; });
     for (let i = 0; i < 60 && !/címjegyzék:/.test(cKimenet); i++) await varj(250);
+    await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     fel = await feluletet(d, PD, dht);
     const elso = await fel.hiv('/api/kereses?q=park');
     let utolso = elso;
@@ -5972,6 +6099,7 @@ proba('⭐⭐ ⑦b: a NAT mögötti tartó — a kérdést az őrjárat függő 
     await fut(b, 'kivisz', join(b, 'sajat.jsonl'), 'sajat');
     await fut(a, 'behoz', join(b, 'sajat.jsonl'));
     await fut(a, 'kereso', 'felajanl', join(a, 'f.jsonl'));
+    await fut(c, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(c, 'kereso', 'behoz', join(a, 'f.jsonl'));
     let cKimenet = '', dKimenet = '';
     oc = orjarat(c, PC);
@@ -5980,6 +6108,7 @@ proba('⭐⭐ ⑦b: a NAT mögötti tartó — a kérdést az őrjárat függő 
     oc.kill();
     oc = null;
     await varj(800);
+    await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     od = orjarat(d, PD);
     od.stdout.on('data', (x) => { dKimenet += x; });
     fel = await feluletet(d, PF, dht);
@@ -5988,7 +6117,7 @@ proba('⭐⭐ ⑦b: a NAT mögötti tartó — a kérdést az őrjárat függő 
       await varj(1000);
       elso = await fel.hiv('/api/kereses?q=park');
     }
-    const kerelmek = await readFile(join(d, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '');
+    const kerelmek = await readFile(join(await koinoMappa(d), 'kerelmek.json'), 'utf8').catch(() => '');
     // C újraindul — D őrjárata a függő kérelmet elviszi neki
     oc = orjarat(c, PC);
     let utolso = elso;
@@ -6057,23 +6186,25 @@ proba('⭐⭐ D111: a megtalált gondolat tartója — a tartó-tipp a találatt
     // a gondolat szeletében egy esemény, amit a bejegyzés NEM hoz: A érték javaslata (küszöbök)
     await fut(a, 'ertek', g, '51', '0', '3', '3');
     let cKimenet = '', dKimenet = '', aKimenet = '';
+    await fut(c, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     oc = orjarat(c, PC);
     oc.stdout.on('data', (x) => { cKimenet += x; });
     for (let i = 0; i < 60 && !/címjegyzék:/.test(cKimenet); i++) await varj(250);
     const felajanlas = tiszta(await fut(a, 'kereso', 'felajanl', '127.0.0.1', String(PC), dht));
     const aTabla = JSON.parse(await readFile(join(a, 'tabla-kulcs.json'), 'utf8')).alairoNyilvanos;
+    await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     const keres = tiszta(await fut(d, 'kereso', 'keres', 'park', dht));
-    const tippek = await readFile(join(d, 'sajat', 'tartotippek.json'), 'utf8').catch(() => '');
+    const tippek = await readFile(join(await koinoMappa(d), 'tartotippek.json'), 'utf8').catch(() => '');
     await fut(d, 'kerelem', 'szelet', gTeljes, dht);
-    const kerelmek = await readFile(join(d, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '');
+    const kerelmek = await readFile(join(await koinoMappa(d), 'kerelmek.json'), 'utf8').catch(() => '');
     od = orjarat(d, PD);
     od.stdout.on('data', (x) => { dKimenet += x; });
     for (let i = 0; i < 80 && !/jelentkeztem/.test(dKimenet); i++) await varj(250);
     oa = orjarat(a, PA);
     oa.stdout.on('data', (x) => { aKimenet += x; });
     const gyerekNalam = async () => {
-      for (const f of await readdir(join(d, 'sajat', 'atmeneti')).catch(() => [])) {
-        if ((await readFile(join(d, 'sajat', 'atmeneti', f), 'utf8').catch(() => '')).includes('"ErtekJavaslat"')) return true;
+      for (const f of await readdir(join(await koinoMappa(d), 'atmeneti')).catch(() => [])) {
+        if ((await readFile(join(await koinoMappa(d), 'atmeneti', f), 'utf8').catch(() => '')).includes('"ErtekJavaslat"')) return true;
       }
       return false;
     };
@@ -6114,7 +6245,7 @@ proba('⭐⭐ D111: a megtalált gondolat tartója — a tartó-tipp a találatt
 proba('⭐⭐ D112 ①: a fájl-tár kerete — a nem vállalt törzs a keret fölött kiesik, a vállalt (a saját) marad', async () => {
   const a = await ujKeszulek();
   const b = await ujKeszulek();
-  const blobok = async (hely) => (await readdir(join(hely, 'sajat', 'fajlok')).catch(() => [])).filter((n) => /^[A-Za-z0-9_-]{43}$/.test(n));
+  const blobok = async (hely) => (await readdir(join(await koinoMappa(hely), 'fajlok')).catch(() => [])).filter((n) => /^[A-Za-z0-9_-]{43}$/.test(n));
   try {
     await fut(a, 'koino', 'Fájl', 'próba', 'nyilt');
     await fut(a, 'gondolat', 'Az A gondolata', 'Ez az A szövege, ami külön darabként él.');
@@ -6184,7 +6315,9 @@ proba('⭐⭐ D112 ③: a felderítés — az őrjárat a háttérben elhozza az
       { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: 'ignore' });
     await varj(1500);
     const kornyezet = { KOINO_KISZOLGALAS: 'alap', KOINO_BEMONDAS_KORLAT: '4' };
+    await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(d, 'tars', '127.0.0.1', String(PA), 'A', kornyezet);
+    await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     const indul = tiszta(await fut(d, 'felderites', X, '10', kornyezet));
     let dKimenet = '';
     od = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(PD)],
@@ -6193,16 +6326,16 @@ proba('⭐⭐ D112 ③: a felderítés — az őrjárat a háttérben elhozza az
     let jegyzek = '';
     for (let i = 0; i < 150; i++) {
       await varj(1000);
-      jegyzek = await readFile(join(d, 'sajat', 'felderitesek.json'), 'utf8').catch(() => '');
+      jegyzek = await readFile(join(await koinoMappa(d), 'felderitesek.json'), 'utf8').catch(() => '');
       if (/"allapot":"kesz"/.test(jegyzek)) break;
     }
     od.kill();
     od = null;
     await varj(800);
-    const rogz = await readFile(join(d, 'sajat', 'atmeneti', 'rogzitett.json'), 'utf8').catch(() => '');
+    const rogz = await readFile(join(await koinoMappa(d), 'atmeneti', 'rogzitett.json'), 'utf8').catch(() => '');
     // a „böngészés”: Y fejlécei (újabb bemondások — a kis korlát fölött)
     await fut(d, 'kerelem', 'fejlecek', Y, '127.0.0.1', String(PA), '50', 'mely', kornyezet);
-    const bemondasok = Object.keys(JSON.parse(await readFile(join(d, 'sajat', 'osszpontok.json'), 'utf8').catch(() => '{}')));
+    const bemondasok = Object.keys(JSON.parse(await readFile(join(await koinoMappa(d), 'osszpontok.json'), 'utf8').catch(() => '{}')));
     const lista = tiszta(await fut(d, 'felderites', kornyezet));
     // ⭐ D112 ⑤: a felület — a felderítések listája, a kártya „pillanatkép” jele, a hibás beállítás, a törlés
     fel = await feluletet(d, 7711, kornyezet);
@@ -6256,7 +6389,7 @@ proba('⭐⭐ D112 ④: a felderítés törzse — a fejlécek után a szöveg-d
   const a = await ujKeszulek();
   const d = await ujKeszulek();
   const PA = 7708, PD = 7709, PF = 7710;
-  const blobok = async (hely) => (await readdir(join(hely, 'sajat', 'fajlok')).catch(() => [])).filter((n) => /^[A-Za-z0-9_-]{43}$/.test(n));
+  const blobok = async (hely) => (await readdir(join(await koinoMappa(hely), 'fajlok')).catch(() => [])).filter((n) => /^[A-Za-z0-9_-]{43}$/.test(n));
   let fel = null, figyelo = null, od = null;
   try {
     await fut(a, 'koino', 'Törzs', 'próba', 'nyilt');
@@ -6275,7 +6408,9 @@ proba('⭐⭐ D112 ④: a felderítés törzse — a fejlécek után a szöveg-d
       { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: 'ignore' });
     await varj(1500);
     const kornyezet = { KOINO_KISZOLGALAS: 'alap' };
+    await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(d, 'tars', '127.0.0.1', String(PA), 'A', kornyezet);
+    await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(d, 'felderites', X, '10', '-', 'torzs', kornyezet);
     let dKimenet = '';
     od = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(PD)],
@@ -6284,7 +6419,7 @@ proba('⭐⭐ D112 ④: a felderítés törzse — a fejlécek után a szöveg-d
     let jegyzek = '';
     for (let i = 0; i < 180; i++) {
       await varj(1000);
-      jegyzek = await readFile(join(d, 'sajat', 'felderitesek.json'), 'utf8').catch(() => '');
+      jegyzek = await readFile(join(await koinoMappa(d), 'felderitesek.json'), 'utf8').catch(() => '');
       if (/"allapot":"kesz"/.test(jegyzek)) break;
     }
     od.kill();
@@ -6293,7 +6428,7 @@ proba('⭐⭐ D112 ④: a felderítés törzse — a fejlécek után a szöveg-d
     // ⚠️ A csere randevúja is hozhatja a darabokat (D és A itt társak — a randevú a két tár entitásainak fájljait is kéri), és
     // a két út versenyez (mérve: hol a kérelem, hol a randevú ér oda előbb). A felderítés dolga a KÉRÉS — a kérelem-napló
     // mutatja, hogy a törzs-kérelem létrejött (függ vagy megjött); a darab bármelyik úton jöhet.
-    const kerelmek = JSON.parse(await readFile(join(d, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '{}'));
+    const kerelmek = JSON.parse(await readFile(join(await koinoMappa(d), 'kerelmek.json'), 'utf8').catch(() => '{}'));
     const torzsKeresek = [...(kerelmek.fuggo ?? []), ...(kerelmek.kesz ?? [])].filter((x) => x.fajta === 'torzs');
     const dElott = await blobok(d);
     await fut(d, 'tomorit', { ...kornyezet, KOINO_FAJL_ATMENETI: '0', KOINO_FAJL_FRISS: '0' });

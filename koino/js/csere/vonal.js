@@ -49,6 +49,7 @@
 // ⚠️ 2026-09-26-IG ITT ÁLLT A `node:net` IMPORTJA (TCP). A D69/2 óta a párbeszéd csak egy
 // foglalat-szerű kapcsolatot kap (a UDP-résen: `udpVonal.js` → `udpKapcsolat`).
 
+import { koinoSzuleteseE } from '../esemeny/esemeny.js';
 import { beolvasztas } from './csere.js';
 // ⭐ A C 7–8. pontja (2026-09-27): a csere szeletenként, tartomány-egyeztetéssel (D74).
 import { egyeztetesNyitasa, egyeztetesLepese } from './tartomany.js';
@@ -294,7 +295,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
   // ===== ⭐ D96: A KOINÓ SZÜLETÉSE MINT ESEMÉNY — a párok közt mindig, a halmaza egyedül az esemény =====
   const szuletesEsemeny = beallitas.koinoSzuletes && typeof beallitas.koinoSzuletes === 'object'
-    && beallitas.koinoSzuletes.tipus === 'KoinoLetrehozas' && beallitas.koinoSzuletes.koino === koino
+    && koinoSzuleteseE(beallitas.koinoSzuletes, koino)
     && ervenyesKulcs(beallitas.koinoSzuletes.azonosito) ? beallitas.koinoSzuletes : null;
   const szuletesPar = szuletesEsemeny
     ? KOINO_SZULETES_KULCS + ':' + await halmazLenyomata(rendezettHalmaz([szuletesEsemeny.azonosito])) : null;
@@ -1368,9 +1369,10 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // ⛔ Csak a közös vagy általunk várt szeletekből vesszük át (a (b)-ben ez tartja távol a mások
   // érdeklődését a tárunktól); a koino-szűrés és az ellenőrzés a `beolvasztas` dolga.
   const megengedett = new Set([...egyeztetendo, ...vartSzeletek]);
-  // ⭐ D96: a koinó születésének kulcsán csak EZ a koinó létrehozása jöhet.
+  // ⭐ D96: a koinó születésének kulcsán csak EZ a koinó létrehozása jöhet — ⭐ D118/2: lenyomat-nevű koinónál csak az az
+  // esemény, amelyiknek az azonosítója maga a név (egy második, azonos nevű születés így nem jut át — a lelet).
   const atveheto = erkezett.filter((e) => e && typeof e === 'object' && (szeletbeTartozik(e, megengedett)
-    || (megengedett.has(KOINO_SZULETES_KULCS) && e.tipus === 'KoinoLetrehozas' && e.koino === koino)));
+    || (megengedett.has(KOINO_SZULETES_KULCS) && koinoSzuleteseE(e, koino))));
   const beolvasztva = await beolvasztas(tar, atveheto, koino);
   uj += beolvasztva.uj;
   ujAzonositok = [...ujAzonositok, ...beolvasztva.ujAzonositok];

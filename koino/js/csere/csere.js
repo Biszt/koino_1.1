@@ -29,7 +29,7 @@
 // Használják: a csere-vonal (`beolvasztas`), a kézi út (`fajlCsere.js`) és a csereProba.js.
 
 import { lenyomat } from '../esemeny/kanonikusAlak.js';
-import { alakiHiba } from '../esemeny/esemeny.js';
+import { alakiHiba, esemenyKoinoja } from '../esemeny/esemeny.js';
 import { koinoEsemenyei, esemenyMentese } from '../tar/esemenyTar.js';
 
 // ===================================
@@ -338,7 +338,7 @@ export async function beolvasztas(tar, esemenyek, koino) {
 
   for (const esemeny of esemenyek) {
     // ----- IDEGEN KOINO: be sem visszük a kapuig -----
-    if (koino !== undefined && esemeny?.koino !== koino) {
+    if (koino !== undefined && esemenyKoinoja(esemeny) !== koino) {
       idegen++;
       console.warn('beolvasztas - IDEGEN koino eseménye, kihagyva', {
         vart: koino, kapott: esemeny?.koino

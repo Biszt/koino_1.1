@@ -3,7 +3,9 @@
 // Azt bizonyítja, hogy egy esemény hamisíthatatlan: bármit írunk át benne, az ellenőrzés
 // bukik — és hogy a kettős cselekvés leleplezhető.
 
-import { esemenyLetrehozasa, esemenyEllenorzese, elagazasE, bejelentesHelyei } from '../js/esemeny/esemeny.js';
+import {
+  esemenyLetrehozasa, esemenyEllenorzese, elagazasE, bejelentesHelyei, esemenyKoinoja, koinoSzuleteseE, koinoSzuleteseListabol
+} from '../js/esemeny/esemeny.js';
 import { probaGyujtemeny } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('Az aláírt esemény próbája');
@@ -172,6 +174,60 @@ proba('⛔⛔ D77: a gondolat nem azonosító alakú SZULO-ját a kapu elutasít
     { ...alapLeiras, tipus: 'KategoriaLetrehozas', adat: { nev: 'K', szulo: 'x' } }, kulcspar);
   return (await esemenyEllenorzese(kategoria)).rendben === true;
 });
+
+// ===== ⭐⭐ D118/2: A KOINÓ NEVE A SZÜLETÉSE LENYOMATA =====
+//
+// A lelet (2026-10-24, `docs/koltozes_atvizsgalas.md` 3.): a szabad koinó-név mellett egy második, azonos nevű születés
+// átvette az alapító helyét. Az új alakban a születés koinó-mezője üres, és a koinó neve a születés azonosítója.
+
+const szuletesLeiras = {
+  koino: '', tipus: 'KoinoLetrehozas', adat: { nev: 'Új alakú', leiras: null, alapitok: [], zart: true },
+  elozo: null, sorszam: 1
+};
+
+proba('⭐⭐ D118/2: az új alakú születés koinója a SAJÁT lenyomata — minden más eseményé a koinó-mezője', async () => {
+  const sz = await esemenyLetrehozasa(szuletesLeiras, kulcspar);
+  const tovabb = await esemenyLetrehozasa({ ...alapLeiras, koino: sz.azonosito, elozo: sz.azonosito, sorszam: 2 }, kulcspar);
+  const regi = await esemenyLetrehozasa({ ...szuletesLeiras, koino: 'regi-nev' }, kulcspar);
+  return (await esemenyEllenorzese(sz)).rendben === true && esemenyKoinoja(sz) === sz.azonosito
+    && esemenyKoinoja(tovabb) === sz.azonosito && esemenyKoinoja(esemeny) === 'proba-koino'
+    && esemenyKoinoja(regi) === 'regi-nev' && esemenyKoinoja(null) === undefined;
+});
+
+proba('⛔⛔ D118/2: a kapu elutasítja a lenyomat-nevet mondó születést és az üres koinó-nevű nem-születést — a két jó alakot beengedi',
+  async () => {
+    const sz = await esemenyLetrehozasa(szuletesLeiras, kulcspar);
+    const hamis = await esemenyLetrehozasa({ ...szuletesLeiras, koino: sz.azonosito }, idegenKulcspar);
+    const uresGondolat = await esemenyLetrehozasa({ ...alapLeiras, koino: '' }, kulcspar);
+    const h = await esemenyEllenorzese(hamis);
+    const u = await esemenyEllenorzese(uresGondolat);
+    // ⚠️ A helyes alakokat beengedi (különben egy mindent elutasító kapu is átmenne): az új és a régi alakú születést.
+    const regi = await esemenyLetrehozasa({ ...szuletesLeiras, koino: 'regi-nev' }, kulcspar);
+    return !h.rendben && /születés/.test(h.ok) && !u.rendben && /üres koinó-név/.test(u.ok)
+      && (await esemenyEllenorzese(sz)).rendben === true && (await esemenyEllenorzese(regi)).rendben === true;
+  });
+
+proba('⭐⭐ D118/2: a koinó születése EGY szabállyal — lenyomat-nevű koinónál csak az, aminek az azonosítója maga a név',
+  async () => {
+    const valodi = await esemenyLetrehozasa(szuletesLeiras, kulcspar);
+    const K = valodi.azonosito;
+    // Egy másik új alakú születés (másik koinó), és egy régi alakú, ami a K nevet mondja (a kapu elvetné — egy lista
+    // mégis tartalmazhatja).
+    const masik = await esemenyLetrehozasa({ ...szuletesLeiras, adat: { ...szuletesLeiras.adat, nev: 'Másik' } }, idegenKulcspar);
+    const hamis = await esemenyLetrehozasa({ ...szuletesLeiras, koino: K, adat: { ...szuletesLeiras.adat, nev: 'Hamis' } },
+      idegenKulcspar);
+    for (const sor of [[valodi, masik, hamis], [hamis, masik, valodi], [masik, hamis, valodi]]) {
+      if (koinoSzuleteseListabol(sor, K) !== valodi) return false;
+    }
+    if (!koinoSzuleteseE(valodi, K) || koinoSzuleteseE(hamis, K) || koinoSzuleteseE(masik, K)) return false;
+    // ⭐ A régi alak (szabad név — csak a próbák): több is lehet, és MINDIG a legkisebb azonosító, a sorrendtől függetlenül.
+    const r1 = await esemenyLetrehozasa({ ...szuletesLeiras, koino: 'regi' }, kulcspar);
+    const r2 = await esemenyLetrehozasa({ ...szuletesLeiras, koino: 'regi' }, idegenKulcspar);
+    const kisebb = r1.azonosito < r2.azonosito ? r1 : r2;
+    return koinoSzuleteseListabol([r1, r2], 'regi') === kisebb && koinoSzuleteseListabol([r2, r1], 'regi') === kisebb
+      // Koinó nélkül az új alakú elöl; a lenyomat-nevet mondó (hamis) soha.
+      && koinoSzuleteseListabol([r1, valodi, r2]) === valodi && koinoSzuleteseListabol([hamis]) === null;
+  });
 
 // ===== TÁJÉKOZTATÓ MÉRÉS =====
 

@@ -340,6 +340,55 @@ export const AZONOSITO_MINTA = /^[A-Za-z0-9_-]{43}$/;
 /** Azonosító alakú-e (szöveg, 43 base64url jel)? */
 export const azonositoAlaku = (x) => typeof x === 'string' && AZONOSITO_MINTA.test(x);
 
+// ===================================
+// ⭐⭐ D118/2: MELYIK KOINÓÉ EGY ESEMÉNY — A KOINÓ NEVE A SZÜLETÉSE LENYOMATA
+// ===================================
+//
+// ⛔ A LELET (2026-10-24, mérve — `docs/koltozes_atvizsgalas.md` 3.): a koinó neve szabad szöveg volt, és a születését
+// három hely háromféleképp választotta (az állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló
+// egyetlen, azonos nevű `KoinoLetrehozas`-szal az alapító (és így minden tag) döntéseit „nem ellenőrizhetővé” tette.
+//
+// ⭐ Az új alak: a születés koinó-mezője ÜRES (önmagát nem nevezheti meg — a lenyomata a tartalmából jön), és a koinó
+// neve a születés AZONOSÍTÓJA; minden más esemény ezt a nevet viszi. Egy második születés így MÁSIK koinó — nincs mit
+// választani. ⚠️ A régi alak (szabad név, a születés koinó-mezője maga a név) csak a próbák kedvéért él: lenyomat-alakú
+// névre soha nem vonatkozik, és a program új koinót csak az új alakban hoz létre.
+
+/** Melyik koinóé az esemény? Az új alakú születésé a saját azonosítója, mindenki másé a koinó-mezője. */
+export function esemenyKoinoja(e) {
+  if (!e || typeof e !== 'object') return undefined;
+  if (e.koino === '' && e.tipus === 'KoinoLetrehozas') return e.azonosito;
+  return e.koino;
+}
+
+/** A koinó születése-e ez az esemény? Lenyomat-nevű koinónál CSAK az, amelyiknek az azonosítója maga a név. */
+export function koinoSzuleteseE(e, koino) {
+  if (!e || typeof e !== 'object' || e.tipus !== 'KoinoLetrehozas') return false;
+  if (azonositoAlaku(koino)) return e.koino === '' && e.azonosito === koino;
+  return e.koino === koino && !azonositoAlaku(e.koino);   // a régi alak (szabad név) — csak a próbákban
+}
+
+/**
+ * A koinó születése egy eseménylistából — EGY szabály minden helyen (az állapot, a tagság, a kapu, a belépő tér).
+ * Koinó nélkül: az első új alakú születésé, ha van ilyen, különben a régi alaké. ⚠️ A régi alaknál több is lehet
+ * (ezért volt a lelet): ott a legkisebb azonosító — determinisztikus, de hamisítható; az új alaknál egy lehet.
+ * @param {Array<Object>} esemenyek
+ * @param {string|null} [koino]
+ * @returns {Object|null}
+ */
+export function koinoSzuleteseListabol(esemenyek, koino = null) {
+  let legjobb = null;
+  let ujAlaku = false;
+  for (const e of esemenyek ?? []) {
+    if (!e || e.tipus !== 'KoinoLetrehozas') continue;
+    if (koino !== null ? !koinoSzuleteseE(e, koino) : azonositoAlaku(e.koino)) continue;
+    const uj = e.koino === '';
+    if (koino === null && ujAlaku && !uj) continue;
+    if (!legjobb || (uj && !ujAlaku) || e.azonosito < legjobb.azonosito) legjobb = e;
+    ujAlaku = ujAlaku || uj;
+  }
+  return legjobb;
+}
+
 /**
  * A lánc-gyökér alakja (D81): `{ naplo, kiosztas }` — két összegzés (`{ l, d, o }`), semmi más; a
  * napló összeg nélküli, a kiosztás egy összeget (a pontot) visz, és a napló darabja a sorszám − 1.
@@ -379,6 +428,15 @@ export function alakiHiba(esemeny) {
     'azonosito', 'alairas'
   ]) {
     if (esemeny[mezo] === undefined) return 'hiányzó mező: ' + mezo;
+  }
+
+  // ----- ⭐⭐ D118/2: A KOINÓ NEVE -----
+  // Az üres koinó-név csak az új alakú születésé (annak a neve a saját lenyomata); és születés nem nevezhet meg
+  // lenyomat-alakú koinót — az egy létező koinó második, hamis születése lenne (a lelet).
+  if (typeof esemeny.koino !== 'string') return 'a koino csak szöveg lehet';
+  if (esemeny.koino === '' && esemeny.tipus !== 'KoinoLetrehozas') return 'üres koinó-név csak a koinó születésén állhat';
+  if (esemeny.tipus === 'KoinoLetrehozas' && azonositoAlaku(esemeny.koino)) {
+    return 'a koinó születése nem nevezhet meg koinót: a koinó neve a születés saját lenyomata';
   }
 
   // ----- A HÁROM ÚJ MEZŐ ALAKJA -----
@@ -465,7 +523,7 @@ export function alakiHiba(esemeny) {
  */
 export function elagazasE(egyik, masik) {
   return egyik.szerzo === masik.szerzo
-    && egyik.koino === masik.koino
+    && esemenyKoinoja(egyik) === esemenyKoinoja(masik)
     && egyik.sorszam === masik.sorszam
     && egyik.azonosito !== masik.azonosito;
 }

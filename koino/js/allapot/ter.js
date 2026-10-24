@@ -44,6 +44,7 @@
 //
 // Használják: `koino.js` (a `ter` parancs és a `GET /api/ter` végpont).
 
+import { koinoSzuleteseListabol } from '../esemeny/esemeny.js';
 import { esemenyTarNyitasa, ismertKoinok, terJegyzekTarolo, alapHely } from '../tar/fajlTar.js';
 import { koinoEsemenyei } from '../tar/esemenyTar.js';
 import { tagE, ujIdentitasNezet } from './identitas.js';
@@ -94,7 +95,8 @@ export async function koinoKartyaja(hely, koino, beallitas = {}) {
   // ⚠️ HIÁNYOZHAT, ÉS AZ NEM HIBA (D19). Ha az eseményeket fájlból hoztam be, vagy a csere
   // még nem ért ide, lehet, hogy a koino gondolatait ismerem, a SZÜLETÉSÉT nem. Olyankor
   // a kártya megmondja, hogy nem tudja — nem talál ki nevet.
-  const alapitas = esemenyek.find((e) => e.tipus === 'KoinoLetrehozas');
+  // ⭐ D118/2: EGY szabállyal (`koinoSzuleteseListabol`) — a mappa neve a koinó neve.
+  const alapitas = koinoSzuleteseListabol(esemenyek, koino);
 
   // ----- A HORGONYOK: ki lépett be ebbe a koinóba? -----
   // Szerzőnként EGY horgony számít (az elsője); a `Belepes` és a `KoinoLetrehozas`
@@ -102,6 +104,7 @@ export async function koinoKartyaja(hely, koino, beallitas = {}) {
   const horgonyok = new Map();                       // szerző → a horgony azonosítója
   for (const e of esemenyek) {
     if (e.tipus !== 'Belepes' && e.tipus !== 'KoinoLetrehozas') continue;
+    if (e.tipus === 'KoinoLetrehozas' && e !== alapitas) continue;   // csak a koinó születése horgony
     if (!horgonyok.has(e.szerzo)) horgonyok.set(e.szerzo, e.azonosito);
   }
 
@@ -132,7 +135,7 @@ export async function koinoKartyaja(hely, koino, beallitas = {}) {
     // ⚠️ A SZERZŐ ÓRÁJA — állítás, nem mért idő. A kártya ezért mutatja mellette az
     // `eloszorLattam`-ot is, ami a SAJÁT megfigyelésem.
     letrehozva: alapitas?.ido ?? null,
-    ismeremASzuleteset: alapitas !== undefined,
+    ismeremASzuleteset: !!alapitas,
 
     // ⭐ A HÁROM SZÁM — a létszám súlya a különbségükben van.
     belepok: horgonyok.size,
@@ -144,7 +147,7 @@ export async function koinoKartyaja(hely, koino, beallitas = {}) {
     // ⭐ „Benne vagyok-e?" — és a `miert` a D19 miatt kell: a „nem" legyen indokolt.
     enTagVagyok: en?.igen ?? false,
     miert: en?.ok ?? 'nem léptem be ebbe a koinóba',
-    enAlapitottam: alapitas?.szerzo === beallitas.szerzo && alapitas !== undefined
+    enAlapitottam: !!alapitas && alapitas.szerzo === beallitas.szerzo
   };
 
   console.log('ter.koinoKartyaja - VÉGE', { koino, tagok, belepok: kartya.belepok });

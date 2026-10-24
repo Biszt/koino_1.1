@@ -34,7 +34,7 @@
 
 import { mkdir, readFile, appendFile, writeFile, rename, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { azonositoAlaku } from '../esemeny/esemeny.js';
+import { azonositoAlaku, esemenyKoinoja } from '../esemeny/esemeny.js';
 import { lenyomatSzinkron } from '../esemeny/kanonikusAlak.js';
 import { rendezettHalmaz } from '../esemeny/halmaz.js';
 import { esemenyMentese } from './esemenyTar.js';
@@ -160,7 +160,7 @@ function javasoltCim(e, g) {
  * @returns {{rendben: boolean, ok?: string, cim?: string, hely?: bigint, frissesseg?: number}}
  */
 export function bejegyzesTartalma(b, koino, most = Date.now()) {
-  if (!b.esemenyek.every((e) => e.koino === koino)) return { rendben: false, ok: 'más koinó eseménye' };
+  if (!b.esemenyek.every((e) => esemenyKoinoja(e) === koino)) return { rendben: false, ok: 'más koinó eseménye' };
   const szuletes = b.esemenyek.find((e) => e.azonosito === b.g);
   if (!szuletes || szuletes.tipus !== 'GondolatLetrehozas' || typeof szuletes.adat?.cim !== 'string'
     || !KERESHETO_TIPUSOK.includes(szuletes.adat.tipus ?? 'Gondolat')) {

@@ -22,6 +22,7 @@
 // Használják: muveletek.js (a bejelentés), koino.js (a csere és a kézi út után, és az `ellenoriz`
 // parancs), a próbák.
 
+import { esemenyKoinoja } from '../esemeny/esemeny.js';
 import { ellentmondasEllenorzese } from './ellentmondas.js';
 
 /**
@@ -38,10 +39,10 @@ export async function ellentmondasokKeresese(tar, koino, esemenyek) {
     if (talalt.has(kulcs)) return;
     if ((await ellentmondasEllenorzese(adat, koino)).rendben) talalt.set(kulcs, adat);
   };
-  const ott = async (szerzo, sorszam) => (await tar.sorszamSzerint(szerzo, sorszam)).filter((x) => x.koino === koino);
+  const ott = async (szerzo, sorszam) => (await tar.sorszamSzerint(szerzo, sorszam)).filter((x) => esemenyKoinoja(x) === koino);
 
   for (const e of esemenyek) {
-    if (!e || e.koino !== koino || e.tipus === 'Ellentmondas') continue;
+    if (!e || esemenyKoinoja(e) !== koino || e.tipus === 'Ellentmondas') continue;
     const kit = e.szerzo;
     const itt = await ott(kit, e.sorszam);
 

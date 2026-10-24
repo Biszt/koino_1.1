@@ -54,7 +54,7 @@
 // (`csomagokKibontasa`), a művelet-réteg (a csomag kiadása), a 55. mérés, a próbák.
 
 import { erintettek, toredekAzonosito } from './szabalyok.js';
-import { esemenyEllenorzese, szelet, bejelentesHelyei, azonositoAlaku } from '../esemeny/esemeny.js';
+import { esemenyEllenorzese, szelet, bejelentesHelyei, azonositoAlaku, esemenyKoinoja } from '../esemeny/esemeny.js';
 import { pontEsemenyOnbizonyitasa, hozottBizonyitekokOnbizonyitasa } from './lancGyoker.js';
 // ⭐ D93/1: a résztvevők tagsági bizonyítéka is a csomagba kerül (a cél tartója különben nem ellenőrizhetné őket).
 import { tagsagiIndex, szerzoTagsaga, tagsagiLanc } from './tagsag.js';
@@ -227,7 +227,7 @@ export async function dontesiCsomagEllenorzese(e) {
     if (!x || typeof x !== 'object' || Array.isArray(x)) return hiba('egy belső eleme nem esemény');
     if (latott.has(x.azonosito)) return hiba('egy eseményt kétszer hoz');
     latott.add(x.azonosito);
-    if (x.koino !== e.koino) return hiba('más koinó eseményét hozza');
+    if (esemenyKoinoja(x) !== esemenyKoinoja(e)) return hiba('más koinó eseményét hozza');
     if (TAGSAGI_TIPUSOK.has(x.tipus)) {
       if (!lancokon.has(x.azonosito)) return hiba('olyan tagsági eseményt hoz, ami egyik résztvevő láncán sincs');
       const v = await esemenyEllenorzese(x);

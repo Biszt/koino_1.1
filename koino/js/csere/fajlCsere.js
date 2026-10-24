@@ -46,6 +46,7 @@
 //
 // Használják: `koino.js` (a `kivisz` és a `behoz` parancs).
 
+import { esemenyKoinoja } from '../esemeny/esemeny.js';
 import { koinoEsemenyei, sajatLancEsemenyei } from '../tar/esemenyTar.js';
 import { egyeztetettEsemenyek, vonalKulcsa } from './szeletEgyeztetes.js';
 import { beolvasztas } from './csere.js';
@@ -102,7 +103,7 @@ export async function kivitelSzovege(tar, koino, beallitas = {}) {
     }
     // ⭐ Célzott kérdés a tárhoz (nem `betolt()`): a 3.2 óta a lánc kérdezhető.
     esemenyek = (await sajatLancEsemenyei(tar, beallitas.szerzo))
-      .filter((e) => e.koino === koino);
+      .filter((e) => esemenyKoinoja(e) === koino);
 
   } else if (hatokor === 'mind') {
     // ⚠️ EZ AZ EGYETLEN ÁG, AMI VÉGIGOLVASSA A TÁRAT — és ugyanazt a korlátot örökli, amit

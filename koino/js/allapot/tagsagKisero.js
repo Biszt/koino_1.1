@@ -21,7 +21,7 @@ import { sajatLancEsemenyei } from '../tar/esemenyTar.js';
 import { tagsagiIndex, szerzoTagsaga, tagsagiLanc, TAGSAGI_CSOMAG, LANC_TIPUSOK } from './tagsag.js';
 import { tagsagiEsemenyekGyujtese } from './identitas.js';
 import { TAGSAG_KELL } from './szabalyok.js';
-import { AZONOSITO_MINTA } from '../esemeny/esemeny.js';
+import { AZONOSITO_MINTA, esemenyKoinoja } from '../esemeny/esemeny.js';
 
 /** Egy cserében legfeljebb ennyi szerző tagságát kérdezzük. */
 export const TAGSAG_KERDES_KORLAT = 32;
@@ -58,7 +58,7 @@ const szerzoAlaku = (x) => typeof x === 'string' && AZONOSITO_MINTA.test(x);
  * @returns {Promise<{r: Object, idx: Object}>} `r` = `szerzoTagsaga`
  */
 export async function szerzoTagsagaTarbol(tar, koino, szerzo, koinoSzuletes = null) {
-  const sajat = (await sajatLancEsemenyei(tar, szerzo)).filter((e) => e.koino === koino);
+  const sajat = (await sajatLancEsemenyei(tar, szerzo)).filter((e) => esemenyKoinoja(e) === koino);
   const horgonyok = new Set();
   for (const e of sajat) {
     if (e.tipus === 'Belepes' || e.tipus === 'KoinoLetrehozas') horgonyok.add(e.azonosito);
@@ -98,7 +98,7 @@ export async function tagsagiKiserok(tar, koino, szerzok, { koinoSzuletes = null
   for (const sz of (Array.isArray(szerzok) ? szerzok : []).filter(szerzoAlaku).slice(0, szerzoKorlat)) {
     if (ki.size >= korlat || bajt >= bajtKorlat) break;
     const csomag = (await sajatLancEsemenyei(tar, sz))
-      .filter((e) => e.koino === koino && e.tipus === TAGSAGI_CSOMAG)
+      .filter((e) => esemenyKoinoja(e) === koino && e.tipus === TAGSAGI_CSOMAG)
       .sort((a, b) => b.sorszam - a.sorszam)[0];
     let sajat = csomag ? [csomag] : null;
     if (!sajat) {
@@ -177,11 +177,11 @@ export function tagsagKerdo({ tar, koino, tarolo, koinoSzuletes = async () => nu
       const jeloltek = new Set();
       for (const az of (Array.isArray(ujAzonositok) ? ujAzonositok : []).slice(0, 4096)) {
         const e = await tar.esemeny(az);
-        if (e && e.koino === koino && TAGSAG_KELL.has(e.tipus) && szerzoAlaku(e.szerzo) && !ismert.has(e.szerzo)) jeloltek.add(e.szerzo);
+        if (e && esemenyKoinoja(e) === koino && TAGSAG_KELL.has(e.tipus) && szerzoAlaku(e.szerzo) && !ismert.has(e.szerzo)) jeloltek.add(e.szerzo);
       }
       // ⭐ A SAJÁT tagságom: ha van meghívásom (valaki a szeletembe tette), de a láncom nem bizonyítható, kérdezem.
       if (sajatSzerzo && !ismert.has(sajatSzerzo)) {
-        const sajat = (await sajatLancEsemenyei(tar, sajatSzerzo)).filter((e) => e.koino === koino && e.tipus === 'Belepes');
+        const sajat = (await sajatLancEsemenyei(tar, sajatSzerzo)).filter((e) => esemenyKoinoja(e) === koino && e.tipus === 'Belepes');
         for (const b of sajat) {
           const meghivott = (await tar.szeletEsemenyei(b.azonosito)).some((e) => e.tipus === 'Meghivas' && e.adat?.kit === sajatSzerzo);
           if (meghivott) { jeloltek.add(sajatSzerzo); break; }
@@ -210,7 +210,7 @@ export function tagsagKerdo({ tar, koino, tarolo, koinoSzuletes = async () => nu
      */
     async fogadas(esemenyek, kert) {
       const kertek = new Set((Array.isArray(kert) ? kert : []).filter(szerzoAlaku));
-      const szurt = (Array.isArray(esemenyek) ? esemenyek : []).filter((e) => e && typeof e === 'object' && e.koino === koino
+      const szurt = (Array.isArray(esemenyek) ? esemenyek : []).filter((e) => e && typeof e === 'object' && esemenyKoinoja(e) === koino
         && ((e.tipus === TAGSAGI_CSOMAG && kertek.has(e.szerzo)) || LANC_TIPUSOK.has(e.tipus))).slice(0, TAGSAG_VALASZ_KORLAT);
       const b = szurt.length ? await mentes(szurt) : { uj: 0, ujAzonositok: [] };
       const t = takaritas(await tarolo.olvas());

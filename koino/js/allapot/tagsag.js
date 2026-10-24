@@ -26,7 +26,7 @@
 // Használják: a szabály-réteg (`szabalyok.js`), az `identitas.js`, a kapu (`esemenyTar.js`), a művelet-réteg (a
 // csomag kiadása), a próbák.
 
-import { esemenyEllenorzese, azonositoAlaku } from '../esemeny/esemeny.js';
+import { esemenyEllenorzese, azonositoAlaku, esemenyKoinoja, koinoSzuleteseListabol } from '../esemeny/esemeny.js';
 
 /**
  * A meghívási lánc legnagyobb mélysége (D59 biztonsági szelepe — a bizonyíték hosszának őre). ⭐ D113 (Csaba,
@@ -53,16 +53,18 @@ export function tagsagiIndex(esemenyek, koino = null) {
   const idx = { koino: null, koinoAzonosito: koino, horgonyok: new Map(), meghivasok: new Map(), profilok: new Map(),
     szerzoHorgonyai: new Map(), memo: new Map() };
   const lista = Array.isArray(esemenyek) ? esemenyek : [];
-  if (!idx.koinoAzonosito) {
-    const k = lista.find((e) => e?.tipus === 'KoinoLetrehozas')
-      ?? lista.flatMap((e) => (e?.tipus === TAGSAGI_CSOMAG && Array.isArray(e.adat?.lanc) ? e.adat.lanc : []))
-        .find((e) => e?.tipus === 'KoinoLetrehozas');
-    idx.koinoAzonosito = k?.koino ?? null;
-  }
+  const csomagokbol = lista.flatMap((e) => (e?.tipus === TAGSAGI_CSOMAG && Array.isArray(e.adat?.lanc)
+    ? e.adat.lanc.slice(0, CSOMAG_ESEMENY_KORLAT) : []));
+  // ⭐⭐ D118/2: a koinó születése EGY szabállyal (`koinoSzuleteseListabol` — az állapot, a kapu és a belépő tér is ezt
+  // hívja). Lenyomat-nevű koinónál csak az az esemény lehet, amelyiknek az azonosítója maga a név: egy második, azonos
+  // nevű születés nem veheti át az alapító helyét (a lelet — eddig a lista ELSŐ születése lett az alapító).
+  const szuletes = koinoSzuleteseListabol([...lista, ...csomagokbol], idx.koinoAzonosito);
+  if (!idx.koinoAzonosito) idx.koinoAzonosito = szuletes ? esemenyKoinoja(szuletes) : null;
+  idx.koino = szuletes;
   const felvesz = (e) => {
-    if (!e || typeof e !== 'object' || e.koino !== idx.koinoAzonosito) return;
+    if (!e || typeof e !== 'object' || esemenyKoinoja(e) !== idx.koinoAzonosito) return;
     if (e.tipus === 'KoinoLetrehozas') {
-      if (!idx.koino) idx.koino = e;
+      if (e !== szuletes && e.azonosito !== szuletes?.azonosito) return;   // nem a koinó születése: nem horgony
       idx.horgonyok.set(e.azonosito, e);
       szerzohoz(idx, e.szerzo, e.azonosito);
     } else if (e.tipus === 'Belepes') {
@@ -215,7 +217,7 @@ export async function tagsagiCsomagEllenorzese(esemeny) {
   if (!Array.isArray(lanc) || !lanc.length || lanc.length > CSOMAG_ESEMENY_KORLAT) return { rendben: false, ok: 'hibás tagsági csomag' };
   if (!azonositoAlaku(esemeny.entitas)) return { rendben: false, ok: 'a tagsági csomag a horgonyhoz szól' };
   for (const b of lanc) {
-    if (!b || typeof b !== 'object' || !LANC_TIPUSOK.has(b.tipus) || b.koino !== esemeny.koino) {
+    if (!b || typeof b !== 'object' || !LANC_TIPUSOK.has(b.tipus) || esemenyKoinoja(b) !== esemenyKoinoja(esemeny)) {
       return { rendben: false, ok: 'a tagsági csomagban idegen esemény' };
     }
     const al = await esemenyEllenorzese(b);

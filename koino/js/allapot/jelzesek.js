@@ -61,6 +61,7 @@
 // `bemutatkoz` parancs kiírja, hogy *„csak KÖLCSÖNÖSEN számít"*, és semmi nem mondta meg,
 // teljesült-e. *Egy kimondott feltételt, amiről a program hallgat, nem lehet teljesíteni.*
 
+import { esemenyKoinoja } from '../esemeny/esemeny.js';
 import { entitasEsemenyei, sajatLancEsemenyei, esemenyLekerese } from '../tar/esemenyTar.js';
 
 // A rólam szóló, számító állítás-fajták — ugyanaz a három, amit az `identitas.js` néz.
@@ -90,11 +91,11 @@ export const ONALLO_KUSZOB = 3;
  */
 async function sajatAllitasai(tar, koino, horgony, en) {
   if (typeof tar.bejelentesek !== 'function') {
-    return (await sajatLancEsemenyei(tar, en)).filter((e) => e.koino === koino);
+    return (await sajatLancEsemenyei(tar, en)).filter((e) => esemenyKoinoja(e) === koino);
   }
   const ki = new Map();
   for (const e of [...await entitasEsemenyei(tar, koino, horgony), ...await tar.bejelentesek(horgony)]) {
-    if (e.koino === koino && e.szerzo === en) ki.set(e.azonosito, e);
+    if (esemenyKoinoja(e) === koino && e.szerzo === en) ki.set(e.azonosito, e);
   }
   return [...ki.values()];
 }
@@ -136,7 +137,7 @@ export async function onalloSzalak(tar, koino, horgony) {
   console.log('jelzesek.onalloSzalak - KEZDÉS', { horgony });
 
   const horgonyEsemeny = await esemenyLekerese(tar, horgony);
-  if (!horgonyEsemeny || horgonyEsemeny.koino !== koino) {
+  if (!horgonyEsemeny || esemenyKoinoja(horgonyEsemeny) !== koino) {
     // ⚠️ A hiány nem vád (D19) — csak annyit mondunk, hogy nem tudjuk.
     const nemTudjuk = { rolam: 0, tole: 0, bemutatkozas: 0, osszes: 0, ellenorizheto: false };
     console.log('jelzesek.onalloSzalak - VÉGE (nem ellenőrizhető)', nemTudjuk);
@@ -241,7 +242,7 @@ export async function bemutatkozasok(tar, koino, horgony) {
   console.log('jelzesek.bemutatkozasok - KEZDÉS', { horgony });
 
   const horgonyEsemeny = await esemenyLekerese(tar, horgony);
-  if (!horgonyEsemeny || horgonyEsemeny.koino !== koino) {
+  if (!horgonyEsemeny || esemenyKoinoja(horgonyEsemeny) !== koino) {
     const nemTudjuk = {
       kolcsonos: 0, egyoldalu: 0, radVar: 0, masikraVar: 0, radVarHorgonyok: [],
       ellenorizheto: false
@@ -264,7 +265,7 @@ export async function bemutatkozasok(tar, koino, horgony) {
   // „Kiről állítottam én ugyanezt?" — ⭐ D93/6: a saját azonosság-szeletemből.
   const tolem = new Set();
   for (const e of (await sajatAllitasai(tar, koino, horgony, en))) {
-    if (e.koino !== koino || e.tipus !== 'Bemutatkozas') continue;
+    if (esemenyKoinoja(e) !== koino || e.tipus !== 'Bemutatkozas') continue;
     const kit = e.adat?.kit;
     if (typeof kit === 'string' && kit !== en) tolem.add(kit);
   }
@@ -281,7 +282,7 @@ export async function bemutatkozasok(tar, koino, horgony) {
     if (tolem.has(szerzo)) continue;
     for (const h of horgonyai) {
       const belepese = await esemenyLekerese(tar, h);
-      if (belepese?.koino === koino && belepese.szerzo === szerzo
+      if (esemenyKoinoja(belepese) === koino && belepese.szerzo === szerzo
         && (belepese.tipus === 'Belepes' || belepese.tipus === 'KoinoLetrehozas')) {
         radVarHorgonyok.push(h);
         break;
@@ -329,7 +330,7 @@ export async function tanusitoiTorlodas(tar, koino, horgony, beallitas = {}) {
   const kuszob = beallitas.onalloKuszob ?? ONALLO_KUSZOB;
 
   const horgonyEsemeny = await esemenyLekerese(tar, horgony);
-  if (!horgonyEsemeny || horgonyEsemeny.koino !== koino) {
+  if (!horgonyEsemeny || esemenyKoinoja(horgonyEsemeny) !== koino) {
     const nemTudjuk = { tanusitott: 0, magukbanAllok: 0, ellenorizheto: false };
     console.log('jelzesek.tanusitoiTorlodas - VÉGE (nem ellenőrizhető)', nemTudjuk);
     return nemTudjuk;
@@ -406,7 +407,7 @@ export async function megbizasAllapota(tar, koino, horgony) {
   console.log('jelzesek.megbizasAllapota - KEZDÉS', { horgony });
 
   const horgonyEsemeny = await esemenyLekerese(tar, horgony);
-  if (!horgonyEsemeny || horgonyEsemeny.koino !== koino) {
+  if (!horgonyEsemeny || esemenyKoinoja(horgonyEsemeny) !== koino) {
     const nemTudjuk = {
       felhatalmazasok: 0, visszavontak: 0, tanusitasok: 0, elismeresek: 0, ellenorizheto: false
     };

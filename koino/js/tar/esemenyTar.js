@@ -26,7 +26,7 @@
 //
 // Használják: muveletek.js és minden, ami eseményt olvas.
 
-import { esemenyEllenorzese, elagazasE, szelet } from '../esemeny/esemeny.js';
+import { esemenyEllenorzese, elagazasE, szelet, esemenyKoinoja } from '../esemeny/esemeny.js';
 // ⭐ D80: az `Ellentmondas` esemény TARTALMA is a kapun megy át (önmagát igazoló bizonyíték).
 import { ellentmondasEllenorzese } from '../allapot/ellentmondas.js';
 // ⭐ D81: a pont-esemény a saját bizonyítékát hozza — a kapu ellenőrzi, hogy illik a lánc-gyökeréhez.
@@ -234,7 +234,7 @@ export async function koinoEsemenyei(tar, koino) {
   // őrjárat elavult képet számolna. ⚠️ Nem minden tárnak van ilyenje (a próbák memóriás
   // tára egyetlen folyamaté), ezért feltételes.
   await tar.frissit?.();
-  return (await tar.betolt()).filter((e) => e.koino === koino);
+  return (await tar.betolt()).filter((e) => esemenyKoinoja(e) === koino);
 }
 
 // ===================================
@@ -262,7 +262,7 @@ export async function entitasEsemenyei(tar, koino, entitas) {
   // ⭐ 3.2: célzott kérdés — a tároló szelet szerint tartja nyilván az eseményeket, tehát
   // ez már NEM olvassa végig a tárat. A koino-szűrés csak biztonsági öv (a fájl amúgy is
   // koinónként külön van).
-  return (await tar.szeletEsemenyei(entitas)).filter((e) => e.koino === koino);
+  return (await tar.szeletEsemenyei(entitas)).filter((e) => esemenyKoinoja(e) === koino);
 }
 
 /**

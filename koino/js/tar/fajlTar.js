@@ -48,6 +48,40 @@ export function alapHely() {
 }
 
 // ===================================
+// ⭐⭐ D118/2: A BECENEVEK — melyik helyi becenév melyik koinóé
+// ===================================
+//
+// A koinó neve a születése lenyomata (43 jel) — kézzel beírni kényelmetlen, ezért a készüléken a koinónak becenevet adunk
+// (a `KOINO_AZONOSITO`, alapból `sajat`). A jegyzék HELYI: sosem utazik, és semmit nem dönt el a koinóban (a vonalon, az
+// eseményekben és a mappa nevében a lenyomat jár). Egy lenyomat-alakú becenév maga a név; a nem jegyzett szabad becenév a
+// régi alak (a régi adat és a próbák).
+
+const BECENEV_FAJL = 'becenevek.json';
+const LENYOMAT_ALAK = /^[A-Za-z0-9_-]{43}$/;
+
+/** A becenév koinója ezen a készüléken (a lenyomat), vagy maga a becenév, ha nincs jegyezve (a régi alak). */
+export async function koinoBecenevFeloldasa(becenev, hely = alapHely()) {
+  if (LENYOMAT_ALAK.test(becenev)) return becenev;
+  try {
+    const az = JSON.parse(await readFile(join(hely, BECENEV_FAJL), 'utf8'))?.[becenev];
+    if (typeof az === 'string' && LENYOMAT_ALAK.test(az)) return az;
+  } catch { /* még nincs jegyzék */ }
+  return becenev;
+}
+
+/** A becenév mostantól ennek a koinónak a neve ezen a készüléken (a `koino`, a `csatlakoz` és a `behoz` jegyzi). */
+export async function koinoBecenevKijelolese(becenev, azonosito, hely = alapHely()) {
+  if (!LENYOMAT_ALAK.test(azonosito)) throw new Error('a koinó neve egy lenyomat (43 jel)');
+  let j = {};
+  try { j = JSON.parse(await readFile(join(hely, BECENEV_FAJL), 'utf8')) ?? {}; } catch { /* még nincs */ }
+  j[becenev] = azonosito;
+  await mkdir(hely, { recursive: true });
+  const ideiglenes = join(hely, BECENEV_FAJL + '.' + process.pid + '.uj');
+  await writeFile(ideiglenes, JSON.stringify(j, null, 1), 'utf8');
+  await rename(ideiglenes, join(hely, BECENEV_FAJL));
+}
+
+// ===================================
 // AZ ESEMÉNY-TÁR
 // ===================================
 

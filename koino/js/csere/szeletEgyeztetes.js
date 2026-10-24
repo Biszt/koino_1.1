@@ -29,7 +29,7 @@
 //
 // Használja: csere/vonal.js (a párbeszéd), a próbák.
 
-import { alakiHiba, szelet, bejelentesHelyei, azonositoAlaku } from '../esemeny/esemeny.js';
+import { alakiHiba, szelet, bejelentesHelyei, azonositoAlaku, esemenyKoinoja } from '../esemeny/esemeny.js';
 import { rendezettHalmaz, halmazLenyomata } from '../esemeny/halmaz.js';
 import { gyokerDarabBol, gyokerLenyomata, darabbaEsik } from './cimjegyzek.js';
 
@@ -79,7 +79,7 @@ export async function egyeztetettEsemenyek(tar, koino, kulcs) {
   const lattuk = new Set();
   const ki = [];
   for (const e of [...sajat, ...bejelentettek]) {
-    if (lattuk.has(e.azonosito) || e.koino !== koino || alakiHiba(e) !== null) continue;
+    if (lattuk.has(e.azonosito) || esemenyKoinoja(e) !== koino || alakiHiba(e) !== null) continue;
     lattuk.add(e.azonosito);
     ki.push(e);
   }

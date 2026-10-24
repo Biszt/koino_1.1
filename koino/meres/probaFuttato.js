@@ -221,6 +221,12 @@ export async function ujEember(koino = 'proba') {
     kulcspar,
 
     /**
+     * ⭐ D118/2: az új alakú koinó születése üres koinó-mezővel megy (`ujEember('')`), utána az alapító a koinó NEVÉN — a
+     * születés lenyomatán — folytatja a láncát.
+     */
+    koinotValt(uj) { koino = uj; },
+
+    /**
      * Új esemény a lánc végére. Az `ido` elhagyható (alapból: most).
      * @param {Object} [beallitas] - `{ entitas }` a szelet-kulcs felülírásához
      */

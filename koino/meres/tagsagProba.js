@@ -12,6 +12,8 @@ import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 import {
   tagsagiIndex, horgonyTagsaga, szerzoTagsaga, tagsagiLanc, tagsagiCsomagEllenorzese, MELYSEG_KORLAT, TAGSAGI_CSOMAG
 } from '../js/allapot/tagsag.js';
+import { allapotSzamitasa } from '../js/allapot/allapotSzamitas.js';
+import { esemenyKoinoja } from '../js/esemeny/esemeny.js';
 
 const { proba, futtatas } = probaGyujtemeny('A tagság tiszta számítása (D93)');
 
@@ -166,5 +168,30 @@ proba('⛔ a hamis tagsági csomag elbukik: átírt belső esemény · idegen az
   const e3 = await tagsagiCsomagEllenorzese(hamis3);
   return !e1.rendben && /nem hiteles/.test(e1.ok) && !e2.rendben && /saját/.test(e2.ok) && !e3.rendben && /nem ad tagságot/.test(e3.ok);
 });
+
+// ⛔⛔ D118/2 — A LELET (2026-10-24, `docs/koltozes_atvizsgalas.md` 3.): a szabad koinó-név mellett egy második, azonos
+// nevű születés a tagságban (a lista ELSŐ születése) az alapító helyére lépett, az állapotban (a rendezett sor UTOLSÓJA) a
+// koinó nevét és zártságát vette át. Itt hat támadó kulccsal (hogy valamelyik a valódi alapító elé, valamelyik mögé
+// rendeződjön), mindkét alakban: új alakú (másik koinó) és régi alakú, ami a K nevet mondja (a kapu ezt elvetné).
+proba('⛔⛔ D118/2 (a lelet): egy MÁSODIK születés — akármilyen kulccsal — nem veszi át az alapító helyét, se a koinó nevét',
+  async () => {
+    const alapito = await ujEember('');
+    const szuletes = await alapito.tesz('KoinoLetrehozas', { nev: 'Valódi', leiras: null, alapitok: [], zart: true });
+    const K = szuletes.azonosito;
+    alapito.koinotValt(K);
+    const tag = await ujEember(K);
+    const belepes = await tag.tesz('Belepes', {});
+    const meghivas = await alapito.tesz('Meghivas', { kit: tag.szerzo, sajatBelepes: K }, undefined, { entitas: belepes.azonosito });
+    const hamisak = [];
+    for (let i = 0; i < 6; i++) {
+      hamisak.push(await (await ujEember('')).tesz('KoinoLetrehozas', { nev: 'Hamis', leiras: null, alapitok: [], zart: false }));
+      hamisak.push(await (await ujEember(K)).tesz('KoinoLetrehozas', { nev: 'Hamis', leiras: null, alapitok: [], zart: false }));
+    }
+    const lista = [...hamisak, szuletes, belepes, meghivas];
+    const idx = tagsagiIndex(lista, K);
+    const kep = allapotSzamitasa(lista.filter((e) => esemenyKoinoja(e) === K));
+    return idx.koino === szuletes && szerzoTagsaga(idx, tag.szerzo).igen === true
+      && szerzoTagsaga(idx, alapito.szerzo).igen === true && kep.koino.nev === 'Valódi' && kep.koino.zart === true;
+  });
 
 export default futtatas;

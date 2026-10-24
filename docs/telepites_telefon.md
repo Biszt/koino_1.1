@@ -265,7 +265,21 @@ készülékek között.)*
 
 ## 12. lépés — a telefon csatlakozik
 
-**A telefonon**, a saját címeddel a `192.168.1.134` helyén:
+⭐ **2026-10-24 óta (D118/2) a koinó neve a születésének lenyomata** — egy 43 jeles név. A telefonnak előbb meg kell
+mondani, melyik koinóhoz csatlakozik. **A laptopon** kiírja a nevét:
+
+```bash
+node koino/koino.js koino
+```
+
+**A telefonon** (a nevet a laptopról másold át — a Termuxban hosszan nyomva beilleszthető):
+
+```bash
+k csatlakoz <a koinó neve>
+```
+
+*(A telefonon a koinó becenéve ezután is `sajat` marad — a `becenevek.json` jegyzi, melyik koinóé.)* Utána **a
+telefonon**, a saját címeddel a `192.168.1.134` helyén:
 
 ```bash
 k csere 192.168.1.134 7373

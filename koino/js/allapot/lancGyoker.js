@@ -46,7 +46,7 @@ import {
   allapotBizonyitek, allapotBizonyitekEllenorzese
 } from '../esemeny/osszegzoFa.js';
 import { pontEsemenyMerlege } from './szabalyok.js';
-import { AZONOSITO_MINTA } from '../esemeny/esemeny.js';
+import { AZONOSITO_MINTA, esemenyKoinoja } from '../esemeny/esemeny.js';
 
 export const NAPLO_FAJTA = 'naplo';
 export const KIOSZTAS_FAJTA = 'kiosztas';
@@ -249,7 +249,7 @@ async function fajlba(a) {
 /** Illik-e az állapot a lánchoz: a lefedett utolsó sorszámon tényleg az az (egyetlen) esemény áll? */
 async function illikALanchoz(tar, koino, a) {
   if (a.sorszam === 0) return true;
-  const ott = (await tar.sorszamSzerint(a.szerzo, a.sorszam)).filter((e) => e.koino === koino);
+  const ott = (await tar.sorszamSzerint(a.szerzo, a.sorszam)).filter((e) => esemenyKoinoja(e) === koino);
   return ott.length === 1 && ott[0].azonosito === a.utolso;
 }
 
@@ -280,7 +280,7 @@ async function allapotIg(tar, koino, szerzo, meddig, tarolo) {
   let utolso = a.utolso;
   let uj = naplo;
   for (let s = a.sorszam + 1; s <= meddig; s++) {
-    const ott = (await tar.sorszamSzerint(szerzo, s)).filter((e) => e.koino === koino);
+    const ott = (await tar.sorszamSzerint(szerzo, s)).filter((e) => esemenyKoinoja(e) === koino);
     if (ott.length !== 1 || (ott[0].elozo ?? null) !== utolso) {
       console.warn('lancGyoker - a saját lánc nem ép (hézag, elágazás vagy szakadás) — nem horgonyzunk',
         { sorszam: s, talalat: ott.length });

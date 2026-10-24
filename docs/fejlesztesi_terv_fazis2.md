@@ -6087,9 +6087,12 @@ költözik.
    született gyermeke; itt lesz a pénz kivezetése, D66/6) és beköltözés az újban (egy aláírás: a láncom a vágásig, a hozott
    kiosztás, a tagsági csomag).
 
-⏸️ Elhalasztva: a vágáskor lezárt döntések lezárási összegzése (D95/1), mérés után. ⏸️ Csabánál: **KZ1–KZ5** (a paraméterek
-besorolása · ki hozhat létre gyermeket · ha a hozott pontok nem férnek az új keretbe · a hibajavítás, ami eredményt
-változtat · a protokoll-törés).
+⏸️ Elhalasztva: a vágáskor lezárt döntések lezárási összegzése (D95/1), mérés után. ✅ **KZ1–KZ5** (Csaba, 2026-10-24:
+*„miden javaslatodat elfogadom, kezdheted az elsővel”*) — mind a javaslat szerint: **KZ1** a paraméterek besorolása (a)–(e) ·
+**KZ2** gyermeket a szülő vágáskori tagja hozhat létre (különben önálló új koinó, szülő nélkül) · **KZ3** ha a hozott pontok nem
+férnek az új keretbe, a beköltöző maga választ (elhagyni lehet, növelni nem) · **KZ4** az eredményt változtató hibajavítás is
+költözés · **KZ5** a protokoll-törés szabálya külön átvizsgálás a költözés után. 🚧 **Az ① (2026-10-24):** a koinó neve a
+születés lenyomata (elágazás 193).
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal

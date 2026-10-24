@@ -36,7 +36,7 @@
 // Használják: tar/esemenyTar.js (a kapu: az `Ellentmondas` esemény tartalma), a próbák; (a hálózati
 // részben) az automatikus ellenőrző, ami a szerzőtől kapott előképből építi a bizonyítékot.
 
-import { esemenyEllenorzese, lancElokepAlakja } from '../esemeny/esemeny.js';
+import { esemenyEllenorzese, lancElokepAlakja, esemenyKoinoja } from '../esemeny/esemeny.js';
 import {
   allapotBizonyitekEllenorzese, allapotValtozasa, osszegzesAlakja
 } from '../esemeny/osszegzoFa.js';
@@ -53,7 +53,7 @@ const nem = (ok) => ({ rendben: false, ok });
 
 /** A szerző egy aláírt eseménye — ép-e, az övé-e, ebből a koinóból-e? */
 async function szerzoEsemenye(e, kit, koino) {
-  if (!e || typeof e !== 'object' || e.szerzo !== kit || e.koino !== koino) return false;
+  if (!e || typeof e !== 'object' || e.szerzo !== kit || esemenyKoinoja(e) !== koino) return false;
   return (await esemenyEllenorzese(e)).rendben === true;
 }
 

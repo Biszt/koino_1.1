@@ -19,7 +19,7 @@ import {
   LEZARASI_OSSZEGZES, LEZARASI_MINTA, lezarasiOsszegzesAlakja, lezarasiOsszegzesEpitese, lezarasiMintaHelyek,
   lezarasiMintakValasza, lezarasiOsszegzesEllenorzese
 } from './lezarasiOsszegzes.js';
-import { esemenyEllenorzese } from '../esemeny/esemeny.js';
+import { esemenyEllenorzese, esemenyKoinoja } from '../esemeny/esemeny.js';
 import { kanonikusBajtok } from '../esemeny/kanonikusAlak.js';
 
 /** A szelet összegzésére ennyi mintát kér az összegző (a 62. mérés: k = 8-cal 5–21 KB). */
@@ -229,7 +229,7 @@ export function sajatKuldo({ tar, koino, szerzo, halmazkent, kezbesitett = async
       const kesz = await kezbesitett();
       const hatar = most() - KULDES_ELETTARTAM;
       const sajat = (await tar.szerzoLanca(szerzo))
-        .filter((e) => e.koino === koino && !kesz.has(e.azonosito) && Number.isSafeInteger(e.ido) && e.ido >= hatar)
+        .filter((e) => esemenyKoinoja(e) === koino && !kesz.has(e.azonosito) && Number.isSafeInteger(e.ido) && e.ido >= hatar)
         .sort((a, b) => b.sorszam - a.sorszam);
       const szeletenkent = new Map();       // szelet → a felajánlott azonosítók
       const kihagyott = new Set();

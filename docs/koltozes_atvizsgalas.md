@@ -200,7 +200,7 @@ A kiköltözés a kivezetés helye: a pénznél majd kimondja az összeget, a sz
 költhető, a beköltözés erre hivatkozva kapja meg az újban. ⛔ A D66/6 korlátja áll (a szülő programjának kell betartania).
 Most csak a két fél szerkezete épül; a pénz mezői később hozzáadhatók, mert egyetlen meglévő eseményt sem érintenek.
 
-## 5. A kérdések (Csabánál)
+## 5. A kérdések — ✅ eldőltek (Csaba, 2026-10-24: *„miden javaslatodat elfogadom, kezdheted az elsővel”* — mind a javaslat szerint)
 
 - **KZ1 — a paraméterek besorolása** (4.1 (a)–(e)). Javaslat: ahogy fent; a (b)-nél a medián bekötése külön lépés.
 - **KZ2 — ki hozhat létre gyermeket?** (A) aki a vágáskor a szülő tagja — ⭐ javaslat: ő ismeri a szülő múltját, és a
@@ -232,7 +232,11 @@ Most csak a két fél szerkezete épül; a pénz mezői később hozzáadhatók,
 ## 7. A javasolt építési sor
 
 1. **① A koinó neve a születés lenyomatából, a szabályok a születésben** — a 3. szakasz lelete ezzel zárul; minden koinót
-   érint. ⚠️ A laptop–telefon próba-koinója (`sajat`) így nem folytatható (régi alakú események is vannak benne) — a
+   érint. 🚧 **①a a név (2026-10-24):** az új alakú születés koinó-mezője üres, a koinó neve a születés azonosítója
+   (`esemeny.js` `esemenyKoinoja`, `koinoSzuleteseE`, `koinoSzuleteseListabol` — a születés EGY szabállyal az állapotban, a
+   tagságban, a kapuban, a vonalon és a belépő térben; a kapu elveti a lenyomat-nevet mondó születést), a `KOINO_AZONOSITO`
+   helyi becenév (`becenevek.json`), `koino` (új alakban; argumentum nélkül a név), `csatlakoz <név>`, a `behoz` egyértelmű
+   fájlnál csatlakozik; a mappa a koinó neve. ⏭️ **①b a szabályok a születésben.** ⚠️ A laptop–telefon próba-koinója (`sajat`) így nem folytatható (régi alakú események is vannak benne) — a
    következő kézi próbához új koinó kell, és a telefon frissítése.
 2. **② A gyermek születése** (szülő, vágás, zártság) **és a kapu koinó-szabálya**, a csere két névvel egy szeletben.
 3. **③ A két réteg a számításban** (a múlt az ős szabályaival; a talaj; a lezárt és a nyitott döntések).

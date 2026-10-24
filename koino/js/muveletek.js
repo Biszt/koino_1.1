@@ -28,7 +28,7 @@ import {
 import { lancUjEsemenyhez } from './allapot/lancGyoker.js';
 // ⭐ D80: az ellentmondás bizonyítéka — a bejelentés előtt magunk is ellenőrizzük.
 import { ellentmondasEllenorzese } from './allapot/ellentmondas.js';
-import { esemenyLetrehozasa } from './esemeny/esemeny.js';
+import { esemenyLetrehozasa, esemenyKoinoja } from './esemeny/esemeny.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import { szovegDarabra } from './esemeny/szovegDarab.js';
 // ⭐ D93: a tagság (a csomag kiadásához) és a tár-alapú lánc-gyűjtés.
@@ -159,7 +159,7 @@ async function esemenytTeszek(kornyezet, tipus, adat, beallitas = {}) {
  * @returns {Promise<string|null>}
  */
 export async function azonossagHorgonya(tar, koino, szerzo) {
-  const lanc = (await sajatLancEsemenyei(tar, szerzo)).filter((e) => e.koino === koino);
+  const lanc = (await sajatLancEsemenyei(tar, szerzo)).filter((e) => esemenyKoinoja(e) === koino);
   const belepes = lanc.find((e) => e.tipus === 'Belepes');
   if (belepes) return belepes.azonosito;
   return lanc.find((e) => e.tipus === 'KoinoLetrehozas')?.azonosito ?? null;
@@ -289,7 +289,7 @@ async function esemenyAlairasa(kornyezet, tipus, adat, beallitas) {
  */
 async function sajatKiosztott(kornyezet, entitas) {
   const lanc = (await sajatLancEsemenyei(kornyezet.tar, kornyezet.szerzo))
-    .filter((e) => e.koino === kornyezet.koino);
+    .filter((e) => esemenyKoinoja(e) === kornyezet.koino);
 
   const allas = { osszeg: 0, pontok: new Map() };
   // ⭐ A folytonosságot is ugyanúgy követjük, mint a szabály (a saját láncunk rendes esetben

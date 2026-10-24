@@ -59,6 +59,7 @@
 // ⛔ Ha egyszer kérdezni fog, a válasz nem lehet „kidobom": P2P-n a *„nem tag"* és a *„még nem
 // láttam a bizonyítékát"* ugyanaz — a koinónak van erre szava (`nemEllenorizhetok`, D19).
 
+import { esemenyKoinoja, koinoSzuleteseE } from '../esemeny/esemeny.js';
 import { esemenyLekerese, entitasEsemenyei, sajatLancEsemenyei } from '../tar/esemenyTar.js';
 // ⭐ D93: a tagság szabálya EGY helyen él (`tagsag.js`) — a szabály-réteg és ez a tár-alapú kérdés ugyanazt hívja.
 import { tagsagiIndex, horgonyTagsaga, MELYSEG_KORLAT, TAGSAGI_CSOMAG, PROFIL } from './tagsag.js';
@@ -179,7 +180,7 @@ async function allitasHelyben(tar, koino, e, horgonyEsemeny, tipus, nezet) {
   const allitoEsemeny = await esemenyLekerese(tar, allitoHorgony);
   nezet.olvasasok++;
   if (!allitoEsemeny) return { ervenyes: false, hianyzik: true };
-  if (allitoEsemeny.szerzo !== e.szerzo || allitoEsemeny.koino !== koino) return { ervenyes: false };
+  if (allitoEsemeny.szerzo !== e.szerzo || esemenyKoinoja(allitoEsemeny) !== koino) return { ervenyes: false };
   return { ervenyes: true, allitoHorgony };
 }
 
@@ -305,7 +306,7 @@ async function kerdes(kulcs, tar, koino, horgony, nezet, vizsgalat) {
     if (!esemeny) {
       return vege({ igen: false, ok: 'nem ellenőrizhető: hiányzik a horgony-esemény', ellenorizheto: false });
     }
-    if (esemeny.koino !== koino) {
+    if (esemenyKoinoja(esemeny) !== koino) {
       return vege({ igen: false, ok: 'a horgony egy MÁSIK koinóhoz tartozik', ellenorizheto: true });
     }
 
@@ -348,8 +349,9 @@ async function kerdes(kulcs, tar, koino, horgony, nezet, vizsgalat) {
  * koino-létrehozásoknál a lista üres: csak a létrehozó alapító. Visszafelé kompatibilis.)*
  */
 async function alapitoE(tar, koino, horgony, esemeny, nezet) {
-  // Ő maga hozta létre a koinót.
-  if (esemeny.tipus === 'KoinoLetrehozas') return true;
+  // Ő maga hozta létre a koinót. ⭐ D118/2: és ez a koinó születése (lenyomat-nevű koinónál csak az az esemény, amelyiknek
+  // az azonosítója maga a név — egy második, azonos nevű születés nem alapító).
+  if (esemeny.tipus === 'KoinoLetrehozas') return koinoSzuleteseE(esemeny, koino);
   if (esemeny.tipus !== 'Belepes') return false;
 
   // Megnevezett alapító: a belépése az alapítás eseményére hivatkozik.
@@ -359,8 +361,7 @@ async function alapitoE(tar, koino, horgony, esemeny, nezet) {
   const alapitasEsemeny = await esemenyLekerese(tar, alapitas);
   nezet.olvasasok++;
   if (!alapitasEsemeny) return false;
-  if (alapitasEsemeny.tipus !== 'KoinoLetrehozas') return false;
-  if (alapitasEsemeny.koino !== koino) return false;
+  if (!koinoSzuleteseE(alapitasEsemeny, koino)) return false;
 
   // ⚠️ És tényleg őt nevezték meg — nem elég ráhivatkozni.
   const alapitok = alapitasEsemeny.adat?.alapitok;
@@ -409,7 +410,7 @@ export async function tagsagiEsemenyekGyujtese(tar, koino, horgony, nezet = ujId
       latott.add(h);
       const e = await esemenyLekerese(tar, h);
       nezet.olvasasok++;
-      if (!e || e.koino !== koino) continue;
+      if (!e || esemenyKoinoja(e) !== koino) continue;
       ki.push(e);
       // ⭐ Aki már eldőlt tagként (a nézet gyorsítótárában), annak az ágát nem olvassuk újra (D47).
       if (h !== horgony && nezet.igenek.get('tag|' + h)?.igen) continue;
@@ -632,7 +633,7 @@ async function tanusitoFelhatalmazoi(tar, koino, tanusitoHorgony, nezet, tanusit
     for (const azonosito of (azonositok ?? [])) {
       const h = await esemenyLekerese(tar, azonosito);
       nezet.olvasasok++;
-      if (!h || h.koino !== koino || h.entitas !== tanusitoHorgony) continue;
+      if (!h || esemenyKoinoja(h) !== koino || h.entitas !== tanusitoHorgony) continue;
       const eddigi = latottSorszam.get(h.szerzo) ?? 0;
       latottSorszam.set(h.szerzo, Math.max(eddigi, h.entitasSorszam ?? 1));
     }
@@ -652,7 +653,7 @@ async function tanusitoFelhatalmazoi(tar, koino, tanusitoHorgony, nezet, tanusit
   // annak SOHA nem szabadna elismernie, hogy lát — és az már a ritmusból lóg ki.
   if (Number.isInteger(tanusitasEsemeny?.sorszam)) {
     const lanc = (await sajatLancEsemenyei(tar, tanusito.szerzo))
-      .filter((e) => e.koino === koino
+      .filter((e) => esemenyKoinoja(e) === koino
                   && e.tipus === 'Lattam'
                   && e.entitas === tanusitoHorgony
                   && e.sorszam < tanusitasEsemeny.sorszam);
@@ -691,7 +692,7 @@ async function tanusitoFelhatalmazoi(tar, koino, tanusitoHorgony, nezet, tanusit
     if (!f) { hianyzott = true; continue; }
 
     // A bemondott esemény tényleg RÓLA szóló felhatalmazás legyen — nem elég ráhivatkozni.
-    if (f.tipus !== 'Felhatalmazas' || f.koino !== koino) { ervenytelen++; continue; }
+    if (f.tipus !== 'Felhatalmazas' || esemenyKoinoja(f) !== koino) { ervenytelen++; continue; }
     if (f.entitas !== tanusitoHorgony) { ervenytelen++; continue; }
     if (f.adat?.kit !== tanusito.szerzo) { ervenytelen++; continue; }
     if (f.szerzo === tanusito.szerzo) { ervenytelen++; continue; }      // magát senki nem hatalmazhatja fel
@@ -702,7 +703,7 @@ async function tanusitoFelhatalmazoi(tar, koino, tanusitoHorgony, nezet, tanusit
     const ado = await esemenyLekerese(tar, adoHorgony);
     nezet.olvasasok++;
     if (!ado) { hianyzott = true; continue; }
-    if (ado.szerzo !== f.szerzo || ado.koino !== koino) { ervenytelen++; continue; }
+    if (ado.szerzo !== f.szerzo || esemenyKoinoja(ado) !== koino) { ervenytelen++; continue; }
 
     // ⛔⛔ ÉS A LÉNYEG: LÁTTA-E A VISSZAVONÁST, MIELŐTT ALÁÍRT?
     //
@@ -789,7 +790,7 @@ async function setaCsomopont(tar, koino, horgony, nezet, teljes) {
   const e = await esemenyLekerese(tar, horgony);
   nezet.olvasasok++;
   if (!e) return { hianyzik: true, ok: 'hiányzik egy horgony-esemény' };
-  if (e.koino !== koino) return { bukott: true, ok: 'egy horgony más koinóé' };
+  if (esemenyKoinoja(e) !== koino) return { bukott: true, ok: 'egy horgony más koinóé' };
   if (await alapitoE(tar, koino, horgony, e, nezet)) return { cel: true, ok: 'alapító kör' };
   if (e.tipus !== 'Belepes') return { bukott: true, ok: 'egy horgony nem belépés' };
   if (nezet.igenek.get('lepcso2|' + horgony)?.igen) return { cel: true, ok: 'már igazolt' };
@@ -801,7 +802,7 @@ async function setaCsomopont(tar, koino, horgony, nezet, teljes) {
     const t = await esemenyLekerese(tar, az);
     nezet.olvasasok++;
     if (!t) return { hianyzik: true, ok: 'egy bemondott tanúsítás hiányzik' };
-    if (t.koino !== koino || t.entitas !== horgony) return { bukott: true, ok: 'hamis bemondás: a tanúsítás nem rá szól' };
+    if (esemenyKoinoja(t) !== koino || t.entitas !== horgony) return { bukott: true, ok: 'hamis bemondás: a tanúsítás nem rá szól' };
     const helyben = await allitasHelyben(tar, koino, t, e, 'Tanusitas', nezet);
     if (helyben.hianyzik) return { hianyzik: true, ok: 'egy tanúsító horgonya hiányzik' };
     if (!helyben.ervenyes) return { bukott: true, ok: 'hamis bemondás: érvénytelen tanúsítás' };
@@ -876,7 +877,7 @@ export async function lepcso2Szuroproba(tar, koino, horgony, nezet = ujIdentitas
 /** ⭐ D94: alapító-e a horgony gazdája (a 2. lépcsője a koinó létrehozásából következik — bemondás nem kell). */
 export async function alapitoHorgony(tar, koino, horgony) {
   const e = await esemenyLekerese(tar, horgony);
-  return !!e && e.koino === koino && alapitoE(tar, koino, horgony, e, ujIdentitasNezet());
+  return !!e && esemenyKoinoja(e) === koino && alapitoE(tar, koino, horgony, e, ujIdentitasNezet());
 }
 
 /**

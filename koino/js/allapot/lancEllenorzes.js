@@ -37,7 +37,7 @@ import {
   naploKovetkezetessegEllenorzese, ujAllapotFa, allapotBeallitas, allapotGyokere, allapotBizonyitek, allapotLista
 } from '../esemeny/osszegzoFa.js';
 import { NAPLO_FAJTA, KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ, lancAllapotaLancbol } from './lancGyoker.js';
-import { esemenyEllenorzese, AZONOSITO_MINTA } from '../esemeny/esemeny.js';
+import { esemenyEllenorzese, AZONOSITO_MINTA, esemenyKoinoja } from '../esemeny/esemeny.js';
 import { ellentmondasEllenorzese } from './ellentmondas.js';
 
 // ===================================
@@ -69,7 +69,7 @@ function naploGyokere(e) {
 
 /** A szerző nálam lévő eseményei (a koinóból) és a feje. */
 async function szerzoNalam(tar, koino, sz) {
-  const lanc = (await tar.szerzoLanca(sz)).filter((e) => e && e.koino === koino && Number.isSafeInteger(e.sorszam));
+  const lanc = (await tar.szerzoLanca(sz)).filter((e) => e && esemenyKoinoja(e) === koino && Number.isSafeInteger(e.sorszam));
   let fej = null;
   for (const e of lanc) if (naploGyokere(e) && (!fej || e.sorszam > fej.sorszam)) fej = e;
   return { lanc, fej };
@@ -158,7 +158,7 @@ export async function lancValaszokFeldolgozasa({ tar, koino, tarolo }, kerdesek,
       vesztes: esemeny.azonosito < masik.azonosito ? masik.azonosito : esemeny.azonosito };
     if ((await ellentmondasEllenorzese(adat, koino)).rendben) leletek.push(adat);
   };
-  const sajatEsemenye = async (e, sz, sorszam) => !!e && typeof e === 'object' && e.szerzo === sz && e.koino === koino
+  const sajatEsemenye = async (e, sz, sorszam) => !!e && typeof e === 'object' && e.szerzo === sz && esemenyKoinoja(e) === koino
     && e.sorszam === sorszam && (await esemenyEllenorzese(e)).rendben === true;
 
   for (const q of kerdesek) {
@@ -257,13 +257,13 @@ export function lancKiszolgalo({ tar, koino }) {
    */
   async function lancFejtol(sz, d, fejAz) {
     const fej = await tar.esemeny(fejAz);
-    if (fej && fej.szerzo === sz && fej.koino === koino && fej.sorszam === d + 1) {
+    if (fej && fej.szerzo === sz && esemenyKoinoja(fej) === koino && fej.sorszam === d + 1) {
       const lanc = new Array(d + 1);
       lanc[d] = fej;
       let jo = true;
       for (let s = d; s >= 1; s--) {
         const e = await tar.esemeny(lanc[s].elozo);
-        if (!e || e.szerzo !== sz || e.koino !== koino || e.sorszam !== s) { jo = false; break; }
+        if (!e || e.szerzo !== sz || esemenyKoinoja(e) !== koino || e.sorszam !== s) { jo = false; break; }
         lanc[s - 1] = e;
       }
       if (jo && (lanc[0].elozo ?? null) === null) return { lanc, fejNalam: true };
@@ -271,7 +271,7 @@ export function lancKiszolgalo({ tar, koino }) {
     const lanc = [];
     let elozo = null;
     for (let s = 1; s <= d + 1; s++) {
-      const ott = (await tar.sorszamSzerint(sz, s)).filter((e) => e.koino === koino);
+      const ott = (await tar.sorszamSzerint(sz, s)).filter((e) => esemenyKoinoja(e) === koino);
       if (ott.length !== 1 || (ott[0].elozo ?? null) !== elozo) {
         // a d+1. (a fej helye) hiányozhat: a fát akkor is felépítjük, csak a fejről nem mondunk semmit
         if (s === d + 1 && ott.length === 0) return { lanc, fejNalam: false };
