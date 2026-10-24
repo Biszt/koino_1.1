@@ -35,7 +35,8 @@
 import { mkdir, readdir, readFile, appendFile, writeFile, unlink, rename, stat, open } from 'node:fs/promises';
 import { join } from 'node:path';
 import { alakiHiba, szelet, azonositoAlaku, bejelentesHelyei, esemenyKoinoja } from '../esemeny/esemeny.js';
-import { koinoEsemenyei } from './esemenyTar.js';
+import { koinoEsemenyei, koinoBemenete } from './esemenyTar.js';
+import { koinoNezete } from '../allapot/koinoLanc.js';   // ⭐ D118 (③)
 
 /** Az átmeneti tár mérete — kiinduló érték, készülékenként állítható (nem állapot-befolyásoló, D66). */
 export const ATMENETI_KORLAT = 20 * 1024 * 1024;
@@ -349,11 +350,13 @@ export async function atmenetiTarNyitasa(koino, mappa, beallitas = {}) {
  * @returns {Promise<{esemenyek: Array<Object>, csakAtmeneti: Set<string>}>}
  */
 export async function ketTarBemenete(tartos, atmeneti, koino) {
-  const tartosak = await koinoEsemenyei(tartos, koino);
+  // ⭐⭐ D118 (③): a koinó-szabály szerint (az ősök vágás előtti eseményei is — a két réteg ebből számol).
+  const tartosak = await koinoBemenete(tartos, koino);
   if (!atmeneti) return { esemenyek: tartosak, csakAtmeneti: new Set() };
   await atmeneti.frissit?.();
   const megvan = new Set(tartosak.map((e) => e.azonosito));
-  const csak = atmeneti.mind().filter((e) => esemenyKoinoja(e) === koino && !megvan.has(e.azonosito));
+  const tartozik = azonositoAlaku(koino) ? (await koinoNezete(tartos, koino)).tartozik : (e) => esemenyKoinoja(e) === koino;
+  const csak = atmeneti.mind().filter((e) => tartozik(e) && !megvan.has(e.azonosito));
   return { esemenyek: [...tartosak, ...csak], csakAtmeneti: new Set(csak.map((e) => e.azonosito)) };
 }
 

@@ -26,7 +26,7 @@
 //
 // Használják: muveletek.js és minden, ami eseményt olvas.
 
-import { esemenyEllenorzese, elagazasE, szelet, esemenyKoinoja } from '../esemeny/esemeny.js';
+import { esemenyEllenorzese, elagazasE, szelet, esemenyKoinoja, azonositoAlaku } from '../esemeny/esemeny.js';
 // ⭐ D80: az `Ellentmondas` esemény TARTALMA is a kapun megy át (önmagát igazoló bizonyíték).
 import { ellentmondasEllenorzese } from '../allapot/ellentmondas.js';
 // ⭐ D81: a pont-esemény a saját bizonyítékát hozza — a kapu ellenőrzi, hogy illik a lánc-gyökeréhez.
@@ -37,7 +37,7 @@ import { LEZARASI_OSSZEGZES, lezarasiOsszegzesAlakja } from '../allapot/lezarasi
 // ⭐ D93/2: a tagsági csomag tartalma is a kapun megy át.
 import { TAGSAGI_CSOMAG, tagsagiCsomagEllenorzese } from '../allapot/tagsag.js';
 // ⭐⭐ D118 (②a): a gyermek születésének bizonyítéka (a szülő születésével együtt).
-import { gyermekSzuleteseE, gyermekSzuletesEllenorzese } from '../allapot/koinoLanc.js';
+import { gyermekSzuleteseE, gyermekSzuletesEllenorzese, koinoNezete } from '../allapot/koinoLanc.js';
 
 // ===================================
 // ESEMÉNY MENTÉSE
@@ -244,6 +244,20 @@ export async function sajatLancEsemenyei(tar, szerzo) {
  * @param {string} koino
  * @returns {Promise<Array<Object>>}
  */
+/**
+ * ⭐⭐ D118 (③): a koinó BEMENETE a koinó-szabály szerint (`koinoLanc.js` — ②b) — a saját eseményei, a születések lánca
+ * és az ősök vágás előtti eseményei. A koinó képe ebből számol (`ketReteg.js`); szülő nélküli koinónál ugyanaz, mint a
+ * `koinoEsemenyei`. ⚠️ Ugyanaz a végigolvasás, mint ott (lásd a fejlécét).
+ * @returns {Promise<Array<Object>>}
+ */
+export async function koinoBemenete(tar, koino) {
+  await tar.frissit?.();
+  const minden = await tar.betolt();
+  if (!azonositoAlaku(koino)) return minden.filter((e) => esemenyKoinoja(e) === koino);
+  const { tartozik } = await koinoNezete(tar, koino);
+  return minden.filter(tartozik);
+}
+
 export async function koinoEsemenyei(tar, koino) {
   // ⭐ Előbb amit MÁS folyamat fűzött a tárhoz (43. mérés) — különben a futó felület vagy
   // őrjárat elavult képet számolna. ⚠️ Nem minden tárnak van ilyenje (a próbák memóriás

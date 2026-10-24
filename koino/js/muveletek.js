@@ -29,6 +29,7 @@ import { lancUjEsemenyhez } from './allapot/lancGyoker.js';
 // ⭐ D80: az ellentmondás bizonyítéka — a bejelentés előtt magunk is ellenőrizzük.
 import { ellentmondasEllenorzese } from './allapot/ellentmondas.js';
 import { esemenyLetrehozasa, esemenyKoinoja, azonositoAlaku } from './esemeny/esemeny.js';
+import { koinoNezete } from './allapot/koinoLanc.js';   // ⭐ D118 (③): a jelen réteg szerint
 import { koinoSzabalyai, teljesSzabalyok } from './esemeny/koinoSzabalyok.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import { szovegDarabra } from './esemeny/szovegDarab.js';
@@ -301,8 +302,12 @@ async function esemenyAlairasa(kornyezet, tipus, adat, beallitas) {
  * @returns {Promise<{osszeg: number, regi: number}>}
  */
 async function sajatKiosztott(kornyezet, entitas) {
-  const lanc = (await sajatLancEsemenyei(kornyezet.tar, kornyezet.szerzo))
-    .filter((e) => esemenyKoinoja(e) === kornyezet.koino);
+  // ⭐⭐ D118 (③): a JELEN réteg szerint — a költöző (a létrehozó) szülőbeli pontjai is a láncom (a hozott kiosztás);
+  // ugyanaz a szabály, amit a szabály-réteg a koinó képében lát (`jelenbenSzamit`), különben a bemondott összeg
+  // ellentmondana a láncomnak.
+  const jelen = azonositoAlaku(kornyezet.koino)
+    ? (await koinoNezete(kornyezet.tar, kornyezet.koino)).jelen : (e) => esemenyKoinoja(e) === kornyezet.koino;
+  const lanc = (await sajatLancEsemenyei(kornyezet.tar, kornyezet.szerzo)).filter(jelen);
   // ⭐ D118/2: a keret a koinóé (a születéséből) — ugyanaz, amit a szabály-réteg használ.
   const keret = (await koinomSzabalyai(kornyezet)).tudatpontKeret;
 

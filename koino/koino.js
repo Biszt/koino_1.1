@@ -146,10 +146,10 @@ import {
 } from './js/esemeny/esemeny.js';
 import { szabalyokAlakiHibaja, ALAP_SZABALYOK, koinoSzabalyai } from './js/esemeny/koinoSzabalyok.js';
 import { szuletesLanc, szuloTagsagaEpitese } from './js/allapot/koinoLanc.js';
-import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
+import { koinoKepe } from './js/allapot/ketReteg.js';
+import { szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
 import { ALLASPONT_MUVELET } from './js/allapot/szabalyok.js';
-import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
-import { szerkesztesiEgyezmenyekAlkalmazasa } from './js/allapot/szerkesztesiVegrehajtas.js';
+import { sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
 import { felszabaditas, buliVolt, MEGULEPEDES_BULIK } from './js/allapot/felszabaditas.js';
 // ⭐ B/1–B/2: a vállalás és az átmeneti tár (D75, D86, D90).
 import { vallalasSzamitasa } from './js/allapot/vallalas.js';
@@ -1388,16 +1388,13 @@ async function kepetKeszit(napokMulva = 0, melyikTar = tar, melyikKoino = KOINO)
     try { if (!(await kiszolgalasBeallitas()).mindent) vallalt = (await ketFokAllapota()).vallalas.szeletek; }
     catch { vallalt = null; }
   }
-  const allapot = allapotSzamitasa(esemenyek, { csakAtmeneti, ...(vallalt ? { nemTartott: (az) => !vallalt.has(az) } : {}) });
   // ⭐ D95/1: a nagy szeletű részek döntése az ellenőrzött lezárási összegzésekből (az összegző tartónál).
   const osszegzesek = melyikTar === tar ? await ellenorzottOsszegzesek() : new Map();
-  const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, Date.now() + napokMulva * NAP, { osszegzesek });
-
-  // ⭐ A HARMADIK FÁZIS (2026-09-06): az elfogadott szerkesztési egyezményeket RÁVEZETJÜK az
-  // entitásokra. ⚠️ Eddig ez hiányzott: a javaslat elfogadódott, az egyezmény megszületett,
-  // a gondolat címe mégis a régi maradt. A `pakli.js` ugyanezt a három fázist futtatja —
-  // így a parancssor és a lap **ugyanazt** mondja.
-  await szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok);
+  // ⭐ A HÁROM FÁZIS (az állapot, a döntések, az elfogadott szerkesztési egyezmények rávezetése — 2026-09-06) — ⭐⭐ D118
+  // (③) óta a koinó képe (`ketReteg.js`): szülőre épülő koinónál két rétegben (a múlt az ős szabályaival, rögzítve; a
+  // jelen a koinóéval, a súly csak a költözőké). A `pakli.js` ugyanezt hívja — így a parancssor és a lap ugyanazt mondja.
+  const { allapot, javaslatok } = await koinoKepe(esemenyek, { koino: melyikKoino, most: Date.now() + napokMulva * NAP,
+    osszegzesek, csakAtmeneti, ...(vallalt ? { nemTartott: (az) => !vallalt.has(az) } : {}) });
 
   return { esemenyek, allapot, javaslatok };
 }

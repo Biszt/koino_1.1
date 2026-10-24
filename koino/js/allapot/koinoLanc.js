@@ -144,7 +144,8 @@ const NEZET_EMLEK = 64;
  * @param {Object} tar - `esemeny(azonosito)`
  * @param {string} koino
  * @param {Map<string, Object>} [kapottak] - a most kapott (még nem tárolt) születések — ⚠️ ezekkel a nézet nem marad meg
- * @returns {Promise<{koino: string, teljes: boolean, szuletesek: Set<string>, tartozik: function(Object): boolean}>}
+ * @returns {Promise<{koino: string, teljes: boolean, lanc: Array<Object>, szuletesek: Set<string>,
+ *   tartozik: function(Object): boolean, jelen: function(Object): boolean}>} a `jelen`: számít-e a koinó JELEN rétegében (③)
  */
 export async function koinoNezete(tar, koino, kapottak = null) {
   const kesz = !kapottak && teljesNezetek.get(koino);
@@ -156,7 +157,9 @@ export async function koinoNezete(tar, koino, kapottak = null) {
   for (let i = 1; i < lanc.length; i++) {
     osok.set(lanc[i].azonosito, { vagas: lanc[i - 1].ido, szerzo: lanc[i - 1].szerzo, sorszam: lanc[i - 1].sorszam });
   }
-  const nezet = { koino, teljes, szuletesek, tartozik: (e) => koinohozTartozik(e, koino, szuletesek, osok) };
+  const koltozok = lancKoltozoi(lanc);
+  const nezet = { koino, teljes, lanc, szuletesek, tartozik: (e) => koinohozTartozik(e, koino, szuletesek, osok),
+    jelen: (e) => (lanc.length ? jelenbenSzamit(e, lanc, 0, koltozok) : esemenyKoinoja(e) === koino) };
   if (teljes && !kapottak && lanc.length) {
     if (teljesNezetek.size >= NEZET_EMLEK) teljesNezetek.delete(teljesNezetek.keys().next().value);
     teljesNezetek.set(koino, nezet);
@@ -181,4 +184,56 @@ export function koinohozTartozik(e, koino, szuletesek, osok) {
   // ⭐ A létrehozó a lánc-pontja szerint (a sorszám), mindenki más az óra szerint.
   if (e.szerzo === o.szerzo) return Number.isSafeInteger(e.sorszam) && e.sorszam < o.sorszam;
   return Number.isSafeInteger(e.ido) && e.ido <= o.vagas;
+}
+
+// ===================================
+// ③ — A JELEN RÉTEGE: a szerkezet mindenkié, a súly csak a költözőké
+// ===================================
+//
+// ⭐⭐ D118/1: súlyt csak a költöző hoz. A koinó jelen rétegébe a saját eseményei kerülnek, és az ősökéből a SZERKEZET (a
+// létrehozások — gondolat, kategória, gondolattípus — és az ellentmondás bizonyítéka) mindenkié, minden más (pont, javaslat,
+// szavazat, érték javaslat, állásfoglalás, a tagsági és az identitás-események) CSAK a költözőké, a lánc-pontjuk előtt —
+// KZ6 (A): a nem költöző nyitott javaslata így nem folytatódik. Ami a múlt rétegéé (az ős születése, a döntési csomag, a
+// lezárási összegzés, a tagsági csomag), az a jelenbe nem kerül.
+//
+// ⭐ A KÖLTÖZŐK nemzedékenként: a létrehozó a SZÜLETÉSÉVEL költözik (a születés az ő láncát folytatja — a lánc-pontja a
+// születés sorszáma); a többiek beköltözése a ④.
+
+const JELENBOL_KIZART = new Set(['KoinoLetrehozas', 'DontesiCsomag', 'LezarasiOsszegzes', 'TagsagiCsomag']);
+const MINDENKIE = new Set(['GondolatLetrehozas', 'Ellentmondas']);
+
+/**
+ * A költözők nemzedékenként: `[k]` = a `lanc[k + 1]` → `lanc[k]` költözés szerzői a lánc-pontjukkal (szerző → az első
+ * sorszám, ami már a gyermeké). ⭐ A létrehozó a születésével (a születés sorszáma).
+ * @param {Array<Object>} lanc - a születések a gyermektől a gyökér felé
+ * @param {Map<string, number>} [tobbi] - a legfelső költözés további költözői (a ③ próbáinak — a beköltözés a ④)
+ * @returns {Array<Map<string, number>>}
+ */
+export function lancKoltozoi(lanc, tobbi = null) {
+  return lanc.slice(0, -1).map((sz, k) => {
+    const m = new Map([[sz.szerzo, sz.sorszam]]);
+    if (k === 0 && tobbi) for (const [szerzo, pont] of tobbi) if (!m.has(szerzo)) m.set(szerzo, pont);
+    return m;
+  });
+}
+
+/**
+ * ⭐⭐ Számít-e az esemény a `lanc[i]` koinó JELEN rétegében? A koinó saját eseménye igen; az ősé, ha szerkezet, vagy ha a
+ * szerzője minden nemzedéken át költözött, és az esemény a lánc-pontja előtt van (`e.sorszam` < a pont annál a
+ * költözésnél, ahol az ős eseményéből a következő nemzedékbe lépett).
+ * @param {Object} e
+ * @param {Array<Object>} lanc
+ * @param {number} i - melyik nemzedék jelene (0: maga a koinó)
+ * @param {Array<Map<string, number>>} koltozok - `lancKoltozoi`
+ */
+export function jelenbenSzamit(e, lanc, i, koltozok) {
+  if (!e || typeof e !== 'object') return false;
+  const k = esemenyKoinoja(e);
+  if (k === lanc[i]?.azonosito) return true;
+  let j = -1;
+  for (let n = i + 1; n < lanc.length; n++) if (lanc[n].azonosito === k) { j = n; break; }
+  if (j < 0 || JELENBOL_KIZART.has(e.tipus)) return false;
+  if (MINDENKIE.has(e.tipus)) return true;
+  for (let m = i; m < j; m++) if (!koltozok[m]?.has(e.szerzo)) return false;
+  return Number.isSafeInteger(e.sorszam) && e.sorszam < koltozok[j - 1].get(e.szerzo);
 }

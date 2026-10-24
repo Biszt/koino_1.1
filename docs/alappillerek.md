@@ -1406,3 +1406,18 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     sorszámmal, mint a gyermekbeli folytatás (elágazás) · ⚠️ a számítás a múltat még nem veszi figyelembe (a ③); az átmeneti
     tár, a lánc-ellenőrzés, az észlelő és a tagsági kérdező a név szerint szűr (a ⑤) · Csaba (D118) · `koinoLanc.js`,
     `csere.js`, `szeletEgyeztetes.js`; a próbák (`koinoLancProba.js`, parancssor).
+197. **2026-10-24 · a költözés ③: a koinó képe két rétegben (D118/1, /3, /4, KZ6)**
+    → **a koinó képe EGY függvény (`ketReteg.js` `koinoKepe` — a parancssor, a pakli és a művelet ugyanazt hívja): szülőre
+    épülő koinónál a múlt nemzedékenként, az ős szabályaival, a vágás pillanatára számolódik, és a LEZÁRT döntései rögzítve
+    jönnek át (`javaslatokSzamitasa` `rogzitettek` — nem számolódnak újra; az általános egyezmény hatálya a jelenből); a
+    jelenben a szerkezet (a létrehozások, az ellentmondás) mindenkié, a súly csak a költözőké, a lánc-pontjukig, nemzedékenként
+    követve (`jelenbenSzamit`); a létrehozó a születésével költözik; a nem költöző nyitott javaslata nem folytatódik (KZ6
+    (A)); a végrehajtás a múlt és a jelen egyezményeit egy sorban vezeti rá; a bemenet a koinó-szabály szerint
+    (`koinoBemenete`); a művelet bemondott összege a jelen szerint (a hozott pontokkal); a múlt képe gyorsítótárban** · ha a
+    lezárt döntést újraszámolnánk, a gyermek szigorúbb küszöbe vagy a költözők egyedül megfordítanák (D118/3); a nem
+    költöző súlya (és nyitott javaslata) olyan ember döntése lenne, aki ott nincs jelen (D118/1); a művelet és a kép két
+    szabállyal a bemondott összeget a lánc ellentmondásának látná · ⚠️ a próbák építése közben kétszer: a tagsági szabály
+    elfedte a költözés szabályát (a nem költözőt tagként kell mérni), és egy elágazás a próbát véletlenné tette · ⏸️ a ④–⑤:
+    a többi költöző, a tagság öröklése, a vállalás, a lánc-gyökér a költözött láncon · Csaba (D118, KZ6) · `ketReteg.js`
+    (új), `koinoLanc.js`, `javaslatSzamitas.js`, `esemenyTar.js` (`koinoBemenete`), `atmenetiTar.js`, `pakli.js`,
+    `muveletek.js`, `koino.js`; a próbák (`ketRetegProba.js`, parancssor); a 83. mérés (`ketRetegMeres.js`).

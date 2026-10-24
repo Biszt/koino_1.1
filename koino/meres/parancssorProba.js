@@ -540,6 +540,52 @@ proba('⭐⭐ D118 (②b): a szülő vágás előtti múltja a gyermek tárába 
     }
   });
 
+// ⭐⭐ D118 (③): A KÉT RÉTEG a parancssoron. A szülőben A (az alapító) és B (meghívott tag) ír egy-egy gondolatot; A
+// létrehozza a gyermeket, és a szülő múltját behozza. A gyermek képében A gondolata él (a létrehozó a születésével költözik
+// — a pontja vele jön), B-é nem (nem költözött: a súlya nem jön — D118/1); és A új pontja a gyermekben átmegy (a bemondott
+// összege a hozott pontjait is tartalmazza). Viselkedést mérünk: a gyermek kiszámolt állapotát (a gondolatok listáját) és a
+// lemezt, nem a kiírt üzenetet.
+proba('⭐⭐ D118 (③): a gyermek képe — a létrehozó hozott pontja él, a nem költözőé nem; a létrehozó új pontja a hozottakkal együtt számít',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const G = { KOINO_AZONOSITO: 'gyermek' };
+    try {
+      await fut(a, 'koino', 'Két réteg', 'nyilt');
+      await taggaTesziKeszulek(a, b);
+      const x = azonosito(await fut(a, 'gondolat', 'XALAP'), 'Létrejött:');
+      await fut(a, 'gondolat', 'WALAP');   // ⚠️ egy második hozott pont — enélkül a régi (csak gyermekbeli) szűrő is 150-et mondana
+      await fut(b, 'gondolat', 'YNEMK');
+      await fut(b, 'kivisz', join(b, 'b.jsonl'), 'sajat');
+      await fut(a, 'behoz', join(b, 'b.jsonl'));
+      const szuloAllapot = await fut(a);
+      await fut(a, 'koino', 'Két réteg gyermeke', 'szulo=sajat', 'nyilt', G);
+      const C = await koinoNeve(a, 'gyermek');
+      await fut(a, 'kivisz', join(a, 'szulo.jsonl'));
+      await fut(a, 'behoz', join(a, 'szulo.jsonl'), G);
+      const elotte = await fut(a, G);
+      const pont = await fut(a, 'pont', x, '150', G).catch((h) => String(h?.message ?? h));
+      const utana = await fut(a, G);
+      const lemez = (await readFile(join(a, C, 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean).map((l) => JSON.parse(l));
+      const ujPont = lemez.filter((e) => e.tipus === 'TudatpontRendezes' && esemenyKoinojaSzerint(e) === C).at(-1);
+      const ok = /XALAP/.test(szuloAllapot) && /YNEMK/.test(szuloAllapot)
+        && lemez.some((e) => e.adat?.cim === 'YNEMK')            // a múltja odaért (②b) …
+        && /XALAP/.test(elotte) && !/YNEMK/.test(elotte)      // … de a súlya nem (③)
+        && /Tudatpont beállítva: 150/.test(pont) && ujPont?.adat?.pont === 150 && ujPont.adat.kiosztva === 250
+        && /XALAP/.test(utana);
+      if (!ok) process.stderr.write('    (a kimenetek: ' + JSON.stringify({ szuloAllapot: szuloAllapot.slice(0, 600),
+        elotte: elotte.slice(0, 600), pont, ujPont: ujPont?.adat }) + ')\n');
+      return ok;
+    } finally {
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
+/** Egy esemény koinója a nyers lemez-sorból (a születésé a saját lenyomata — D118/2). */
+function esemenyKoinojaSzerint(e) {
+  return e.koino === '' && e.tipus === 'KoinoLetrehozas' ? e.azonosito : e.koino;
+}
+
 // ===================================
 // ⭐⭐ B/1–B/2: A `hozd` AZ ÁTMENETI TÁRBA — és a pontom után a tartósba lép elő (2026-10-03)
 // ===================================

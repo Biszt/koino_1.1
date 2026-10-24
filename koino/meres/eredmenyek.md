@@ -5369,3 +5369,27 @@ mély kérésen: a három összegű fa bizonyítékai nagyobbak (minden testvér
 0,6–0,9 KB (a bizonyítéka, és ha a gyerek nincs a listában, a születése). ⭐ A választás: a kiválasztott 2 + 1, a legfelső 3
 testvér 1 + 1 — a mély kérés +9–12%, a gyökér egy szintje +1,6–2,2 KB; a tét kisebb, mint az össz-ponté (8 és 4 minta): a darab a
 nézet jele, a sorrendet nem dönti el. → a felderítetlen rész (D116).
+
+---
+
+## 83. ⭐ A KÉT RÉTEG ÁRA — mennyibe kerül a múlt a gyermek képében? (D118, a költözés ③, 2026-10-24, a laptopon)
+
+`node koino/meres/ketRetegMeres.js [N ...]` — a megépült kódon (`ketReteg.js` `koinoKepe`). *(A ③ előtt a 76. mérés számaival
+számoltunk: egy állapot-számítás ~9 µs eseményenként; a múlt rétege egy ilyen a múlt eseményein, és a múlt csak bővül → a
+talaj gyorsítótárban. Ez a mérés azt nézi, igaz-e.)*
+
+**A bemenet:** egy szülő N eseménnyel (4 tag, gondolatok ponttal, minden 20. gondolaton egy lezárt javaslat); a gyermek a
+létrehozó (egy a négyből) költözésével, ~1% saját eseménnyel. A nemzedék-sorban ugyanannyi múlt-esemény 1, 2, 4 ősre osztva.
+
+- **N = 1000:** szülő nélkül 14 ms · a gyermek először 12 ms (24 rögzített döntés) · másodszor 6 ms · 1/2/4 ős: 11 / 14 / 16 ms.
+- **N = 5000:** szülő nélkül 19 ms · a gyermek először 51 ms (117 rögzített) · másodszor 22 ms · 1/2/4 ős: 35 / 46 / 78 ms.
+- **N = 20 000:** szülő nélkül 173 ms · a gyermek először 284 ms (465 rögzített) · másodszor 103 ms · 1/2/4 ős: 195 / 236 /
+  286 ms.
+
+⭐ **Amit mutat:** a gyermek első képe ~1,6× a szülő nélküliének (a múlt egyszer kiszámolódik, aztán a jelen); a
+gyorsítótárból a múlt ingyen van, és a jelen kisebb, mint a szülő egész képe (a szerkezet mindenkié, de a súly csak a
+költözőé — kevesebb pont, kevesebb élő entitás). ⚠️ **A nemzedékekkel enyhén nő** (4 ősnél 1,5×): minden szint jelene az
+összes fölötte lévő ős SZERKEZETÉT újra beolvassa (a létrehozásokat — hogy egy pont bármikor visszahozhassa őket). Nemzedékenként
+lineáris, és a múlt képe szintenként gyorsítótárban van, tehát csak akkor fizetjük, ha a múlt bővül. ⏸️ Ha egyszer száz
+nemzedék lesz: a szerkezetet elég volna a legmélyebb szinten egyszer összegyűjteni — mérés után. A 9. szabály szerint a teher
+ott áll, ahol a többi: a szigorú (b) alatt a készülék tárában csak a vállalt szeletei múltja van.

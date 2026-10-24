@@ -256,7 +256,8 @@ Most csak a két fél szerkezete épül; a pénz mezői később hozzáadhatók,
    kell, és a telefon frissítése.
 2. ✅ **② A gyermek születése** (szülő, vágás, zártság) **és a kapu koinó-szabálya**, a csere két névvel egy szeletben
    (2026-10-24 — ②a és ②b, a 8. szakasz; elágazás 195–196).
-3. **③ A két réteg a számításban** (a múlt az ős szabályaival; a talaj; a lezárt és a nyitott döntések).
+3. ✅ **③ A két réteg a számításban** (a múlt az ős szabályaival; a talaj; a lezárt és a nyitott döntések) — 2026-10-24, a 9.
+   szakasz; elágazás 197; 83. mérés.
 4. **④ A ki- és a beköltözés** (a lánc megkötése, a kiosztás átvétele, a tagság és a 2. lépcső öröklése), a `koltozes`
    parancs és a kézi út.
 5. **⑤ A többi réteg bekötése** (vállalás, gyökér-darab, kereső-réteg, felderítés, értesítés, lánc-ellenőrzés).
@@ -316,6 +317,18 @@ kiköltözés kivétele (a vágás utáni, mégis kell) a ④-gyel jön.
 
 ## 9. A ③ építési alakja — a két réteg a számításban (2026-10-24)
 
+✅ *Megépült (2026-10-24, elágazás 197 — `ketReteg.js` `koinoKepe`, `koinoLanc.js` `jelenbenSzamit` / `lancKoltozoi`,
+`javaslatSzamitas.js` `rogzitettek`; a parancssor, a pakli és a művelet ugyanazt hívja; a próbák a `ketRetegProba.js`-ben és a
+parancssorban, 10 rontással; a 83. mérés).* Az építés két pontosítása: ⭐ **a létrehozó a születésével költözik** (a születés
+az ő láncát folytatja, a lánc-pontja a születés sorszáma — a ③ így a parancssoron is mérhető); és ⭐ **a súlyt nemzedékenként
+követjük** (aki a nagyszülőből a szülőbe költözött, de tovább nem, annak a nagyszülőbeli súlya az unokában nem él).
+
+⚠️ **Amit a ③ nem old meg (a ④–⑤):** a többi költöző (a beköltözés eseménye, a hozott kiosztás — KZ3 — és a tagság öröklése:
+ma a nem költöző tag is csak meghívással lesz tag a gyermekben); a vállalás a hozott entitásokra (a gyermekben „nem tartod”);
+a lánc-gyökér és a lánc-ellenőrzés a költözött láncon (ha a létrehozó a szülőt is alapította, a lánca a gyermekben
+hézagos — az ős születése nincs a jelen bemenetében —, ezért a bemondott összegét a szabály-réteg csak jelzéssel méri); az
+átmeneti tár, az észlelő.
+
 A 4.4 a kódhoz igazítva. A számítás ma három fázis (`allapotSzamitasa` → `javaslatokSzamitasa` →
 `szerkesztesiEgyezmenyekAlkalmazasa`), és három helyen fut (a parancssor `kepetKeszit`-je, a pakli képe, egy művelet). A ③
 ezt EGY függvénybe foglalja (a koinó képe), ami a koinó-szabály (②b) szerinti bemenetet két rétegre bontja:
@@ -336,7 +349,7 @@ ezt EGY függvénybe foglalja (a koinó képe), ami a koinó-szabály (②b) sze
   76. mérés); a múlt nem változik, csak bővül (a csere hozza a késve érkezőt) → a talaj gyorsítótárban, a múlt
   változata szerint. A 83. mérés a megépült kódon méri (a teljes képet nemzedékenként).
 
-⏸️ **Csabánál — KZ6: a vágáskor NYITOTT javaslat, amit NEM költöző tett.** A javaslattétel ma is súly (a nem tag
+✅ **KZ6 (Csaba, 2026-10-24: *„elfogadom a javaslataidat”* — az (A)): a vágáskor NYITOTT javaslat, amit NEM költöző tett.** A javaslattétel ma is súly (a nem tag
 javaslata nem számít — D93/1), és a D118/1 szerint súlyt csak a költöző hoz; a D118/4 szerint viszont „a nyitott
 javaslatok a költözőkkel folytatódnak”. (A) ⭐ javaslat: **nem folytatódik** — a nyitott ügy azé, aki beadta; ha nem jött
 át, a javaslata a szülőben dől el (ott a múlt része marad), és ha egy költöző fontosnak tartja, a gyermekben újra beadja

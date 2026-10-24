@@ -43,11 +43,12 @@
 //
 // Használják: a felület kezelője (`koino.js`), és bármely másik kliens.
 
-import { koinoEsemenyei } from '../tar/esemenyTar.js';
-import { allapotSzamitasa, szetosztottPontok } from './allapotSzamitas.js';
+import { koinoEsemenyei, koinoBemenete } from '../tar/esemenyTar.js';
+// ⭐⭐ D118 (③): a koinó képe két rétegben (a múlt az ős szabályaival, a jelen a koinóéval).
+import { koinoKepe } from './ketReteg.js';
+import { szetosztottPontok } from './allapotSzamitas.js';
 import { TUDATPONT_KERET } from './szabalyok.js';
-import { javaslatokSzamitasa, ALAP_KUSZOBOK } from './javaslatSzamitas.js';
-import { szerkesztesiEgyezmenyekAlkalmazasa } from './szerkesztesiVegrehajtas.js';
+import { ALAP_KUSZOBOK } from './javaslatSzamitas.js';
 import { szovegFeloldasa, szovegHivatkozasE } from '../esemeny/szovegDarab.js';
 import { osszPontokSzamitasa, gyerekJegyzek, ismertAlattaSzamitasa } from './osszPont.js';
 // ⭐ D102: a gyökér kulcsa a fejléc-tudásban (a kérelem válasza ez alatt jegyzi a gyökér gyerekszámát és levágását) — egy
@@ -424,7 +425,7 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
   const honnan = beallitas.kurzor ? kurzorDekodolas(beallitas.kurzor) : null;
 
   // ----- A KÉP: a horgonyhoz tartozó állapot -----
-  const esemenyek = await koinoEsemenyei(tar, koino);
+  const esemenyek = await koinoBemenete(tar, koino);   // ⭐ D118 (③): a koinó-szabály szerint
   const teljes = esemenyek.length;
 
   // Az első lekérés horgonyt VER; a továbbiak a kurzorból hozzák. ⚠️ A `min` azért kell,
@@ -716,7 +717,7 @@ export async function pakliHierarchia(tar, koino, beallitas = {}) {
     : (tartottak ? (az) => tartottak.has(az) : () => true);
   const gyokerTeljes = typeof beallitas.gyokerTeljes === 'boolean' ? beallitas.gyokerTeljes : !tartottak;
 
-  const esemenyek = await koinoEsemenyei(tar, koino);
+  const esemenyek = await koinoBemenete(tar, koino);   // ⭐ D118 (③): a koinó-szabály szerint
   const most = beallitas.most ?? Date.now();
   const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek, tar.csakAtmeneti?.() ?? null);
   const entitasok = kep.entitasok;
@@ -833,7 +834,7 @@ export async function pakliHierarchia(tar, koino, beallitas = {}) {
 
 async function lapKepe(tar, koino, beallitas) {
   const nezet = beallitas.nezet ?? ujPakliNezet();
-  const esemenyek = await koinoEsemenyei(tar, koino);
+  const esemenyek = await koinoBemenete(tar, koino);   // ⭐ D118 (③): a koinó-szabály szerint
   const teljes = esemenyek.length;
 
   // ⚠️ Ugyanaz a `min`, mint a `pakliOldal`-ban: egy régi horgony nagyobb lehet, mint
@@ -1227,7 +1228,7 @@ export const STRUKTURA_KERES = FELDERITES_ALAP.k;
 /** A Struktúra sorrendje a horgonyhoz tartozó képből — az ág (ha van) szerint szűrve, a kerettel. */
 async function strukturaSorrend(tar, koino, beallitas = {}) {
   const nezet = beallitas.nezet ?? ujPakliNezet();
-  const esemenyek = await koinoEsemenyei(tar, koino);
+  const esemenyek = await koinoBemenete(tar, koino);   // ⭐ D118 (③): a koinó-szabály szerint
   const horgony = Number.isInteger(beallitas.horgony) ? Math.min(beallitas.horgony, esemenyek.length) : esemenyek.length;
   const most = Number.isInteger(beallitas.most) ? beallitas.most : Date.now();
   const kep = await kepetKerni(nezet, koino, horgony, most, esemenyek, tar.csakAtmeneti?.() ?? null);
@@ -1393,7 +1394,7 @@ export const SIKIDOM_DARAB = 300;
 /** A Síkidom közös alapja: a friss kép (mindig a tár mai vége — a nézet újrakérdez), az ágazati pontok, a gyerek-tudás. */
 async function sikidomAlap(tar, koino, beallitas = {}) {
   const nezet = beallitas.nezet ?? ujPakliNezet();
-  const esemenyek = await koinoEsemenyei(tar, koino);
+  const esemenyek = await koinoBemenete(tar, koino);   // ⭐ D118 (③): a koinó-szabály szerint
   const kep = await kepetKerni(nezet, koino, esemenyek.length, Date.now(), esemenyek, tar.csakAtmeneti?.() ?? null);
   const tartottak = typeof nezet.tartott === 'function' ? await nezet.tartott() : null;
   // ⭐ D116: az össz-pontok egyszer (az ágazati pont és a felderítetlen rész is ebből)
@@ -1535,7 +1536,7 @@ export async function keresesHelyben(tar, koino, beallitas = {}) {
   const agazat = typeof beallitas.agazat === 'string' && beallitas.agazat ? beallitas.agazat : null;
   if (!q) return { talalatok: [], ismert: 0, nemEldontheto: 0, hianyzik: [], agazat };
   const nezet = beallitas.nezet ?? ujPakliNezet();
-  const esemenyek = await koinoEsemenyei(tar, koino);
+  const esemenyek = await koinoBemenete(tar, koino);   // ⭐ D118 (③): a koinó-szabály szerint
   const kep = await kepetKerni(nezet, koino, esemenyek.length, Date.now(), esemenyek, tar.csakAtmeneti?.() ?? null);
   const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok, await tartottKerdes(nezet));
   const ertek = (az) => agazati.get(az) ?? 0;
@@ -1582,7 +1583,7 @@ export async function keresesHelyben(tar, koino, beallitas = {}) {
  */
 export async function ertesitesiKep(tar, koino, beallitas = {}) {
   const nezet = beallitas.nezet ?? ujPakliNezet();
-  const esemenyek = await koinoEsemenyei(tar, koino);
+  const esemenyek = await koinoBemenete(tar, koino);   // ⭐ D118 (③): a koinó-szabály szerint
   const most = Number.isFinite(beallitas.most) ? beallitas.most : Date.now();
   const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek, tar.csakAtmeneti?.() ?? null);
   const tartottak = typeof nezet.tartott === 'function' ? await nezet.tartott() : null;
@@ -1618,7 +1619,7 @@ export async function ertesitesiKep(tar, koino, beallitas = {}) {
  *   javaslatokSzama: number, egyezmenyekSzama: number}>}
  */
 export async function helyiStatisztika(tar, koino, beallitas = {}) {
-  const esemenyek = await koinoEsemenyei(tar, koino);
+  const esemenyek = await koinoBemenete(tar, koino);   // ⭐ D118 (③): a koinó-szabály szerint
   const kep = await lapKepe(tar, koino, beallitas);
   // ⭐ (Csaba, 2026-10-23: „az alsósávon is jelezni kéne az ismeretlen entitások darabszámát, ha nem túl drága”): a gyökér
   // szintjének felderítetlen része (D116 — a tartó bemondott darabja, mínusz amit ismerek). Ugyanaz a kör a képen, mint a
@@ -1721,7 +1722,7 @@ export async function sajatHozzarendelesek(tar, koino, beallitas = {}) {
   const kertLimit = Number.isInteger(beallitas.limit) ? beallitas.limit : HOZZARENDELES_KORLAT;
   const limit = Math.max(1, Math.min(kertLimit, HOZZARENDELES_KORLAT));
 
-  const esemenyek = await koinoEsemenyei(tar, koino);
+  const esemenyek = await koinoBemenete(tar, koino);   // ⭐ D118 (③): a koinó-szabály szerint
   const kep = await lapKepe(tar, koino, beallitas);
   const keret = kep.koino?.szabalyok?.tudatpontKeret ?? TUDATPONT_KERET;   // ⭐ D118/2: a koinó kerete
   if (!en) return { data: [], count: 0, osszes: 0, nemEldontheto: 0, szabad: keret, hianyzik: [], kovetkezoKurzor: null };
@@ -1816,7 +1817,7 @@ export async function entitasKuszobei(tar, koino, azonosito, beallitas = {}) {
 /**
  * A horgonyhoz tartozó kép — gyorsítótárból, vagy kiszámolva.
  *
- * ⚠️ ITT ÜL MA A NEM-SKÁLÁZÓ RÉSZ, és tudatosan: az `allapotSzamitasa` az első `horgony`
+ * ⚠️ ITT ÜL MA A NEM-SKÁLÁZÓ RÉSZ, és tudatosan: a koinó képe (`koinoKepe`) az első `horgony`
  * darab eseményt kapja.
  *
  * ⭐ **Egy lapozás alatt EGYSZER fut le** — a további oldalak ÉS a hozzájuk tartozó
@@ -1838,16 +1839,13 @@ async function kepetKerni(nezet, koino, horgony, most, esemenyek, csakAtmeneti =
   // ⭐ „Az első N esemény" — és ez azért stabil halmaz, mert a tár HOZZÁFŰZHETŐ: ami egyszer
   // beírt, az ott marad, azon a helyen.
   const bemenet = horgony >= esemenyek.length ? esemenyek : esemenyek.slice(0, horgony);
-  // ⭐ B/2: ha a tár a két tár nézete (`atmenetiTar.js`), a D14 kivételéhez megmondja, mi van csak az átmenetiben.
-  const kep = allapotSzamitasa(bemenet, { csakAtmeneti,
-    ...(tartottak ? { nemTartott: (az) => !tartottak.has(az) } : {}) });
-
-  // ⭐⭐ ÉS A HÁROM FÁZIS HARMADIKA: az elfogadott szerkesztési egyezmények rávezetése.
-  // ⚠️ Enélkül a pakli **elfogadott egyezmény után is a régi címet mutatná** — pontosan az
-  // a hiba, amit a Szakasz 5.3 első órájában mértünk.
+  // ⭐⭐ A HÁROM FÁZIS — D118 (③) óta a koinó képe (`ketReteg.js`): szülőre épülő koinónál két rétegben. ⚠️ A harmadik
+  // fázis (az elfogadott szerkesztési egyezmények rávezetése) nélkül a pakli elfogadott egyezmény után is a régi címet
+  // mutatná — pontosan az a hiba, amit a Szakasz 5.3 első órájában mértünk. ⭐ B/2: ha a tár a két tár nézete, a D14
+  // kivételéhez megmondja, mi van csak az átmenetiben.
   const osszegzesek = typeof nezet.osszegzesek === 'function' ? await nezet.osszegzesek() : new Map();
-  const javaslatok = javaslatokSzamitasa(kep.szamitok, kep, most, { osszegzesek });
-  await szerkesztesiEgyezmenyekAlkalmazasa(kep, javaslatok);
+  const { allapot: kep, javaslatok } = await koinoKepe(bemenet, { koino, most, osszegzesek, csakAtmeneti,
+    ...(tartottak ? { nemTartott: (az) => !tartottak.has(az) } : {}) });
 
   // ⭐ A javaslatok is kártyák (5.5) — a képpel együtt tartjuk, hogy ne kelljen kétszer
   // kiszámolni őket.

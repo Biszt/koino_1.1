@@ -733,9 +733,14 @@ export function lezarasiPillanatkep(esemenyek, javaslatEsemeny,
  *   bemenetét nem tartjuk egészében (a két fokú vállalás összegző tartójánál). ⚠️ A hívó csak az összegezve tartott
  *   szeletekét adja (`koino.js` `ellenorzottOsszegzesek`): ahol megvan, az összegzés dönt — a helyben látott részleges
  *   bemenet (a saját pont-eseményem, a javaslat szavazatai) nem.
+ * @param {Map<string, Object>} [beallitas.rogzitettek] - ⭐⭐ D118 (③): a MÚLT lezárt döntései (javaslat → a döntés, ahogy
+ *   a szülő a vágás pillanatában számolta — `ketReteg.js`). Nem számolódnak újra (D118/3: a lezárt döntés múlt — nem
+ *   fordulhat meg a gyermek szabályaitól vagy szavazóitól); ⚠️ az általános egyezmény HATÁLYA viszont élő (D27/2): azt a
+ *   jelen állásfoglalásai adják.
  */
 export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now(), beallitas = {}) {
   const osszegzesek = beallitas.osszegzesek instanceof Map ? beallitas.osszegzesek : new Map();
+  const rogzitettek = beallitas.rogzitettek instanceof Map ? beallitas.rogzitettek : null;
   // ⭐⭐ D118/2 (①b): a küszöbök alapértékei a koinó születéséből (az állapotban, vagy a bemenetben).
   const alapKuszobok = beallitas.alapKuszobok ?? allapot?.koino?.szabalyok?.alapKuszobok
     ?? koinoSzabalyai(koinoSzuleteseListabol(esemenyek)).alapKuszobok;
@@ -750,6 +755,7 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now(), beall
 
   for (const e of esemenyek) {
     if (e.tipus !== 'Javaslat') continue;
+    if (rogzitettek?.has(e.azonosito)) continue;   // ⭐ D118 (③): a múlt döntése — lent, változatlanul
 
     // A fajta dönti el, mi történik ELFOGADÁSKOR (D27). Ha hiányzik, szerkesztésinek
     // vesszük — ez a mai koino összes javaslata.
@@ -902,6 +908,17 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now(), beall
       kesoiSzavazatok,
       egyezmeny
     });
+  }
+
+  // ----- ⭐⭐ D118 (③): A MÚLT LEZÁRT DÖNTÉSEI — változatlanul; az általános egyezmény hatálya a jelenből -----
+  for (const [az, j] of rogzitettek ?? []) {
+    if (javaslatok.has(az)) continue;
+    const masolat = { ...j, mult: true };
+    if (masolat.egyezmeny && masolat.fajta === 'altalanos') {
+      masolat.egyezmeny = { ...masolat.egyezmeny,
+        hataly: hatalyok.get(az) ?? { csatlakozok: [], tiltakozok: [], utkozesek: [] } };
+    }
+    javaslatok.set(az, masolat);
   }
 
   console.log('javaslatokSzamitasa - VÉGE', { javaslat: javaslatok.size });
