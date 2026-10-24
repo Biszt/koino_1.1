@@ -59,7 +59,8 @@
 // ⛔ Ha egyszer kérdezni fog, a válasz nem lehet „kidobom": P2P-n a *„nem tag"* és a *„még nem
 // láttam a bizonyítékát"* ugyanaz — a koinónak van erre szava (`nemEllenorizhetok`, D19).
 
-import { esemenyKoinoja, koinoSzuleteseE } from '../esemeny/esemeny.js';
+import { esemenyKoinoja, koinoSzuleteseE, azonositoAlaku } from '../esemeny/esemeny.js';
+import { ALAP_SZABALYOK, koinoSzabalyai } from '../esemeny/koinoSzabalyok.js';
 import { esemenyLekerese, entitasEsemenyei, sajatLancEsemenyei } from '../tar/esemenyTar.js';
 // ⭐ D93: a tagság szabálya EGY helyen él (`tagsag.js`) — a szabály-réteg és ez a tár-alapú kérdés ugyanazt hívja.
 import { tagsagiIndex, horgonyTagsaga, MELYSEG_KORLAT, TAGSAGI_CSOMAG, PROFIL } from './tagsag.js';
@@ -77,7 +78,7 @@ import { randomInt } from 'node:crypto';
 export const MEGHIVO_KELL = 1;
 
 // Hány tanúsítás kell a 2. LÉPCSŐHÖZ (a pénztárcához)?
-export const TANUSITAS_KELL = 3;
+export const TANUSITAS_KELL = ALAP_SZABALYOK.tanusitasKell;   // ⭐ D118/2: a mai érték — a koinó születése mást mondhat
 
 // ⭐ `N`: hány felhatalmazás kell ahhoz, hogy valaki TANÚSÍTHASSON?
 //
@@ -88,7 +89,7 @@ export const TANUSITAS_KELL = 3;
 // *A „felső harmadban vagy-e?" globális tudást kívánna; a „van-e legalább N" csak a saját
 // szeletemet.* A közösségi érték bekötése ezért később cserélhető — a hívók változtatása
 // nélkül.
-export const FELHATALMAZAS_KELL = 5;
+export const FELHATALMAZAS_KELL = ALAP_SZABALYOK.felhatalmazasKell;   // ⭐ D118/2: az alapérték a születésből jöhet
 
 // ⭐⭐ D94 (Csaba, 2026-10-04 — a 65. mérés után): A 2. LÉPCSŐ IGAZOLÁSA SZÚRÓPRÓBÁVAL.
 //
@@ -119,11 +120,28 @@ export const LEPCSO_BEMONDAS = 'LepcsoBemondas';
  *
  * @param {Object} [beallitas] - a küszöbök felülírása (a közösségi értékek bekötéséhez)
  */
+/**
+ * ⭐⭐ D118/2 (①b): a nézet küszöbei (a tanúsítás-szám, a felhatalmazás alapértéke) a koinó SZÜLETÉSÉBŐL — egyszer
+ * nézetenként, és csak ami a hívó nem mondott ki. Lenyomat-nevű koinónál a születés azonosítója maga a koinó neve (egy
+ * tár-kérdés); ha nincs meg (vagy a régi alak), a mai értékek. ⚠️ A meghívó-szám nem a születésé: a tagság egy meghívás
+ * és a legrövidebb lánc (`tagsag.js`; a 11–12. mérés: a több meghívó nem véd).
+ */
+async function nezetSzabalyai(tar, koino, nezet) {
+  if (nezet.szabalyokBetoltve) return;
+  nezet.szabalyokBetoltve = true;
+  const sz = koinoSzabalyai(azonositoAlaku(koino) ? await esemenyLekerese(tar, koino) : null);
+  if (!nezet.kifejezett?.tanusitasKell) nezet.tanusitasKell = sz.tanusitasKell;
+  if (!nezet.kifejezett?.felhatalmazasKell) nezet.felhatalmazasKell = sz.felhatalmazasKell;
+}
+
 export function ujIdentitasNezet(beallitas = {}) {
   return {
     meghivoKell: beallitas.meghivoKell ?? MEGHIVO_KELL,
     tanusitasKell: beallitas.tanusitasKell ?? TANUSITAS_KELL,
     felhatalmazasKell: beallitas.felhatalmazasKell ?? FELHATALMAZAS_KELL,
+    // ⭐ D118/2: amit a hívó nem mondott ki, azt a koinó születése adja (`nezetSzabalyai` — egyszer nézetenként).
+    kifejezett: { tanusitasKell: beallitas.tanusitasKell !== undefined, felhatalmazasKell: beallitas.felhatalmazasKell !== undefined },
+    szabalyokBetoltve: false,
 
     // Kérdésenként külön gyorsítótár — csak a POZITÍV eredmények.
     igenek: new Map(),       // 'tag|<horgony>' → eredmény
@@ -449,6 +467,7 @@ export async function tagsagiEsemenyekGyujtese(tar, koino, horgony, nezet = ujId
  */
 export function tanusithatE(tar, koino, horgony, nezet = ujIdentitasNezet()) {
   return kerdes('tanusithat', tar, koino, horgony, nezet, async (esemeny) => {
+    await nezetSzabalyai(tar, koino, nezet);   // ⭐ D118/2
     // Előbb a saját helyzete: aki nincs bent a 2. lépcsőn, nem tanúsíthat.
     const sajat = await lepcso2E(tar, koino, horgony, nezet);
     if (!sajat.igen) {
@@ -485,6 +504,7 @@ export function tanusithatE(tar, koino, horgony, nezet = ujIdentitasNezet()) {
  * mindkettőt megkérdezheti.
  */
 export async function lepcso2E(tar, koino, horgony, nezet = ujIdentitasNezet()) {
+  await nezetSzabalyai(tar, koino, nezet);   // ⭐ D118/2: a koinó tanúsítás-száma
   // ⭐⭐ D94: A KERET. A legfelső hívás megnyitja (ennyi olvasás fér bele a teljes ellenőrzésbe); a belső, rekurzív
   // hívások ugyanabban a keretben futnak. Ha kifut, a szúrópróba dönt. ⚠️ A keret helyi mennyiség (mennyit olvastam),
   // nem a koinó mérete: a kis koinó ugyanazt a kódot futtatja, csak belefér.
@@ -544,6 +564,7 @@ function lepcso2Teljes(tar, koino, horgony, nezet) {
  * *Ugyanaz a munkamegosztás, mint mindenhol: a szabály a minimumot tartja, a jelzés feltár.*
  */
 async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny) {
+  await nezetSzabalyai(tar, koino, nezet);   // ⭐ D118/2 (ha nem a fenti belépőkön át jöttünk)
   console.log('identitas.tanusitoJoga - KEZDÉS',
     { tanusitoHorgony, tanusitas: tanusitasEsemeny?.azonosito });
 
@@ -848,6 +869,7 @@ async function seta(tar, koino, horgony, kiindulo, nezet) {
  * @returns {Promise<{igen: boolean, ok: string, ellenorizheto: boolean, szuroproba: true}>}
  */
 export async function lepcso2Szuroproba(tar, koino, horgony, nezet = ujIdentitasNezet()) {
+  await nezetSzabalyai(tar, koino, nezet);   // ⭐ D118/2
   console.log('identitas.lepcso2Szuroproba - KEZDÉS', { horgony, setak: nezet.setak });
   nezet.szuroprobak++;
   const vege = (eredmeny) => {
@@ -886,6 +908,7 @@ export async function alapitoHorgony(tar, koino, horgony) {
  * @returns {Promise<Array<string>>}
  */
 export async function ervenyesTanusitasaim(tar, koino, horgony, nezet = ujIdentitasNezet()) {
+  await nezetSzabalyai(tar, koino, nezet);   // ⭐ D118/2
   const e = await esemenyLekerese(tar, horgony);
   if (!e || e.tipus !== 'Belepes') return [];
   const kivalasztott = new Map();

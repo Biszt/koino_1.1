@@ -36,7 +36,7 @@ import {
   levelOsszegzes, osszegzesAlakja, azonosOsszegzes, naploBizonyitek, naploBizonyitekEllenorzese, naploKovetkezetesseg,
   naploKovetkezetessegEllenorzese, ujAllapotFa, allapotBeallitas, allapotGyokere, allapotBizonyitek, allapotLista
 } from '../esemeny/osszegzoFa.js';
-import { NAPLO_FAJTA, KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ, lancAllapotaLancbol } from './lancGyoker.js';
+import { NAPLO_FAJTA, KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ, lancAllapotaLancbol, koinoKerete } from './lancGyoker.js';
 import { esemenyEllenorzese, AZONOSITO_MINTA, esemenyKoinoja } from '../esemeny/esemeny.js';
 import { ellentmondasEllenorzese } from './ellentmondas.js';
 
@@ -152,11 +152,12 @@ export async function lancValaszokFeldolgozasa({ tar, koino, tarolo }, kerdesek,
   const leletek = [];
   let igazolt = 0, fuggo = 0;
   const jegyzek = lancJegyzekVagasa(await tarolo.olvas());
+  const keret = { tudatpontKeret: await koinoKerete(tar, koino) };   // ⭐ D118/2: a koinó kerete
   const lista = Array.isArray(valaszok) ? valaszok.filter((v) => v && typeof v === 'object') : [];
   const elagazas = async (kit, esemeny, masik) => {
     const adat = { kit, fajta: 'elagazas', esemeny, masik,
       vesztes: esemeny.azonosito < masik.azonosito ? masik.azonosito : esemeny.azonosito };
-    if ((await ellentmondasEllenorzese(adat, koino)).rendben) leletek.push(adat);
+    if ((await ellentmondasEllenorzese(adat, koino, keret)).rendben) leletek.push(adat);
   };
   const sajatEsemenye = async (e, sz, sorszam) => !!e && typeof e === 'object' && e.szerzo === sz && esemenyKoinoja(e) === koino
     && e.sorszam === sorszam && (await esemenyEllenorzese(e)).rendben === true;
@@ -209,7 +210,7 @@ export async function lancValaszokFeldolgozasa({ tar, koino, tarolo }, kerdesek,
         if (negativ) {
           const adat = { kit: q.sz, fajta: 'negativ', vadpont: fej.sorszam, esemeny: fej, kulcs: negativ[0],
             bizonyitek: await allapotBizonyitek(fa, negativ[0]) };
-          if ((await ellentmondasEllenorzese(adat, koino)).rendben) leletek.push(adat);
+          if ((await ellentmondasEllenorzese(adat, koino, keret)).rendben) leletek.push(adat);
         }
       }
     }
@@ -317,7 +318,7 @@ export function lancKiszolgalo({ tar, koino }) {
         }
         if (q.r) v.c = (await naploKovetkezetesseg(NAPLO_FAJTA, levelek, q.r, 0, memo)).ut;
         if (q.k === 1) {
-          const a = await lancAllapotaLancbol(l.lanc.slice(0, q.d));
+          const a = await lancAllapotaLancbol(l.lanc.slice(0, q.d), await koinoKerete(tar, koino));   // ⭐ D118/2: a koinó kerete
           const lista = a ? allapotLista(a.kiosztasFa) : null;
           if (lista && lista.length <= LISTA_KORLAT) v.k = lista.map((t) => [t.kulcs, t.osszegek[0]]);
         }

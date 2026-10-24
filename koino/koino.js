@@ -144,6 +144,7 @@ import { koinoEsemenyei, sajatLancEsemenyei, esemenyLekerese, esemenyMentese, en
 import {
   szelet, esemenyEllenorzese, bejelentesHelyei, azonositoAlaku, esemenyKoinoja, koinoSzuleteseE, koinoSzuleteseListabol
 } from './js/esemeny/esemeny.js';
+import { szabalyokAlakiHibaja, ALAP_SZABALYOK } from './js/esemeny/koinoSzabalyok.js';
 import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
 import { ALLASPONT_MUVELET } from './js/allapot/szabalyok.js';
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
@@ -188,7 +189,7 @@ import {
   regiobaEsik, bejegyzesHelye, osztodasMelysege, KERESO_FIOK_CEL, keresoRegioKulcsa, cimIllik
 } from './js/csere/keresoReteg.js';
 import {
-  koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
+  koinoLetrehozasa, koinomSzabalyai, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
   javaslatLetrehozasa, szavazas, allasfoglalas, TUDATPONT_KERET,
   // ⭐ A SZAKASZ 4 HÉT MŰVELETE (2026-09-12) — eddig egyik sem volt elérhető kézzel.
   belepes, meghivas, felhatalmazas, tanusitas, bemutatkozas, lattam, felhatalmazasVisszavonasa,
@@ -455,6 +456,12 @@ async function ujKoinoSzuletese(nev, leiras, beallitas) {
   } finally {
     await rm(ideiglenes, { recursive: true, force: true });
   }
+}
+
+/** ⭐ D118/2 (①b): a koinó szabályai egy sorban (`kulcs=érték`, a küszöbök is). */
+function szabalyokSzovege(sz) {
+  const { alapKuszobok, ...tobbi } = sz;
+  return [...Object.entries(tobbi), ...Object.entries(alapKuszobok ?? {})].map(([k, v]) => k + '=' + v).join(' ');
 }
 
 /**
@@ -905,7 +912,8 @@ async function keresoTarTomoritese() {
  */
 async function sajatVallalasa(allapot) {
   const lanc = (await sajatLancEsemenyei(tar, szerzo)).filter((e) => esemenyKoinoja(e) === KOINO);
-  return vallalasSzamitasa(lanc, { koinoSzuletes: allapot?.koino?.azonosito ?? null, ...kifutasBeallitas() });
+  return vallalasSzamitasa(lanc, { koinoSzuletes: allapot?.koino?.azonosito ?? null, ...kifutasBeallitas(),
+    tudatpontKeret: (await koinomSzabalyai(kornyezet)).tudatpontKeret });   // ⭐ D118/2: a koinó kerete
 }
 
 /**
@@ -3395,7 +3403,7 @@ async function ketFokAllapota(allapot = null) {
   // ⚠️ A teljes állapot nélkül (a csere minden munkájában fut): a koinó születését a tagsági láncom adja.
   const szuletes = allapot?.koino?.azonosito ?? (await koinoSzuletese())?.azonosito ?? null;
   const vallalas = vallalasSzamitasa((await sajatLancEsemenyei(tar, szerzo)).filter((e) => esemenyKoinoja(e) === KOINO),
-    { koinoSzuletes: szuletes, ...kifutasBeallitas() });
+    { koinoSzuletes: szuletes, ...kifutasBeallitas(), tudatpontKeret: (await koinomSzabalyai(kornyezet)).tudatpontKeret });
   const tarolo = osszegzesTarolo(KOINO);
   const t = await tarolo.olvas();
   const jegyzek = new Map((await tar.szeletek()).map((x) => [x.szelet, x.db + x.bejelentes]));
@@ -3508,7 +3516,8 @@ async function ketFokBeallitasai(allapot = null) {
     // A minták szerzőinek tagsága a táramból (D95/2): ha nem derül ki, „nem ellenőrizhető” (nem hiba — D19), és a szerző a
     // függők közé kerül — ugyanennek a cserének a tagsági köre kéri a csomagját.
     tagE: (sz) => tagsagKerdes.tagE(sz),
-    esemenyMentes: (e) => esemenyMentese(tar, e) });
+    esemenyMentes: (e) => esemenyMentese(tar, e),
+    alapKuszobok: (await koinomSzabalyai(kornyezet)).alapKuszobok });   // ⭐ D118/2
   let kepEmlek = null;
   const tarto = teljesTarto({
     teljesE: async (k) => kf.fokok.get(k) !== 'osszegzo' && (kf.jegyzek.get(k) ?? 0) > 0,
@@ -4275,7 +4284,8 @@ async function allapotKiirasa(napokMulva) {
   kiir(SZIN.vastag + allapot.koino.nev + SZIN.vege
     + SZIN.halvany + '   (' + (allapot.koino.zart === false ? 'nyílt' : 'zárt') + ' · te: '
     + rovidAzonosito(szerzo) + ')' + SZIN.vege);
-  kiir(SZIN.halvany + 'tudatpontjaid: ' + szetosztottPontok(allapot, szerzo) + ' / ' + TUDATPONT_KERET
+  kiir(SZIN.halvany + 'tudatpontjaid: ' + szetosztottPontok(allapot, szerzo) + ' / '
+    + (allapot.koino?.szabalyok?.tudatpontKeret ?? TUDATPONT_KERET)   // ⭐ D118/2: a koinó kerete
     + ' · eseményeid: ' + (await sajatLancEsemenyei(tar, szerzo)).length
     + ' · esemény összesen: ' + esemenyek.length
     + (napokMulva ? ' · NÉZET: ' + napokMulva + ' nap múlva' : '') + SZIN.vege);
@@ -5102,6 +5112,8 @@ try {
             + ' csatlakozás: csatlakoz <a koinó neve>');
         } else {
           kiir('A koinó neve (ezt add meg annak, aki csatlakozik): ' + KOINO);
+          // ⭐ D118/2 (①b): a szabályai a születéséből (ha még nem jött meg, a mai értékek)
+          kiir('A szabályai: ' + szabalyokSzovege(await koinomSzabalyai(kornyezet)));
           kiir(SZIN.halvany + 'Ezen a készüléken a becenév: ' + KOINO_BECENEV + ' · a másik készüléken: csatlakoz ' + KOINO
             + SZIN.vege);
         }
@@ -5117,13 +5129,25 @@ try {
       // ⭐ D93/5: profil=nev,telepules — a koinó kötelező profil-mezői (a meghívás csak a profil lenyomatával érvényes).
       const profilErv = tobbi.find((x) => x.startsWith('profil='));
       const profil = profilErv ? profilErv.slice(7).split(',').map((m) => m.trim()).filter(Boolean) : [];
-      const szuletes = await ujKoinoSzuletese(nev, tobbi.find((x) => x !== 'nyilt' && !x.startsWith('profil=')),
-        { zart: !nyilt, profil });
+      // ⭐⭐ D118/2 (①b): a koinó SZABÁLYAI a születésben — `kulcs=egész` (pl. tudatpontKeret=500 elfogadasiKuszob=66);
+      // a küszöbök nevei az alapértékekhez kerülnek. Ami nincs megadva, az a mai érték.
+      const szabalyok = {};
+      for (const x of tobbi) {
+        const m = /^([A-Za-z]+)=(-?\d+)$/.exec(x);
+        if (!m) continue;
+        if (m[1] in ALAP_SZABALYOK.alapKuszobok) (szabalyok.alapKuszobok ??= {})[m[1]] = Number(m[2]);
+        else szabalyok[m[1]] = Number(m[2]);
+      }
+      const szabalyHiba = szabalyokAlakiHibaja(Object.keys(szabalyok).length ? szabalyok : undefined);
+      if (szabalyHiba) throw new Error('A koinó szabályai: ' + szabalyHiba);
+      const szuletes = await ujKoinoSzuletese(nev, tobbi.find((x) => x !== 'nyilt' && !/^[A-Za-z]+=/.test(x)),
+        { zart: !nyilt, profil, szabalyok });
       await koinoBecenevKijelolese(KOINO_BECENEV, szuletes.azonosito);
       if (profil.length) kiir(SZIN.halvany + 'Kötelező profil-mezők: ' + profil.join(', ') + ' (a meghívó tanúsítja — D28/2)' + SZIN.vege);
       kiir('A koino létrejött: ' + nev + (nyilt ? ' (NYÍLT — bárki olvashatja, aki eljut egy tagjához)'
         : ' (ZÁRT — a tartalmát csak tagnak adjuk ki; a betartatás az identitás-lépéssel jön)'));
       kiir('  A koinó neve: ' + szuletes.azonosito);
+      kiir('  A szabályai: ' + szabalyokSzovege(szuletes.adat.szabalyok));
       kiir(SZIN.halvany + '  Ezen a készüléken a „' + KOINO_BECENEV + '” becenév; a másik készüléken: csatlakoz '
         + szuletes.azonosito + SZIN.vege);
       break;

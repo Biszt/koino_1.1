@@ -32,6 +32,7 @@
 import { szabalyokErvenyesitese, erintettek, elsoErintett, javaslatEntitasai } from './szabalyok.js';
 import { csomagokKibontasa } from './dontesiCsomag.js';
 import { koinoSzuleteseListabol } from '../esemeny/esemeny.js';
+import { koinoSzabalyai } from '../esemeny/koinoSzabalyok.js';
 
 // ===================================
 // A BEMENET RENDEZÉSE — a determinizmus EGYETLEN forrása
@@ -281,6 +282,9 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
   // hívja). ⛔ Eddig a rendezett sor UTOLSÓ születése írta felül a koinó adatait — egy második, azonos nevű születés így
   // a koinó nevét és zártságát is átvette (a lelet).
   const koinoSzuletes = koinoSzuleteseListabol(szamitok, beallitas.koino ?? null);
+  // ⭐⭐ D118/2 (①b): a koinó SZABÁLYAI a születéséből (ha nincs meg, a mai értékek) — a döntés, a pakli és a parancssor
+  // innen veszi őket.
+  koinoAdatok.szabalyok = koinoSzabalyai(koinoSzuletes);
   const letrehozasok = new Map();        // entitás azonosító → a létrehozó esemény
   const pontok = utolsoNyer();           // "szerzo|entitas" → pontszám
   const ertekJavaslatok = utolsoNyer();  // "szerzo|entitas" → küszöb-négyes

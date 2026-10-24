@@ -1089,7 +1089,7 @@ export async function hianyzoFelmenok(tar, koino, azonosito, beallitas = {}) {
     data: {
       hianyzoFelmenok: hianyzok,
       hianyzoDb: hianyzok.length,
-      eemberEgyenleg: TUDATPONT_KERET - kiosztva
+      eemberEgyenleg: (kep.koino?.szabalyok?.tudatpontKeret ?? TUDATPONT_KERET) - kiosztva   // ⭐ D118/2: a koinó kerete
     }
   };
 }
@@ -1723,7 +1723,8 @@ export async function sajatHozzarendelesek(tar, koino, beallitas = {}) {
 
   const esemenyek = await koinoEsemenyei(tar, koino);
   const kep = await lapKepe(tar, koino, beallitas);
-  if (!en) return { data: [], count: 0, osszes: 0, nemEldontheto: 0, szabad: TUDATPONT_KERET, hianyzik: [], kovetkezoKurzor: null };
+  const keret = kep.koino?.szabalyok?.tudatpontKeret ?? TUDATPONT_KERET;   // ⭐ D118/2: a koinó kerete
+  if (!en) return { data: [], count: 0, osszes: 0, nemEldontheto: 0, szabad: keret, hianyzik: [], kovetkezoKurzor: null };
 
   // A nyertes pont-esemény sorszáma (a saját láncomban) — ez a „legutóbb rendezett” mércéje.
   const sajatSorszam = new Map();
@@ -1773,7 +1774,7 @@ export async function sajatHozzarendelesek(tar, koino, beallitas = {}) {
     count: data.length,               // a prototípusé: a visszaadott tételek száma
     osszes: tetelek.length,           // ⭐ és hány van összesen (a lista felülről korlátos)
     nemEldontheto,
-    szabad: TUDATPONT_KERET - szetosztottPontok(kep, en),
+    szabad: keret - szetosztottPontok(kep, en),
     hianyzik: hianyzik.slice(0, HOZZARENDELES_KORLAT),
     kovetkezoKurzor: tobb && utolso ? utolso.sorszam + ':' + utolso.entitasId : null
   };
@@ -1806,7 +1807,7 @@ export async function entitasKuszobei(tar, koino, azonosito, beallitas = {}) {
 
   console.log('pakli.entitasKuszobei - VÉGE', { vanSajat: sajat !== null });
   return {
-    aktualisErtekek: kuszobokKifele(e.kuszobok ?? ALAP_KUSZOBOK),
+    aktualisErtekek: kuszobokKifele(e.kuszobok ?? kep.koino?.szabalyok?.alapKuszobok ?? ALAP_KUSZOBOK),   // ⭐ D118/2
     // ⭐ D101: a saját javaslat a JAVASLAT alakjában (az `ErtekJavaslatModal` ezekkel a nevekkel tölti ki a mezőit).
     eemberJavaslat: sajat ? kuszobokKifele(sajat, 'javaslat') : null
   };

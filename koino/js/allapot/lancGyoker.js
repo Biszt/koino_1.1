@@ -46,7 +46,8 @@ import {
   allapotBizonyitek, allapotBizonyitekEllenorzese
 } from '../esemeny/osszegzoFa.js';
 import { pontEsemenyMerlege } from './szabalyok.js';
-import { AZONOSITO_MINTA, esemenyKoinoja } from '../esemeny/esemeny.js';
+import { AZONOSITO_MINTA, esemenyKoinoja, azonositoAlaku } from '../esemeny/esemeny.js';
+import { koinoSzabalyai, ALAP_SZABALYOK } from '../esemeny/koinoSzabalyok.js';
 
 export const NAPLO_FAJTA = 'naplo';
 export const KIOSZTAS_FAJTA = 'kiosztas';
@@ -136,10 +137,11 @@ export async function hozottBizonyitekokOnbizonyitasa(e) {
 }
 
 /** Egy saját esemény hatása az állásra — a szabály ítéletével (a `szabalyok.js` ugyanígy lép). */
-function allasLepese(allas, e) {
+function allasLepese(allas, e, keret) {
   if (e.tipus !== 'TudatpontRendezes') return false;
   // ⚠️ A saját láncot itt mindig hézagtalanul ismerjük (különben a lánc-gyökér null), tehát folytonos.
-  const merleg = pontEsemenyMerlege(e, allas, true);
+  // ⭐ D118/2: a keret a koinóé (a hívó adja; ha nem, a mai érték) — ugyanaz, amivel a szabály-réteg ítél.
+  const merleg = pontEsemenyMerlege(e, allas, true, keret);
   if (merleg.elvetve) return false;           // ami nem számít, az a régi értéket hagyja érvényben
   allas.pontok.set(merleg.entitas, merleg.pont);
   allas.osszeg = merleg.ujOsszeg;
@@ -165,7 +167,7 @@ async function kiosztasFaja(pontok) {
  * @param {Array<Object>} elozmenyek - a szerző eseményei, sorszám szerint 1-től, hézag nélkül
  * @returns {Promise<Object|null>} null, ha a lánc nem ép
  */
-export async function lancAllapotaLancbol(elozmenyek) {
+export async function lancAllapotaLancbol(elozmenyek, keret) {
   const allas = { osszeg: 0, pontok: new Map() };
   const naploLevelek = [];
   let elozo = null;
@@ -173,7 +175,7 @@ export async function lancAllapotaLancbol(elozmenyek) {
     const e = elozmenyek[i];
     if (e.sorszam !== i + 1 || (e.elozo ?? null) !== elozo) return null;
     naploLevelek.push(await levelOsszegzes(NAPLO_FAJTA, e.azonosito));
-    allasLepese(allas, e);
+    allasLepese(allas, e, keret);
     elozo = e.azonosito;
   }
   const naploGyoker = await naploGyokere(NAPLO_FAJTA, naploLevelek);
@@ -189,8 +191,17 @@ export async function lancAllapotaLancbol(elozmenyek) {
  * A lánc-gyökér a szerző 1..k-1 sorszámú eseményeiből — a k-adik eseményhez. Gyorsítótár nélkül.
  * @returns {Promise<Object|null>} null, ha a lánc nem ép
  */
-export async function lancGyokerLancbol(elozmenyek) {
-  return (await lancAllapotaLancbol(elozmenyek))?.lancGyoker ?? null;
+export async function lancGyokerLancbol(elozmenyek, keret) {
+  return (await lancAllapotaLancbol(elozmenyek, keret))?.lancGyoker ?? null;
+}
+
+/**
+ * ⭐ D118/2 (①b): a koinó tudatpont-kerete a tárból — lenyomat-nevű koinónál a születés azonosítója maga a koinó neve
+ * (egy kérdés); ha nincs meg (vagy a régi alak), a mai érték.
+ */
+export async function koinoKerete(tar, koino) {
+  const szuletes = azonositoAlaku(koino) ? await tar?.esemeny?.(koino) : null;
+  return koinoSzabalyai(szuletes ?? null).tudatpontKeret;
 }
 
 // ===================================
@@ -234,14 +245,17 @@ async function fajlbolAllapot(adat, szerzo) {
   // mérhető — egy őr, ami semmit nem fog meg, csak azt hiteti el, hogy véd).
   const naplo = { ...ujNaplo(NAPLO_FAJTA), csucsok: adat.csucsok };
   const pontok = new Map(adat.pontok);
+  // ⚠️ A keret nélküli (régebbi) fájl a mai kerettel készült.
+  const keret = adat.keret ?? ALAP_SZABALYOK.tudatpontKeret;
+  if (!Number.isSafeInteger(keret)) return null;
   return { szerzo, sorszam: adat.sorszam, utolso: adat.utolso ?? null, naplo, osszeg: adat.osszeg, pontok,
-    kiosztasGyoker: adat.kiosztasGyoker, kiosztasFa: null };
+    kiosztasGyoker: adat.kiosztasGyoker, kiosztasFa: null, keret };
 }
 
 async function fajlba(a) {
   const adat = {
     v: TAR_VALTOZAT, szerzo: a.szerzo, sorszam: a.sorszam, utolso: a.utolso, csucsok: a.naplo.csucsok,
-    osszeg: a.osszeg, pontok: [...a.pontok], kiosztasGyoker: a.kiosztasGyoker
+    osszeg: a.osszeg, pontok: [...a.pontok], kiosztasGyoker: a.kiosztasGyoker, keret: a.keret
   };
   return { ...adat, ell: await ellenorzoje(adat) };
 }
@@ -259,6 +273,7 @@ async function illikALanchoz(tar, koino, a) {
  * @returns {Promise<Object|null>} null, ha a saját lánc nem ép (hézag, elágazás, szakadás)
  */
 async function allapotIg(tar, koino, szerzo, meddig, tarolo) {
+  const keret = await koinoKerete(tar, koino);
   let tarbeli = memoria.get(tar);
   if (!tarbeli) { tarbeli = new Map(); memoria.set(tar, tarbeli); }
 
@@ -267,9 +282,12 @@ async function allapotIg(tar, koino, szerzo, meddig, tarolo) {
   // ⚠️ A fájl hibája nem hiba: a gyorsítótár elhagyható, a lánc pótolja.
   const fajlbol = tarolo ? await fajlbolAllapot(await tarolo.olvas().catch(() => null), szerzo) : null;
   for (const jelolt of [tarbeli.get(szerzo), fajlbol]) {
-    if (jelolt && jelolt.sorszam <= meddig && await illikALanchoz(tar, koino, jelolt)) { a = jelolt; break; }
+    // ⭐ D118/2: a kép a koinó keretével készült — ha azóta megjött a születés (más kerettel), a lánc újraszámolja.
+    if (jelolt && jelolt.sorszam <= meddig && jelolt.keret === keret && await illikALanchoz(tar, koino, jelolt)) {
+      a = jelolt; break;
+    }
   }
-  if (!a) a = uresAllapot(szerzo);
+  if (!a) a = { ...uresAllapot(szerzo), keret };
   const indulo = a.sorszam;
 
   // ----- A hiányzó vég a láncból -----
@@ -287,12 +305,12 @@ async function allapotIg(tar, koino, szerzo, meddig, tarolo) {
       return null;
     }
     uj = await naploHozzafuzes(uj, await levelOsszegzes(NAPLO_FAJTA, ott[0].azonosito));
-    if (allasLepese(allas, ott[0])) pontValtozott = true;
+    if (allasLepese(allas, ott[0], keret)) pontValtozott = true;
     utolso = ott[0].azonosito;
   }
   const kiosztasFa = pontValtozott ? await kiosztasFaja(pontok) : a.kiosztasFa;
   const kesz = {
-    szerzo, sorszam: meddig, utolso, naplo: uj, osszeg: allas.osszeg, pontok, kiosztasFa,
+    szerzo, sorszam: meddig, utolso, naplo: uj, osszeg: allas.osszeg, pontok, kiosztasFa, keret,
     kiosztasGyoker: pontValtozott ? await allapotGyokere(kiosztasFa) : a.kiosztasGyoker
   };
 

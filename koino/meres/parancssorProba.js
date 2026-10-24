@@ -399,6 +399,57 @@ proba('⭐ D118/2: a `csatlakoz <név>` után a csere hozza a koinót — és eg
     }
   });
 
+// ⭐⭐ D118/2 (①b): A KOINÓ SZABÁLYAI A SZÜLETÉSBEN — a parancssoron és a MÁSIK készüléken. Az alapító 500-as kerettel
+// hozza létre a koinót; a csere a születéssel a szabályt is átviszi, és a másik készülék (aki semmit nem állított be) a
+// saját programjával tartja be: a 600 pontot nem írja a lemezére, a 450-et igen. A határon kívüli szabállyal koinó nem
+// születik. Viselkedést mérünk (a két lemezt), nem feliratot. ⚠️ Rontás: ha a művelet a mai keretet nézi
+// (`koinomSzabalyai` nélkül), a 600 a lemezre kerül.
+proba('⭐⭐ D118/2 (①b): a születés szabályai a parancssoron — 500-as kerettel a 600 pont nem kerül a lemezre (a csere után a másik készüléken sem), a 450 igen',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const c = await ujKeszulek();
+    try {
+      const letrejott = await fut(a, 'koino', 'Szabály-próba', 'nyilt', 'tudatpontKeret=500', 'elfogadasiKuszob=66');
+      const K = await koinoNeve(a);
+      if (!K) return false;
+      const g = azonosito(await fut(a, 'gondolat', 'KERET'), 'Létrejött:');
+      const sokA = await fut(a, 'pont', g, '600').catch((h) => String(h?.message ?? h));
+      await fut(a, 'pont', g, '450');
+      await fut(b, 'csatlakoz', K);
+      await csereKor(a, b, 7797);
+      const nevKiiras = await fut(b, 'koino');
+      const sokB = await fut(b, 'pont', g, '600').catch((h) => String(h?.message ?? h));
+      await fut(b, 'pont', g, '450');
+      // A határon kívüli szabály: nincs koinó, nincs jegyzett becenév.
+      const rossz = await fut(c, 'koino', 'Rossz', 'tudatpontKeret=20000').catch((h) => String(h?.message ?? h));
+      const lemez = async (hely) => (await readFile(join(hely, K, 'esemenyek.jsonl'), 'utf8').catch(() => ''))
+        .split('\n').filter(Boolean).map((x) => JSON.parse(x));
+      const pontjai = (esemenyek, ki) => esemenyek.filter((e) => e.tipus === 'TudatpontRendezes' && e.szerzo === ki)
+        .map((e) => e.adat.pont);
+      const aLemez = await lemez(a);
+      const bLemez = await lemez(b);
+      const aSzerzo = aLemez.find((e) => e.tipus === 'KoinoLetrehozas')?.szerzo;
+      const bSzerzo = bLemez.find((e) => e.tipus === 'Belepes' || (e.tipus === 'TudatpontRendezes' && e.szerzo !== aSzerzo))?.szerzo;
+      const szuletesB = bLemez.find((e) => e.tipus === 'KoinoLetrehozas' && e.azonosito === K);
+      const ok = /tudatpontKeret=500/.test(letrejott) && /Kereted 500/.test(sokA) && /Kereted 500/.test(sokB)
+        && !pontjai(aLemez, aSzerzo).includes(600) && pontjai(aLemez, aSzerzo).includes(450)
+        && szuletesB?.adat?.szabalyok?.tudatpontKeret === 500 && szuletesB?.adat?.szabalyok?.alapKuszobok?.elfogadasiKuszob === 66
+        // ⭐ A születés MINDEN szabályt hordoz (a megadottakon túl a mai értékeket is) — egy későbbi program alapértéke így
+        // nem írhatja át (a 15. mérés megismétlése).
+        && szuletesB.adat.szabalyok.kategoriaKorlat === 3 && szuletesB.adat.szabalyok.felhatalmazasKell === 5
+        && szuletesB.adat.szabalyok.alapKuszobok.maximumDontesiIdo === 604800
+        && !!bSzerzo && !pontjai(bLemez, bSzerzo).includes(600) && pontjai(bLemez, bSzerzo).includes(450)
+        && /tudatpontKeret=500/.test(nevKiiras)
+        && /határon kívül/.test(rossz) && (await koinoNeve(c)) === null;
+      if (!ok) process.stderr.write('    (a kimenetek: ' + JSON.stringify({ letrejott: letrejott.slice(-200), sokA, sokB, nevKiiras, rossz,
+        aPontok: pontjai(aLemez, aSzerzo), bPontok: bSzerzo ? pontjai(bLemez, bSzerzo) : null }) + ')\n');
+      return ok;
+    } finally {
+      for (const h of [a, b, c]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ===================================
 // ⭐⭐ B/1–B/2: A `hozd` AZ ÁTMENETI TÁRBA — és a pontom után a tartósba lép elő (2026-10-03)
 // ===================================

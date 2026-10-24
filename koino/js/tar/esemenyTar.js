@@ -30,7 +30,7 @@ import { esemenyEllenorzese, elagazasE, szelet, esemenyKoinoja } from '../esemen
 // ⭐ D80: az `Ellentmondas` esemény TARTALMA is a kapun megy át (önmagát igazoló bizonyíték).
 import { ellentmondasEllenorzese } from '../allapot/ellentmondas.js';
 // ⭐ D81: a pont-esemény a saját bizonyítékát hozza — a kapu ellenőrzi, hogy illik a lánc-gyökeréhez.
-import { pontEsemenyOnbizonyitasa, hozottBizonyitekokOnbizonyitasa } from '../allapot/lancGyoker.js';
+import { pontEsemenyOnbizonyitasa, hozottBizonyitekokOnbizonyitasa, koinoKerete } from '../allapot/lancGyoker.js';
 import { CSOMAG_TIPUS, dontesiCsomagEllenorzese } from '../allapot/dontesiCsomag.js';
 // ⭐ D95/1: a lezárási összegzés alakja.
 import { LEZARASI_OSSZEGZES, lezarasiOsszegzesAlakja } from '../allapot/lezarasiOsszegzes.js';
@@ -113,7 +113,9 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
   // szabály-réteg ennek alapján hagyja ki a pontjait (D79). ⛔ Ezért a tartalmát is itt ellenőrizzük,
   // az egyetlen kapun (3. szabály): hamis vád nem kerül a tárba, és a szabály a tárban lévőt hiszi el.
   if (esemeny.tipus === 'Ellentmondas') {
-    const vad = await ellentmondasEllenorzese(esemeny.adat, esemeny.koino);
+    // ⭐ D118/2: a koinó kerete a tárból (a születés azonosítója maga a koinó neve); ha nincs meg, a mai érték.
+    const vad = await ellentmondasEllenorzese(esemeny.adat, esemeny.koino,
+      { tudatpontKeret: await koinoKerete(tar, esemeny.koino) });
     // ⚠️ A vádpontot (vagy elágazásnál a vesztest) a bejelentő mondja be — az ellenőrzés vetette össze.
     if (!vad.rendben) {
       console.log('esemenyMentese - VÉGE (HAMIS VÁD)', { ok: vad.ok });

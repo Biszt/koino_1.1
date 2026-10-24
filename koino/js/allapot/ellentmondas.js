@@ -77,20 +77,21 @@ function elokepe(e) {
  * szerző a saját gyökerénél használ: csak az entitás régi értéke és az összeg kell hozzá.
  * @returns {Promise<null|{regi: number, osszeg: number, merleg: Object}>} null, ha a bizonyíték hibás
  */
-async function pontHatasa(e, elotte, bizonyitek) {
+async function pontHatasa(e, elotte, bizonyitek, keret) {
   const entitas = e.adat?.entitas;
   if (typeof entitas !== 'string') return null;
   const b = await allapotBizonyitekEllenorzese(KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ, elotte.kiosztas, entitas, bizonyitek);
   if (!b.rendben) return null;
   const regi = b.van ? b.osszegek[0] : 0;
   const osszeg = elotte.kiosztas.o[0];
-  return { regi, osszeg, merleg: pontEsemenyMerlege(e, { osszeg, pontok: new Map([[entitas, regi]]) }, true) };
+  // ⭐ D118/2: a koinó kerete (a hívó adja; ha nem, a mai érték) — ugyanaz, amivel a szerző a saját gyökerénél ítél.
+  return { regi, osszeg, merleg: pontEsemenyMerlege(e, { osszeg, pontok: new Map([[entitas, regi]]) }, true, keret) };
 }
 
 /** A pont-esemény utáni kiosztás-gyökér a szerző szabálya szerint (amit elvet, az nem változtat). */
-async function utanaKiosztas(e, elotte, bizonyitek) {
+async function utanaKiosztas(e, elotte, bizonyitek, keret) {
   if (e.tipus !== 'TudatpontRendezes') return elotte.kiosztas;
-  const h = await pontHatasa(e, elotte, bizonyitek);
+  const h = await pontHatasa(e, elotte, bizonyitek, keret);
   if (!h) return null;
   if (h.merleg.elvetve) return elotte.kiosztas;
   const uj = h.merleg.pont > 0 ? { ertek: null, osszegek: [h.merleg.pont] } : null;
@@ -112,7 +113,8 @@ async function utanaKiosztas(e, elotte, bizonyitek) {
  * @returns {Promise<{rendben: boolean, ok?: string, vadpont?: number, vesztes?: string}>}
  *   elágazásnál `vesztes` (a kihagyandó ág azonosítója), a többinél `vadpont`
  */
-export async function ellentmondasEllenorzese(adat, koino) {
+export async function ellentmondasEllenorzese(adat, koino, beallitas = {}) {
+  const keret = beallitas.tudatpontKeret;   // ⭐ D118/2: a koinó kerete (a születéséből — a hívó tudja)
   if (!adat || typeof adat !== 'object' || typeof adat.kit !== 'string') return nem('hiányzik a vádolt (kit)');
   const { kit, fajta } = adat;
   if (!ELLENTMONDAS_FAJTAK.includes(fajta)) return nem('ismeretlen fajta: ' + fajta);
@@ -142,7 +144,7 @@ export async function ellentmondasEllenorzese(adat, koino) {
     if (!Number.isSafeInteger(pont) || pont < 0 || !Number.isSafeInteger(kiosztva) || kiosztva < 0) {
       return nem('a pont-esemény alakja hibás (azt a szabály amúgy is elveti)');
     }
-    const h = await pontHatasa(e, elotte, e.adat.bizonyitek);
+    const h = await pontHatasa(e, elotte, e.adat.bizonyitek, keret);
     if (!h) return nem('a pont-esemény bizonyítéka nem az aláírt gyökérhez tartozik');
     if (kiosztva === h.osszeg - h.regi + pont) return nem('nincs ellentmondás: a bemondás kijön az előző állapotból');
     vadpont = e.sorszam;
@@ -152,7 +154,7 @@ export async function ellentmondasEllenorzese(adat, koino) {
     if (k.sorszam !== e.sorszam + 1 || k.elozo !== e.azonosito) return nem('a két esemény nem közvetlenül követi egymást');
     const kovetkezoElotte = elokepe(k);
     if (!kovetkezoElotte) return nem('a következő esemény nem hordozza a lánc-gyökerét');
-    const vart = await utanaKiosztas(e, elotte, e.adat?.bizonyitek);
+    const vart = await utanaKiosztas(e, elotte, e.adat?.bizonyitek, keret);
     if (!vart) return nem('a pont-esemény bizonyítéka nem az aláírt gyökérhez tartozik');
     // ⛔ A LENYOMAT dönt (lásd `elokepe`).
     if (vart.l === kovetkezoElotte.kiosztas.l) return nem('nincs ellentmondás: a következő esemény a helyes állapotot köti');

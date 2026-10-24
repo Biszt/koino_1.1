@@ -1366,3 +1366,19 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     szól) · Csaba · `esemeny.js`, `tagsag.js`, `allapotSzamitas.js`, `identitas.js`, `ter.js`, `vonal.js`, `fajlTar.js`
     (`koinoBecenevFeloldasa` / `Kijelolese`), `koino.js`, és a koinó-hasonlítások 18 fájlban; a próbák (`koinoMappa`,
     `koinoNeve` a parancssor-próbában).
+194. **2026-10-24 · a költözés ①b: a koinó szabályai a születésben (D118/2, KZ1)**
+    → **a tudatpont-keret, a kategória-korlát, a tanúsítás-szám, a felhatalmazás alapértéke és a küszöbök alapértékei a
+    születés `szabalyok` mezőjében (`koinoSzabalyok.js` — a kapu csak ismert kulcsot és a határon belüli egész számot
+    enged; a keret felső határa a mai 10 000); a program az új születésbe MINDET kiírja (+206 B), és az `ALAP_SZABALYOK`
+    soha nem változik (csak a régi alakú és a még meg nem érkezett születésé); a számítás minden helyen a koinó számával
+    (a szabály-réteg, a döntés, a lezárási összegzés, az identitás-nézet, a lánc-gyökér — a gyorsítótár a kerethez kötött —,
+    a lánc-ellenőrzés, az ellentmondás, az észlelő, a vállalás, a művelet, a pakli); a parancssor:
+    `koino "<név>" … kulcs=érték`** · ha csak az eltérők kerülnének a születésbe, egy későbbi program alapértéke minden ilyen
+    koinót csendben átírna (a 15. mérés kettéhasadása — a megismételt mérés mutatja: a régi alakú hasad, az új nem); a
+    hiányzó születésnél a mai érték a legengedékenyebb, tehát a kapu semmi érvényeset nem dob el · ⛔ a meghívó-szám NEM
+    szabály (Csaba, 2026-10-24: „maradjon 1 egyelőre”) — a modell része; ⛔ a mérés egy hibát is talált: a keret MÁSODIK
+    vizsgálata (a számított összegre, hézagos láncnál) még a program állandóját nézte · Csaba (KZ1) · `koinoSzabalyok.js`
+    (új), `esemeny.js`, `szabalyok.js`, `javaslatSzamitas.js`, `lezarasiOsszegzes.js`, `osszegzoTartas.js`,
+    `identitas.js`, `lancGyoker.js`, `lancEllenorzes.js`, `ellentmondas.js`, `eszlelo.js`, `esemenyTar.js`, `vallalas.js`,
+    `allapotSzamitas.js`, `muveletek.js`, `pakli.js`, `koino.js`, `verzioMeres.js`; a próbák (esemény, szabály, döntés,
+    identitás, lánc-gyökér, parancssor).

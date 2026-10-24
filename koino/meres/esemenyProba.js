@@ -7,6 +7,7 @@ import {
   esemenyLetrehozasa, esemenyEllenorzese, elagazasE, bejelentesHelyei, esemenyKoinoja, koinoSzuleteseE, koinoSzuleteseListabol
 } from '../js/esemeny/esemeny.js';
 import { probaGyujtemeny } from './probaFuttato.js';
+import { koinoSzabalyai, ALAP_SZABALYOK, teljesSzabalyok, szabalyokAlakiHibaja } from '../js/esemeny/koinoSzabalyok.js';
 
 const { proba, futtatas } = probaGyujtemeny('Az aláírt esemény próbája');
 
@@ -227,6 +228,73 @@ proba('⭐⭐ D118/2: a koinó születése EGY szabállyal — lenyomat-nevű ko
     return koinoSzuleteseListabol([r1, r2], 'regi') === kisebb && koinoSzuleteseListabol([r2, r1], 'regi') === kisebb
       // Koinó nélkül az új alakú elöl; a lenyomat-nevet mondó (hamis) soha.
       && koinoSzuleteseListabol([r1, valodi, r2]) === valodi && koinoSzuleteseListabol([hamis]) === null;
+  });
+
+// ===== ⭐⭐ D118/2 (①b): A KOINÓ SZABÁLYAI A SZÜLETÉSBEN — a mező alakja a kapun =====
+//
+// A születés `szabalyok` mezője az állapotot befolyásoló számokat hordozza (`koinoSzabalyok.js`). A kapu csak ismert
+// kulcsot enged, egész számot a határokon belül — különben egy hibás születés minden készüléken mást számolna (a
+// keretet túllépő szám a kanonikus alak „biztonságos egész” kivételét is áttörné, D106).
+
+proba('⭐⭐ D118/2 (①b): a születés szabályai a kapun — a jó alakot beengedi, az ismeretlen kulcsot, a határon kívülit, a nem számot és a fordított döntési időt elveti',
+  async () => {
+    const szuletesSzabalyokkal = (szabalyok) => esemenyLetrehozasa(
+      { ...szuletesLeiras, adat: { ...szuletesLeiras.adat, szabalyok } }, kulcspar);
+    const jok = [
+      { tudatpontKeret: 500 },
+      { tudatpontKeret: 10000, kategoriaKorlat: 0, tanusitasKell: 1, felhatalmazasKell: 1000 },
+      { alapKuszobok: { elfogadasiKuszob: 66, reszveteliKuszob: 10 } },
+      { alapKuszobok: { minimumDontesiIdo: 3600, maximumDontesiIdo: 3600 } }
+    ];
+    const rosszak = [
+      [{ meghivoKell: 2 }, /ismeretlen szabály/],                  // ⛔ a meghívó-szám nem paraméter (Csaba, 2026-10-24)
+      [{ tudatpontKeret: 10001 }, /határon kívül/],                // a D106 kivétele a mai keretre van levezetve
+      [{ tudatpontKeret: 0 }, /határon kívül/],
+      [{ kategoriaKorlat: 17 }, /határon kívül/],              // (a tört számot már a kanonikus alak sem írja alá)
+      [{ tanusitasKell: '3' }, /határon kívül/],
+      [{ alapKuszobok: { elfogadasiKuszob: 101 } }, /küszöb a határon kívül/],
+      [{ alapKuszobok: { kuszob: 51 } }, /ismeretlen küszöb/],
+      [{ alapKuszobok: { minimumDontesiIdo: 700000 } }, /legkisebb döntési idő/],   // a mai legnagyobb 604 800
+      [[500], /objektum/]
+    ];
+    for (const sz of jok) {
+      const e = await szuletesSzabalyokkal(sz);
+      if ((await esemenyEllenorzese(e)).rendben !== true) return false;
+    }
+    for (const [sz, minta] of rosszak) {
+      const v = await esemenyEllenorzese(await szuletesSzabalyokkal(sz));
+      if (v.rendben || !minta.test(v.ok)) { console.log('    (átment vagy más okkal bukott:', JSON.stringify(sz), v.ok, ')'); return false; }
+    }
+    // ⚠️ A régi (mező nélküli) születés változatlanul érvényes.
+    return (await esemenyEllenorzese(await esemenyLetrehozasa(szuletesLeiras, kulcspar))).rendben === true;
+  });
+
+proba('⭐ D118/2 (①b): a koinó szabályai a születésből — ami nincs megadva, a mai érték; a hiányzó, a régi és a hibás születés a mai értékeket adja',
+  async () => {
+    const sz = await esemenyLetrehozasa({ ...szuletesLeiras, adat: { ...szuletesLeiras.adat,
+      szabalyok: { tudatpontKeret: 500, alapKuszobok: { elfogadasiKuszob: 66 } } } }, kulcspar);
+    const k = koinoSzabalyai(sz);
+    const hibas = { ...sz, adat: { ...sz.adat, szabalyok: { tudatpontKeret: -1 } } };
+    return k.tudatpontKeret === 500 && k.kategoriaKorlat === ALAP_SZABALYOK.kategoriaKorlat
+      && k.alapKuszobok.elfogadasiKuszob === 66
+      && k.alapKuszobok.maximumDontesiIdo === ALAP_SZABALYOK.alapKuszobok.maximumDontesiIdo
+      && koinoSzabalyai(null) === ALAP_SZABALYOK && koinoSzabalyai(await esemenyLetrehozasa(szuletesLeiras, kulcspar)) === ALAP_SZABALYOK
+      && koinoSzabalyai(hibas) === ALAP_SZABALYOK && koinoSzabalyai(esemeny) === ALAP_SZABALYOK
+      && ALAP_SZABALYOK.tudatpontKeret === 10000 && Object.isFrozen(k) && Object.isFrozen(k.alapKuszobok);
+  });
+
+proba('⭐ D118/2 (①b): az új születésbe írt szabályok TELJESEK — a megadottak a mai értékek helyén, és a kapun átmennek',
+  async () => {
+    const t = teljesSzabalyok({ tudatpontKeret: 500, alapKuszobok: { elfogadasiKuszob: 66 } });
+    const ures = teljesSzabalyok();
+    const kulcsok = (o) => Object.keys(o).sort().join(',');
+    t.alapKuszobok.reszveteliKuszob = 7;   // sima objektum (az esemény adata) — a mai értékeket nem érinti
+    return t.tudatpontKeret === 500 && t.alapKuszobok.elfogadasiKuszob === 66 && t.kategoriaKorlat === ALAP_SZABALYOK.kategoriaKorlat
+      && kulcsok(t) === kulcsok(ALAP_SZABALYOK) && kulcsok(t.alapKuszobok) === kulcsok(ALAP_SZABALYOK.alapKuszobok)
+      && JSON.stringify(ures) === JSON.stringify(ALAP_SZABALYOK) && szabalyokAlakiHibaja(ures) === null
+      && ALAP_SZABALYOK.alapKuszobok.reszveteliKuszob === 0
+      && (await esemenyEllenorzese(await esemenyLetrehozasa({ ...szuletesLeiras, adat: { ...szuletesLeiras.adat, szabalyok: t } },
+        kulcspar))).rendben === true;
   });
 
 // ===== TÁJÉKOZTATÓ MÉRÉS =====

@@ -1363,6 +1363,29 @@ ugyanazt TUDJUK-e; nem azt, hogy ugyanazt SZÁMOLJUK-e.*
 (ma egy „nincs újdonság" kör 334 bájt), és hogy eltérésnél mit tegyen a készülék a
 bejelentésen túl. *Az külön döntés — a koino bejelent, nem bíráskodik (D19).*
 
+### ⭐⭐ Megismételve a szabályokkal a születésben (2026-10-24, D118/2 — a költözés ①b)
+
+`node koino/meres/verzioMeres.js ir` → az `ALAP_SZABALYOK.tudatpontKeret` átírása 5000-re (`koinoSzabalyok.js`, `.bak`
+másolattal) → `… olvas`
+
+Az ①b óta a koinó szabályai a **születésében** állnak, és a program az új születésbe **mindet** kiírja (`teljesSzabalyok`).
+A mérés ugyanazt a láncot két koinóban gyártja le — a szerző az alapító (ő tag, a D93/1 szerint is számít; a régi mérés
+születés és tagság nélkül ma semmit nem számolna): egy **régi alakúban** (a születésnek nincs `szabalyok` mezője) és egy
+**új alakúban** (minden szabály a születésben). 9 esemény mindkettőben, bájtra ugyanaz a két olvasásnál.
+
+- **A régi alakú koinó** kettéhasad, mint 2026-09-11-én: a 10 000-es program 4 entitást és 8000 pontot lát
+  (`aG7q5KVL…pOPF7q0`), az 5000-es 2 entitást, 4000 pontot és 2 kivételt (`cR8XvHFi…zXszxo`).
+- **Az új alakú koinó** NEM hasad: mindkét program a születés 10 000-es keretével számol, 4 entitás, 8000 pont, 0 kivétel,
+  és az ujjlenyomat **bájtra ugyanaz** (`hBcJaJ-u…Vc2Y5fQ`).
+- ⛔ **A mérés egy hibát is talált:** az első megismétléskor az új alakú koinó is kettéhasadt (2 entitás, „túllépné a
+  tudatpont-keretet (6000 / 5000)”) — a `pontEsemenyMerlege` MÁSODIK keret-vizsgálata (a számított összegre) még a program
+  állandóját nézte; az első (a bemondott összegre) már a koinóét. Javítva, és a próbája hézagos lánccal méri ezt az ágat
+  (`szabalyProba.js` — a rontás, a régi feltétel, bukik).
+
+⭐ **Amit bizonyít:** a szabály a koinóhoz kötött, a program-állandó csak a régi alakú (és a még meg nem érkezett)
+születésnél dönt. ⛔ Ezért az `ALAP_SZABALYOK` soha nem változhat: egy régi alakú koinót különben két program két
+állapotra számolna — egy új szabály új koinó (a költözés, KZ4). A szabályok ára a születésben **+206 bájt** (427 → 633), egyszer koinónként.
+
 ---
 
 ## 16. A FÁJL-ÁTVITEL SEBESSÉGE AZ ÁTFÚRT RÉSEN (2026-09-13)

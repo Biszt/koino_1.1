@@ -743,5 +743,72 @@ proba('⭐⭐ D93/1: a NEM TAG pontja nem számít — függőben (nem vád), é
     && csomaggal.entitasok.get(t.azonosito)?.osszesPont === 30;
 });
 
+// ===================================
+// ⭐⭐ D118/2 (①b): A KOINÓ SZABÁLYAI A SZÜLETÉSBEN
+// ===================================
+//
+// Ugyanazok az események két koinóban: az egyik születése kisebb keretet és kategória-korlátot mond. ⭐ A szabály-réteg a
+// születésből ítél — a programban nincs más szám. ⚠️ Rontás: ha a `szabalyokErvenyesitese` a mai állandót veszi, bukik.
+
+/** Egy próba-koinó születése a megadott szabályokkal (a régi alakban — a `tagokkal` ehhez építi a tagságot). */
+async function koinoSzabalyokkal(szabalyok) {
+  const alapito = await ujEember();
+  return alapito.tesz('KoinoLetrehozas', { nev: 'Szabályos koinó', leiras: null, alapitok: [], zart: true, szabalyok });
+}
+
+proba('⭐⭐ D118/2 (①b): a koinó KERETE a születéséből — 500-as keretnél a 600 pont nem számít, a 450 igen; ugyanez a mai koinóban számít',
+  async () => {
+    const szuletes = await koinoSzabalyokkal({ tudatpontKeret: 500 });
+    const anna = await ujEember();
+    const t = await anna.tesz('GondolatLetrehozas', { cim: 'Keret', meret: 10 });
+    const sok = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 600 });
+    const kevesebb = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 450 });
+
+    const kicsiben = allapotSzamitasa(await tagokkal([szuletes, t, sok]));
+    const utana = allapotSzamitasa(await tagokkal([szuletes, t, sok, kevesebb]));
+    const maiban = allapotSzamitasa(await tagokkal([t, sok]));
+    return !kicsiben.entitasok.has(t.azonosito)
+      && kicsiben.kivetelek.some((k) => k.azonosito === sok.azonosito && /600 \/ 500/.test(k.ok))
+      && utana.entitasok.get(t.azonosito)?.osszesPont === 450
+      && maiban.kivetelek.length === 0 && maiban.entitasok.get(t.azonosito)?.osszesPont === 600
+      // ⭐ Az állapot kimondja a koinó szabályait (a felület és a parancssor innen veszi).
+      && kicsiben.koino?.szabalyok?.tudatpontKeret === 500 && maiban.koino?.szabalyok?.tudatpontKeret === TUDATPONT_KERET;
+  });
+
+// ⭐ A MÁSIK ÁG: a bemondás a kereten belül van, de hézag után a SZÁMÍTOTT összeg túllépi. A 15. mérés megismétlése találta
+// meg, hogy ez az ág még a program állandóját nézte (a mai, 10 000-es koinóban ugyanez az esemény számít — jelzéssel).
+proba('⭐ D118/2 (①b): hézagos láncnál a SZÁMÍTOTT összeg is a koinó keretéhez mérődik — 500-asban a 700 nem számít, a maiban igen',
+  async () => {
+    const szuletes = await koinoSzabalyokkal({ tudatpontKeret: 500 });
+    const anna = await ujEember();
+    const y = await anna.tesz('GondolatLetrehozas', { cim: 'Y', meret: 10 });
+    const py = await anna.tesz('TudatpontRendezes', { entitas: y.azonosito, pont: 300 });
+    const vissza = await anna.tesz('TudatpontRendezes', { entitas: y.azonosito, pont: 0 });   // ez nem jut el hozzánk (hézag)
+    const x = await anna.tesz('GondolatLetrehozas', { cim: 'X', meret: 10 });
+    const px = await anna.tesz('TudatpontRendezes', { entitas: x.azonosito, pont: 400 });      // bemondva 400 — a láncából 700
+    if (px.adat.kiosztva !== 400 || !vissza) return false;
+    const kicsiben = allapotSzamitasa(await tagokkal([szuletes, y, py, x, px]));
+    const maiban = allapotSzamitasa(await tagokkal([y, py, x, px]));
+    return kicsiben.kivetelek.some((k) => k.azonosito === px.azonosito && /túllépné a tudatpont-keretet \(700 \/ 500\)/.test(k.ok))
+      && !kicsiben.entitasok.has(x.azonosito)
+      && !maiban.kivetelek.some((k) => k.azonosito === px.azonosito) && maiban.entitasok.get(x.azonosito)?.osszesPont === 400;
+  });
+
+proba('⭐ D118/2 (①b): a koinó KATEGÓRIA-KORLÁTJA a születéséből — 1-es korlátnál a két kategóriás gondolat nem számít, a mai koinóban igen',
+  async () => {
+    const szuletes = await koinoSzabalyokkal({ kategoriaKorlat: 1 });
+    const anna = await ujEember();
+    const k1 = await anna.tesz('GondolatLetrehozas', { tipus: 'Kategoria', cim: 'Egyik', meret: 10 });
+    const k2 = await anna.tesz('GondolatLetrehozas', { tipus: 'Kategoria', cim: 'Másik', meret: 10 });
+    const t = await anna.tesz('GondolatLetrehozas', { cim: 'Két kategória', meret: 10, kategoriak: [k1.azonosito, k2.azonosito] });
+    const egy = await anna.tesz('GondolatLetrehozas', { cim: 'Egy kategória', meret: 10, kategoriak: [k1.azonosito] });
+    const kivetel = (lista) => szabalyokErvenyesitese(lista).kivetelek.find((x) => x.azonosito === t.azonosito);
+    const kicsiben = await tagokkal([szuletes, k1, k2, t, egy]);
+    const maiban = await tagokkal([k1, k2, t, egy]);
+    return /legfeljebb 1 kategória/.test(kivetel(kicsiben)?.ok ?? '')
+      && !szabalyokErvenyesitese(kicsiben).kivetelek.some((x) => x.azonosito === egy.azonosito)
+      && kivetel(maiban) === undefined;
+  });
+
 export default futtatas;
 

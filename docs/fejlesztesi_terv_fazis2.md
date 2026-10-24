@@ -6091,8 +6091,10 @@ költözik.
 *„miden javaslatodat elfogadom, kezdheted az elsővel”*) — mind a javaslat szerint: **KZ1** a paraméterek besorolása (a)–(e) ·
 **KZ2** gyermeket a szülő vágáskori tagja hozhat létre (különben önálló új koinó, szülő nélkül) · **KZ3** ha a hozott pontok nem
 férnek az új keretbe, a beköltöző maga választ (elhagyni lehet, növelni nem) · **KZ4** az eredményt változtató hibajavítás is
-költözés · **KZ5** a protokoll-törés szabálya külön átvizsgálás a költözés után. 🚧 **Az ① (2026-10-24):** a koinó neve a
-születés lenyomata (elágazás 193).
+költözés · **KZ5** a protokoll-törés szabálya külön átvizsgálás a költözés után. ✅ **Az ① (2026-10-24):** a koinó neve a
+születés lenyomata (elágazás 193), és a szabályai a születésében — a program az új születésbe mindet kiírja, az
+`ALAP_SZABALYOK` soha nem változik (elágazás 194; a 15. mérés megismételve: a régi alakú koinó hasad, az új nem). ⛔ A
+meghívó-szám nem szabály, hanem a modell része, rögzítve 1 (Csaba, 2026-10-24: *„igen, maradjon 1 egyenlőre”*).
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal

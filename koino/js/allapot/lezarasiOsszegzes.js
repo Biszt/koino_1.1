@@ -188,7 +188,7 @@ export function lezarasiOsszegzesAlakja(o) {
  * jön ki. Ha rendben, az állást is visszaadja (a döntés-számításnak).
  * @returns {{rendben: boolean, ok?: string, allas?: Object}}
  */
-export function lezarasiSzamokEllenorzese(o, javaslatEsemeny) {
+export function lezarasiSzamokEllenorzese(o, javaslatEsemeny, alapKuszobok = ALAP_KUSZOBOK) {
   if (!lezarasiOsszegzesAlakja(o)) return { rendben: false, ok: 'hibás összegzés' };
   if (o.javaslat !== javaslatEsemeny?.azonosito) return { rendben: false, ok: 'más javaslatról szól' };
   const sz = o.szamok;
@@ -197,7 +197,8 @@ export function lezarasiSzamokEllenorzese(o, javaslatEsemeny) {
   if (o.fak.nevezo.d !== sz.nevezo || o.fak.nevezo.o[0] !== sz.nevezo) return { rendben: false, ok: 'a nevező-fa mást számol' };
   if (sz.nevezo < sz.tamogatok + sz.ellenzok + sz.tartozkodok) return { rendben: false, ok: 'a nevező kisebb a szavazóknál' };
   for (const nev of KUSZOB_NEVEK) {
-    if (o.fak.ertek[nev].d === 0 && o.kuszobok[nev] !== ALAP_KUSZOBOK[nev]) return { rendben: false, ok: 'üres naplóhoz nem alapérték' };
+    // ⭐ D118/2: az alapérték a koinóé (a születéséből — a hívó adja; ha nem, a mai érték).
+    if (o.fak.ertek[nev].d === 0 && o.kuszobok[nev] !== alapKuszobok[nev]) return { rendben: false, ok: 'üres naplóhoz nem alapérték' };
   }
   const allas = allasSzamokbol(javaslatEsemeny, sz, sz.nevezo, o.kuszobok);
   if (allas.lezarasIdeje !== o.reszLezaras) return { rendben: false, ok: 'a határidő nem a számokból jön' };
@@ -217,10 +218,11 @@ export function lezarasiSzamokEllenorzese(o, javaslatEsemeny) {
  * @param {Function} [b.tagE] - async (szerző) → true | false | null (nem ellenőrizhető)
  * @returns {Promise<{rendben: boolean, ok?: string, allas?: Object, ellenorzott: number, nemEllenorizheto: number}>}
  */
-export async function lezarasiOsszegzesEllenorzese({ osszegzes: o, javaslatEsemeny, helyek, mintak, tagE = async () => null }) {
+export async function lezarasiOsszegzesEllenorzese({ osszegzes: o, javaslatEsemeny, helyek, mintak, tagE = async () => null,
+  alapKuszobok = ALAP_KUSZOBOK }) {
   const ered = { rendben: true, ellenorzott: 0, nemEllenorizheto: 0 };
   const hiba = (ok) => ({ ...ered, rendben: false, ok });
-  const szamok = lezarasiSzamokEllenorzese(o, javaslatEsemeny);
+  const szamok = lezarasiSzamokEllenorzese(o, javaslatEsemeny, alapKuszobok);
   if (!szamok.rendben) return hiba(szamok.ok);
   const reszJavaslata = javaslatEntitasai(javaslatEsemeny).find((je) => je.resz?.entitas === o.entitas)?.azonosito;
   const tagsag = async (szerzo) => {

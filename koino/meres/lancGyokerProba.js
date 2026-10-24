@@ -401,4 +401,43 @@ proba('⛔⛔ D85 T3 előfeltétele: a hamis bizonyítékú javaslatot a kapu el
     && !!kivetel && /nem bizonyította/.test(kivetel.ok);
 });
 
+// ===================================
+// ⭐ D118/2 (①b): A GYORSÍTÓTÁR A KOINÓ KERETÉHEZ KÖTÖTT
+// ===================================
+//
+// A keret a koinó születéséből jön (`koinoKerete`); amíg a születés nincs meg, a mai érték. Ha a gyorsítótár egy kép
+// után megérkezik a születés (más kerettel), a régi kép nem érvényes — a láncot az új kerettel kell újraszámolni (a
+// szabály-réteg is azzal ítél). ⚠️ Rontás: a jelölt kerete nélkül (a régi feltétel) a memória és a fájl képe is
+// átmegy, és a gyökér a mai kerettel számolt marad.
+proba('⭐ D118/2 (①b): a lánc-gyökér gyorsítótára a koinó keretéhez kötött — a később érkező születés (500) után a memória és a fájl képe sem érvényes',
+  async () => {
+    const alapitoKulcs = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+    const szuletes = await esemenyLetrehozasa({ koino: '', tipus: 'KoinoLetrehozas', elozo: null, sorszam: 1,
+      adat: { nev: 'Kis keretű', leiras: null, alapitok: [], zart: false, szabalyok: { tudatpontKeret: 500 } } }, alapitoKulcs);
+    const K = szuletes.azonosito;
+    const mappa = await mkdtemp(join(tmpdir(), 'koino-lancgyoker-'));
+    const tar = await esemenyTarNyitasa(K, mappa);
+    const kulcspar = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+    const szerzo = Buffer.from(await crypto.subtle.exportKey('raw', kulcspar.publicKey)).toString('base64url');
+    const tarolo = lancTarolo(K, mappa);
+    const kornyezet = { koino: K, kulcspar, szerzo, tar, darabTar: fajlBlobTarolo(K, mappa), lancTarolo: tarolo };
+
+    // A születés még nincs meg: a mai keret (10 000) — a 600 pont számít, és a kép ezzel készül el.
+    const g = await gondolatLetrehozasa(kornyezet, { cim: 'Keret előtt' });
+    await tudatpontRendezese(kornyezet, g.azonosito, 600);
+    const lanc = await sajatLancEsemenyei(tar, szerzo);
+    const kovetkezo = lanc.length + 1;
+    const elotte = await lancGyokerUjEsemenyhez(tar, K, szerzo, kovetkezo, tarolo);
+    const maival = await lancGyokerLancbol(lanc, 10000);
+    const kicsivel = await lancGyokerLancbol(lanc, 500);
+    if (!azonosLancGyoker(elotte, maival) || azonosLancGyoker(maival, kicsivel)) return false;
+
+    // Megjön a születés: ugyanaz a tár (a memória képe), és egy újra megnyitott (a fájl képe).
+    if (!(await esemenyMentese(tar, szuletes)).mentve) return false;
+    const memoriabol = await lancGyokerUjEsemenyhez(tar, K, szerzo, kovetkezo, tarolo);
+    const ujTar = await esemenyTarNyitasa(K, mappa);
+    const fajlbol = await lancGyokerUjEsemenyhez(ujTar, K, szerzo, kovetkezo, lancTarolo(K, mappa));
+    return azonosLancGyoker(memoriabol, kicsivel) && azonosLancGyoker(fajlbol, kicsivel);
+  });
+
 export default futtatas;

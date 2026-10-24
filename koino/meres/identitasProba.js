@@ -1333,6 +1333,56 @@ proba('⭐⭐ D93/6: a jelzés CSAK SZELETEKBŐL — a tanúsító szelete és a
     && sz1.tole === 3 && sz1.aktivitas >= 4 && sz2.aktivitas === 1;
 });
 
+// ===================================
+// ⭐⭐ D118/2 (①b): A TANÚSÍTÁS-SZÁM A KOINÓ SZÜLETÉSÉBŐL
+// ===================================
+//
+// Az új alakú koinó (a neve a születés lenyomata) a születésében kettőt mond: egy újonnan jött e-ember két tanúsítással
+// 2. lépcsős. ⭐ A nézet a tárból olvassa ki (a koinó neve a születés azonosítója — egy kérdés). ⚠️ Rontás: ha a nézet a
+// mai állandóval számol (3), bukik; és a kimondott beállítás (a próbák, a mérések) erősebb a születésnél.
+
+/** Egy új alakú koinó alapító körrel (`db` fő), a születésben a megadott szabályokkal. */
+async function ujAlakuAlapitoKor(db, szabalyok) {
+  const tagok = [];
+  for (let i = 1; i < db; i++) tagok.push(await ujEember(''));
+  const letrehozo = await ujEember('');
+  const letrehozas = await letrehozo.tesz('KoinoLetrehozas',
+    { nev: 'Új alakú', leiras: null, alapitok: tagok.map((t) => t.szerzo), ...(szabalyok ? { szabalyok } : {}) });
+  const K = letrehozas.azonosito;
+  letrehozo.koinotValt(K);
+  const esemenyek = [letrehozas];
+  const kor = [{ eember: letrehozo, horgony: K, esemeny: letrehozas }];
+  for (const t of tagok) {
+    t.koinotValt(K);
+    const be = await t.tesz('Belepes', { alapitas: K });
+    esemenyek.push(be);
+    kor.push({ eember: t, horgony: be.azonosito, esemeny: be });
+  }
+  return { K, kor, esemenyek };
+}
+
+proba('⭐⭐ D118/2 (①b): a koinó születése KÉT tanúsítást mond — két tanúsítással 2. lépcsős; a mai (három) koinóban nem, és a kimondott beállítás erősebb',
+  async () => {
+    const eset = async (szabalyok) => {
+      const { K, kor, esemenyek } = await ujAlakuAlapitoKor(4, szabalyok);
+      const mappa = await mkdtemp(join(tmpdir(), 'koino-identitas-'));
+      mappak.push(mappa);
+      const tar = await esemenyTarNyitasa(K, mappa);
+      const ujEe = await ujEember(K);
+      const uj = { eember: ujEe, horgony: null };
+      const be = await ujEe.tesz('Belepes', {});
+      uj.horgony = be.azonosito;
+      await ment(tar, ...esemenyek, be, await meghivas(kor[0], uj), await tanusitas(kor[0], uj), await tanusitas(kor[1], uj));
+      return {
+        sajat: (await lepcso2E(tar, K, uj.horgony)).igen,
+        kimondva: (await lepcso2E(tar, K, uj.horgony, ujIdentitasNezet({ tanusitasKell: 3 }))).igen
+      };
+    };
+    const ketto = await eset({ tanusitasKell: 2 });
+    const mai = await eset(null);
+    return ketto.sajat === true && ketto.kimondva === false && mai.sajat === false && TANUSITAS_KELL === 3;
+  });
+
 export default async function () {
   const eredmeny = await futtatas();
   for (const m of mappak) await rm(m, { recursive: true, force: true });

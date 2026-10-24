@@ -32,6 +32,8 @@
 // Használják: koino.js (a parancssori arc) és az önpróbák.
 
 import { median } from './allapotSzamitas.js';
+import { ALAP_SZABALYOK, koinoSzabalyai } from '../esemeny/koinoSzabalyok.js';
+import { koinoSzuleteseListabol } from '../esemeny/esemeny.js';
 import { erintettek, javaslatEntitasai, szavazatSajatPontjai } from './szabalyok.js';
 
 // ===================================
@@ -41,34 +43,32 @@ import { erintettek, javaslatEntitasai, szavazatSajatPontjai } from './szabalyok
 // Akkor érvényesek, ha egy entitáshoz még senki nem adott érték javaslatot. Ezek a
 // D13/c szerint később koino-szintű PARAMÉTEREK lesznek (entitások, amikre tudatpontot
 // és érték javaslatot lehet tenni) — most állandók.
-export const ALAP_KUSZOBOK = {
-  elfogadasiKuszob: 51,        // százalék: a támogatottság ekkora legyen a szavazók közt
-  reszveteliKuszob: 0,         // százalék: ekkora részvétel kell (0 = nincs feltétel)
-
-  // ⭐⭐ 1 MÁSODPERC (Csaba döntése, 2026-09-12) — korábban 1 nap volt.
-  //
-  // ⛔ MIÉRT VOLT ROSSZ AZ 1 NAP: a prototípus alapértéke **0** (`gondolatErtekHisztogram.js`),
-  // és ezen múlik, hogy a saját gondolatod szerkesztése **azonnal** megtörténjen, ha te vagy
-  // az egyetlen tudatpont-tulajdonos. Egy nappal a koino szigorúbb lett volna a
-  // prototípusnál — nem elvből, csak egy elfelejtett állandó miatt.
-  //
-  // ⭐ MIÉRT NEM 0, HANEM 1: a nulla ablak **elfajult** — a javaslat a születése
-  // pillanatában zárna, tehát rajtam kívül **senki más nem tudna beleszavazni**, akármilyen
-  // gyors. Az 1 másodperc ugyanúgy „azonnali" egytulajdonosnál, de **nem zárja ki** a
-  // többieket elvi szinten. *(A saját támogató szavazatom amúgy is a javaslat időbélyegét
-  // viseli — `muveletek.js` —, tehát nem ezen múlik.)*
-  //
-  // ⚠️ ÉS EZ NEM „GYORS DÖNTÉS": a **D4 bizonyossági mutatója** dönti el, hol áll a valódi
-  // idő a minimum és a maximum KÖZÖTT. Egyhangú, teljes részvételű döntésnél a minimumnál
-  // (1 mp), vitatottnál a maximum (7 nap) felé — *a minimum nem a szokásos, hanem a
-  // legjobb eset.*
-  //
-  // ⛔⛔ A D66 SZERINT EZ ÁLLAPOT-BEFOLYÁSOLÓ ÁLLANDÓ: ha egy meglévő koino adatán
-  // változtatjuk, a régi és az új program **mást számol** ugyanabból az eseményhalmazból.
-  // Az `ALAP_KUSZOBOK` a hat ilyen egyike — vagyis ez a sor **együtt mozog a koino nevével**.
-  minimumDontesiIdo: 1,        // másodperc — a reakció-ablak alsó határa (D4)
-  maximumDontesiIdo: 604800    // másodperc: 7 nap
-};
+// ⭐⭐ 1 MÁSODPERC (Csaba döntése, 2026-09-12) — korábban 1 nap volt.
+//
+// ⛔ MIÉRT VOLT ROSSZ AZ 1 NAP: a prototípus alapértéke **0** (`gondolatErtekHisztogram.js`),
+// és ezen múlik, hogy a saját gondolatod szerkesztése **azonnal** megtörténjen, ha te vagy
+// az egyetlen tudatpont-tulajdonos. Egy nappal a koino szigorúbb lett volna a
+// prototípusnál — nem elvből, csak egy elfelejtett állandó miatt.
+//
+// ⭐ MIÉRT NEM 0, HANEM 1: a nulla ablak **elfajult** — a javaslat a születése
+// pillanatában zárna, tehát rajtam kívül **senki más nem tudna beleszavazni**, akármilyen
+// gyors. Az 1 másodperc ugyanúgy „azonnali" egytulajdonosnál, de **nem zárja ki** a
+// többieket elvi szinten. *(A saját támogató szavazatom amúgy is a javaslat időbélyegét
+// viseli — `muveletek.js` —, tehát nem ezen múlik.)*
+//
+// ⚠️ ÉS EZ NEM „GYORS DÖNTÉS": a **D4 bizonyossági mutatója** dönti el, hol áll a valódi
+// idő a minimum és a maximum KÖZÖTT. Egyhangú, teljes részvételű döntésnél a minimumnál
+// (1 mp), vitatottnál a maximum (7 nap) felé — *a minimum nem a szokásos, hanem a
+// legjobb eset.*
+//
+// ⛔⛔ A D66 SZERINT EZ ÁLLAPOT-BEFOLYÁSOLÓ ÁLLANDÓ: ha egy meglévő koino adatán
+// változtatjuk, a régi és az új program **mást számol** ugyanabból az eseményhalmazból.
+// Az `ALAP_KUSZOBOK` a hat ilyen egyike — vagyis ez a sor **együtt mozog a koino nevével**.
+//
+// ⭐⭐ D118/2 (①b, 2026-10-24): az értékek a `koinoSzabalyok.js`-ben élnek (EGY forrás) — és a koinó a SZÜLETÉSÉBEN mást
+// mondhat (`szabalyok.alapKuszobok`); a döntés onnan veszi (`javaslatokSzamitasa`, `lezarasiPillanatkep`). Ez itt a mai
+// érték: elfogadás 51%, részvétel 0%, a döntési idő 1 mp – 7 nap.
+export const ALAP_KUSZOBOK = ALAP_SZABALYOK.alapKuszobok;
 
 // A küszöbök nevei — ezekre számolunk mediánt az érték javaslatokból (D4)
 export const KUSZOB_NEVEK = Object.keys(ALAP_KUSZOBOK);
@@ -381,7 +381,7 @@ function kulonvaloOldal(szavazatok, igenyek, fajta) {
 }
 
 function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJavaslatEsemenyek,
-                         javaslatPontok = [], lezarasRogzitve = null) {
+                         javaslatPontok = [], lezarasRogzitve = null, alapKuszobok = ALAP_KUSZOBOK) {
   const entitasok = kik.map((r) => r.entitas);
   const sor = idorendbe([...szavazatok, ...tudatpontok, ...ertekJavaslatEsemenyek, ...javaslatPontok]);
 
@@ -442,7 +442,7 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
       if ((tulajdonosok.get(entitas).get(szerzo)?.pont ?? 0) > 0) ervenyesek.push(bejegyzes.ertekek);
     }
 
-    const eredmeny = { ...ALAP_KUSZOBOK };
+    const eredmeny = { ...alapKuszobok };   // ⭐ D118/2: a koinó alapértékei (a születéséből)
     for (const nev of KUSZOB_NEVEK) {
       const szamok = ervenyesek
         .map((ertekek) => ertekek?.[nev])
@@ -693,7 +693,8 @@ function hatalyokSzamitasa(esemenyek) {
  * @returns {Map<string, Object>} javaslat azonosító → állapot
  */
 /** Egy javaslat csoport-számítása a begyűjtött bemenetből (a `javaslatokSzamitasa` és a lezárási pillanatkép közös útja). */
-function csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok }, lezarasRogzitve = null) {
+function csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok }, lezarasRogzitve = null,
+                          alapKuszobok = ALAP_KUSZOBOK) {
   const erintettAzonositok = kik.map((r) => r.entitas);
   return reszekSzamitasa(
     e,
@@ -703,7 +704,8 @@ function csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok }, 
     erintettAzonositok.flatMap((az) => ertekJavaslatok.get(az) ?? []),
     // ⭐ D85/2: a javaslat-entitás(ok) pontjai — a szavazati jog második feltétele.
     javaslatEntitasai(e).flatMap((je) => tudatpontok.get(je.azonosito) ?? []),
-    lezarasRogzitve
+    lezarasRogzitve,
+    alapKuszobok
   );
 }
 
@@ -712,14 +714,15 @@ function csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok }, 
  * lezáráskori bemenet (`reszekSzamitasa` pillanatképe). A lezárási összegzés ebből épül.
  * @returns {{lezarasIdeje: number, reszek: Array<Object>, pillanatkepek: Map<string, Object>}}
  */
-export function lezarasiPillanatkep(esemenyek, javaslatEsemeny) {
+export function lezarasiPillanatkep(esemenyek, javaslatEsemeny,
+  alapKuszobok = koinoSzabalyai(koinoSzuleteseListabol(esemenyek)).alapKuszobok) {
   const gyujtott = {
     szavazatok: szavazatokGyujtese(esemenyek),
     tudatpontok: tudatpontokGyujtese(esemenyek),
     ertekJavaslatok: ertekJavaslatokGyujtese(esemenyek)
   };
   const { reszek, lezarasIdeje, pillanatkepek, dontesiIdo, kuszobTeljesul } =
-    csoportSzamitasa(javaslatEsemeny, erintettek(javaslatEsemeny.adat), gyujtott);
+    csoportSzamitasa(javaslatEsemeny, erintettek(javaslatEsemeny.adat), gyujtott, null, alapKuszobok);
   return { reszek, lezarasIdeje, pillanatkepek, dontesiIdo, kuszobTeljesul };
 }
 
@@ -733,6 +736,9 @@ export function lezarasiPillanatkep(esemenyek, javaslatEsemeny) {
  */
 export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now(), beallitas = {}) {
   const osszegzesek = beallitas.osszegzesek instanceof Map ? beallitas.osszegzesek : new Map();
+  // ⭐⭐ D118/2 (①b): a küszöbök alapértékei a koinó születéséből (az állapotban, vagy a bemenetben).
+  const alapKuszobok = beallitas.alapKuszobok ?? allapot?.koino?.szabalyok?.alapKuszobok
+    ?? koinoSzabalyai(koinoSzuleteseListabol(esemenyek)).alapKuszobok;
   console.log('javaslatokSzamitasa - KEZDÉS', { esemenyDarab: esemenyek.length });
 
   const szavazatok = szavazatokGyujtese(esemenyek);
@@ -768,7 +774,7 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now(), beall
     const reszOsszegzese = (az) => osszegzesek.get(e.azonosito + '|' + az) ?? null;
     const osszegzettek = erintettAzonositok.map(reszOsszegzese);
     const rogzitett = osszegzettek.find(Boolean)?.osszegzes.lezaras ?? null;
-    const csoport0 = csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok }, rogzitett);
+    const csoport0 = csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok }, rogzitett, alapKuszobok);
     if (rogzitett !== null) {
       csoport0.reszek = csoport0.reszek.map((r, i) => {
         const o = osszegzettek[i];
@@ -797,7 +803,7 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now(), beall
     // `muvelet` is az első érintetté. Egyetlen érintettnél ez pontosan a régi
     // viselkedés; többnél a teljes igazság a `reszek` tömbben van, és a döntést
     // (`kuszobTeljesul`) mindig az ÉS adja, nem ez az összefoglaló.
-    const { kuszobok } = reszek[0] ?? { kuszobok: { ...ALAP_KUSZOBOK } };
+    const { kuszobok } = reszek[0] ?? { kuszobok: { ...alapKuszobok } };
     const {
       tamogatok, ellenzok, tartozkodok, szavazok, nevezo,
       tamogatottsagEzrelek, ellenzoiEzrelek, tartozkodoiEzrelek, reszveteliEzrelek,

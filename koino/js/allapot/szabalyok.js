@@ -31,6 +31,8 @@
 // Használják: allapotSzamitas.js (és rajta keresztül minden számítás).
 
 import { lenyomatSzinkron } from '../esemeny/kanonikusAlak.js';
+import { ALAP_SZABALYOK, koinoSzabalyai } from '../esemeny/koinoSzabalyok.js';
+import { koinoSzuleteseListabol } from '../esemeny/esemeny.js';
 // ⭐ D93/1: a tagság (egy forrás — `tagsag.js`).
 import { tagsagiIndex, szerzoTagsaga } from './tagsag.js';
 
@@ -44,13 +46,15 @@ export const TAGSAG_KELL = new Set(['TudatpontRendezes', 'Javaslat', 'Szavazat',
 // Mindenkinek UGYANANNYI tudatpontja van: nem elkölthető, csak szétosztható és bármikor
 // átrendezhető. Ez itt lakik, EGY példányban — a művelet-réteg és a felület is innen
 // veszi, hogy ne csúszhasson szét kétféle igazságra.
-export const TUDATPONT_KERET = 10000;
+// ⭐⭐ D118/2 (①b): ez a MAI érték — a koinó a születésében mást mondhat (`koinoSzabalyok.js`); a számítás onnan veszi.
+export const TUDATPONT_KERET = ALAP_SZABALYOK.tudatpontKeret;
 
 // ⭐ Hány kategóriába sorolható EGY gondolat? A prototípus is hármat engedett
 // (`Maximum 3 különböző kategória rendelhető egy gondolathoz`), és a korlát ott
 // Mongoose-validátorban élt. A P2P koinóban nincs szerver, ami visszautasítsa — ezért a
 // korlát a SZÁMÍTÁSBAN van (2. szabály lent), és a felület nem tudja kijátszani.
-export const KATEGORIA_KORLAT = 3;
+// ⭐ D118/2 (①b): a mai érték — a koinó születése mást mondhat.
+export const KATEGORIA_KORLAT = ALAP_SZABALYOK.kategoriaKorlat;
 
 // A koino entitás-típusai (Gondolat · Kategoria · GondolatTipus). ⚠️ Ezek NEM külön
 // esemény-fajták: mindegyiket ugyanaz a `GondolatLetrehozas` esemény hozza létre, és az
@@ -331,7 +335,7 @@ export function hozottSajatPontok(e) {
  * @returns {{elvetve?: string, jelzes?: string, entitas?: string, pont?: number, ujOsszeg?: number}}
  *   `elvetve`: nem számít (indoklással) · `jelzes`: számít, de nem ellenőrizhető (D19)
  */
-export function pontEsemenyMerlege(e, allas, folytonos) {
+export function pontEsemenyMerlege(e, allas, folytonos, keret = TUDATPONT_KERET) {
   const pont = e.adat?.pont;
   const kiosztva = e.adat?.kiosztva;
 
@@ -348,9 +352,10 @@ export function pontEsemenyMerlege(e, allas, folytonos) {
   // ⭐⭐ EZ A D42 LÉNYEGE: EGYETLEN ESEMÉNYBŐL ELDŐL, a lánc többi része nélkül.
   // Szeletelt tárban ez az EGYETLEN mód a keret ellenőrzésére — teljes láncot soha
   // többé nem fogunk látni.
-  if (kiosztva > TUDATPONT_KERET) {
+  // ⭐ D118/2: a keret a koinóé (a születéséből — a hívó adja; ha nem tudja, a mai érték).
+  if (kiosztva > keret) {
     return { elvetve: 'a bemondott összeg túllépi a keretet ('
-      + kiosztva + ' / ' + TUDATPONT_KERET + ')' };
+      + kiosztva + ' / ' + keret + ')' };
   }
 
   // ----- ⭐⭐ D81: AZ ESEMÉNY SAJÁT BIZONYÍTÉKA — a lánc ismerete nélkül -----
@@ -392,9 +397,10 @@ export function pontEsemenyMerlege(e, allas, folytonos) {
     }
   }
 
-  if (ujOsszeg > TUDATPONT_KERET) {
+  // ⭐ D118/2: itt is a koinó kerete (a 15. mérés megismétlése találta meg, hogy ez az ág még a program állandóját nézte).
+  if (ujOsszeg > keret) {
     return { jelzes, elvetve: 'túllépné a tudatpont-keretet (' + ujOsszeg + ' / '
-      + TUDATPONT_KERET + ')' };
+      + keret + ')' };
   }
 
   return { jelzes, entitas: e.adat.entitas, pont, ujOsszeg };
@@ -430,6 +436,9 @@ function leszarmazottE(entitas, os, szulok) {
 }
 
 export function szabalyokErvenyesitese(esemenyek) {
+  // ⭐⭐ D118/2 (①b): a koinó SZABÁLYAI a születéséből (a bemenetben van — a koinó születése mindenki vállalása, D90/2);
+  // ha nincs meg, a mai értékek.
+  const koinoSzabalyok = koinoSzabalyai(koinoSzuleteseListabol(esemenyek));
   const kivetelek = [];
   const nemEllenorizhetok = [];
   const kiesettek = new Set();   // az azonosítók, amik nem számítanak
@@ -567,7 +576,7 @@ export function szabalyokErvenyesitese(esemenyek) {
             + '. eseményétől a pontjai nem számítanak');
           continue;
         }
-        const merleg = pontEsemenyMerlege(e, { osszeg, pontok }, folytonos);
+        const merleg = pontEsemenyMerlege(e, { osszeg, pontok }, folytonos, koinoSzabalyok.tudatpontKeret);
         if (merleg.jelzes) nemEllenorizheto(e, merleg.jelzes);
         if (merleg.elvetve) {
           kivetel(e, merleg.elvetve);
@@ -596,8 +605,8 @@ export function szabalyokErvenyesitese(esemenyek) {
             kivetel(e, 'a kategóriák csak listában adhatók meg');
             continue;
           }
-          if (kategoriak.length > KATEGORIA_KORLAT) {
-            kivetel(e, 'legfeljebb ' + KATEGORIA_KORLAT + ' kategória rendelhető egy '
+          if (kategoriak.length > koinoSzabalyok.kategoriaKorlat) {
+            kivetel(e, 'legfeljebb ' + koinoSzabalyok.kategoriaKorlat + ' kategória rendelhető egy '
               + 'gondolathoz (itt ' + kategoriak.length + ')');
             continue;
           }

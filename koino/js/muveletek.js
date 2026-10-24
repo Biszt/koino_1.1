@@ -28,7 +28,8 @@ import {
 import { lancUjEsemenyhez } from './allapot/lancGyoker.js';
 // ⭐ D80: az ellentmondás bizonyítéka — a bejelentés előtt magunk is ellenőrizzük.
 import { ellentmondasEllenorzese } from './allapot/ellentmondas.js';
-import { esemenyLetrehozasa, esemenyKoinoja } from './esemeny/esemeny.js';
+import { esemenyLetrehozasa, esemenyKoinoja, azonositoAlaku } from './esemeny/esemeny.js';
+import { koinoSzabalyai, teljesSzabalyok } from './esemeny/koinoSzabalyok.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import { szovegDarabra } from './esemeny/szovegDarab.js';
 // ⭐ D93: a tagság (a csomag kiadásához) és a tár-alapú lánc-gyűjtés.
@@ -154,6 +155,17 @@ async function esemenytTeszek(kornyezet, tipus, adat, beallitas = {}) {
 }
 
 /**
+ * ⭐⭐ D118/2 (①b): a koinó SZABÁLYAI a születéséből — lenyomat-nevű koinónál a születés azonosítója maga a koinó neve,
+ * tehát egyetlen tár-kérdés. Ha nincs meg (vagy a régi alak), a mai értékek.
+ * @returns {Promise<Object>} `koinoSzabalyok.js` `koinoSzabalyai` alakja
+ */
+export async function koinomSzabalyai(kornyezet) {
+  if (kornyezet.koinoSzabalyok) return kornyezet.koinoSzabalyok;
+  const szuletes = azonositoAlaku(kornyezet.koino) ? await kornyezet.tar?.esemeny?.(kornyezet.koino) : null;
+  return koinoSzabalyai(szuletes ?? null);
+}
+
+/**
  * Egy szerző AZONOSSÁG-HORGONYA ebben a koinóban (D56): az alapítóé a `KoinoLetrehozas`, mindenki
  * másé a (legkorábbi) `Belepes` eseménye. ⚠️ A tárban lévő láncából — ha nincs meg, null (D19).
  * @returns {Promise<string|null>}
@@ -175,7 +187,8 @@ export async function azonossagHorgonya(tar, koino, szerzo) {
  * @param {Object} adat - a bizonyíték (`ellentmondas.js`: kit, fajta, vadpont, és a fajta anyaga)
  */
 export async function ellentmondasBejelentese(kornyezet, adat) {
-  const vad = await ellentmondasEllenorzese(adat, kornyezet.koino);
+  const vad = await ellentmondasEllenorzese(adat, kornyezet.koino,
+    { tudatpontKeret: (await koinomSzabalyai(kornyezet)).tudatpontKeret });   // ⭐ D118/2
   if (!vad.rendben) throw new Error('A bizonyíték nem áll meg: ' + vad.ok);
   const horgony = await azonossagHorgonya(kornyezet.tar, kornyezet.koino, adat.kit);
   if (!horgony) {
@@ -290,6 +303,8 @@ async function esemenyAlairasa(kornyezet, tipus, adat, beallitas) {
 async function sajatKiosztott(kornyezet, entitas) {
   const lanc = (await sajatLancEsemenyei(kornyezet.tar, kornyezet.szerzo))
     .filter((e) => esemenyKoinoja(e) === kornyezet.koino);
+  // ⭐ D118/2: a keret a koinóé (a születéséből) — ugyanaz, amit a szabály-réteg használ.
+  const keret = (await koinomSzabalyai(kornyezet)).tudatpontKeret;
 
   const allas = { osszeg: 0, pontok: new Map() };
   // ⭐ A folytonosságot is ugyanúgy követjük, mint a szabály (a saját láncunk rendes esetben
@@ -306,7 +321,7 @@ async function sajatKiosztott(kornyezet, entitas) {
     // függvényét hívjuk. Egy korábbi saját másolat az ELVETETT bemondást (pl. egy régi,
     // `kiosztva` nélküli eseményt) beleszámolta — és onnantól minden új pont-eseményünk
     // „ellentmondott a saját láncának".
-    const merleg = pontEsemenyMerlege(e, allas, folytonos);
+    const merleg = pontEsemenyMerlege(e, allas, folytonos, keret);
     if (merleg.elvetve) continue;   // ami nem számít, az a régi értéket hagyja érvényben
     allas.pontok.set(merleg.entitas, merleg.pont);
     allas.osszeg = merleg.ujOsszeg;
@@ -350,7 +365,10 @@ export function koinoLetrehozasa(kornyezet, nev, leiras, alapitok, beallitas = {
     // ⚠️ a betartatás az E-vel jön (a tag a kézfogásban bizonyítja magát); addig a mező ott van, de nem tilt.
     zart: beallitas.zart !== false,
     // ⭐ D93/5 (D28/3): a koinó kötelező profil-mezői (pl. ['nev', 'telepules']) — ha nincs, a koinó nem vár profilt.
-    ...(Array.isArray(beallitas.profil) && beallitas.profil.length ? { profil: [...beallitas.profil] } : {})
+    ...(Array.isArray(beallitas.profil) && beallitas.profil.length ? { profil: [...beallitas.profil] } : {}),
+    // ⭐⭐ D118/2 (①b): a koinó SZABÁLYAI — MIND (a megadottak a mai értékek helyén), hogy egy későbbi program alapértéke ne
+    // írhassa át őket; a kapu ellenőrzi (`koinoSzabalyok.js`). Nem változtatható: egy másik szabály egy másik koinó (a költözés).
+    szabalyok: teljesSzabalyok(beallitas.szabalyok)
   });
 }
 
@@ -847,10 +865,11 @@ export async function tudatpontRendezese(kornyezet, entitas, pont, szerep = 'akt
     // A tudatpont ÁTRENDEZHETŐ: ami ezen az entitáson már ott van, az nem „új" kiadás.
     const { osszeg, regi } = await sajatKiosztott(kornyezet, entitas);
     const kiosztva = osszeg - regi + pont;
+    const keret = (await koinomSzabalyai(kornyezet)).tudatpontKeret;   // ⭐ D118/2: a koinó kerete
 
-    if (kiosztva > TUDATPONT_KERET) {
+    if (kiosztva > keret) {
       throw new Error(
-        'Ennyi tudatpontod nincs. Kereted ' + TUDATPONT_KERET +
+        'Ennyi tudatpontod nincs. Kereted ' + keret +
         ', ebből máshol ' + (osszeg - regi) + ' van kiosztva.'
       );
     }

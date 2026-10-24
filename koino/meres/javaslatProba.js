@@ -115,6 +115,23 @@ proba('A küszöb ALATT egy hajszállal: ELVETVE (kerekítés nem menti meg)', a
   return j.statusz === 'elvetve' && j.tamogatottsagEzrelek === 509;
 });
 
+// ===== ⭐⭐ D118/2 (①b): A KÜSZÖBÖK ALAPÉRTÉKE A KOINÓ SZÜLETÉSÉBŐL =====
+//
+// Ahol egy gondolatra nincs érték javaslat, ott a koinó alapértéke dönt — és az a születésben áll, nem a programban.
+// ⚠️ Rontás: ha a `javaslatokSzamitasa` a mai `ALAP_KUSZOBOK`-at veszi, a 66%-os koinóban is elfogad.
+
+proba('⭐⭐ D118/2 (①b): a koinó küszöb-alapértéke a születéséből — 3 / 5 támogatás a mai (51%) koinóban elfogad, a 66%-osban elvet',
+  async () => {
+    const eset = await esetFelepitese({ szavazatok: ['Tamogat', 'Tamogat', 'Tamogat', 'Ellenez', 'Ellenez'] });
+    const alapito = await ujEember();
+    const szigoru = await alapito.tesz('KoinoLetrehozas', { nev: 'Szigorú koinó', leiras: null, alapitok: [], zart: true,
+      szabalyok: { alapKuszobok: { elfogadasiKuszob: 66 } } });
+    const mai = await javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+    const szigoruban = await javaslatAllapot({ ...eset, esemenyek: [szigoru, ...eset.esemenyek] }, eset.kezdet + 10 * NAP);
+    return mai.statusz === 'elfogadva' && ALAP_KUSZOBOK.elfogadasiKuszob === 51
+      && szigoruban.statusz === 'elvetve' && szigoruban.egyezmeny === null;
+  });
+
 // ===== RÉSZVÉTELI KÜSZÖB =====
 
 proba('A részvételi küszöb alatt: ELVETVE (bár mindenki támogatta, aki szavazott)', async () => {

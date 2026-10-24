@@ -24,6 +24,7 @@
 
 import { esemenyKoinoja } from '../esemeny/esemeny.js';
 import { ellentmondasEllenorzese } from './ellentmondas.js';
+import { koinoKerete } from './lancGyoker.js';
 
 /**
  * A megadott események körül bizonyítható ellentmondások — ellenőrizve, ismétlés nélkül.
@@ -35,9 +36,10 @@ import { ellentmondasEllenorzese } from './ellentmondas.js';
  */
 export async function ellentmondasokKeresese(tar, koino, esemenyek) {
   const talalt = new Map();                  // kulcs → adat (egy lelet egyszer)
+  const keret = { tudatpontKeret: await koinoKerete(tar, koino) };   // ⭐ D118/2: a koinó kerete
   const probal = async (kulcs, adat) => {
     if (talalt.has(kulcs)) return;
-    if ((await ellentmondasEllenorzese(adat, koino)).rendben) talalt.set(kulcs, adat);
+    if ((await ellentmondasEllenorzese(adat, koino, keret)).rendben) talalt.set(kulcs, adat);
   };
   const ott = async (szerzo, sorszam) => (await tar.sorszamSzerint(szerzo, sorszam)).filter((x) => esemenyKoinoja(x) === koino);
 

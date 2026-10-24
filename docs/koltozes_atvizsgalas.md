@@ -104,11 +104,14 @@ ugyanazt számolják). Ettől:
 
 **A besorolás** (a mai állandók — ⏸️ KZ1):
 - **(a) szabály a születésben** (csak új koinóval változik): `TUDATPONT_KERET` (10 000), `KATEGORIA_KORLAT` (3),
-  `MEGHIVO_KELL` (1), `TANUSITAS_KELL` (3), `ALAP_KUSZOBOK` (az alapérték — az entitásonkénti medián ma is mozgatja).
+  `TANUSITAS_KELL` (3), `ALAP_KUSZOBOK` (az alapérték — az entitásonkénti medián ma is mozgatja).
 - **(b) élő paraméter** (a születés az alapértéket adja, a közösség a mediánnal mozgatja — D57/b; a bekötés még nincs meg):
   `FELHATALMAZAS_KELL` (5).
 - **(c) a modell része** (a számítás kódja, nem paraméter): `TAGSAG_KELL`, `JAVASLAT_MUVELETEK` / `ISMERT_MUVELETEK`, a
-  döntés képlete — ezek változása **a számítás változása** (lent).
+  döntés képlete — ezek változása **a számítás változása** (lent). ⭐ És a **meghívó-szám** (`MEGHIVO_KELL` = 1: hány
+  különböző tag hívjon meg egy új embert, hogy tag legyen) — Csaba, 2026-10-24: *„igen, maradjon 1 egyelőre”*. Az
+  `identitas.js` állandója ma holt (a `tagsag.js` egy meghívással és a legrövidebb lánccal számol), és a 11–12. mérés
+  szerint a nagyobb szám árcédula, nem védelem; ha valaha mégis szabály lenne, az a tagsági lánc új számítása — költözés.
 - **(d) méret-korlát** (D106: nem lehet szűkebb a koinó saját határánál, ezért nem paraméter): `MELYSEG_KORLAT` (256).
 - **(e) helyi** (a készülék ellenőrzési mélysége vagy szokása, nem szabály — az eredményt becsületes esetben nem
   változtatja): `LEPCSO_KERET`, `SZUROPROBA_SETAK`, `LEZARASI_MINTA`, `MINTA_ALAP`, `MEGULEPEDES_BULIK`, `KIFUTAS`,
@@ -232,12 +235,25 @@ Most csak a két fél szerkezete épül; a pénz mezői később hozzáadhatók,
 ## 7. A javasolt építési sor
 
 1. **① A koinó neve a születés lenyomatából, a szabályok a születésben** — a 3. szakasz lelete ezzel zárul; minden koinót
-   érint. 🚧 **①a a név (2026-10-24):** az új alakú születés koinó-mezője üres, a koinó neve a születés azonosítója
+   érint. ✅ **①a a név (2026-10-24):** az új alakú születés koinó-mezője üres, a koinó neve a születés azonosítója
    (`esemeny.js` `esemenyKoinoja`, `koinoSzuleteseE`, `koinoSzuleteseListabol` — a születés EGY szabállyal az állapotban, a
    tagságban, a kapuban, a vonalon és a belépő térben; a kapu elveti a lenyomat-nevet mondó születést), a `KOINO_AZONOSITO`
    helyi becenév (`becenevek.json`), `koino` (új alakban; argumentum nélkül a név), `csatlakoz <név>`, a `behoz` egyértelmű
-   fájlnál csatlakozik; a mappa a koinó neve. ⏭️ **①b a szabályok a születésben.** ⚠️ A laptop–telefon próba-koinója (`sajat`) így nem folytatható (régi alakú események is vannak benne) — a
-   következő kézi próbához új koinó kell, és a telefon frissítése.
+   fájlnál csatlakozik; a mappa a koinó neve. ✅ **①b a szabályok a születésben (2026-10-24, elágazás 194):** a 4.1 (a)
+   csoportja és a (b) alapértéke a születés `szabalyok` mezőjében (`koinoSzabalyok.js`: `ALAP_SZABALYOK`, a határok,
+   `szabalyokAlakiHibaja` — a kapu —, `koinoSzabalyai`, `teljesSzabalyok`); ⭐ a program az új születésbe MINDET kiírja
+   (+206 B), így egy későbbi program alapértéke nem írhatja át — ⛔ az `ALAP_SZABALYOK` ezért soha nem változik (csak a régi
+   alakú és a még meg nem érkezett születésre szól). A keret felső határa a mai 10 000 (a D106 kivétele erre van
+   levezetve), tehát a születés nélkül a kapu a legengedékenyebb. A számítás mindenütt a koinó számával: a szabály-réteg
+   (a keret mindkét vizsgálata, a kategória-korlát), a döntés (a küszöbök alapértéke, a lezárási pillanatkép és az
+   összegzés ellenőrzése), az identitás (a tanúsítás-szám, a felhatalmazás alapértéke — a nézet a tárból: a koinó neve a
+   születés azonosítója), a lánc-gyökér (a gyorsítótár a kerethez kötött), a lánc-ellenőrzés, az ellentmondás, az
+   észlelő, a vállalás, a művelet, a pakli és a parancssor (`koino "<név>" … tudatpontKeret=500 elfogadasiKuszob=66`).
+   ⛔ A meghívó-szám NEM szabály (Csaba: „maradjon 1 egyelőre” — a 4.1 (c)). ⭐ A 15. mérés megismételve
+   (`eredmenyek.md` 15.): a régi alakú koinó a program-állandó átírásával kettéhasad, az új alakú nem — és a mérés egy
+   hibát is talált (a keret második vizsgálata még az állandót nézte; javítva, próbával). ⚠️ A laptop–telefon
+   próba-koinója (`sajat`) így nem folytatható (régi alakú események is vannak benne) — a következő kézi próbához új koinó
+   kell, és a telefon frissítése. ⏭️ **②.**
 2. **② A gyermek születése** (szülő, vágás, zártság) **és a kapu koinó-szabálya**, a csere két névvel egy szeletben.
 3. **③ A két réteg a számításban** (a múlt az ős szabályaival; a talaj; a lezárt és a nyitott döntések).
 4. **④ A ki- és a beköltözés** (a lánc megkötése, a kiosztás átvétele, a tagság és a 2. lépcső öröklése), a `koltozes`

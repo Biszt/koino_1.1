@@ -39,6 +39,7 @@ export const KIFUTAS = 24 * 3600 * 1000;
  * @param {string|null} [beallitas.koinoSzuletes] - a koinó `KoinoLetrehozas` eseményének azonosítója
  * @param {number} [beallitas.most] - a mostani idő (a kifutáshoz; alapból `Date.now()`)
  * @param {number} [beallitas.kifutas] - a kifutás hossza ms-ban (alapból `KIFUTAS`; 0: nincs kifutás)
+ * @param {number} [beallitas.tudatpontKeret] - ⭐ D118/2: a koinó kerete (a születéséből; alapból a mai érték)
  * @returns {{szeletek: Set<string>, pontok: Map<string, number>, azonossag: Array<string>,
  *            koinoSzuletes: string|null, kifuto: Map<string, number>}} a `kifuto`: a pont nélkül, de még kifutásban
  *            tartott szeletek → mikor jár le a kifutásuk
@@ -58,7 +59,7 @@ export function vallalasSzamitasa(sajatEsemenyek, beallitas = {}) {
     vart = e.sorszam + 1;
     if (e.tipus === 'Belepes' || e.tipus === 'KoinoLetrehozas') azonossag.push(e.azonosito);
     if (e.tipus !== 'TudatpontRendezes') continue;
-    const m = pontEsemenyMerlege(e, allas, folytonos);
+    const m = pontEsemenyMerlege(e, allas, folytonos, beallitas.tudatpontKeret);
     if (m.elvetve) continue;                     // ami nem számít, az a régi értéket hagyja érvényben
     const elozo = allas.pontok.get(m.entitas) ?? 0;
     allas.pontok.set(m.entitas, m.pont);

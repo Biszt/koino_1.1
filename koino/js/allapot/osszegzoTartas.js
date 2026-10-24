@@ -44,7 +44,7 @@ const azonosKanonikus = (a, b) => Buffer.from(kanonikusBajtok(a)).equals(Buffer.
  * @param {Function} [b.tagE] - async (szerző) → true | false | null (a minták szerzőinek tagsága)
  * @param {Function} [b.esemenyMentes] - async (esemény) — a javaslat és az összegzés kísérőként a tárba
  */
-export function osszegzoKerdo({ tarolo, szeletek, tagE = async () => null, esemenyMentes = async () => {} }) {
+export function osszegzoKerdo({ tarolo, szeletek, tagE = async () => null, esemenyMentes = async () => {}, alapKuszobok }) {
   return {
     /** A CIMEK `osz` listája: szeletenként a legutóbb ellenőrzött gyökér lenyomata és a lezárási időpont. */
     async lista() {
@@ -97,7 +97,7 @@ export function osszegzoKerdo({ tarolo, szeletek, tagE = async () => null, eseme
             continue;
           }
           const e = await lezarasiOsszegzesEllenorzese({ osszegzes: l.esemeny.adat, javaslatEsemeny: j, helyek: lh,
-            mintak: mintak?.lezaras?.[l.esemeny.azonosito], tagE });
+            mintak: mintak?.lezaras?.[l.esemeny.azonosito], tagE, alapKuszobok });   // ⭐ D118/2: a koinó alapértékei
           if (!e.rendben) { eredmeny.elvetve.push({ k: v.k, mi: 'lezaras', ok: e.ok }); continue; }
           t.lezarasok[j.azonosito + '|' + v.k] = { esemeny: l.esemeny.azonosito, osszegzes: l.esemeny.adat, allas: e.allas,
             ellenorizve: Date.now() };

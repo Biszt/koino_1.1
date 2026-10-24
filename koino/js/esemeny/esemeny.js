@@ -19,6 +19,7 @@
 //
 // Használják: a tár-réteg és minden művelet (gondolat, tudatpont, javaslat, szavazat).
 
+import { szabalyokAlakiHibaja } from './koinoSzabalyok.js';
 import { lenyomat, base64UrlBajtok, bajtokBase64Url } from './kanonikusAlak.js';
 // ⭐ D81: a lánc-gyökér két összegzés — az alakjukat itt nézzük (a fa egy forrás).
 import { osszegzesAlakja } from './osszegzoFa.js';
@@ -437,6 +438,11 @@ export function alakiHiba(esemeny) {
   if (esemeny.koino === '' && esemeny.tipus !== 'KoinoLetrehozas') return 'üres koinó-név csak a koinó születésén állhat';
   if (esemeny.tipus === 'KoinoLetrehozas' && azonositoAlaku(esemeny.koino)) {
     return 'a koinó születése nem nevezhet meg koinót: a koinó neve a születés saját lenyomata';
+  }
+  // ⭐⭐ D118/2 (①b): a koinó SZABÁLYAI a születésben — csak ismert kulcsok, a határokon belül (`koinoSzabalyok.js`).
+  if (esemeny.tipus === 'KoinoLetrehozas') {
+    const hiba = szabalyokAlakiHibaja(esemeny.adat?.szabalyok);
+    if (hiba) return hiba;
   }
 
   // ----- A HÁROM ÚJ MEZŐ ALAKJA -----
