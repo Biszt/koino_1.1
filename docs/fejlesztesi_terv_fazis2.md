@@ -6100,7 +6100,8 @@ cserében és a kézi úton (elágazás 195). ✅ **A ②b:** a kapu koinó-szab
 és cseréjében (a létrehozóé a lánc-pont, mindenki másé az óra szerint; elágazás 196). ✅ **KZ6** (Csaba, 2026-10-24: *„elfogadom a javaslataidat, mehetünk tovább”*): a vágáskor nyitott javaslat, amit nem költöző tett, a gyermekben NEM folytatódik (a javaslattétel is súly — D118/1); a költözők nyitott javaslatai a szavazataikkal és a gyermek küszöbeivel folytatódnak. ✅ **A ③ (2026-10-24):** a koinó képe két rétegben — a múlt az ős szabályaival, a lezárt döntések rögzítve; a jelenben a
 súly csak a költözőké (a létrehozó a születésével költözik); elágazás 197, 83. mérés. ✅ **A ④a:** a ki- és a beköltözés eseménye (a beköltözés a szülőbeli láncot a vágás előtti utolsó esemény után folytatja, a
 vágáskori tagsági bizonyítékkal), a tagság öröklése (a beköltözés tagsági horgony), a költözők a képben a beköltözésekből
-(KZ3 (A): az elhagyott pontok); elágazás 198. ⏭️ ④b: a `koltozes` parancs.
+(KZ3 (A): az elhagyott pontok); elágazás 198. ✅ **A ④b:** a `koltozes` parancs (a kiköltözés, az első kitöltés, a beköltözés,
+a kézi út) és a létrehozó első kitöltése; elágazás 199, 82. mérés. ⏭️ ④c: a 2. lépcső öröklése.
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal

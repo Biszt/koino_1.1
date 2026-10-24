@@ -1439,3 +1439,14 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     `tagsag.js`, `szabalyok.js`, `esemeny.js` (az alak),
     `esemenyTar.js` (a kapu), `ketReteg.js`, `muveletek.js`, `tagsagKisero.js`, `vallalas.js`, `jelzesek.js`, `koino.js`; a
     próbák (`koltozesProba.js`).
+199. **2026-10-24 · a költözés ④b: a `koltozes` parancs és az első kitöltés (D118/6, KZ3)**
+    → **`koltozes <gyermek> [elhagy=<az>,…] [fájl]` (a szülő koinóból): ellenőrzi, hogy a gyermek születése megvan és ennek a
+    koinónak a gyermeke, hogy a vágáskor tag voltam (a tagsági láncom eseményei a vágás előttiek); a lánc-pont a vágás előtti
+    utolsó eseményem; a KZ3 (a hozott pontjaim a gyermek keretébe, különben `elhagy=`); aztán a kiköltözés a szülőben, az első
+    kitöltés (a láncom a lánc-pontig, és a hozott szeleteim múltja — a gyermek kapuján, a koinó-szabály szerint), a
+    beköltözés a gyermekben, és ha kérem, mindez fájlba (a gyermek születés-láncával — a kézi út); ⭐ a létrehozó ugyanígy: a
+    `koino … szulo=` a hozott múltját is a gyermekbe viszi (közös segéd: `hozottMult`)** · a létrehozó kitöltése nélkül a
+    gyermek az ő múltját csak kézzel kapta meg (a ③ próbája így pótolta) · ⚠️ a próbák építése közben: a szelet kitöltését a
+    csere ELŐTT kell mérni (a csere a létrehozó kitöltéséből is elhozza), egy rontás maga volt hibás (a modul szintjén
+    `return` — szintaktikai hiba, ami semmit nem mért) · Csaba (D118) · `muveletek.js`, `koino.js`; a parancssor-próbák; a
+    82. mérés (`koltozesMeres.js`).

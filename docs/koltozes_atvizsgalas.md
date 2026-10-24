@@ -366,7 +366,11 @@ az építés közben: ⛔ ha a költöző maga is beköltözéssel került a sz�
 kapu ezt is a születésekkel ellenőrzi (rekurzívan, nemzedékenként), különben egy hamis szülőbeli beköltözés ingyen tagságot
 adna; és ⭐ KZ3: a hozott pont-esemény a SZÜLŐ keretét és kiosztását mondta be — a gyermekben a számított összeg és a gyermek
 kerete dönt (`pontEsemenyMerlege` `hozott`; a szabály-réteg és a művelet egy szabállyal), különben a kisebb keretbe semmi nem
-férne be, akármennyit hagy el a költöző. ⏭️ ④b.
+férne be, akármennyit hagy el a költöző. ✅ *④b megépült (2026-10-24, elágazás 199 — `koltozes <gyermek> [elhagy=<az>,…]
+[fájl]`, `muveletek.js` `kikoltozes` / `bekoltozes`, `koino.js` `hozottMult` — a létrehozóé és a beköltözőé egy segéd; két
+készüléken mérve, 7 rontással; a 82. mérés).* ⭐ Az építés közben: **a létrehozó első kitöltése** is kell (a `koino … szulo=`
+a láncát és a hozott szeletei múltját is a gyermekbe viszi — eddig a ③ próbája kézzel pótolta), és a létrehozó KZ3-a a
+parancsban (ha a hozott pontjai nem férnek, hiba). ⏭️ ④c: a 2. lépcső öröklése.
 
 A 4.5–4.6 a kódhoz igazítva, három részben: **④a az események** (a formájuk, a kapu, a költözők a képben, a tagság
 öröklése), **④b a `koltozes` parancs** (a két aláírás, az első kitöltés, a kézi út — és a két készüléken mért út), **④c a 2.

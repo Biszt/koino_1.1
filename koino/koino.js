@@ -139,12 +139,12 @@ import {
   // ⭐ A KÉZI ÚT MÁSIK FELE (2026-09-15): eddig csak KIMENTENI lehetett a kulcsot.
   kulcsparVisszatoltese
 } from './js/kulcs/kulcsTar.js';
-import { koinoEsemenyei, sajatLancEsemenyei, esemenyLekerese, esemenyMentese, entitasEsemenyei } from './js/tar/esemenyTar.js';
+import { koinoEsemenyei, sajatLancEsemenyei, esemenyLekerese, esemenyMentese, entitasEsemenyei, lancVege } from './js/tar/esemenyTar.js';
 // ⭐ B/2: a szelet-kulcs (az előléptetéshez).
 import {
   szelet, esemenyEllenorzese, bejelentesHelyei, azonositoAlaku, esemenyKoinoja, koinoSzuleteseE, koinoSzuleteseListabol
 } from './js/esemeny/esemeny.js';
-import { szabalyokAlakiHibaja, ALAP_SZABALYOK, koinoSzabalyai } from './js/esemeny/koinoSzabalyok.js';
+import { szabalyokAlakiHibaja, ALAP_SZABALYOK, koinoSzabalyai, teljesSzabalyok } from './js/esemeny/koinoSzabalyok.js';
 import { szuletesLanc, szuloTagsagaEpitese, bekoltozesekEllenorzese } from './js/allapot/koinoLanc.js';
 import { koinoKepe } from './js/allapot/ketReteg.js';
 import { szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
@@ -190,7 +190,7 @@ import {
   regiobaEsik, bejegyzesHelye, osztodasMelysege, KERESO_FIOK_CEL, keresoRegioKulcsa, cimIllik
 } from './js/csere/keresoReteg.js';
 import {
-  koinoLetrehozasa, koinomSzabalyai, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
+  koinoLetrehozasa, koinomSzabalyai, kikoltozes, bekoltozes, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
   javaslatLetrehozasa, szavazas, allasfoglalas, TUDATPONT_KERET,
   // ⭐ A SZAKASZ 4 HÉT MŰVELETE (2026-09-12) — eddig egyik sem volt elérhető kézzel.
   belepes, meghivas, felhatalmazas, tanusitas, bemutatkozas, lattam, felhatalmazasVisszavonasa,
@@ -223,7 +223,7 @@ import {
   lancKerdesek, lancValaszokFeldolgozasa, lancKiszolgalo, lancTarsFeljegyzese, lancTarsSzerzoje, lancEllenorzesAllasa
 } from './js/allapot/lancEllenorzes.js';
 import { megbizasAllapota, tanusitoiTorlodas, bemutatkozasok, onalloSzalak } from './js/allapot/jelzesek.js';
-import { szeletParok, egyeztetettEsemenyek } from './js/csere/szeletEgyeztetes.js';
+import { szeletParok, egyeztetettEsemenyek, vonalKulcsa } from './js/csere/szeletEgyeztetes.js';
 import { halmazLenyomata } from './js/esemeny/halmaz.js';
 // ⭐ A BELÉPŐ TÉR (5.6): a koinók FÖLÖTTI nézet — a D25 tere.
 import { terKartyai } from './js/allapot/ter.js';
@@ -445,7 +445,7 @@ const tar = await koinoTaraNyitasa(KOINO);
  * mappájába mentjük, ugyanazon a kapun. Ugyanaz a művelet (`koinoLetrehozasa`), csak a koinó-mezője üres.
  * @returns {Promise<Object>} a születés eseménye (`azonosito` = a koinó neve)
  */
-async function ujKoinoSzuletese(nev, leiras, beallitas, osSzuletesek = [], lancVeg = null) {
+async function ujKoinoSzuletese(nev, leiras, beallitas, osSzuletesek = [], lancVeg = null, kitoltes = []) {
   const ideiglenes = await mkdtemp(join(tmpdir(), 'koino-szuletes-'));
   try {
     const ures = await esemenyTarNyitasa('uj', ideiglenes);
@@ -466,10 +466,43 @@ async function ujKoinoSzuletese(nev, leiras, beallitas, osSzuletesek = [], lancV
     }
     const m = await esemenyMentese(cel, szuletes);
     if (!m.mentve) throw new Error('A koinó születése nem menthető: ' + m.ok);
+    // ⭐⭐ D118 (④b): a létrehozó hozott múltja a gyermek kapuján (a koinó-szabály szerint).
+    if (kitoltes.length) await beolvasztas(cel, kitoltes, szuletes.azonosito);
     return szuletes;
   } finally {
     await rm(ideiglenes, { recursive: true, force: true });
   }
+}
+
+/**
+ * ⭐⭐ D118 (④b): A KÖLTÖZŐ HOZOTT MÚLTJA (a létrehozóé és a beköltözőé — egy szabály): a láncom a lánc-pontomig, és a hozott
+ * szeleteim (amin a lánc-pontig pozitív pontom van, az elhagyottak nélkül) múltja a szülő tárából — ez az első kitöltés (a
+ * terhe a vállalásommal arányos); és a KZ3: a hozott pontjaim összege a gyermek keretébe kell férjen.
+ * @param {Object} ptar - a szülő tára
+ * @param {string} P - a szülő neve
+ * @param {Array<Object>} lancom - a láncom a szülő tárában (sorszám szerint)
+ * @param {Object} c - a lánc-pontom (a vágás előtti utolsó eseményem)
+ * @param {Array<string>} elhagy - amit elhagyok (KZ3 (A))
+ * @param {number} keret - a gyermek tudatpont-kerete
+ */
+async function hozottMult(ptar, P, lancom, c, elhagy, keret) {
+  const pontjaim = new Map();
+  for (const e of lancom) {
+    if (e.sorszam > c.sorszam) break;
+    if (e.tipus === 'TudatpontRendezes' && Number.isSafeInteger(e.adat?.pont)) pontjaim.set(e.adat.entitas, e.adat.pont);
+  }
+  const hozott = [...pontjaim].filter(([az, p]) => p > 0 && !elhagy.includes(az));
+  const hozottOsszeg = hozott.reduce((s, [, p]) => s + p, 0);
+  if (hozottOsszeg > keret) {
+    throw new Error('A hozott pontjaid (' + hozottOsszeg + ') nem férnek a gyermek keretébe (' + keret + ') — hagyj el'
+      + ' néhányat: elhagy=<az>,… (KZ3)\n  a pontjaid: ' + hozott.map(([az, p]) => rovidAzonosito(az) + '=' + p).join(' '));
+  }
+  const vitt = [];
+  const lattuk = new Set();
+  const tegyel = (e) => { if (e && !lattuk.has(e.azonosito)) { lattuk.add(e.azonosito); vitt.push(e); } };
+  for (const e of lancom) if (e.sorszam <= c.sorszam) tegyel(e);
+  for (const [az] of hozott) for (const e of await egyeztetettEsemenyek(ptar, P, vonalKulcsa(az))) tegyel(e);
+  return { pontjaim, hozott, hozottOsszeg, vitt };
 }
 
 /**
@@ -505,10 +538,14 @@ async function gyermekSzuletesElokeszitese(szuloErv, { nyilt, szabalyok }) {
   const egyesitett = { ...sz, ...szabalyok, alapKuszobok: { ...sz.alapKuszobok, ...(szabalyok.alapKuszobok ?? {}) } };
   const { lanc: osok, teljes } = await szuletesLanc(ptar, P);
   if (!teljes) throw new Error('A szülő születés-lánca nincs meg teljesen ezen a készüléken.');
+  // ⭐ a létrehozó lánca a szülő tárában — a vége (a gyermek születése ezt folytatja: a lánc-pontja)
+  const sajatLanc = await sajatLancEsemenyei(ptar, szerzo);
+  const lancVeg = sajatLanc.at(-1) ?? null;
+  // ⭐⭐ ④b: a létrehozó is a születésével költözik — a hozott múltja (az első kitöltés) és a KZ3 (a gyermek kerete)
+  const mult = lancVeg ? await hozottMult(ptar, P, sajatLanc, lancVeg, [], teljesSzabalyok(egyesitett).tudatpontKeret)
+    : { vitt: [], hozottOsszeg: 0 };
   return { szulo: P, szuloSzuletes: pszuletes, szuloTagsag, szabalyok: egyesitett, zart: zart || !nyilt,
-    osSzuletesek: [...osok].reverse(),
-    // ⭐ a létrehozó lánca a szülő tárában — a vége (a gyermek születése ezt folytatja)
-    lancVeg: (await sajatLancEsemenyei(ptar, szerzo)).at(-1) ?? null };
+    osSzuletesek: [...osok].reverse(), lancVeg, kitoltes: mult.vitt, hozottOsszeg: mult.hozottOsszeg };
 }
 
 /** ⭐ D118/2 (①b): a koinó szabályai egy sorban (`kulcs=érték`, a küszöbök is). */
@@ -5237,7 +5274,7 @@ try {
         gyermek
           ? { zart: gyermek.zart, profil, szabalyok: gyermek.szabalyok, szulo: gyermek.szulo, szuloTagsag: gyermek.szuloTagsag }
           : { zart: !nyilt, profil, szabalyok },
-        gyermek?.osSzuletesek ?? [], gyermek?.lancVeg ?? null);
+        gyermek?.osSzuletesek ?? [], gyermek?.lancVeg ?? null, gyermek?.kitoltes ?? []);
       await koinoBecenevKijelolese(KOINO_BECENEV, szuletes.azonosito);
       if (profil.length) kiir(SZIN.halvany + 'Kötelező profil-mezők: ' + profil.join(', ') + ' (a meghívó tanúsítja — D28/2)' + SZIN.vege);
       kiir('A koino létrejött: ' + nev + (nyilt ? ' (NYÍLT — bárki olvashatja, aki eljut egy tagjához)'
@@ -5245,7 +5282,8 @@ try {
       kiir('  A koinó neve: ' + szuletes.azonosito);
       if (gyermek) {
         kiir('  A szülője: ' + gyermek.szulo + ' („' + (gyermek.szuloSzuletes.adat?.nev ?? '?') + '”) — a vágás a'
-          + ' születés pillanata; a költözés (a múlt és a súly) a következő lépésekkel jön');
+          + ' születés pillanata; a születéseddel beköltöztél (a hozott pontjaid: ' + gyermek.hozottOsszeg + ', a gyermekbe vitt'
+          + ' múlt: ' + gyermek.kitoltes.length + ' esemény); a többiek: koltozes <ez a gyermek>');
       }
       kiir('  A szabályai: ' + szabalyokSzovege(szuletes.adat.szabalyok));
       kiir(SZIN.halvany + '  Ezen a készüléken a „' + KOINO_BECENEV + '” becenév; a másik készüléken: csatlakoz '
@@ -5255,6 +5293,75 @@ try {
 
     // ⭐⭐ D118/2: CSATLAKOZÁS egy koinóhoz a nevével (a lenyomatával) — a becenév mostantól azé; a születését és a
     // többit a következő csere hozza (vagy a `behoz`). ⚠️ Egy már jegyzett becenevet csak kimondva írunk felül.
+    // ⭐⭐ D118 (④b): A KÖLTÖZÉS — ebből a koinóból (a szülő) a gyermekébe. A kiköltözés itt, a beköltözés ott, és közben a
+    // láncom a vágás előtti utolsó eseményemig és a hozott szeleteim múltja a gyermek tárába (az első kitöltés — a terhe a
+    // vállalásommal arányos). A vágáskori tagság kell (D118/3); ha a hozott pontjaim nem férnek a gyermek keretébe, el kell
+    // hagynom belőlük (KZ3 (A): `elhagy=<az>,…`). A kézi út: a gyermekbe vitt események fájlba is.
+    case 'koltozes': {
+      const cel = ervek[0];
+      if (!cel) throw new Error('Melyik gyermekbe? node koino/koino.js koltozes <a gyermek neve vagy becenéve> [elhagy=<az>,…] [fájl]');
+      const K = azonositoAlaku(cel) ? cel : await koinoBecenevFeloldasa(cel);
+      if (!azonositoAlaku(K) || K === KOINO) throw new Error('A gyermek egy új alakú koinó neve vagy becenéve: ' + cel);
+      const ktar = await koinoTaraNyitasa(K);
+      const ksz = (await ktar.esemeny(K)) ?? null;
+      if (!ksz || !koinoSzuleteseE(ksz, K)) {
+        throw new Error('A gyermek (' + rovidAzonosito(K) + ') születése nincs meg ezen a készüléken — csatlakozz hozzá (más'
+          + ' becenévvel: KOINO_AZONOSITO=<becenév> node koino/koino.js csatlakoz <név>) és cserélj, vagy hozd be.');
+      }
+      if (ksz.adat?.szulo !== KOINO) throw new Error('A(z) ' + rovidAzonosito(K) + ' nem ennek a koinónak a gyermeke.');
+      if (ksz.szerzo === szerzo) throw new Error('A gyermek létrehozója vagy: a születéseddel már beköltöztél.');
+      if ((await sajatLancEsemenyei(ktar, szerzo)).some((e) => e.tipus === 'Bekoltozes')) {
+        throw new Error('Már beköltöztél ebbe a gyermekbe.');
+      }
+      const vagas = ksz.ido;
+      // ----- a lánc-pontom: a vágás előtti utolsó eseményem (a szülő tárában) -----
+      const lancom = await sajatLancEsemenyei(tar, szerzo);
+      let c = null;
+      for (const e of lancom) { if (!(Number.isSafeInteger(e.ido) && e.ido <= vagas)) break; c = e; }
+      if (!c) throw new Error('A vágáskor még nem voltál a szülőben (az első eseményed a gyermek születése utáni).');
+      // ----- a vágáskori tagságom -----
+      const horgony = await sajatHorgonyom();
+      const pszul = await koinoSzuletese();
+      const bizonyitek = horgony && pszul
+        ? szuloTagsagaEpitese([pszul, ...await tagsagiEsemenyekGyujtese(tar, KOINO, horgony)], KOINO, horgony) : null;
+      if (!bizonyitek) throw new Error('Költözni a szülő tagja tud (D118/3) — a tagságod itt nem bizonyítható (tagsag).');
+      if (bizonyitek.lanc.some((e) => !(e.ido <= vagas))) {
+        throw new Error('A tagságod a vágás után született — a gyermekbe a vágáskori tagok költözhetnek (D118/3).');
+      }
+      // ----- KZ3 és az első kitöltés: a hozott pontjaim és a szeleteim múltja (a közös segéd — a létrehozóé is ez) -----
+      const elhagyErv = ervek.find((x) => x.startsWith('elhagy='));
+      const sajatPontok = new Set(lancom.filter((e) => e.sorszam <= c.sorszam && e.tipus === 'TudatpontRendezes')
+        .map((e) => e.adat?.entitas));
+      const elhagy = elhagyErv
+        ? elhagyErv.slice(7).split(',').map((x) => x.trim()).filter(Boolean).map((x) => feloldas(x, sajatPontok)) : [];
+      const { hozott, hozottOsszeg, vitt } = await hozottMult(tar, KOINO, lancom, c, elhagy, koinoSzabalyai(ksz).tudatpontKeret);
+      // ----- 1. a kiköltözés itt -----
+      const kik = await kikoltozes(kornyezet, K, horgony);
+      // ----- 2. az első kitöltés — a gyermek kapuján (a koinó-szabály szerint) -----
+      const be = await beolvasztas(ktar, vitt, K);
+      // ----- 3. a beköltözés a gyermekben — a láncom vége ott most a lánc-pontom -----
+      const veg = await lancVege(ktar, szerzo);
+      if (veg.elozo !== c.azonosito) {
+        throw new Error('A gyermek tárában a láncom vége nem a lánc-pontom (' + rovidAzonosito(c.azonosito) + ') — a költözés'
+          + ' nem folytatható (a kiköltözés megtörtént; próbáld újra).');
+      }
+      const kornyezetK = { koino: K, kulcspar, szerzo, tar: ktar, darabTar: fajlBlobTarolo(K), lancTarolo: lancTarolo(K) };
+      const bek = await bekoltozes(kornyezetK, { szulo: KOINO, kikoltozes: kik.azonosito,
+        lanc: { sorszam: c.sorszam, azonosito: c.azonosito }, szuloTagsag: bizonyitek, ...(elhagy.length ? { elhagy } : {}) });
+      // ----- 4. a kézi út: a gyermek születés-lánca, a kitöltés és a beköltözés fájlba -----
+      const fajl = ervek.slice(1).find((x) => !x.startsWith('elhagy='));
+      if (fajl) {
+        const szuletesek = [...(await szuletesLanc(ktar, K)).lanc].reverse();
+        await writeFile(fajl, [...szuletesek, ...vitt, bek].map((e) => JSON.stringify(e)).join('\n') + '\n', 'utf8');
+      }
+      kiir('Kiköltöztél ebből a koinóból, és beköltöztél a gyermekébe (' + rovidAzonosito(K) + ' — „' + (ksz.adat?.nev ?? '?') + '”).');
+      kiir('  a lánc-pontod: a ' + c.sorszam + '. eseményed (a vágás előtti utolsó) · a hozott pontjaid: ' + hozottOsszeg
+        + ' (' + hozott.length + ' entitáson' + (elhagy.length ? ', elhagyva ' + elhagy.length : '') + ')'
+        + ' · a gyermekbe vitt múlt: ' + be.uj + ' új esemény');
+      if (fajl) kiir(SZIN.halvany + '  A gyermekbe vitt események fájlban is: ' + fajl + ' (a másik készüléken: behoz <fájl>)' + SZIN.vege);
+      break;
+    }
+
     case 'csatlakoz': {
       const cel = ervek[0];
       if (!azonositoAlaku(cel)) throw new Error('Melyik koinóhoz? node koino/koino.js csatlakoz <a koinó neve — 43 jel>');

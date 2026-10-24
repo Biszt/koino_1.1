@@ -5393,3 +5393,25 @@ költözőé — kevesebb pont, kevesebb élő entitás). ⚠️ **A nemzedékek
 lineáris, és a múlt képe szintenként gyorsítótárban van, tehát csak akkor fizetjük, ha a múlt bővül. ⏸️ Ha egyszer száz
 nemzedék lesz: a szerkezetet elég volna a legmélyebb szinten egyszer összegyűjteni — mérés után. A 9. szabály szerint a teher
 ott áll, ahol a többi: a szigorú (b) alatt a készülék tárában csak a vállalt szeletei múltja van.
+
+---
+
+## 82. ⭐ A KÖLTÖZÉS ÁRA — mekkora a ki- és a beköltözés, és a születések lánca? (D118, a költözés ④, 2026-10-24)
+
+`node koino/meres/koltozesMeres.js` — a ④a formátumán. *(A számozás a terv szerinti: a 82. a ④-é, a 83. — a két réteg — előbb
+készült el.)*
+
+- **A kiköltözés** (`Kikoltozes`, a szülőben): **544 B**.
+- **A beköltözés** (`Bekoltozes`): a tagsági bizonyítékkal nő, ~1 KB lépésenként (lépésenként egy belépés és egy meghívás) —
+  1 lépés **1,7 KB**, 4 lépés **4,7 KB**, 13 lépés **13,8 KB** (a 63. mérés szerint 1 millió tagnál ~13 lépés). Egyszer,
+  költözőnként.
+- **A gyermek születése:** az alapítótól 0,8 KB (az ő lánca üres), egy mélyen ülő tagtól ugyanannyi, mint a beköltözése.
+- **A születések lánca** (a csatlakozó első cseréje, a születés-szelet): ~0,8 KB nemzedékenként — 1 / 2 / 4 / 8 / 16
+  nemzedék: 0,6 / 1,4 / 3,1 / 6,3 / 12,8 KB. Lineáris, és egyszer jön.
+- **Egy szelet örökölt múltja** a vonalon és a lemezen ugyanannyi, mint a szülőben volt (az események átírás nélkül jönnek —
+  D118/1); a költöző első kitöltése a vállalt szeletei múltja.
+
+⭐ **Amit mutat:** a költözés ára a költöző saját láncával arányos (a 9. szabály szerint — nem a koinó méretével), a születések
+lánca a nemzedékek számával — mind egyszeri. A legnagyobb tétel a mély tag beköltözése (~14 KB 1 millió tagnál) — egy
+rövidebb lánc (egy közelebbi meghívó) kisebb; a mező a tagsági csomag mintáját követi (D113: ≤ 1024 esemény).
+

@@ -504,7 +504,11 @@ export async function tagsagiCsomagKiadasa(kornyezet) {
   const idx = tagsagiIndex(esemenyek, kornyezet.koino);
   const r = horgonyTagsaga(idx, horgony);
   if (!r.igen) return { kiadva: false, ok: r.ok };
-  if (r.melyseg === 0) return { kiadva: false, ok: 'alapító — a láncom maga a koinó létrehozása', melyseg: 0 };
+  if (r.melyseg === 0) {
+    // ⭐ D118 (④b): a beköltözött horgonya maga a bizonyíték (a beköltözés — a tagsági kísérők viszik), az alapítóé a születés.
+    return { kiadva: false, melyseg: 0, ok: idx.horgonyok.get(horgony)?.tipus === 'Bekoltozes'
+      ? 'beköltözött — a horgonyom maga a bizonyíték (a beköltözésem)' : 'alapító — a láncom maga a koinó létrehozása' };
+  }
   const lanc = tagsagiLanc(idx, horgony);
   // Van-e már legalább ilyen rövid csomagom (a meglévő csomag mélysége a saját láncából számítható)?
   for (const e of esemenyek) {
@@ -540,6 +544,25 @@ export async function tagsagiCsomagKiadasa(kornyezet) {
 export function belepes(kornyezet, alapitas) {
   const adat = typeof alapitas === 'string' ? { alapitas } : {};
   return esemenytTeszek(kornyezet, 'Belepes', adat);
+}
+
+/**
+ * ⭐⭐ D118 (④b): A KIKÖLTÖZÉS — a szülőben, a saját azonosság-szeletembe (`horgony` — a szülőbeli horgonyom): „átmentem a
+ * gyermekbe”. A szülő ebből tudja, ki ment át (a családfa; később a pénz kivezetése — 4.8). A szülő jelene: a gyermekbe nem
+ * kerül, a beköltözés hivatkozik rá.
+ */
+export function kikoltozes(kornyezet, gyermek, horgony) {
+  return esemenytTeszek(kornyezet, 'Kikoltozes', { gyermek }, { entitas: horgony });
+}
+
+/**
+ * ⭐⭐ D118 (④b): A BEKÖLTÖZÉS — a gyermekben; a saját szeletét nyitja (a horgonyom ott). ⚠️ A szülőbeli láncomat a
+ * megnevezett (vágás előtti utolsó) eseménye után folytatja: a hívó gondoskodik róla, hogy a gyermek tárában a láncom vége az
+ * legyen (az első kitöltés — `koino.js` `koltozes`); a kapu ellenőrzi.
+ * @param {Object} adat - `{ szulo, kikoltozes, lanc: { sorszam, azonosito }, szuloTagsag, elhagy? }`
+ */
+export function bekoltozes(kornyezet, adat) {
+  return esemenytTeszek(kornyezet, 'Bekoltozes', adat, { entitas: null });
 }
 
 /**

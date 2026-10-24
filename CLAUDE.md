@@ -19,7 +19,7 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ### ▶️ SESSION-VÁLTÁS (2026-10-15) — A KÖVETKEZŐ SESSION INNEN INDUL
 
-**Az állapot:** **1304 önpróba** (62 próba-fájl; a legutóbbi teljes soron 1303 zöld — az egy bukás a Síkidom-próba szeszélye, az oka megvan és javítva, lent — 2026-10-24, D118 ④a a beköltözés) · 328 fájl / 6313,1 KB (⚠️ CR nélkül mérve —
+**Az állapot:** **1305 önpróba** (62 próba-fájl; a legutóbbi teljes soron 1304 zöld — az egy bukás a D91/3 címjegyzék-próba 10 mp-es tétlenségi órája terhelés alatt, magában zöld, lent — 2026-10-24, D118 ④b a `koltozes` parancs) · 329 fájl / 6334,1 KB (⚠️ CR nélkül mérve —
 lásd a 6. szabályt) · 0 npm-csomag · minden pusholva. ✅ **A telefon friss** (Csaba 2026-10-23-án a felderítés kézi
 próbájához és a három javításhoz frissítette — *„működik”*); a parancs lent, *„Ami nyitva maradt"*. A laptopon a próbához három
 fa: „Felderítés-próba” (60 gondolat), „Nagy felderítés-próba” és „Harmadik felderítés-próba” (400–400 gondolat, ≤ 8 szint, ≤ 8
@@ -202,8 +202,12 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    `Kikoltozes` a szülőben, `Bekoltozes` a gyermekben (a szülőbeli láncot a vágás előtti utolsó esemény után folytatja, a
    vágáskori tagsági bizonyítékkal; `elhagy` — KZ3 (A)); a kapu a koinó és a szülő születésével ellenőriz (a csomagban utazót
    is — különben egy hamis beköltözés ingyen tagságot adna); a beköltözés tagsági horgony (D118/3); a kép a beköltözésekből
-   tudja, ki költözött. ⏭️ **④b a `koltozes` parancs** (a két aláírás, az első kitöltés, a kézi út, két készüléken mérve) —
-   előtte a 82. mérés; utána ④c a 2. lépcső öröklése. ⚠️ Az ⑤-re: a vállalás a hozott entitásokra (ma „nem tartod”), a lánc-gyökér és
+   tudja, ki költözött. ✅ **④b a `koltozes` parancs** (elágazás 199; 82. mérés: a beköltözés ~1 KB tagsági lépésenként, a
+   születés-lánc ~0,8 KB nemzedékenként): `koltozes <gyermek> [elhagy=<az>,…] [fájl]` — a kiköltözés a szülőben, az első
+   kitöltés (a láncom a lánc-pontig és a hozott szeleteim múltja), a beköltözés a gyermekben, a kézi út; ⭐ a létrehozó is
+   (a `koino … szulo=` a hozott múltját is viszi). Két készüléken mérve: a csere után a másik készülék a beköltöző súlyával
+   számol. ⏭️ **④c a 2. lépcső öröklése** (a gyermekben ma „a horgony nem belépési esemény” — a tanúsítások és a
+   felhatalmazások a vágáskor). ⚠️ Az ⑤-re: a vállalás a hozott entitásokra (ma „nem tartod”), a lánc-gyökér és
    a lánc-ellenőrzés a költözött láncon, az átmeneti tár. ⚠️ A laptop–telefon próba-koinója (`sajat`, régi alak) nem folytatható — a
    következő kézi próbához új koinó kell (`koino "<név>"`, a telefonon `csatlakoz <név>`). Elágazás 192–196.
 2. ⏸️ **A terep 🅱️ (két mobilnetes telefon)** — Csaba (2026-10-19): *„ezt hagyjuk ki”*; előtte a telefon frissítése (lent).
@@ -214,6 +218,10 @@ pontját („a gyökér-darabbal”), pedig azt a gyökér-kérelem SZÚRÓPRÓB
 fele eséllyel a gyerek-ág) — ~6%-ban egyik minta sem az, és a nem ismert saját pont helye 1 (60 − 1 = 59 a várt 30 helyett; a
 teljes sor kimenete fájlban volt). A program jól számol; a próba most B tudásából várja a számot (és kiírja, melyik eset volt —
 8 futásból egyszer „nem ismert”, zöld). ⚠️ A 2026-10-13-i bukás (lent) más alakú volt: a beállító lépés nem kapott választ.
+
+⏸️ **Kisebb nyitottak (2026-10-24):** ⚠️ a D91/3 címjegyzék-próba a teljes sor terhelése alatt egyszer bukott: „rés nyílt, de a csere
+a résen elbukott: A másik fél nem válaszol (10000 ms)” — ugyanaz a 10 mp-es tétlenségi óra, mint a lenti csere-próbáknál
+(megnevezte magát); magában 3/3 zöld. MÉRENDŐ, nem hangolandó.
 
 ⏸️ **Kisebb nyitottak (2026-10-19):** ⚠️ a ⑦b próbájában a felület a teljes sor terhelése alatt egyszer nem írt ki semmit 15 mp alatt (magában zöld) — a `feluletet` segéd hibája most megnevezi magát (stderr, kilépési kód, eltelt idő). ✅ A ⑦b MÁSIK bukás-alakjának oka megvan és javítva (elágazás 181): az első próbálkozás egy épp újrainduló tartónál elbukott, és a régi szabály szerint a tartó a kérelem lejáratáig (2 óra) nem kapott újra esélyt — a „már próbáltuk” jel most 2 percre szól.
 
@@ -309,7 +317,7 @@ D100 parancssor-próbája méri, egy végig futó felülettel) · a lap a még m
   minden kérdéshez újraindított folyamat mindent frissen lát, és elrejti, amit közben egy MÁSIK folyamat írt — a ház
   bekötés-próbája így nem vette észre, hogy a futó felület nem látja az őrjárat hozta választ.
 - ⛔ **Előbb a mérés, aztán az építés** — a mérések jegyzőkönyve:
-  [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) (számozott, 1–81. és 83. — a 82. a ④-gyel jön).
+  [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) (számozott, 1–83.).
 
 #### ⏸️ Régebbi nyitott döntések (mind Csabáé — részletek a naplóban)
 
@@ -372,7 +380,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés, terepen — TCP-n 334 bájt volt; ⚠️ D89/1 óta titkosítva +~0,4 KB: kézfogás, csomagonként ~18 B, az aláírás — 57. mérés; D95/4 óta a gyökér-darab jele +76–100 B) · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **328 fájl, 6313,1 KB** — ⚠️ *ebből a `felulet/` 146 fájl / 1603,8 KB (2026-10-22), ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **329 fájl, 6334,1 KB** — ⚠️ *ebből a `felulet/` 146 fájl / 1603,8 KB (2026-10-22), ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -479,6 +487,9 @@ node koino/koino.js koino "név" [leírás] [nyilt] [profil=nev,telepules]  # �
                                  # maximumDontesiIdo) — a születésbe MIND bekerül, a meg nem adott a mai értékkel
                                  # ⭐⭐ D118 (②a): szulo=<a szülő neve vagy becenéve> — a GYERMEK születése (KZ2: a szülő
                                  # tagja hozhatja létre); a szülő szabályait (a meg nem adottakat) és zártságát örökli
+node koino/koino.js koltozes <a gyermek neve vagy becenéve> [elhagy=<az>,…] [fájl]  # ⭐⭐ D118 (④b): a KÖLTÖZÉS a szülőből
+                                 # (a szülő a mostani koinó): kiköltözés itt, a láncom és a hozott szeleteim múltja a gyermekbe,
+                                 # beköltözés ott (a vágáskori tagság kell; a hozott pontok a gyermek keretébe — KZ3); fájlba is
 node koino/koino.js csatlakoz <a koinó neve> [felulir]  # ⭐ D118/2: a becenév mostantól ennek a koinónak a neve — a születést
                                  # és a többit a csere (vagy a `behoz`) hozza; utána `belep`. A `behoz` egy egyértelműen
                                  # egy koinóé fájlnál magától is csatlakozik, ha a becenév még nem jegyzett
@@ -560,7 +571,7 @@ node koino/koino.js ellenoriz                       # ⭐ D82: a tár MINDEN ese
                                  # → bejelentés a vádolt azonosság-szeletébe (a csere és a `behoz` után magától is)
                                  # A fájl alakja a táré: a másolt esemenyek.jsonl is behozható.
                                  # ⛔ A kapu UGYANAZ: az átírt esemény itt is elbukik.
-node koino/meres/mind.js         # a 1304 önpróba
+node koino/meres/mind.js         # a 1305 önpróba
 node koino/meres/mind.js fa      # ⭐ egy témakör (csoport): alap · allapot · felulet · csere · fajl · fa · parancssor
 KOINO_PROBA="részlet" node koino/meres/mind.js parancssor  # ⭐ csak a nevükben ezt tartalmazó próbák (kimondja magát)
 node koino/meres/skalaMeres.js   # SKÁLA-MÉRÉS (nem önpróba: számokat ad, nem igen/nem-et)
@@ -582,6 +593,8 @@ node koino/meres/tarsEmlekezetMeres.js [n ...]  # ⭐ A TÁRSANKÉNTI EMLÉKEZET
                                  # az első szint a nyílt forgalom 25–62%-a; az F-fel elmarad (`uzenetMeres` műszer; KOINO_BONTAS=1)
 node koino/meres/lancKorMeres.js [n ...]  # ⭐ A LÁNC-KÖR ÁRA (71., D98/2–4): kérdezett eseményenként ~0,6–0,8 KB, logaritmikusan; a szerző a
                                  # részfa-gyorsítótárral 9–42 ms (nélküle 5000 eseménynél 1,9 s)
+node koino/meres/koltozesMeres.js  # ⭐ A KÖLTÖZÉS ÁRA (82., D118 ④): kiköltözés 0,5 KB, beköltözés ~1 KB tagsági lépésenként (13 lépés
+                                 # 13,8 KB), a születések lánca ~0,8 KB nemzedékenként — mind egyszeri
 node koino/meres/ketRetegMeres.js [N ...]  # ⭐ A KÉT RÉTEG ÁRA (83., D118 ③): a gyermek első képe ~1,6× a szülő nélküliének, a múlt
                                  # gyorsítótárával kisebb; a nemzedékekkel enyhén nő (minden szint az ősök szerkezetét újraolvassa)
 node koino/meres/darabMeres.js [gondolatok ...]  # ⭐ AZ ÖSSZ-DARAB A VONALON (81., D116): a fejléc-kérdések bájtjai (KOINO_KOD=<régi
@@ -641,7 +654,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés; TCP-n 334 bájt volt). ⚠️ Két készülék között ma körönként akár **négy** is lemegy (két cím × két irány, 43. mérés; a 45. mérés szétszedte: a két tényező független, és terepen egy címen is két csere megy percenként) — egyperces körrel ez társanként ~8 MB/nap, ötperccel ~1,6 MB. ⭐ A címek tényezőjét a D71 (ii) megszüntette (46. mérés: két címen is 1 csere/ablak); az irányokét a (iii) döntés felezné. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 328 fájl, 6313,1 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 329 fájl, 6334,1 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 
@@ -670,7 +683,7 @@ node koino/koino.js tars 127.0.0.1 7373 "A készülék" && node koino/koino.js c
 ⚠️ **A KOINO NEM BÖNGÉSZŐBEN FUT (D29, 2026-08-28).** Csaba döntése: *„hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta P2P kapcsolatra koncentráljunk."* Indok: a böngésző korlátai nem a koino korlátai — egy lap nem tud portot nyitni, nem fogad kapcsolatot, elrejti a saját címeit, és bezáráskor eltűnik; a P2P-hez emlegetett infrastruktúra (jelzőpont, STUN, továbbító) jórészt EBBŐL következik. A böngésző később lehet egy kliens, de nem ő szabja meg, mire képes a koino.
 
 - **Nincs telepítendő függőség** — a kriptográfia a Node beépített WebCryptójából jön (Ed25519 natívan). Az adat a `koino-adat/` mappában él, **hozzáfűzhető** fájlban (soronként egy aláírt esemény); máshová a `KOINO_ADAT` változóval tehető.
-- **Önpróbák:** `node koino/meres/mind.js` — 1304 próba 62 fájlban (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de a sort nem pirosítja be — ha átmegy, az bukás; ma egy sincs); a kilépési kód 1, ha bármi bukott. ⭐ **Témakörönként (2026-10-01):** `node koino/meres/mind.js <csoport> [<csoport> …]` — **alap** (kanonikus, kulcs, esemény, tár, író, átmeneti, keresőtár, keresőmegújítás) · **allapot** (állapot, javaslat, szabály, egyezmény, döntési csomag, össz-pont, felszabadítás, identitás, tagság, értesítés, felderítés, koinólánc, kétréteg, költözés) · **felulet** (kapu, pakli, tér, csereállapot) · **csere** (csere, fájlcsere, társak, tartomány, titkosítás, udpkapu, kötés, tábla, dht, címjegyzék, kérelem, összegzőtartás, tagságkísérő, gyökérdarab, kereső, közöshalmaz, részvétel, társemlékezet, vizsga, kiszolgálásikeret, keresőrégió, mélységtanulás, felajánlás, keresés) · **fajl** (fájl, fájligény, fájlkérelem, fájlátvitel, szövegdarab) · **fa** (összegzőfa, láncgyökér, ellentmondás, észlelő, láncellenőrzés) · **parancssor**. Egy próba-fájl a nevével (`mind.js eszlelo`), és ha a neve csoport is: `mind.js csak csere`. A szűrő **pontosan** illeszkedik (a régi részszó-szűrő a `tar`-ra a `tarsak`-ot is indította), és a részleges futás az összegzésben kimondja magát (`Csak: fa — 4 próba-fájl a 40-ből`). ⭐ **Egy próba a nevéből (2026-10-05):** `KOINO_PROBA=<részlet>` — csak az a próba fut, amelynek a nevében benne van (a hosszú parancssor-csoportból egyet); a fejléc és az összegzés kimondja (`Szűrve: …`). ⛔ **A besorolás-őr:** minden próba-fájl pontosan egy csoportban van, és a `meres/` minden `*Proba.js` fájlja be van kötve (kivétel a `NEM_ONPROBA` listán: az `ebredesProba.js` mérés) — ha nem, a `mind.js` semmit nem futtat (kilépési kód 2), és megnevezi, mi hiányzik. *Új próba-fájlnál tehát a `CSOPORTOK`-ba is be kell írni.* Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
+- **Önpróbák:** `node koino/meres/mind.js` — 1305 próba 62 fájlban (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de a sort nem pirosítja be — ha átmegy, az bukás; ma egy sincs); a kilépési kód 1, ha bármi bukott. ⭐ **Témakörönként (2026-10-01):** `node koino/meres/mind.js <csoport> [<csoport> …]` — **alap** (kanonikus, kulcs, esemény, tár, író, átmeneti, keresőtár, keresőmegújítás) · **allapot** (állapot, javaslat, szabály, egyezmény, döntési csomag, össz-pont, felszabadítás, identitás, tagság, értesítés, felderítés, koinólánc, kétréteg, költözés) · **felulet** (kapu, pakli, tér, csereállapot) · **csere** (csere, fájlcsere, társak, tartomány, titkosítás, udpkapu, kötés, tábla, dht, címjegyzék, kérelem, összegzőtartás, tagságkísérő, gyökérdarab, kereső, közöshalmaz, részvétel, társemlékezet, vizsga, kiszolgálásikeret, keresőrégió, mélységtanulás, felajánlás, keresés) · **fajl** (fájl, fájligény, fájlkérelem, fájlátvitel, szövegdarab) · **fa** (összegzőfa, láncgyökér, ellentmondás, észlelő, láncellenőrzés) · **parancssor**. Egy próba-fájl a nevével (`mind.js eszlelo`), és ha a neve csoport is: `mind.js csak csere`. A szűrő **pontosan** illeszkedik (a régi részszó-szűrő a `tar`-ra a `tarsak`-ot is indította), és a részleges futás az összegzésben kimondja magát (`Csak: fa — 4 próba-fájl a 40-ből`). ⭐ **Egy próba a nevéből (2026-10-05):** `KOINO_PROBA=<részlet>` — csak az a próba fut, amelynek a nevében benne van (a hosszú parancssor-csoportból egyet); a fejléc és az összegzés kimondja (`Szűrve: …`). ⛔ **A besorolás-őr:** minden próba-fájl pontosan egy csoportban van, és a `meres/` minden `*Proba.js` fájlja be van kötve (kivétel a `NEM_ONPROBA` listán: az `ebredesProba.js` mérés) — ha nem, a `mind.js` semmit nem futtat (kilépési kód 2), és megnevezi, mi hiányzik. *Új próba-fájlnál tehát a `CSOPORTOK`-ba is be kell írni.* Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
 - ⚠️ A `koino/koino.js` **fejlesztői eszköz**, nem a koino felülete — a valódi felület a prototípus pakli-nézetéből öröklődik (lásd [`docs/felulet_terv.md`](docs/felulet_terv.md)).
 
 ### A PROTOTÍPUS (`backend/` + `frontend/` — Fázis 1, befagyasztva)
