@@ -73,6 +73,41 @@
   color: var(--color-text-faint);
 }
 
+/* ----- ⭐⭐ D118 (⑥): A CSALÁDFA — a szülő, a gyermekek, a költözéseim -----
+   A nevek gombok (oda lépünk); a készüléken nem ismert szülő halványan és dőlten (D19: hiány, nem vád). */
+
+.koino-kartya__csalad {
+  margin: .5rem 0 0;
+  font-size: var(--text-sm, .9rem);
+}
+
+.koino-kartya__csalad-sor { margin: .15rem 0; }
+
+.koino-kartya__csalad-sor--koltozes { color: var(--color-text-faint); }
+
+.koino-kartya__csalad-nev {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-primary);
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+
+.koino-kartya__csalad-nev:disabled {
+  color: var(--color-text);
+  text-decoration: none;
+  cursor: default;
+}
+
+.koino-kartya__csalad-nev--ismeretlen {
+  color: var(--color-text-faint);
+  font-style: italic;
+  text-decoration: none;
+  cursor: default;
+}
+
 /* ----- AZ ALSÓ SÁV ----- */
 
 .koino-kartya__sav {

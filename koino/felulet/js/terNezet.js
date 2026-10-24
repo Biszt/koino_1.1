@@ -138,6 +138,10 @@ export class TerNezet {
     }
     elem.appendChild(labjegyzet);
 
+    // ----- ⭐⭐ D118 (⑥): A CSALÁDFA — a szülő, a gyermekek, és a költözéseim -----
+    const csalad = this._csalad(koino);
+    if (csalad) elem.appendChild(csalad);
+
     // ----- A BELÉPÉS -----
     //
     // ⚠️ A „belépés" itt NEM bejelentkezés (D15: nincs ilyen a koinóban) — csak annyi,
@@ -164,6 +168,61 @@ export class TerNezet {
     elem.appendChild(sav);
 
     return elem;
+  }
+
+  /**
+   * ⭐⭐ D118 (⑥): a családfa a kártyán — ↑ a szülője, ↓ a gyermekei (a nevükre kattintva oda lépünk; amit a készülék nem
+   * ismer, az halványan, a rövid nevével — D19), és a költözéseim (ide beköltöztem · innen kiköltöztem).
+   * @returns {HTMLElement|null}
+   */
+  _csalad(koino) {
+    const sorok = [];
+    if (koino.szulo) {
+      sorok.push(['↑ a szülője:', [{ azonosito: koino.szulo, nev: koino.szuloNev, ismert: koino.szuloIsmert }]]);
+    }
+    if (koino.gyermekek?.length) sorok.push(['↓ a gyermekei:', koino.gyermekek.map((g) => ({ ...g, ismert: true }))]);
+    const koltozesek = [];
+    if (koino.enBekoltoztem) koltozesek.push('🧳 ide költöztél (a szülőből)');
+    for (const gy of koino.kikoltoztem ?? []) {
+      const g = koino.gyermekek?.find((x) => x.azonosito === gy);
+      koltozesek.push('🧳 innen kiköltöztél ide: ' + (g?.nev ?? gy.slice(0, 8) + '…'));
+    }
+    if (!sorok.length && !koltozesek.length) return null;
+
+    const doboz = document.createElement('div');
+    doboz.className = 'koino-kartya__csalad';
+    for (const [cimke, koinok] of sorok) {
+      const sor = document.createElement('p');
+      sor.className = 'koino-kartya__csalad-sor';
+      sor.appendChild(document.createTextNode(cimke + ' '));
+      koinok.forEach((k, i) => {
+        if (i) sor.appendChild(document.createTextNode(', '));
+        if (k.ismert) {
+          const gomb = document.createElement('button');
+          gomb.type = 'button';
+          gomb.className = 'koino-kartya__csalad-nev';
+          gomb.textContent = k.nev ?? 'nem ismerem a születését';
+          gomb.title = k.azonosito === this.aktiv ? 'itt vagy' : 'Belépek ide';
+          gomb.disabled = k.azonosito === this.aktiv;
+          gomb.addEventListener('click', () => this._belepes(k.azonosito));
+          sor.appendChild(gomb);
+        } else {
+          // ⚠️ A hiány megnevezve, nem kitalálva (D19): a szülő születése nincs a készüléken.
+          const nev = document.createElement('span');
+          nev.className = 'koino-kartya__csalad-nev koino-kartya__csalad-nev--ismeretlen';
+          nev.textContent = 'ezen a készüléken nem ismert (' + k.azonosito.slice(0, 8) + '…)';
+          sor.appendChild(nev);
+        }
+      });
+      doboz.appendChild(sor);
+    }
+    for (const szoveg of koltozesek) {
+      const sor = document.createElement('p');
+      sor.className = 'koino-kartya__csalad-sor koino-kartya__csalad-sor--koltozes';
+      sor.textContent = szoveg;
+      doboz.appendChild(sor);
+    }
+    return doboz;
   }
 
   /** Egy szám a kártyán, magyarázó címkével. */

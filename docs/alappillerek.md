@@ -1486,3 +1486,12 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     `allapotSzamitas.js`, `szabalyok.js`, `ketReteg.js`, `lancEllenorzes.js`, `vallalas.js`, `koino.js`; a próbák
     (`koltozesProba.js`, a ④b parancssor-próbája), 13 rontással; az építés közben: a születés nélküli lánc (a ③ óta a
     művelet összege a korábbi pontjaimat kihagyta) és a koinó születésének helye (a hívó tára adja).
+203. **2026-10-25 · a költözés ⑥: a felület — a tér családfája és a „Költözés…” ablak (D118)**
+    → **a tér kártyáján a szülő, a gyermekek és a költözéseim; a fő menüben a „🧳 Költözés…” ablak (a gyermekek a
+    készüléken, a kerete, a hozott pontok a címekkel, az elhagyás KZ3-ra élő összeggel, megerősítés); a parancs és a lap
+    ugyanazt a függvényt hívja (`koltozesElokeszitese` / `koltozesVegrehajtasa` / `koltozesElonezete`, `GET`/`POST
+    /api/koltozes`)** · ⛔ lelet: a tér kártyája a beköltözést nem vette horgonynak (a gyermekben a beköltözők kimaradtak a
+    számokból, a beköltöző „nem léptem be”-t látott) · ⚠️ költözni a saját (indításkori) koinóból lehet; gyermeket a lapról
+    nem lehet létrehozni (a koinó létrehozása ma parancs) · Csaba (D118 — a 7. szakasz ⑥ pontja) · `ter.js`,
+    `terNezet.js`, `koinoKoltozes.js`, `foMenu.js`, `koino.js`, CSS; a próbák (`terProba.js`, a parancssor), 5 rontással;
+    böngészőben végigjárva.

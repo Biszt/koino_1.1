@@ -686,6 +686,60 @@ proba('⭐⭐ D118 (④b): a költözés két készüléken — kiköltözés a 
     }
   });
 
+// ===================================
+// ⭐⭐ D118 (⑥): A KÖLTÖZÉS A LAPRÓL — az előnézet, a költözés, a tér családfája
+// ===================================
+//
+// B a szülő tagja, a vágás előtt egy gondolatára 40 pontot tett; A létrehozza a gyermeket. ⭐ Viselkedést mérünk: B felülete
+// az előnézetben a gyermeket és a hozott 40 pontot mutatja (a gondolat címével), a lapról indított költözés után B lemezén a
+// gyermekben ott a beköltözése, a szülőben a kiköltözése; a tér a családfát (a gyermek szülője, a szülő gyermeke) és a
+// beköltözést mutatja; másodszor a lap már nem enged („már beköltöztél”). A felület VÉGIG fut.
+proba('⭐⭐ D118 (⑥): a költözés a LAPRÓL — az előnézet a gyermeket és a hozott pontokat mutatja, a költözés után a lemezen a ki- és a beköltözés, a téren a családfa; másodszor nem enged',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const G = { KOINO_AZONOSITO: 'gyermek' };
+    let f = null;
+    try {
+      await fut(a, 'koino', 'Lap szülő', 'nyilt');
+      const P = await koinoNeve(a);
+      await taggaTesziKeszulek(a, b);
+      await fut(a, 'kivisz', join(a, 'szulo.jsonl'));
+      await fut(b, 'behoz', join(a, 'szulo.jsonl'));
+      const y = azonosito(await fut(b, 'gondolat', 'LAPROL'), 'Létrejött:');
+      await fut(b, 'pont', y, '40');
+      await fut(a, 'koino', 'Lap gyermek', 'szulo=sajat', 'nyilt', G);
+      const K = await koinoNeve(a, 'gyermek');
+      await fut(a, 'kivisz', join(a, 'gyermek.jsonl'), G);
+      await fut(b, 'behoz', join(a, 'gyermek.jsonl'), G);
+      f = await feluletet(b, 7861);
+      const elotte = await f.hiv('/api/koltozes');
+      const g = (elotte.adat?.gyermekek ?? []).find((x) => x.azonosito === K);
+      const koltozes = await f.hiv('/api/koltozes', { method: 'POST', body: JSON.stringify({ gyermek: K }) });
+      const masodszor = await f.hiv('/api/koltozes', { method: 'POST', body: JSON.stringify({ gyermek: K }) });
+      const ter = await f.hiv('/api/ter');
+      const kk = (ter.adat?.kartyak ?? []).find((x) => x.azonosito === K);
+      const pk = (ter.adat?.kartyak ?? []).find((x) => x.azonosito === P);
+      const lemez = async (koino) => (await readFile(join(b, koino, 'esemenyek.jsonl'), 'utf8').catch(() => '')).split('\n')
+        .filter(Boolean).map((x) => JSON.parse(x));
+      const bK = await lemez(K);
+      const bP = await lemez(P);
+      const ok = !!g && g.lehet === true && g.hozottOsszeg === 40 && g.pontok?.[0]?.cim === 'LAPROL'
+        && koltozes.allapot === 200 && koltozes.adat?.success === true && koltozes.adat?.hozottOsszeg === 40
+        && bK.some((e) => e.tipus === 'Bekoltozes') && bP.some((e) => e.tipus === 'Kikoltozes' && e.adat?.gyermek === K)
+        && masodszor.allapot === 400 && /már beköltöztél/i.test(masodszor.adat?.hiba ?? '')
+        && kk?.szulo === P && kk?.szuloNev === 'Lap szülő' && kk?.enBekoltoztem === true && kk?.enTagVagyok === true
+        && pk?.gyermekek?.some((x) => x.azonosito === K) && pk?.kikoltoztem?.includes(K);
+      if (!ok) process.stderr.write('    (' + JSON.stringify({ g, koltozes: koltozes.adat, masodszor: masodszor.adat,
+        kk: kk && { szulo: kk.szulo, nev: kk.szuloNev, be: kk.enBekoltoztem, tag: kk.enTagVagyok },
+        pk: pk && { gy: pk.gyermekek, kik: pk.kikoltoztem } }) + ')\n');
+      return ok;
+    } finally {
+      if (f) { f.folyamat.kill(); await varj(500); }
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 /** Egy esemény koinója a nyers lemez-sorból (a születésé a saját lenyomata — D118/2). */
 function esemenyKoinojaSzerint(e) {
   return e.koino === '' && e.tipus === 'KoinoLetrehozas' ? e.azonosito : e.koino;

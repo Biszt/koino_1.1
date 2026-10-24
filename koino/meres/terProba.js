@@ -17,6 +17,8 @@ import { join } from 'node:path';
 import { esemenyTarNyitasa, ismertKoinok } from '../js/tar/fajlTar.js';
 import { esemenyMentese } from '../js/tar/esemenyTar.js';
 import { terKartyai, koinoKartyaja, RENDEZESEK } from '../js/allapot/ter.js';
+import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
+import { teljesSzabalyok } from '../js/esemeny/koinoSzabalyok.js';
 
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
@@ -289,6 +291,74 @@ proba('⭐ Az „először láttam" szerint is rendezhető (a hamisíthatatlan, 
 
     const { kartyak } = await terKartyai(hely, { rendezes: 'eloszorLattam', irany: 'novekvo' });
     return kartyak[0].azonosito === 'regi' && kartyak[1].azonosito === 'uj';
+  });
+
+// ===================================
+// ⭐⭐ D118 (⑥): A CSALÁDFA ÉS A BEKÖLTÖZŐ A TÉREN
+// ===================================
+
+proba('⭐⭐ D118 (⑥): a téren a gyermek a szülőjét, a szülő a gyermekét mutatja — és a beköltöző a gyermekben belépő ÉS tag (a beköltözése a horgonya), a szülőben látja a kiköltözését',
+  async () => {
+    const hely = await ujKeszulek();
+    const NAP = 86400 * 1000;
+    const T0 = Date.UTC(2026, 0, 1);
+    const VAGAS = T0 + 10 * NAP;
+    const A = await ujEember('');
+    const P = await A.tesz('KoinoLetrehozas', { nev: 'Szülő', leiras: null, alapitok: [], zart: true,
+      szabalyok: teljesSzabalyok() }, T0);
+    A.koinotValt(P.azonosito);
+    const B = await ujEember(P.azonosito);
+    const bBe = await B.tesz('Belepes', {}, T0 + 10);
+    const bM = await A.tesz('Meghivas', { kit: B.szerzo, sajatBelepes: P.azonosito }, T0 + 11, { entitas: bBe.azonosito });
+    A.koinotValt('');
+    const K = await A.tesz('KoinoLetrehozas', { nev: 'Gyermek', leiras: null, alapitok: [], zart: true, szulo: P.azonosito,
+      szuloTagsag: { horgony: P.azonosito, lanc: [] }, szabalyok: teljesSzabalyok() }, VAGAS);
+    // B kiköltözése (a szülőben) és beköltözése (a gyermekben) — a szülőbeli láncát a belépése után folytatja.
+    const kik = await esemenyLetrehozasa({ koino: P.azonosito, tipus: 'Kikoltozes', adat: { gyermek: K.azonosito },
+      elozo: bBe.azonosito, sorszam: bBe.sorszam + 1, ido: VAGAS + 500, entitas: bBe.azonosito, entitasSorszam: 9, latott: [] },
+    B.kulcspar);
+    B.koinotValt(K.azonosito);
+    const bek = await B.tesz('Bekoltozes', { szulo: P.azonosito, kikoltozes: kik.azonosito,
+      lanc: { sorszam: bBe.sorszam, azonosito: bBe.azonosito }, szuloTagsag: { horgony: bBe.azonosito, lanc: [bBe, bM] } },
+    VAGAS + 600);
+    const ment = async (koino, esemenyek) => {
+      const tar = await esemenyTarNyitasa(koino, hely);
+      for (const e of esemenyek) {
+        const m = await esemenyMentese(tar, e);
+        if (!m.mentve) throw new Error('nem menthető (' + e.tipus + '): ' + m.ok);
+      }
+    };
+    await ment(P.azonosito, [P, bBe, bM, kik]);
+    await ment(K.azonosito, [P, bBe, bM, K, bek]);
+    const ter = await terKartyai(hely, { szerzo: B.szerzo });
+    const pk = ter.kartyak.find((k) => k.azonosito === P.azonosito);
+    const kk = ter.kartyak.find((k) => k.azonosito === K.azonosito);
+    // ⚠️ A próba nem vak: a beköltözés nélkül (a régi horgony-típusokkal) a gyermekben B se belépő, se tag nem volna.
+    const ok = !!pk && !!kk && kk.szulo === P.azonosito && kk.szuloIsmert === true && kk.szuloNev === 'Szülő'
+      && pk.szulo === null && pk.gyermekek.length === 1 && pk.gyermekek[0].azonosito === K.azonosito
+      && pk.gyermekek[0].nev === 'Gyermek' && kk.gyermekek.length === 0
+      && kk.enBekoltoztem === true && kk.enTagVagyok === true && kk.belepok === 2 && kk.tagok === 2
+      && pk.kikoltoztem.length === 1 && pk.kikoltoztem[0] === K.azonosito && pk.enBekoltoztem === false;
+    if (!ok) process.stderr.write('    (' + JSON.stringify({ pk: pk && { gy: pk.gyermekek, kik: pk.kikoltoztem },
+      kk: kk && { szulo: kk.szulo, nev: kk.szuloNev, be: kk.enBekoltoztem, tag: kk.enTagVagyok, belepok: kk.belepok,
+        tagok: kk.tagok, miert: kk.miert } }) + ')\n');
+    return ok;
+  });
+
+proba('⚠️ D118 (⑥): ha a szülő születése nincs a készüléken, a gyermek kártyája a szülőt NEM ISMERTNEK mondja (nem talál ki nevet)',
+  async () => {
+    const hely = await ujKeszulek();
+    const A = await ujEember('');
+    const P = await A.tesz('KoinoLetrehozas', { nev: 'Szülő', leiras: null, alapitok: [], zart: true,
+      szabalyok: teljesSzabalyok() }, Date.UTC(2026, 0, 1));
+    const K = await A.tesz('KoinoLetrehozas', { nev: 'Gyermek', leiras: null, alapitok: [], zart: true, szulo: P.azonosito,
+      szuloTagsag: { horgony: P.azonosito, lanc: [] }, szabalyok: teljesSzabalyok() }, Date.UTC(2026, 0, 5));
+    // ⚠️ a gyermek tárába a szülő születése is kell (a kapu ellenőrzi) — de a szülőnek nincs saját mappája a készüléken
+    const tar = await esemenyTarNyitasa(K.azonosito, hely);
+    for (const e of [P, K]) await esemenyMentese(tar, e);
+    const ter = await terKartyai(hely, {});
+    const kk = ter.kartyak.find((k) => k.azonosito === K.azonosito);
+    return ter.kartyak.length === 1 && kk.szulo === P.azonosito && kk.szuloIsmert === false && kk.szuloNev === null;
   });
 
 export default futtatas;

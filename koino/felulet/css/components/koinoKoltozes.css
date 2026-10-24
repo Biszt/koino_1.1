@@ -1,0 +1,44 @@
+/* koino/felulet/css/components/koinoKoltozes.css */
+
+/* Felelősség: ⭐ D118 ⑥ — a költözés ablaka (koinós többlet): a gyermekek sorai, az elhagyandó pontok (KZ3), a megerősítés.
+   A színek a lap meglévő változóiból (`base/variables.css`), a felderítés ablakának mintájára. */
+
+.koino-koltozes { display: flex; flex-direction: column; gap: 10px; }
+.koino-koltozes__leiras { font-size: 0.85em; opacity: 0.85; margin: 0; line-height: 1.4; }
+.koino-koltozes__siker { margin: 0; font-size: 1em; }
+
+.koino-koltozes-sor {
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.koino-koltozes-sor--nem { opacity: 0.8; border-style: dashed; }
+.koino-koltozes-sor__cim { font-weight: 600; overflow-wrap: anywhere; }
+.koino-koltozes-sor__az { font-weight: 400; font-size: 0.8em; color: var(--color-text-faint); }
+.koino-koltozes-sor__allas { font-size: 0.85em; line-height: 1.4; }
+.koino-koltozes-sor__hiba { color: var(--color-error, #a33); }
+.koino-koltozes-sor__pontok { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 0.85em; }
+.koino-koltozes-sor__pontok label { display: flex; align-items: baseline; gap: 6px; cursor: pointer; }
+.koino-koltozes-sor__figyelem {
+  margin: 0;
+  font-size: 0.85em;
+  line-height: 1.4;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--color-surface-offset, #f3efe8);
+}
+.koino-koltozes-sor__gombok { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.koino-koltozes-sor__gomb {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #bbb);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9em;
+}
+.koino-koltozes-sor__gomb--fo { background: var(--color-primary); color: var(--color-text-inverse); border-color: var(--color-primary); }
+.koino-koltozes-sor__gomb:disabled { opacity: 0.55; cursor: default; }

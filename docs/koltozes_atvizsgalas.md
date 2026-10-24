@@ -262,7 +262,8 @@ Most csak a két fél szerkezete épül; a pénz mezői később hozzáadhatók,
    parancs és a kézi út — 2026-10-24, a 10. szakasz (④a–④c); elágazás 198–200; 82. mérés.
 5. 🚧 **⑤ A többi réteg bekötése** (vállalás, gyökér-darab, kereső-réteg, felderítés, értesítés, lánc-ellenőrzés) — a 11.
    szakasz: ✅ ⑤a (elágazás 201), ✅ ⑤b a lánc (elágazás 202).
-6. **⑥ A felület** (a belépő tér családfája, „Költözés…” a fő menüben).
+6. ✅ **⑥ A felület** (a belépő tér családfája, „Költözés…” a fő menüben) — a 12. szakasz; elágazás 203. ⭐ **A KÖLTÖZÉS
+   (D118) MEGÉPÜLT.**
 
 *Amit ez nem old meg:* a koinók egyesítését, a pénzt (csak a helyét), és a protokoll-törést (KZ5).
 
@@ -482,3 +483,28 @@ lánc-gyökér, a lánc-ellenőrzés, a folytonosság, a nem költöző lánca).
   hozott előtagon (két szülőbeli esemény azonos sorszámon) a kapu ma nem fogad el bizonyítékot (a lánc-ellenőrzés ott
   csak a meglévőt igazolja, a hamisat nem vádolja); és a beköltözéskor a hozott kiosztás (a következő esemény előképe)
   csak annál ellenőrizhető, aki a hozott előtagot is tartja.
+
+## 12. A ⑥ építési alakja — a felület (2026-10-25)
+
+✅ *Megépült (2026-10-25, elágazás 203).* A költözés a felületen két helyen jelenik meg, mindkettő koinós többlet (a
+prototípusban a koinó mint fogalom nem volt):
+
+- **A tér családfája** (`ter.js`, `terNezet.js`): a koinó kártyáján „↑ a szülője” (a születéséből; a nevére kattintva oda
+  lépünk — ha a szülő születése nincs a készüléken, halványan „nem ismert”, D19), „↓ a gyermekei” (a készüléken ismert
+  gyermekek), és a költözéseim („🧳 ide költöztél”, „🧳 innen kiköltöztél ide: …”). ⛔ Lelet közben: a tér kártyája csak
+  a belépést és a születést vette horgonynak — egy gyermekben a beköltözők kimaradtak a számokból, és a beköltöző a saját
+  kártyáján „nem léptem be”-t látott; most a beköltözés is horgony (`tagsag.js` `HORGONY_TIPUSOK`).
+- **„🧳 Költözés…” a fő menüben** (`koinoKoltozes.js`): a mostani koinó ismert gyermekei, mindegyiknél: költözhetek-e (ha
+  nem, a program kimondott oka), a gyermek kerete, a hozott pontjaim a gondolatok címével, és ha nem férnek (KZ3), az
+  elhagyandók jelölése — az összeg élőben frissül, a költözés gomb addig nem nyomható. A megerősítés kimondja, mi
+  visszavonhatatlan, mi jön át és mi marad; a siker után a tér nyitható.
+- **A program oldala** (`koino.js`): a `koltozes` parancs törzse közös függvényekbe került (`koltozesElokeszitese` — semmit
+  nem ír; `koltozesVegrehajtasa`; `koltozesElonezete` — a gyermekek a készüléken), a kapun `GET /api/koltozes` (az
+  előnézet) és `POST /api/koltozes` (a költözés) — a parancs és a lap ugyanazt hívja. ⚠️ Költözni a saját (indításkori)
+  koinóból lehet (mint a felderítés). A többi koinó tára folyamatonként egyszer nyílik (`koinoTaraEgyszer` — a felület
+  aktív koinója és a költözés gyermeke ugyanazt kapja).
+- *A próbák:* 2 tér-próba (a családfa és a beköltöző a téren; a nem ismert szülő) és egy felület-próba (a lapról: az
+  előnézet, a költözés, a lemez, a tér, a második kísérlet) — 5 rontással. ⭐ Böngészőben végigjárva (egy kisebb keretű
+  gyermekkel: az elhagyás, a megerősítés, a siker, a tér, a gyermek paklija a hozott gondolattal és a szabad ponttal).
+- ⚠️ *Ami marad:* gyermeket létrehozni a felületről nem lehet (a koinó létrehozása ma egyáltalán parancs —
+  `koino "<név>" … szulo=…`); a tér „esemény” száma a koinó saját eseményei (a hozott múlt nélkül).
