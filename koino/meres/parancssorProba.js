@@ -740,6 +740,45 @@ proba('⭐⭐ D118 (⑥): a költözés a LAPRÓL — az előnézet a gyermeket 
     }
   });
 
+// ===================================
+// ⛔ D118 (a kézi próba 4. lelete, 2026-10-25): A ZÁRT GYERMEKBE KÖLTÖZÉS UTÁNI ELSŐ CSERE MINDENT VISZ
+// ===================================
+//
+// A kézi próba mérte: a zárt gyermek kapuja a csere ELEJÉN (a TAGSAG körben) ítéli meg a tagságot, a beköltöző beköltözése
+// viszont épp abban a cserében érkezik — és a költöző nem ad ki tagsági csomagot (a horgonya maga a bizonyíték). A nem
+// tagnak csak az azonosság-szelete ment át; a hozott gondolata csak a következő cserén. ⭐ Viselkedést mérünk: a költözés
+// után EGY csere, és A gyermek-tárában ott a hozott gondolat. Rontás: a költöző nem mutatja fel a beköltözését → nem jön át.
+proba('⛔ D118 (kézi próba, 4.): a zárt gyermekbe költözés utáni ELSŐ csere mindent visz — a kapu a felmutatott beköltözéssel tagnak ismeri',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const G = { KOINO_AZONOSITO: 'gyermek' };
+    try {
+      await fut(a, 'koino', 'Zárt szülő');                     // ⚠️ zárt — alapból
+      await taggaTesziKeszulek(a, b);
+      await fut(a, 'kivisz', join(a, 'szulo.jsonl'));
+      await fut(b, 'behoz', join(a, 'szulo.jsonl'));
+      await fut(b, 'gondolat', 'ZARTBA');                        // B gondolata, magától 100 ponttal — a vágás előtt
+      await fut(a, 'koino', 'Zárt gyermek', 'szulo=sajat', G);   // zárt szülőnek csak zárt gyermeke
+      const K = await koinoNeve(a, 'gyermek');
+      await fut(a, 'kiszolgalas', 'mindent', G);
+      // B a gyermek születését a cserén kapja (a zárt kapu a nem tagnak is kiadja), aztán költözik.
+      await csereKor(a, b, 7863, G);
+      const koltozes = await fut(b, 'koltozes', 'gyermek').catch((h) => String(h?.message ?? h));
+      // ⭐ EGYETLEN csere a költözés után.
+      await csereKor(a, b, 7864, G);
+      const aK = (await readFile(join(a, K, 'esemenyek.jsonl'), 'utf8').catch(() => '')).split('\n').filter(Boolean)
+        .map((x) => JSON.parse(x));
+      const ok = /Kiköltöztél/.test(koltozes) && aK.some((e) => e.tipus === 'Bekoltozes')
+        && aK.some((e) => e.tipus === 'GondolatLetrehozas' && e.adat?.cim === 'ZARTBA');
+      if (!ok) process.stderr.write('    (' + JSON.stringify({ koltozes: koltozes.slice(0, 200),
+        aK: aK.map((e) => e.tipus + (e.adat?.cim ? ':' + e.adat.cim : '')) }) + ')\n');
+      return ok;
+    } finally {
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 /** Egy esemény koinója a nyers lemez-sorból (a születésé a saját lenyomata — D118/2). */
 function esemenyKoinojaSzerint(e) {
   return e.koino === '' && e.tipus === 'KoinoLetrehozas' ? e.azonosito : e.koino;

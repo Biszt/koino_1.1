@@ -226,7 +226,10 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    címe) két csere ugyanazzal a társsal, összeakadt üzenetek · (2) a gyermek nem fedezhető fel (a nevét be kell gépelni;
    csatlakozás / társ / kézi csere csak parancs) · (3) ⛔⛔ egy készülék két koinója: a két őrjárat a társat keresi, a
    másik koinó portján megáll — a gyermek magától nem cserél · (4) a zárt gyermekbe költözés utáni első csere félig visz (a
-   kapu a csere elején ítél a tagságról). ⏭️ Az 1. és a 4. mérése és javítása; a 2. és a 3. iránya Csabánál. A laptop
+   kapu a csere elején ítél a tagságról) — ✅ javítva (a költöző a TAGSAG körben a beköltözését mutatja fel). ✅ Csaba
+   döntése: a 2.-re (A)+(B) (a lap tudja a csatlakozást és a társ felvételét; a szülő cseréje hozza a gyermekek hírét), a
+   3.-ra (B) egy őrjárat a közös ősből származó koinóknak (a független koinók külön maradnak — köztük a „MÁSIK koinó”
+   megállást a gyors javítás zárja). ⏭️ Az 1. mérése; a családi őrjárat átvizsgálása (a 3. (B) és a 2. (B) együtt); a 2. (A). A laptop
    próba-adata: a scratchpad `kezi-proba` (őrjárat 7373 a szülőnek, 7375 a gyermeknek, felület 7499); a telefonon
    `~/koino-kp2` (őrjárat 7374 a szülőnek, 7376 a gyermeknek). ⚠️ A teljes próbasor előtt a laptop folyamatait le kell
    állítani. ⚠️ Gyermeket a lapról nem lehet létrehozni (a koinó létrehozása ma parancs). ⚠️ A D94 szúrópróba a szülőbeli

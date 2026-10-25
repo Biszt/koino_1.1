@@ -536,4 +536,8 @@ lapján a szabad pont 20 (a 120-as keretből). **A költözés működik.** A pr
 4. ⛔ **A zárt gyermekbe költözés utáni első csere félig visz.** A laptop zárt kapuja a csere ELEJÉN ítélte meg, hogy a
    telefon tag-e a gyermekben — még nem volt (a beköltözése épp abban a cserében jött), és a nem tagnak csak az azonosság-
    szelete ment át (a beköltözés és egy csak küldő esemény); a következő csere hozott mindent (mérve: 2:33 → 2:37).
-   ⏭️ MÉRENDŐ és javítandó (a kapu a csere közben megérkező horgonnyal is dönthetne — a TAGSAG kör erre van).
+   ✅ *Javítva (2026-10-25):* az ok, hogy a költöző nem ad ki tagsági csomagot (a horgonya maga a bizonyíték), így a TAGSAG
+   körben nem volt mit felmutatnia — most a BEKÖLTÖZÉSÉT mutatja fel (`koino.js` `sajatTagsagiCsomagja`), és a kapu azt
+   ugyanazzal az ellenőrzéssel fogadja, mint a csomagban utazót (`tagsagItelete` — `bekoltozesekEllenorzese`). Parancssor-
+   próba (zárt szülő, zárt gyermek, a költözés után EGY csere — a hozott gondolat ott van), két rontással (a küldő és a
+   kapu oldala külön).

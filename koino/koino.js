@@ -4004,6 +4004,14 @@ async function tagsagItelete(szemely, csomag = null) {
     && (await bekoltozesekEllenorzese(csomag.adat?.lanc, tar)).rendben) {   // ⛔ D118 (④a)
     lista.push(csomag);
   }
+  // ⭐ D118 (a kézi próba 4. lelete): a költöző a BEKÖLTÖZÉSÉT mutatja fel (a horgonya — csomagot nem ad ki) — ugyanaz az
+  // ellenőrzés, mint a csomagban utazóé: hiteles, az övé, ennek a koinónak a beköltözése, és a koinó és a szülő születésével
+  // igazolt (a vágáskori tagsága a szülőben).
+  if (csomag && csomag.tipus === 'Bekoltozes' && csomag.szerzo === szemely.sz && csomag.azonosito === szemely.h
+    && esemenyKoinoja(csomag) === KOINO && (await esemenyEllenorzese(csomag)).rendben
+    && (await bekoltozesekEllenorzese([csomag], tar)).rendben) {
+    lista.push(csomag);
+  }
   const r = szerzoTagsaga(tagsagiIndex(lista, KOINO), szemely.sz);
   if (r.igen) tagEmlek.set(szemely.sz, true);
   return { igen: !!r.igen, ok: r.ok };
@@ -4015,6 +4023,12 @@ async function sajatTagsagiCsomagja() {
   if (!h) return null;
   const r = await tagsagiCsomagKiadasa(kornyezet).catch(() => null);
   if (r?.esemeny) return r.esemeny;
+  // ⭐ D118 (a kézi próba 4. lelete, 2026-10-25): a KÖLTÖZŐ nem ad ki tagsági csomagot (a horgonya maga a bizonyíték) — a
+  // kapunak a BEKÖLTÖZÉSÉT mutatja fel, a társ a koinó és a szülő születésével ellenőrzi (`tagsagItelete`). Különben a zárt
+  // gyermek kapuja a költözés utáni első cserén nem tagnak látta (a beköltözés épp abban a cserében érkezett), és csak az
+  // azonosság-szelete ment át — a hozott gondolatai a következő cserén.
+  const horgonyEsemeny = await tar.esemeny(h);
+  if (horgonyEsemeny?.tipus === 'Bekoltozes' && horgonyEsemeny.szerzo === szerzo) return horgonyEsemeny;
   const sajat = (await entitasEsemenyei(tar, KOINO, h))
     .filter((e) => e.tipus === TAGSAGI_CSOMAG && e.szerzo === szerzo)
     .sort((a, b) => b.sorszam - a.sorszam);
