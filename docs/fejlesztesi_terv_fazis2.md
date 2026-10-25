@@ -6106,7 +6106,13 @@ a vágáskori állapot szerint, a szülő szabályaival; a gyermek születése n
 vállalás, a kereső-réteg és az átmeneti tár a hozott entitásokra (elágazás 201). ✅ **A ⑤b:** a szerző LÁNCA a koinóban egy
 szabállyal (a költözőé a hozott előtaggal; a nem költöző gyermekbeli lánca 1-ről indul) — a lánc-vég, a lánc-gyökér, a
 koinó képe (a lánc-ág, az ismert sorszámok), a lánc-ellenőrzés; elágazás 202. ✅ **A ⑥:** a felület — a tér családfája és a
-„🧳 Költözés…” ablak (elágazás 203). ⭐ **A KÖLTÖZÉS (D118) MEGÉPÜLT** — ⏭️ Csaba kézi próbája.
+„🧳 Költözés…” ablak (elágazás 203). ⭐ **A KÖLTÖZÉS (D118) MEGÉPÜLT.** ✅ A kézi próba (laptop + telefon) négy
+leletet hozott (a 4. javítva). ✅ **D119** (Csaba, 2026-10-25 — [`csaladi_orjarat_atvizsgalas.md`](csaladi_orjarat_atvizsgalas.md)
+7. szakasz): **a családi őrjárat** (egy készüléken egy családnak — a közös gyökérből eredő koinóknak — egy őrjárata és portja,
+a független családok külön; egy társsal egy munka, a közös koinók sorban) és **a koino-verzió kártya** (Csaba ötlete: minden
+gyermek a szülőben egy koino-verzió entitással születik — a feltöltő az űrlappal hozza létre, pontot rendel hozzá, a „Kód”
+fülén a teljes program, és a gyermek születése a kód lenyomatát is megnevezi; a `kormanyzas.md` 2. szintje). ⏭️ Az építés
+a koino-verzió kártyával indul (előbb az M2' mérés).
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal

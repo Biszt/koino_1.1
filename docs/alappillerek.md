@@ -1495,3 +1495,11 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     nem lehet létrehozni (a koinó létrehozása ma parancs) · Csaba (D118 — a 7. szakasz ⑥ pontja) · `ter.js`,
     `terNezet.js`, `koinoKoltozes.js`, `foMenu.js`, `koino.js`, CSS; a próbák (`terProba.js`, a parancssor), 5 rontással;
     böngészőben végigjárva.
+204. **2026-10-25 · D119 — a családi őrjárat és a koino-verzió kártya (a költözés kézi próbájának 2. és 3. lelete)**
+    → **egy készüléken egy családnak (a közös gyökérből eredő koinók) egy őrjárata és portja, a független családok külön; egy
+    társsal egy munka, a közös koinók sorban; és minden gyermek a szülőben egy KOINO-VERZIÓ entitással születik (a
+    `kormanyzas.md` 2. szintje): a feltöltő az űrlappal hozza létre, pontot rendel hozzá, a „Kód” fülén a teljes program, és
+    a gyermek születése a kód lenyomatát is megnevezi (a lap kimondja, ha a készülék más verziót futtat)** · a kézi próba
+    mérte: a gyermek magától nem cserélt (a két őrjárat a másik koinó portján megállt), és a nevét be kellett gépelni ·
+    ⭐ a koino-verzió kártya egyben a gyermek HÍRE (a szülő cseréje és a kézi út viszi) és a forráskód-kormányzás kártyája
+    (a kód P2P terjed, GitHub nélkül — D12) · Csaba (CS1–CS5 — a CS3 Csaba ötlete) · `csaladi_orjarat_atvizsgalas.md`.

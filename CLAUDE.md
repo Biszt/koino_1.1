@@ -229,7 +229,15 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    kapu a csere elején ítél a tagságról) — ✅ javítva (a költöző a TAGSAG körben a beköltözését mutatja fel). ✅ Csaba
    döntése: a 2.-re (A)+(B) (a lap tudja a csatlakozást és a társ felvételét; a szülő cseréje hozza a gyermekek hírét), a
    3.-ra (B) egy őrjárat a közös ősből származó koinóknak (a független koinók külön maradnak — köztük a „MÁSIK koinó”
-   megállást a gyors javítás zárja). ⏭️ Az 1. mérése; a családi őrjárat átvizsgálása (a 3. (B) és a 2. (B) együtt); a 2. (A). A laptop
+   megállást a gyors javítás zárja). ✅ Az 1. helyben mérve (nem jön elő — a terepen mérendő; a javítás iránya a családi őrjáratban). ✅ **D119**
+   (Csaba — [`csaladi_orjarat_atvizsgalas.md`](docs/csaladi_orjarat_atvizsgalas.md)): **a családi őrjárat** (CS1 a közös
+   gyökér · CS2 (A) egy társsal egy munka, a közös koinók sorban · CS4 (A) családonként egy őrjárat · CS5 (A) két külön
+   indítás) és ⭐ **a koino-verzió kártya** (CS3 — Csaba ötlete: minden gyermek a szülőben egy koino-verzió entitással születik
+   — a `kormanyzas.md` 2. szintje —, a feltöltő a fő menü űrlapjával hozza létre, pontot rendel hozzá, a „Kód” fülén a teljes
+   program, a gyermek születése a kód lenyomatát is megnevezi, a lap kimondja, ha a készülék más verziót futtat). ⏭️ Az
+   építési sor (az átvizsgálás 9. szakasza): ① a koino-verzió kártya (előbb az M2' mérés: a kód-csomag) → ② a koinó-példány →
+   ③ a családi csere → ④ a kör a családra + egy munka társanként → ⑤ a független családok → ⑥ a lap (csatlakozás, társ) →
+   ⑦ terepi próba. A laptop
    próba-adata: a scratchpad `kezi-proba` (őrjárat 7373 a szülőnek, 7375 a gyermeknek, felület 7499); a telefonon
    `~/koino-kp2` (őrjárat 7374 a szülőnek, 7376 a gyermeknek). ⚠️ A teljes próbasor előtt a laptop folyamatait le kell
    állítani. ⚠️ Gyermeket a lapról nem lehet létrehozni (a koinó létrehozása ma parancs). ⚠️ A D94 szúrópróba a szülőbeli

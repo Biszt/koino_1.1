@@ -84,3 +84,49 @@ gyermek ③ után magától jelenik meg.
 ① a koinó-példány (gépies, a teljes sor a háló) → ② a családi csere a vonalon → ③ a kör a családra, a tábla-kulcs szerinti
 összevonás és a kapu egy-munka szabálya → ④ a gyermekek híre és a tér → ⑤ a független családok címei → ⑥ a lap
 (csatlakozás, társ) → ⑦ terepi próba (laptop + telefon: költözés, majd a gyermek magától cserél).
+
+## 7. ✅ D119 — a döntések (Csaba, 2026-10-25)
+
+- **CS1:** a család a közös gyökérből eredő koinók (a testvérek is).
+- **CS2 (A):** egy társsal egy munka — a közös koinók cseréje sorban, ugyanazon a résen.
+- **CS3 — Csaba ötlete, a javaslatok helyett:** *„A gyermek születésének is egy entitásnak kéne lennie, amit a „feltöltő”
+  hoz létre, űrlap kitöltése után, amit a főmenüből nyitott meg. Tudatpontot kell hogy rendeljen hozzá. Ezen a programverzió
+  típusú kártyán, az egyik fülben ott kéne hogy legyen a teljes kód, hogy mindenki le tudja ellenőrizni.”* A pontosítások
+  (Csaba, mind a javaslat szerint): ⭐ **ez a [`kormanyzas.md`](kormanyzas.md) „koino-verzió entitása”** (a fában, a
+  gyökér-entitások fölött, tudatponttal, javaslattal, különválással — a forráskód-kormányzás 1–3. lépcsője ugyanazzal a
+  gépezettel, a 4. a költözés); **minden gyermek ilyen kártyával születik** (a gyermek leírása: a neve, a szabályai, a
+  programja); és **a kód köti a gyermeket** (a teljes program tartalom-címzett fájlokként a kártya fülén; a gyermek
+  születése megnevezi a kód lenyomatát; a lap kimondja, ha a készülék más verziót futtat — nem tiltja, jelzi).
+- **CS4 (A):** családonként egy őrjárat (a független család másik őrjárat, másik port).
+- **CS5 (A):** két külön indítás marad (`orjarat`, `felulet`); a lap kimondja, ha egy koinónak nincs futó őrjárata.
+
+## 8. A koino-verzió kártya (a CS3 alakja — az építés előtt pontosítandó)
+
+- **Az entitás a szülőben:** a koino-verzió egy legfelső szintű entitás a szülő fájában (`GondolatLetrehozas`, `tipus:
+  'KoinoVerzio'` — a kategória és a gondolattípus mintájára), a címe a gyermek neve, a szövege a leírása, és megnevezi a
+  gyermeket (a születése azonosítója) és a kódot (a kód-csomag lenyomata). A feltöltő pontot rendel hozzá (D14 — enélkül
+  nincs), a többiek ugyanúgy, mint bármire; javaslat, különválás ugyanúgy. ⭐ **Ez a gyermek HÍRE** (a 2. (B)): a szülő
+  rendes cseréje (a gyökér darabjai) és a kézi út viszi — a tér és a „Költözés…” ablak ebből tudja, hogy van gyermek, akkor is,
+  ha a születése még nincs a készüléken (azt a családi csere hozza).
+- **A kód-csomag:** a teljes program (a `koino/` mappa, sorvég nélkül — a 6. szabály mércéje) egy jegyzékkel (útvonal →
+  a fájl lenyomata) és a fájlokkal, tartalom-címzetten a fájl-tárban (D72, 5.7 — a törzs útja, a vállalóktól); a jegyzék
+  lenyomata a kód neve. A kártya „Kód” füle a jegyzéket és a fájlokat mutatja (a lap csak rajzol).
+- **A kötés:** a gyermek születése (a `szabalyok` mellett) a kód lenyomatát is mondja (`program`); a futó program a saját
+  jegyzékét kiszámolja, és ha a koinóé más, a lap kimondja („ez a koinó a … verziót futtatja, te a …-t”).
+- **Az űrlap:** a fő menüben „Új koino-verzió (gyermek)…”: a név, a leírás, a szabályok (a szülőé az alap), a kezdő pont; a
+  kód a feltöltő FUTÓ programja (aki új verziót javasol, az azt telepíti, és onnan hozza létre). Egy lépésben: a kód-csomag,
+  a gyermek születése (a létrehozó költözik vele — ma is így), a koino-verzió entitás a szülőben, a pont. ⭐ Ezzel a lap
+  gyermeket is létre tud hozni (eddig csak parancs).
+- **A kód terjedése:** aki költözne, a kártya fájljaiból a programot is megkapja (P2P, GitHub nélkül — D12); a telepítése
+  ma kézi (a fájlok kiírása egy mappába) — ⏸️ a frissítés kényelme később.
+- **Mérendő (M2'):** a kód-csomag mérete (ma 331 fájl / ~6,4 MB sorvég nélkül; tömörítve kevesebb), a jegyzék mérete, egy
+  koino-verzió kártya és a törzse a vonalon.
+
+## 9. Az építési sor (D119 után)
+
+① **a koino-verzió kártya** (előbb az M2' mérés; a kód-csomag, a születés `program` mezője, az entitás, az űrlap, a „Kód” fül,
+a tér és a „Költözés…” a kártyákból) → ② **a koinó-példány** (a `koino.js` koinó-szintű része egy gyárba — gépies, a teljes
+sor a háló) → ③ **a családi csere** (a nyitás a családot nevezi meg, a közös koinók sorban; az M1 mérés előtte) → ④ **a kör a
+családra**, a tábla-kulcs szerinti összevonás, és a kapu egy munkája társanként (az 1. lelet) → ⑤ **a független családok**
+címei („MÁSIK család” nem elérés) → ⑥ **a lap** (csatlakozás egy koinóhoz, társ felvétele — 2. (A)) → ⑦ **terepi próba**
+(laptop + telefon: koino-verzió a lapról, költözés, a gyermek magától cserél).
