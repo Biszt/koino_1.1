@@ -26,7 +26,7 @@
 //
 // Használják: muveletek.js és minden, ami eseményt olvas.
 
-import { esemenyEllenorzese, elagazasE, szelet, esemenyKoinoja, azonositoAlaku } from '../esemeny/esemeny.js';
+import { esemenyEllenorzese, elagazasE, szelet, esemenyKoinoja, azonositoAlaku, koinoVerzioE } from '../esemeny/esemeny.js';
 // ⭐ D80: az `Ellentmondas` esemény TARTALMA is a kapun megy át (önmagát igazoló bizonyíték).
 import { ellentmondasEllenorzese } from '../allapot/ellentmondas.js';
 // ⭐ D81: a pont-esemény a saját bizonyítékát hozza — a kapu ellenőrzi, hogy illik a lánc-gyökeréhez.
@@ -38,7 +38,7 @@ import { LEZARASI_OSSZEGZES, lezarasiOsszegzesAlakja } from '../allapot/lezarasi
 import { TAGSAGI_CSOMAG, tagsagiCsomagEllenorzese } from '../allapot/tagsag.js';
 // ⭐⭐ D118 (②a): a gyermek születésének bizonyítéka (a szülő születésével együtt).
 import { gyermekSzuleteseE, gyermekSzuletesEllenorzese, koinoNezete, bekoltozesE, bekoltozesEllenorzese,
-  bekoltozesekEllenorzese, lancNezete } from '../allapot/koinoLanc.js';
+  bekoltozesekEllenorzese, lancNezete, koinoVerzioEllenorzese } from '../allapot/koinoLanc.js';
 
 // ===================================
 // ESEMÉNY MENTÉSE
@@ -121,6 +121,16 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
     if (!gy.rendben) {
       console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: gy.ok });
       return { mentve: false, ok: gy.ok, ...(gy.hianyzik ? { hianyzik: true } : {}) };
+    }
+  }
+
+  // ----- 1/a4b. ⭐⭐ D119 (①a): A KOINO-VERZIÓ — a beágyazott gyermek-születés a koinó (a szülő) születésével -----
+  // Ugyanaz a próba, mint a gyermek saját kapuján: egy hamis vagy nem tagtól jött születés nem lesz a szülőben „gyermek”.
+  if (koinoVerzioE(esemeny)) {
+    const kv = await koinoVerzioEllenorzese(esemeny, (await tar.esemeny(esemenyKoinoja(esemeny))) ?? null, tar);
+    if (!kv.rendben) {
+      console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: kv.ok });
+      return { mentve: false, ok: kv.ok, ...(kv.hianyzik ? { hianyzik: true } : {}) };
     }
   }
 

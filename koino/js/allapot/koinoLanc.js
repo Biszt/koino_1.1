@@ -25,7 +25,7 @@
 // Hálózatot nem importál. Használják: `tar/esemenyTar.js` (a kapu), `csere/csere.js` (a lánc a beolvasztásban),
 // `csere/fajlCsere.js` (a kézi út), `koino.js` (a létrehozás, a születés-szelet).
 
-import { esemenyEllenorzese, esemenyKoinoja, koinoSzuleteseE, azonositoAlaku } from '../esemeny/esemeny.js';
+import { esemenyEllenorzese, esemenyKoinoja, koinoSzuleteseE, azonositoAlaku, koinoVerzioE } from '../esemeny/esemeny.js';
 import { tagsagiIndex, horgonyTagsaga, tagsagiLanc, LANC_TIPUSOK, CSOMAG_ESEMENY_KORLAT } from './tagsag.js';
 
 /** A létrehozó tagsági láncának legnagyobb hossza — ugyanaz, mint a tagsági csomagé (D113). */
@@ -68,6 +68,24 @@ export async function gyermekSzuletesEllenorzese(szuletes, szuloSzuletes, tar = 
     return { rendben: false, ok: 'zárt szülőnek csak zárt gyermeke lehet (D118/5)' };
   }
   return szuloTagsagaEllenorzese(szuletes.adat.szuloTagsag, szuletes.szerzo, szuloSzuletes, null, 'a létrehozó', tar);
+}
+
+/**
+ * ⭐⭐ D119 (①a): A KOINO-VERZIÓ a kapun — a beágyazott gyermek-születés hiteles (az aláírása és a lenyomata), és a szülő (a
+ * koino-verzió koinója) születésével együtt érvényes gyermek-születés (KZ2, D118/5 — ugyanaz, mint a gyermek saját kapuján).
+ * Az alakot (a cím, a kód, a feltöltő) az `alakiHiba` már nézte. ⚠️ Ha a szülő születése még nincs meg: `hianyzik`.
+ * @param {Object} kv - a koino-verzió létrehozó eseménye
+ * @param {Object|null} szuloSzuletes - a koino-verzió koinójának születése
+ * @param {Object} [tar]
+ * @returns {Promise<{rendben: boolean, ok?: string, hianyzik?: boolean}>}
+ */
+export async function koinoVerzioEllenorzese(kv, szuloSzuletes, tar = null) {
+  if (!koinoVerzioE(kv)) return { rendben: false, ok: 'nem koino-verzió' };
+  const sz = kv.adat.szuletes;
+  const al = await esemenyEllenorzese(sz);
+  if (!al.rendben) return { rendben: false, ok: 'a koino-verzió születése nem hiteles: ' + al.ok };
+  const gy = await gyermekSzuletesEllenorzese(sz, szuloSzuletes, tar);
+  return gy.rendben ? { rendben: true } : { ...gy, ok: 'a koino-verzió születése: ' + gy.ok };
 }
 
 /**
@@ -279,7 +297,9 @@ const MINDENKIE = new Set(['GondolatLetrehozas', 'Ellentmondas']);
  */
 export function lancKoltozoi(lanc, tobbi = null, esemenyek = null) {
   return lanc.slice(0, -1).map((sz, k) => {
-    const m = new Map([[sz.szerzo, { pont: sz.sorszam, elhagy: new Set() }]]);
+    // ⭐ D119 (A): a létrehozó is elhagyhat (a születése `elhagy`-a — a koino-verzió kártyáira tett pontja nem költözik).
+    const m = new Map([[sz.szerzo, { pont: sz.sorszam,
+      elhagy: new Set(Array.isArray(sz.adat?.elhagy) ? sz.adat.elhagy : []) }]]);
     // ⭐⭐ ④a: a BEKÖLTÖZÉSEK (a gyermek eseményei a bemenetből) — a lánc-pont a beköltözés sorszáma (az előtte lévő
     // szülőbeli eseményeit hozza), és az elhagyott entitásokra a hozott pont nem jön (KZ3 (A)).
     for (const e of esemenyek ?? []) {

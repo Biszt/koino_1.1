@@ -288,6 +288,7 @@ async function leszarmazottakSzetosztasa(allapot, foag, ujAg, kulonvalok, egyezm
       ikon: e.ikon ?? null,
       gondolatTipus: e.gondolatTipus ?? null,
       kategoriak: [...(e.kategoriak ?? [])],
+      ...(e.koinoVerzio ? { koinoVerzio: e.koinoVerzio } : {}),   // ⭐ D119: a koino-verzió gyermeke és kódja
       meret: e.meret,
       agMeret: e.meret,
       // ⭐ A SZERZŐ MÁSOLÓDIK (Csaba) — attól függetlenül, hogy tulajdonos-e még.
@@ -390,6 +391,7 @@ async function kulonvalas(entitas, regi, kulonvalok, egyezmeny, allapot) {
     ikon: entitas.ikon ?? null,
     gondolatTipus: entitas.gondolatTipus ?? null,
     kategoriak: [...(entitas.kategoriak ?? [])],
+    ...(entitas.koinoVerzio ? { koinoVerzio: entitas.koinoVerzio } : {}),   // ⭐ D119: a koino-verzió gyermeke és kódja
     meret: entitas.meret,
     agMeret: entitas.meret,
     szerzo: entitas.szerzo,

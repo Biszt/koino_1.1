@@ -478,7 +478,12 @@ proba('⭐⭐ D118 (②a): a gyermek születése — a szülő szabályaival és
       const cSzul = (await lemez(a)).find((e) => e.azonosito === C);
       const pLanc = (await readFile(join(a, P, 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x))
         .filter((e) => e.szerzo === cSzul?.szerzo).sort((x, y) => x.sorszam - y.sorszam);
-      const folytatja = pLanc.length >= 3 && cSzul.sorszam === pLanc.at(-1).sorszam + 1 && cSzul.elozo === pLanc.at(-1).azonosito;
+      // ⭐ D119 (①a): a szülőben a születés után a koino-verzió kártya következik (a szülőbeli ágon, a születés sorszámán) —
+      // a születés és a kártya is a lánc-pontot folytatja (a vágás előtti utolsó szülőbeli eseményt).
+      const lancPont = pLanc.find((e) => e.sorszam === cSzul?.sorszam - 1);
+      const kartya = pLanc.find((e) => e.adat?.tipus === 'KoinoVerzio' && e.adat?.gyermek === C);
+      const folytatja = pLanc.length >= 3 && !!lancPont && cSzul.elozo === lancPont.azonosito
+        && kartya?.sorszam === cSzul.sorszam && kartya.elozo === lancPont.azonosito;
       // A B a gyermekhez csatlakozik — a csere hozza a láncot.
       await fut(b, 'csatlakoz', C, G);
       await csereKor(a, b, 7799, G);
@@ -502,6 +507,97 @@ proba('⭐⭐ D118 (②a): a gyermek születése — a szülő szabályaival és
       return ok;
     } finally {
       for (const h of [a, b, d, n]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
+// ⭐⭐ D119 (①a): A KOINO-VERZIÓ a parancssoron és a MÁSIK készüléken. Az A a szülőben (`koinoverzio`) hozza létre a
+// gyermeket: a szülő tárában a koino-verzió kártya (a gyermek beágyazott születésével, a kóddal) és a pont rá, a szülő
+// fájl-tárában a kód-csomag (a jegyzék és a program minden fájlja — a koino.js a sorvég nélküli tartalmával), a gyermek
+// születése a kód nevét mondja, és a `koino` kimondja, hogy a készüléken ez a program fut. A túl nagy pont ELŐRE hibát ad
+// (semmi nem születik). A kártya a kézi úton a B-hez ér (a szülő tagja a vágás előtt), és a B a gyermek tára NÉLKÜL —
+// csatlakozás és cserék nélkül, a kártyából — költözik (a kézi próba 2. lelete). ⭐ Csaba döntése („(A) Nem költözik”): B az
+// első kártyára is tesz pontot, A létrehoz egy második gyermeket — a születése magától elhagyja A pontját az első kártyán, B
+// beköltözése a B-ét, és a második gyermek képében az első kártya nem él (a B hozott gondolata igen). Viselkedést mérünk (a
+// lemezeket).
+proba('⭐⭐ D119 (①a): a koino-verzió — a gyermek a szülőben egy kártyával és a kód-csomaggal születik; a túl nagy pont előre hibát ad; a kártya a másik készüléken elég a költözéshez; a kártyára tett pont nem költözik',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const lemez = async (hely, koino) => (await readFile(join(hely, koino, 'esemenyek.jsonl'), 'utf8').catch(() => ''))
+      .split('\n').filter(Boolean).map((x) => JSON.parse(x));
+    const mappak = async (hely) => (await readdir(hely, { withFileTypes: true })).filter((d) => d.isDirectory())
+      .map((d) => d.name).sort().join();
+    try {
+      await fut(a, 'koino', 'Verziók szülője', 'nyilt');
+      const P = await koinoNeve(a);
+      await taggaTesziKeszulek(a, b);
+      await fut(a, 'kivisz', join(a, 'szulo.jsonl'));
+      await fut(b, 'behoz', join(a, 'szulo.jsonl'));
+      await fut(b, 'gondolat', 'BVITTE');                        // B pontja a vágás előtt — ezt hozza a gyermekbe
+      // ⚠️ A-nak is van vállalt gondolata: a gyermekben így él a szigorú (b) „nem tartott” kivétele (a D14 csak a tartottra
+      // ítél) — enélkül egy elhagyott kártya szellemként sem maradhatna, és a próba vak volna rá.
+      await fut(a, 'gondolat', 'AVITTE');
+      // a túl nagy pont előre hibát ad — és semmi nem születik (se a gyermek mappája, se esemény a szülőben)
+      const mappakElotte = await mappak(a);
+      const aPElotte = (await lemez(a, P)).length;
+      const tulNagy = await fut(a, 'koinoverzio', 'Túl nagy', 'pont=20000').catch((h) => String(h?.message ?? h));
+      const semmi = (await mappak(a)) === mappakElotte && (await lemez(a, P)).length === aPElotte;
+      const kiiras = await fut(a, 'koinoverzio', 'Új verzió', 'Az új szabályok', 'pont=70', 'becenev=uj');
+      const C = await koinoNeve(a, 'uj');
+      if (!P || !C || C === P) return false;
+      const aP = await lemez(a, P);
+      const kv = aP.find((e) => e.adat?.tipus === 'KoinoVerzio');
+      const kvPont = aP.find((e) => e.tipus === 'TudatpontRendezes' && e.adat?.entitas === kv?.azonosito);
+      const cSzul = (await lemez(a, C)).find((e) => e.azonosito === C);
+      const kod = cSzul?.adat?.program;
+      // a kód-csomag a szülő fájl-tárában: a jegyzék, és minden fájlja (a koino.js a sorvég nélküli méretével)
+      const fajlok = join(a, P, 'fajlok');
+      const jegyzek = kod ? JSON.parse(await readFile(join(fajlok, kod.lenyomat), 'utf8').catch(() => 'null')) : null;
+      const koinoJs = jegyzek?.fajlok?.find((f) => f[0] === 'koino.js');
+      const sajatKoinoJs = (await readFile(KOINO_JS, 'latin1')).replace(/\r\n/g, '\n').length;
+      const megvannak = jegyzek ? (await Promise.all(jegyzek.fajlok.map((f) => readFile(join(fajlok, f[1]))
+        .then((x) => x.length === f[2], () => false)))).every(Boolean) : false;
+      const verzio = await fut(a, 'koino', { KOINO_AZONOSITO: 'uj' });
+      // B: a kártya a kézi úton (a szülő kivitele) — és a költözés a gyermek tára nélkül
+      await fut(a, 'kivisz', join(a, 'szulo2.jsonl'));
+      await fut(b, 'behoz', join(a, 'szulo2.jsonl'));
+      const bTaraElotte = (await lemez(b, C)).length;
+      // ⭐ (A): B pontot tesz az első kártyára (a második gyermek vágása előtt) — ez nem költözik
+      await fut(b, 'pont', kv.azonosito.slice(0, 8), '30');
+      const koltozes = await fut(b, 'koltozes', C);
+      const bC = await lemez(b, C);
+      const bSzerzo = bC.find((e) => e.tipus === 'Bekoltozes')?.szerzo;
+      // a második gyermek (A), és B beköltözése oda is
+      await fut(a, 'koinoverzio', 'Második verzió', 'pont=10', 'becenev=uj2');
+      const C2 = await koinoNeve(a, 'uj2');
+      const c2Szul = (await lemez(a, C2)).find((e) => e.azonosito === C2);
+      await fut(a, 'kivisz', join(a, 'szulo3.jsonl'));
+      await fut(b, 'behoz', join(a, 'szulo3.jsonl'));
+      const koltozes2 = await fut(b, 'koltozes', C2);
+      const bBe2 = (await lemez(b, C2)).find((e) => e.tipus === 'Bekoltozes');
+      const bKep2 = await fut(b, { KOINO_AZONOSITO: C2 });
+      // A gyermekbeli tárában ott az első kártya születése (a lánca). ⚠️ „alap” módban: a „mindent” mindent tart, ott a nem tartott
+      // szelet kivétele (a szellem) nem élhetne — a próba vak volna rá.
+      const aKep2 = await fut(a, { KOINO_AZONOSITO: 'uj2', KOINO_KISZOLGALAS: 'alap' });
+      const ok = /csak \d+ szabad/.test(tulNagy) && semmi && /A gyermek létrejött/.test(kiiras)
+        && kv?.adat?.gyermek === C && kv.adat.szuletes?.azonosito === C && kv.adat.cim === 'Új verzió' && kv.szerzo === cSzul?.szerzo
+        && kvPont?.adat?.pont === 70 && !!kod && kv.adat.kod.lenyomat === kod.lenyomat && kv.adat.kod.bajt === kod.bajt
+        && jegyzek?.fajta === 'koino-kod-1' && koinoJs?.[2] === sajatKoinoJs && megvannak
+        && verzio.includes('A programja: ' + kod.lenyomat + ' — ezen a készüléken is ez fut')
+        && bTaraElotte === 0 && /Kiköltöztél/.test(koltozes) && !!bSzerzo
+        && bC.some((e) => e.azonosito === P) && bC.some((e) => e.azonosito === C) && bC.some((e) => e.adat?.cim === 'BVITTE')
+        // ⭐ (A): a második gyermek születése A pontját, B beköltözése B pontját hagyja el az első kártyán; a képben nem él
+        && !!C2 && (c2Szul?.adat?.elhagy ?? []).includes(kv.azonosito) && /Kiköltöztél/.test(koltozes2)
+        && (bBe2?.adat?.elhagy ?? []).includes(kv.azonosito) && /BVITTE/.test(bKep2) && !/Új verzió/.test(bKep2)
+        && /Második verzió/.test(aKep2) && /AVITTE/.test(aKep2) && !/Új verzió/.test(aKep2);
+      if (!ok) process.stderr.write('    (a kimenetek: ' + JSON.stringify({ tulNagy, semmi, kiiras: kiiras.slice(0, 400),
+        kv: !!kv, kvPont: kvPont?.adat?.pont, kod, jegyzek: jegyzek?.fajlok?.length, koinoJs, sajatKoinoJs, megvannak,
+        verzio: verzio.slice(0, 600), bTaraElotte, koltozes: koltozes.slice(0, 300), bSzerzo: !!bSzerzo,
+        c2Elhagy: c2Szul?.adat?.elhagy, koltozes2: koltozes2.slice(0, 300), bElhagy2: bBe2?.adat?.elhagy,
+        bKep2: bKep2.slice(0, 900), aKep2: aKep2.slice(0, 900) }) + ')\n');
+      return ok;
+    } finally {
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
     }
   });
 

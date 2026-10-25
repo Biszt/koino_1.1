@@ -6111,8 +6111,11 @@ leletet hozott (a 4. javítva). ✅ **D119** (Csaba, 2026-10-25 — [`csaladi_or
 7. szakasz): **a családi őrjárat** (egy készüléken egy családnak — a közös gyökérből eredő koinóknak — egy őrjárata és portja,
 a független családok külön; egy társsal egy munka, a közös koinók sorban) és **a koino-verzió kártya** (Csaba ötlete: minden
 gyermek a szülőben egy koino-verzió entitással születik — a feltöltő az űrlappal hozza létre, pontot rendel hozzá, a „Kód”
-fülén a teljes program, és a gyermek születése a kód lenyomatát is megnevezi; a `kormanyzas.md` 2. szintje). ⏭️ Az építés
-a koino-verzió kártyával indul (előbb az M2' mérés).
+fülén a teljes program, és a gyermek születése a kód lenyomatát is megnevezi; a `kormanyzas.md` 2. szintje). ✅ A 84. mérés
+(a kód-csomag: 331 fájl / 6,4 MB, a jegyzék 28,5 KB) és ✅ **az ①a** (a program oldala: a kód-csomag, a születés programja, a
+kártya a kapuval, a `koinoverzio` parancs, a gyermek a kártyából — elágazás 205). ✅ **D119/A** (Csaba, 2026-10-25: „(A) Nem
+költözik”): a kártyára tett pont a szülő ügye — a program a beköltözés és (új) a gyermek születésének `elhagy`-ába írja, az
+elhagyott, de látott pont tudás (elágazás 206). ⏭️ Az ①b: a kártya törzse, a „Kód” fül, az űrlap, a jelzés a lapon.
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal

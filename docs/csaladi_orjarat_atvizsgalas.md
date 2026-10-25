@@ -130,3 +130,57 @@ sor a háló) → ③ **a családi csere** (a nyitás a családot nevezi meg, a 
 családra**, a tábla-kulcs szerinti összevonás, és a kapu egy munkája társanként (az 1. lelet) → ⑤ **a független családok**
 címei („MÁSIK család” nem elérés) → ⑥ **a lap** (csatlakozás egy koinóhoz, társ felvétele — 2. (A)) → ⑦ **terepi próba**
 (laptop + telefon: koino-verzió a lapról, költözés, a gyermek magától cserél).
+
+## 10. ✅ Az ①a — a koino-verzió a program oldalán (2026-10-25)
+
+- **A kód-csomag** (`js/tar/kodCsomag.js`; a 84. mérés): a jegyzék `{ fajta: 'koino-kod-1', fajlok: [[út, lenyomat, bájt], …] }`
+  (az utak a `koino/` mappától, rendezve), a kanonikus alakja egy darab, a lenyomata a KÓD NEVE; a fájlok a fájl-tárban (a
+  nevük a lenyomatuk — két verzió közös fájlja egyszer). ⛔ Sorvég nélkül (a szöveges fájlokban a `\r\n` → `\n` — a 6.
+  szabály mércéje): különben ugyanaz a verzió a Windows-munkakönyvtárban és a telefonon két nevet kapna. A program fájljai:
+  amit a git követ (a mérések kimenete és a helyi adat nem a program); git nélkül a mappa bejárva, az adat-mappák nélkül. A
+  kívülről jött jegyzéket csak az egy alakjában fogadjuk el (rendezett, ismétlés nélkül, relatív utak, a fájl-korláton belül).
+- **A születés `program`-ja:** a gyermek születése a kód-csomag hivatkozását is mondja (csak új alakban). ⚠️ A gyökér-koinó
+  születése nem nevez meg programot: nincs kártyája, ahol a kód lakna (a kód a gyermekekkel jön), és minden új koinó ~6,4 MB-ot
+  írna a fájl-tárba.
+- **A koino-verzió entitás** (`esemeny.js` `KOINO_VERZIO`, `koinoVerzioE`; a kapu: `koinoLanc.js` `koinoVerzioEllenorzese`):
+  `GondolatLetrehozas`, `tipus: 'KoinoVerzio'`, legfelső szintű; a címe a gyermek neve, a szövege a leírás (darab), a `gyermek`,
+  a `szuletes` (a gyermek ALÁÍRT születése, beágyazva) és a `kod` (= a születés programja). Az alak: a születés ennek a
+  koinónak a gyermeke, a feltöltő hozta létre (a kártya szerzője), a kód a programja, a cím a neve. A kapu a beágyazott
+  születést hitelesnek és a szülő születésével érvényes gyermek-születésnek látja (KZ2, D118/5 — ugyanaz a próba, mint a
+  gyermek saját kapuján; a hiányzó szülő nem végleges elutasítás). A képben a `koinoVerzio: { gyermek, kod }` (a különválás
+  is viszi). A kártya ~1–2 KB (a beágyazott születés a létrehozó tagsági láncával) — koinó-verziónként egyszer.
+- ⭐ **A sorrend: előbb a gyermek születése, aztán a kártya.** A kártya magába ágyazza a születést, tehát a születés nem
+  folytathatja a kártyát (kör lenne) — mindkettő a létrehozó vágás előtti utolsó szülőbeli eseményét folytatja (a születés a
+  gyermekben, a kártya a szülőben: a lánc két ága, ahogy eddig is a születés utáni első szülőbeli esemény). A kártya így a
+  szülő JELENE: a gyermek tárába nem kerül (a koinó-szabály — a létrehozóé a lánc-pont).
+- **A pont** (D14): a feltöltő pontja a kártyán (alapból 100 — `pont=N`). ⛔ A szabad pontot ELŐRE nézzük
+  (`szabadTudatpontjaim`), mert a gyermek születése után már nem volna mit visszacsinálni (a rontás mérte: a gyermek
+  megszületett, a pont bukott).
+- **A parancs:** `koinoverzio "<név>" [leírás] [nyilt] [szabályok…] [pont=N] [becenev=…]` a szülőben (a `koino … szulo=`
+  ugyanezt hívja): a kód-csomag a szülő fájl-tárába, a gyermek születése a programmal, a kártya és a pont. A `koino` kimondja
+  a koinó programját, és ha a készüléken más fut („⚠ ezen a készüléken MÁS verzió fut” — nem tilt, jelez).
+- ⭐ **A gyermek a kártyából** (a kézi próba 2. lelete): a „Költözés…” előnézete a gyermekeket a szülő élő koino-verzió
+  kártyáiból is látja (a legtöbb pontú 64-et — a terhe a koinó ÉLŐ gyermekeivel nő, nem a történetével), és a költözés a
+  gyermek tára nélkül is megy: a tárát a kártyából nyitja meg (a születések lánca a gyökértől és a gyermek születése, a
+  gyermek kapuján). ⛔ A tárat CSAK a költözés nyitja meg, nem minden kártya: különben minden készülék minden gyermek tárát
+  tartaná, és a családi őrjárat (③–④) mindegyiket cserélné.
+- ⛔ **A teljes sor lelete → Csaba döntése (2026-10-25): „(A) Nem költözik” — a KÁRTYÁRA TETT PONT a szülő ügye.** A ④b próba
+  bukott: a létrehozó második (50-es keretű) gyermeke nem született meg, mert az első gyermek kártyáján lévő 100 pontja is
+  hozott pont volt (150 > 50) — és ha befér, a gyermekben a testvér kártyája élve megjelent volna. ⭐ Az alak: nem a
+  számítás találja ki, melyik pont kártyán van (a kártya létrehozó eseményét nem minden készülék ismeri — két készülék más
+  képet számolna), hanem a program a KZ3 `elhagy` mezőjébe írja, MAGÁTÓL és aláírva: a beköltözés `elhagy`-ában (a költöző
+  kártya-pontjai — `koinoVerzioKartyak`), és ⭐ a gyermek születése is kap `elhagy`-ot (a létrehozó a születésével költözik;
+  csak a szülőt megnevező születésen); a számítás (`lancKoltozoi`) a létrehozóét is olvassa. ⛔ És a lelet mögötti lelet: az
+  elhagyott pont-eseményt a számítás nem látta, ezért a „nem tartott” kivétel (D75/4 — a szigorú (b) alatt) a kártyát
+  „a pontjai ismeretlenek” szellemként a gyermekben hagyta; most az elhagyott, de látott pont tudás (`ketReteg.js`
+  `elhagyottPontok` → `allapotSzamitas.js` — „ez a költöző 0-t hoz rá”), a D14 ítélhet. Ez a kézi `elhagy`-ra is igaz (eddig
+  ott is szellem maradt). A „Költözés…” előnézete a kártya-pontokat külön mondja ki (`kartyaPontok` — a szülőben maradnak).
+- **A próbák:** `koinoVerzioProba.js` (9 — a kód-csomag sorvég nélkül, a jegyzék egy alakja, a futó program csomagja, a kapu, a
+  hamis kártyák, a `program` alakja, a kép, ⭐ a kártyára tett pont nem költözik — a második gyermek képében a testvér kártyája
+  szellemként sem él —, az `elhagy` alakja), a parancssor (1 új — a kártya és a kód-csomag a lemezen, a túl nagy pont előre,
+  a `koino` a programmal, a B a kártyából költözik a gyermek tára nélkül, ⭐ egy második gyermek: a születése A, a beköltözés B
+  kártya-pontját hagyja el, és egyik képben sincs szellem — „alap” módban mérve, mert a „mindent” mindent tart), a ②a próba a
+  kártyával; 20 rontás, mind bukott.
+- ⏭️ **Az ①b:** a kártya törzse a vállalásban és a törzs-kérelemben (a jegyzék és a fájlok — ma a fájl-tár kerete nem védi
+  őket, és a törzs-kérelem 64 fájlnál megállna), a „Kód” fül, az űrlap a fő menüben, a „más verziót futtatsz” jelzés a lapon,
+  a tér a kártyákból.

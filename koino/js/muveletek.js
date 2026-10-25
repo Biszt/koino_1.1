@@ -28,7 +28,7 @@ import {
 import { lancUjEsemenyhez } from './allapot/lancGyoker.js';
 // ⭐ D80: az ellentmondás bizonyítéka — a bejelentés előtt magunk is ellenőrizzük.
 import { ellentmondasEllenorzese } from './allapot/ellentmondas.js';
-import { esemenyLetrehozasa, esemenyKoinoja, azonositoAlaku } from './esemeny/esemeny.js';
+import { esemenyLetrehozasa, esemenyKoinoja, azonositoAlaku, KOINO_VERZIO } from './esemeny/esemeny.js';
 import { lancNezete } from './allapot/koinoLanc.js';   // ⭐ D118 (③, ⑤b): a szerző lánca a koinóban, a jelen réteg szerint
 import { koinoSzabalyai, teljesSzabalyok } from './esemeny/koinoSzabalyok.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
@@ -344,6 +344,17 @@ async function sajatKiosztott(kornyezet, entitas) {
   return { osszeg: allas.osszeg, regi: allas.pontok.get(entitas) ?? 0 };
 }
 
+/**
+ * ⭐ D119 (①a): mennyi tudatpontom szabad még ebben a koinóban (a keret − a kiosztott) — ugyanabból a számításból, mint a
+ * bemondott összeg (`sajatKiosztott`). A koino-verzió ezzel néz meg előre, mielőtt a gyermek megszületne.
+ * @param {Object} kornyezet
+ * @returns {Promise<number>}
+ */
+export async function szabadTudatpontjaim(kornyezet) {
+  const { osszeg } = await sajatKiosztott(kornyezet, null);
+  return (await koinomSzabalyai(kornyezet)).tudatpontKeret - osszeg;
+}
+
 // ===================================
 // A KOINO LÉTREHOZÁSA
 // ===================================
@@ -384,8 +395,38 @@ export function koinoLetrehozasa(kornyezet, nev, leiras, alapitok, beallitas = {
     // írhassa át őket; a kapu ellenőrzi (`koinoSzabalyok.js`). Nem változtatható: egy másik szabály egy másik koinó (a költözés).
     szabalyok: teljesSzabalyok(beallitas.szabalyok),
     // ⭐⭐ D118 (②a): a GYERMEK születése a szülő nevét és a létrehozó tagsági bizonyítékát hozza (KZ2 — `koinoLanc.js`).
-    ...(beallitas.szulo ? { szulo: beallitas.szulo, szuloTagsag: beallitas.szuloTagsag } : {})
+    ...(beallitas.szulo ? { szulo: beallitas.szulo, szuloTagsag: beallitas.szuloTagsag } : {}),
+    // ⭐⭐ D119 (A): amit a létrehozó a születésével NEM hoz (KZ3 (A) — a koino-verzió kártyáira tett pontja: a szülő ügye).
+    ...(beallitas.szulo && Array.isArray(beallitas.elhagy) && beallitas.elhagy.length ? { elhagy: [...beallitas.elhagy] } : {}),
+    // ⭐⭐ D119 (①a): a koinó PROGRAMJA — a kód-csomag jegyzékének hivatkozása (`tar/kodCsomag.js`): a kód köti a koinót.
+    ...(beallitas.program ? { program: { ...beallitas.program } } : {})
   });
+}
+
+/**
+ * ⭐⭐ D119 (①a): A KOINO-VERZIÓ — egy gyermek születése a SZÜLŐBEN (a `kornyezet` a szülőé). Egy legfelső szintű entitás
+ * (`GondolatLetrehozas`, `tipus: 'KoinoVerzio'` — a kategória mintájára): a címe a gyermek neve, a szövege a leírása (külön
+ * darab — D72), és magába ágyazza a gyermek aláírt születését (`szuletes`) — ebből tudja a szülő, hogy van gyermeke —, a
+ * kódot pedig a születés programjával nevezi meg (`kod`). A kapu a beágyazott születést a szülő születésével ellenőrzi.
+ * ⚠️ A pontot a hívó rendeli hozzá (D14: pont nélkül az entitás nem létezik — mint a gondolatnál).
+ * @param {Object} kornyezet - a szülő koinó környezete
+ * @param {{szuletes: Object, leiras?: string, kodBajt?: number}} adatok - a gyermek születése (a programmal); a `kodBajt` a
+ *   kód-csomag teljes mérete (a jegyzék és a fájlok — a tárolási vállalás mértékébe, D26)
+ */
+export async function koinoVerzioLetrehozasa(kornyezet, { szuletes, leiras, kodBajt = 0 }) {
+  if (!szuletes?.adat?.program) throw new Error('A koino-verzió a gyermek születését hozza, a programjával (a kód-csomaggal).');
+  const entitas = {
+    tipus: KOINO_VERZIO,
+    cim: szuletes.adat.nev,
+    szoveg: await szovegDarabbaTetele(kornyezet, leiras || null),
+    szulo: null,
+    gyermek: szuletes.azonosito,
+    szuletes,
+    kod: { ...szuletes.adat.program }
+  };
+  // ⭐ D26: a tárolási vállalás mértéke — a koino-verzió törzse a kód is.
+  entitas.meret = kanonikusBajtok(entitas).length + (entitas.szoveg?.bajt ?? 0) + kodBajt;
+  return esemenytTeszek(kornyezet, 'GondolatLetrehozas', entitas);
 }
 
 // ===================================

@@ -261,7 +261,9 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
   // láthatom (csak a születésük jön el, a szülő vagy a gyökér-darab bejelentéseként), tehát a D14 rájuk sem ítélhet.
   const nemTartott = typeof beallitas.nemTartott === 'function' ? beallitas.nemTartott : null;
   // Mely entitásoknak láttuk legalább egy pont-eseményét (a D14 kivétele és a döntés ismerete ugyanez a jel).
-  const pontjaIsmert = new Set();
+  // ⭐ D119 (A): a jelenből kizárt, de látott ELHAGYOTT pont (a költöző nem hozta — KZ3) is tudás: „ez a költöző 0-t hoz rá”
+  // (`ketReteg.js` adja) — különben az elhagyott entitás a gyermekben „a pontjai ismeretlenek” szellemként maradna.
+  const pontjaIsmert = new Set(beallitas.elhagyottPontok instanceof Set ? beallitas.elhagyottPontok : []);
 
   // ----- KÉT SZŰRŐ, EGYMÁS UTÁN -----
   // 1. ELÁGAZÁS: ha valaki két eseményt írt alá ugyanarról a pontról, determinisztikusan
@@ -420,6 +422,8 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
       ...(toredek ? { toredek: { csoport: letrehozoEsemeny.azonosito, sorszam: toredek.sorszam,
         darab: toredek.darab } } : {}),
       meret: letrehozoEsemeny.adat.meret ?? 0,       // D26: a tárolási vállalás mértéke
+      // ⭐⭐ D119 (①a): a koino-verzió a gyermeket és a kódot nevezi meg (a születés a létrehozó eseményben marad).
+      ...(adat.tipus === 'KoinoVerzio' ? { koinoVerzio: { gyermek: adat.gyermek, kod: adat.kod } } : {}),
       szerzo: letrehozoEsemeny.szerzo,
       letrehozva: letrehozoEsemeny.ido,
       osszesPont: 0,

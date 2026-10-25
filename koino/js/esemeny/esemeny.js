@@ -23,6 +23,8 @@ import { szabalyokAlakiHibaja } from './koinoSzabalyok.js';
 import { lenyomat, base64UrlBajtok, bajtokBase64Url } from './kanonikusAlak.js';
 // ⭐ D81: a lánc-gyökér két összegzés — az alakjukat itt nézzük (a fa egy forrás).
 import { osszegzesAlakja } from './osszegzoFa.js';
+// ⭐ D119 (①a): a koinó programja és a koino-verzió kódja egy darab-hivatkozás (a kód-csomag jegyzéke — `tar/kodCsomag.js`).
+import { szovegHivatkozasE } from './szovegDarab.js';
 
 const ALGORITMUS = 'Ed25519';
 
@@ -368,6 +370,25 @@ export function koinoSzuleteseE(e, koino) {
   return e.koino === koino && !azonositoAlaku(e.koino);   // a régi alak (szabad név) — csak a próbákban
 }
 
+// ===================================
+// ⭐⭐ D119 (①a): A KOINO-VERZIÓ — A GYERMEK SZÜLETÉSE A SZÜLŐBEN, A KÓDDAL
+// ===================================
+//
+// Csaba ötlete (CS3, 2026-10-25): minden gyermek a szülőben egy KOINO-VERZIÓ entitással születik — a `kormanyzas.md` 2.
+// szintje (a koino-verzió entitása). Egy legfelső szintű entitás (`GondolatLetrehozas`, `tipus: 'KoinoVerzio'` — a
+// kategória és a gondolattípus mintájára: új esemény-fajta nélkül), a címe a gyermek neve, a gyermek ALÁÍRT születését
+// magába ágyazza, és a kódot (a kód-csomag jegyzékét) is megnevezi. Ettől a szülő rendes cseréje (a gyökér darabjai) és a
+// kézi út a gyermek HÍRÉT is viszi, és a „Kód” fülön a teljes program ellenőrizhető. A feltöltő a gyermek létrehozója; a
+// pontot ugyanúgy rendeli hozzá, mint bármihez (D14 — pont nélkül nincs).
+
+/** A koino-verzió entitás típusa. */
+export const KOINO_VERZIO = 'KoinoVerzio';
+
+/** Koino-verzió létrehozó eseménye-e? */
+export function koinoVerzioE(e) {
+  return !!e && typeof e === 'object' && e.tipus === 'GondolatLetrehozas' && e.adat?.tipus === KOINO_VERZIO;
+}
+
 /**
  * A koinó születése egy eseménylistából — EGY szabály minden helyen (az állapot, a tagság, a kapu, a belépő tér).
  * Koinó nélkül: az első új alakú születésé, ha van ilyen, különben a régi alaké. ⚠️ A régi alaknál több is lehet
@@ -453,8 +474,21 @@ export function alakiHiba(esemeny) {
           || t.lanc.length > 1024) {
         return 'a gyermek születése a létrehozó tagsági bizonyítékát hozza ({ horgony, lanc })';
       }
+      // ⭐⭐ D119 (Csaba: „(A) Nem költözik”): a létrehozó a születésével költözik, és a beköltözéshez hasonlóan elhagyhat
+      // (KZ3 (A)) — a program a koino-verzió kártyáira tett pontjait magától elhagyja (a kártya a szülő ügye).
+      const el = esemeny.adat?.elhagy;
+      if (el !== undefined && (!Array.isArray(el) || el.length > 1024 || !el.every(azonositoAlaku))) {
+        return 'az elhagyott pontok listája entitás-azonosítók listája';
+      }
     } else if (t !== undefined) {
       return 'tagsági bizonyíték csak a szülőt megnevező születésen állhat';
+    } else if (esemeny.adat?.elhagy !== undefined) {
+      return 'elhagyott pont csak a gyermek születésén állhat (a létrehozó a születésével költözik)';
+    }
+    // ⭐⭐ D119 (①a): a koinó PROGRAMJA — a kód-csomag jegyzékének hivatkozása (a kód neve); csak új alakban.
+    const pr = esemeny.adat?.program;
+    if (pr !== undefined && (esemeny.koino !== '' || !szovegHivatkozasE(pr))) {
+      return 'a koinó programja a kód-csomag hivatkozása ({ lenyomat, bajt }) — csak új alakú születésen';
     }
   }
   // ⭐⭐ D118 (④a): a KÖLTÖZÉS két eseménye — az alakjuk (a bizonyítékot a kapu nézi, a koinó és a szülő születésével).
@@ -514,6 +548,27 @@ export function alakiHiba(esemeny) {
     if (szulo !== undefined && szulo !== null && !azonositoAlaku(szulo)) {
       return 'a gondolat szulo-ja csak azonosító vagy null lehet';
     }
+  }
+  // ----- ⭐⭐ D119 (①a): A KOINO-VERZIÓ — legfelső szintű, a gyermek születését és a kódját hozza -----
+  // Itt az alak (a beágyazott születésé is); az aláírást és a tagsági bizonyítékot a kapu nézi, a szülő születésével
+  // (`koinoLanc.js` `koinoVerzioEllenorzese`).
+  if (koinoVerzioE(esemeny)) {
+    const a = esemeny.adat;
+    const sz = a.szuletes;
+    if (a.szulo !== undefined && a.szulo !== null) return 'a koino-verzió legfelső szintű entitás (nincs szülője)';
+    if (esemeny.entitas !== null) return 'a koino-verzió a saját szeletét nyitja';
+    if (!azonositoAlaku(a.gyermek) || !szovegHivatkozasE(a.kod)) return 'a koino-verzió a gyermek nevét és a kódját nevezi meg';
+    if (!sz || typeof sz !== 'object' || Array.isArray(sz) || sz.tipus !== 'KoinoLetrehozas' || sz.koino !== ''
+        || sz.azonosito !== a.gyermek || sz.adat?.szulo !== esemeny.koino || sz.szerzo !== esemeny.szerzo) {
+      return 'a koino-verzió a gyermek születését hozza (ennek a koinónak a gyermeke, a feltöltő hozta létre)';
+    }
+    const pr = sz.adat.program;
+    if (!szovegHivatkozasE(pr) || pr.lenyomat !== a.kod.lenyomat || pr.bajt !== a.kod.bajt) {
+      return 'a koino-verzió kódja a gyermek születésének programja';
+    }
+    if (a.cim !== sz.adat.nev) return 'a koino-verzió címe a gyermek neve';
+    const h = alakiHiba(sz);
+    if (h) return 'a koino-verzió születése: ' + h;
   }
   // ----- ⭐ D93/5: A PROFIL — a koinó kötelező mezői, a Profil esemény, a meghívás tanúsítása -----
   if (esemeny.tipus === 'KoinoLetrehozas' && esemeny.adat?.profil !== undefined) {

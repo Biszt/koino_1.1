@@ -100,12 +100,16 @@ async function nemzedekKepe(esemenyek, lanc, koltozok, i, most, beallitas) {
   // jelzés volna (mérve).
   const lancAga = (e) => (lancbanVan(e, lanc, i, koltozok) ? e.szerzo : e.szerzo + '|' + esemenyKoinoja(e));
   const ismertSorszamok = new Map();
+  // ⭐ D119 (A): az elhagyott pont (a láncon van, a jelenből kizárt) entitása — a D14 ítélhet róla (a költöző 0-t hoz rá).
+  const elhagyottPontok = new Set();
   for (const e of esemenyek) {
     if (!lancbanVan(e, lanc, i, koltozok) || jelenbenSzamit(e, lanc, i, koltozok)) continue;
     if (!ismertSorszamok.has(e.szerzo)) ismertSorszamok.set(e.szerzo, new Set());
     ismertSorszamok.get(e.szerzo).add(e.sorszam);
+    if (e.tipus === 'TudatpontRendezes' && azonositoAlaku(e.adat?.entitas)) elhagyottPontok.add(e.adat.entitas);
   }
-  const kep = await haromFazis(bemenet, lanc[i].azonosito, most, { ...beallitas, lancAga, ismertSorszamok }, rogzitettek);
+  const kep = await haromFazis(bemenet, lanc[i].azonosito, most, { ...beallitas, lancAga, ismertSorszamok, elhagyottPontok },
+    rogzitettek);
   return { ...kep, mult };
 }
 
@@ -133,7 +137,8 @@ async function haromFazis(bemenet, koino, most, beallitas, rogzitettek) {
     ...(koino ? { koino } : {}),
     ...(beallitas.csakAtmeneti ? { csakAtmeneti: beallitas.csakAtmeneti } : {}),
     ...(beallitas.nemTartott ? { nemTartott: beallitas.nemTartott } : {}),
-    ...(beallitas.lancAga ? { lancAga: beallitas.lancAga, ismertSorszamok: beallitas.ismertSorszamok } : {})
+    ...(beallitas.lancAga ? { lancAga: beallitas.lancAga, ismertSorszamok: beallitas.ismertSorszamok } : {}),
+    ...(beallitas.elhagyottPontok?.size ? { elhagyottPontok: beallitas.elhagyottPontok } : {})
   });
   const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, most, {
     ...(beallitas.osszegzesek ? { osszegzesek: beallitas.osszegzesek } : {}),

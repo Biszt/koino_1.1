@@ -1503,3 +1503,17 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     mérte: a gyermek magától nem cserélt (a két őrjárat a másik koinó portján megállt), és a nevét be kellett gépelni ·
     ⭐ a koino-verzió kártya egyben a gyermek HÍRE (a szülő cseréje és a kézi út viszi) és a forráskód-kormányzás kártyája
     (a kód P2P terjed, GitHub nélkül — D12) · Csaba (CS1–CS5 — a CS3 Csaba ötlete) · `csaladi_orjarat_atvizsgalas.md`.
+205. **2026-10-25 · D119 ①a — a koino-verzió a program oldalán: a kód-csomag, a születés programja, a kártya a kapuval, a
+    `koinoverzio` parancs, a gyermek a kártyából**
+    → **a kód-csomag a futó program fájljai sorvég nélkül, tartalom-címzetten (a jegyzék lenyomata a kód neve); a gyermek
+    születése a kódot nevezi meg; a koino-verzió egy legfelső szintű `GondolatLetrehozas` a szülőben, ami a gyermek aláírt
+    születését magába ágyazza (a kapu a szülő születésével ellenőrzi); előbb a születés, aztán a kártya (a fordított sorrend
+    kör lenne); a szabad pontot előre nézzük; a gyermek tárát csak a költözés nyitja meg, a kártyából** · ⛔ a gyökér-koinó
+    születése nem nevez meg programot (nincs kártyája, ahol a kód lakna) · ⛔ a tár nem nyílik minden kártyára (9. szabály:
+    minden készülék minden gyermeket tartana és cserélne) · `csaladi_orjarat_atvizsgalas.md` 10. szakasz.
+206. **2026-10-25 · D119 — a koino-verzió kártyára tett pont nem költözik (Csaba: „(A) Nem költözik”; a teljes sor lelete)**
+    → **a kártya pontja a szülő ügye: a program a KZ3 `elhagy` mezőjébe írja magától és aláírva — a beköltözésébe és (új) a
+    gyermek születésébe (a létrehozó a születésével költözik); a számítás a létrehozóét is olvassa; és az elhagyott, de látott
+    pont tudás — a D14 ítélhet, a kártya (és bármely elhagyott entitás) nem marad szellemként a gyermekben** · a lelet: a
+    második, kisebb keretű gyermek nem született meg (az első kártya pontja is hozott volt) · ⛔ nem a számítás ismeri fel a
+    kártyát (a létrehozó eseményét nem minden készülék ismeri — két kép lenne) · `csaladi_orjarat_atvizsgalas.md` 10. szakasz.
