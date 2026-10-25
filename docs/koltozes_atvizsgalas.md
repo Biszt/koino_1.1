@@ -522,7 +522,13 @@ lapján a szabad pont 20 (a 120-as keretből). **A költözés működik.** A pr
 1. ⛔ **Két út, összeakadt csere** (2:09). A két gép a helyi hálón ÉS a router nyilvános címén (a visszafordított úton)
    is elérte egymást; a laptop a nyilvános úton jött kopogást „ismeretlennek” látta, és egy második cserét indított
    ugyanazzal a társsal. A telefon egyik munkája a másik üzenetét kapta („Várt üzenet: NYITAS, érkezett: CIMEK”), a
-   laptopé 10 mp után „nem válaszol”-lal zárult. Adat nem veszett el (a következő perc csere pótolta). ⏭️ MÉRENDŐ.
+   laptopé 10 mp után „nem válaszol”-lal zárult. Adat nem veszett el (a következő perc csere pótolta). 🔍 *Mérve helyben
+   (2026-10-25, a scratchpad `m_ketut.sh` — két „készülék” egy gépen, mindegyik a másikat két címen ismeri, 8 perc):* az
+   összeakadás NEM jött elő (12–12 sikeres csere, 0 bukott); az első percben két csere futott párhuzamosan ugyanazzal a
+   társsal, és mindkettő ugyanazt a munkát végezte (fölösleges, de ártalmatlan — a tár kiszűri a duplát), utána a kötés a
+   két címet egy társnak vette (a tábla-kulcs szerint), és percenként egy csere ment. A terepi hibához a router valódi
+   visszafordítása vagy ritkább időzítés kell — a terepen mérendő. ⏭️ A javítás iránya (egy társsal egyszerre egy munka a
+   TÁBLA-KULCS szerint, nem a cím szerint — `udpKapu.js` ma cím:port szerint tartja) a családi őrjárat átvizsgálásába.
 2. ⚠️ **A gyermek nem fedezhető fel magától.** A telefon a gyermek 43 jeles nevét begépelte (`csatlakoz`), és a laptop
    gyermek-portját kézzel vette fel (`tars`); a szülő cseréje a gyermekek hírét nem viszi. A csatlakozás, a társ felvétele
    és a kézi csere ma csak parancs (a szülőnél is az volt). ⏸️ **Tervezési kérdés (Csabánál).**
