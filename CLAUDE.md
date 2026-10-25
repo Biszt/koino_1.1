@@ -220,9 +220,16 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    felület** (elágazás 203): a tér kártyáján a családfa (↑ a szülő, ↓ a gyermekek, a költözéseim — ⛔ lelet: a tér a
    beköltözést nem vette horgonynak), a fő menüben a „🧳 Költözés…” ablak (a gyermekek, a kerete, a hozott pontok, az
    elhagyás KZ3-ra élő összeggel, megerősítés); a parancs és a lap ugyanazt hívja (`koltozesVegrehajtasa`, `GET`/`POST
-   /api/koltozes`); böngészőben végigjárva. ⭐⭐ **A KÖLTÖZÉS (D118) MEGÉPÜLT.** ⏭️ **Csaba kézi próbája:** a laptopon új
-   koinó (`koino "<név>"`), a telefon frissítése és `csatlakoz <név>`, gyermek (`koino "<név>" … szulo=…`), költözés a
-   lapról. ⚠️ Gyermeket a lapról nem lehet létrehozni (a koinó létrehozása ma parancs). ⚠️ A D94 szúrópróba a szülőbeli
+   /api/koltozes`); böngészőben végigjárva. ⭐⭐ **A KÖLTÖZÉS (D118) MEGÉPÜLT.** ✅ **Csaba kézi próbája (2026-10-25,
+   laptop + telefon — az átvizsgálás 13. szakasza):** a telefon a lapján költözött egy zárt, 120-as keretű gyermekbe
+   (elhagyással), és a laptop gyermek-képe a súlyával számol — ⚠️ négy lelet: (1) két úton (helyi + a router nyilvános
+   címe) két csere ugyanazzal a társsal, összeakadt üzenetek · (2) a gyermek nem fedezhető fel (a nevét be kell gépelni;
+   csatlakozás / társ / kézi csere csak parancs) · (3) ⛔⛔ egy készülék két koinója: a két őrjárat a társat keresi, a
+   másik koinó portján megáll — a gyermek magától nem cserél · (4) a zárt gyermekbe költözés utáni első csere félig visz (a
+   kapu a csere elején ítél a tagságról). ⏭️ Az 1. és a 4. mérése és javítása; a 2. és a 3. iránya Csabánál. A laptop
+   próba-adata: a scratchpad `kezi-proba` (őrjárat 7373 a szülőnek, 7375 a gyermeknek, felület 7499); a telefonon
+   `~/koino-kp2` (őrjárat 7374 a szülőnek, 7376 a gyermeknek). ⚠️ A teljes próbasor előtt a laptop folyamatait le kell
+   állítani. ⚠️ Gyermeket a lapról nem lehet létrehozni (a koinó létrehozása ma parancs). ⚠️ A D94 szúrópróba a szülőbeli
    bemondásokat követi — a nagy zárványú költöző a gyermekben „nem ellenőrizhető”, amíg azok nincsenek meg. ⚠️ A laptop–telefon próba-koinója (`sajat`, régi alak) nem folytatható — a
    következő kézi próbához új koinó kell (`koino "<név>"`, a telefonon `csatlakoz <név>`). Elágazás 192–196.
 2. ⏸️ **A terep 🅱️ (két mobilnetes telefon)** — Csaba (2026-10-19): *„ezt hagyjuk ki”*; előtte a telefon frissítése (lent).

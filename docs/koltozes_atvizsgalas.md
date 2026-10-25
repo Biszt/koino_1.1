@@ -508,3 +508,32 @@ prototípusban a koinó mint fogalom nem volt):
   gyermekkel: az elhagyás, a megerősítés, a siker, a tér, a gyermek paklija a hozott gondolattal és a szabad ponttal).
 - ⚠️ *Ami marad:* gyermeket létrehozni a felületről nem lehet (a koinó létrehozása ma egyáltalán parancs —
   `koino "<név>" … szulo=…`); a tér „esemény” száma a koinó saját eseményei (a hozott múlt nélkül).
+
+## 13. A kézi próba (Csaba, 2026-10-25) — laptop + telefon
+
+A laptopon egy zárt szülő („Családi próba”, „mindent” kiszolgálás), a telefonon egy új e-ember (`~/koino-kp2`), aki a
+cserén belépett, és akit a laptop meghívott; mindkettő tett pontot (a telefon egy saját gondolatra 100-at, a laptop „Közös
+kert”-jére 40-et). A laptop létrehozta a gyermeket („Családi gyermek”, 120-as kerettel — a saját hozott pontja épp 120), a
+telefon a cserén megkapta a születését, és a LAPJÁN költözött: a „Költözés…” ablak a 140 hozott pontot „nem fér”-nek
+mutatta, a „Közös kert” 40-ét elhagyta, a költözés lement. ✅ **A laptop gyermek-képe a telefon súlyával számol:** a
+telefon gondolata 100, a „Közös kert” 100 (csak a laptopé — a telefon 40-e elhagyva, KZ3), a „Nyári tábor” 20; a telefon
+lapján a szabad pont 20 (a 120-as keretből). **A költözés működik.** A próba négy leletet hozott:
+
+1. ⛔ **Két út, összeakadt csere** (2:09). A két gép a helyi hálón ÉS a router nyilvános címén (a visszafordított úton)
+   is elérte egymást; a laptop a nyilvános úton jött kopogást „ismeretlennek” látta, és egy második cserét indított
+   ugyanazzal a társsal. A telefon egyik munkája a másik üzenetét kapta („Várt üzenet: NYITAS, érkezett: CIMEK”), a
+   laptopé 10 mp után „nem válaszol”-lal zárult. Adat nem veszett el (a következő perc csere pótolta). ⏭️ MÉRENDŐ.
+2. ⚠️ **A gyermek nem fedezhető fel magától.** A telefon a gyermek 43 jeles nevét begépelte (`csatlakoz`), és a laptop
+   gyermek-portját kézzel vette fel (`tars`); a szülő cseréje a gyermekek hírét nem viszi. A csatlakozás, a társ felvétele
+   és a kézi csere ma csak parancs (a szülőnél is az volt). ⏸️ **Tervezési kérdés (Csabánál).**
+3. ⛔⛔ **Egy készülék két koinója: a gyermek magától nem cserél.** Minden koinónak külön őrjárat és port kell („egy
+   figyel = egy koinó”), a két őrjárat viszont a KÉSZÜLÉK kulcsával dolgozik, és a kopogás a TÁRSAT keresi: a telefon
+   gyermek-őrjárata a laptopot a szülő-portján (7373) érte el elsőként, ott „MÁSIK koinóé, nem cseréltünk” lett, és a
+   társ többi címét (a gyermek-port, 7375) már nem próbálta — fordítva ugyanígy. A kézi `csere` működött (az a megadott
+   címre megy). A költözés tehát megtörténik, de utána a gyermek csak kézzel jut tovább. ⏸️ **Gyors javítás (a „MÁSIK
+   koinó” nem elérés, a kötés koinónként jegyzi a portot) vagy szerkezeti (egy őrjárat, egy port a készülék minden
+   koinójának) — Csabánál.**
+4. ⛔ **A zárt gyermekbe költözés utáni első csere félig visz.** A laptop zárt kapuja a csere ELEJÉN ítélte meg, hogy a
+   telefon tag-e a gyermekben — még nem volt (a beköltözése épp abban a cserében jött), és a nem tagnak csak az azonosság-
+   szelete ment át (a beköltözés és egy csak küldő esemény); a következő csere hozott mindent (mérve: 2:33 → 2:37).
+   ⏭️ MÉRENDŐ és javítandó (a kapu a csere közben megérkező horgonnyal is dönthetne — a TAGSAG kör erre van).
