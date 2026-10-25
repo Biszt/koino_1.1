@@ -601,6 +601,90 @@ proba('⭐⭐ D119 (①a): a koino-verzió — a gyermek a szülőben egy kárty
     }
   });
 
+// ⭐⭐ D119 (①b): A KOINO-VERZIÓ A LAPRÓL ÉS A KÓDJA A VONALON. Az A felülete megmutatja az űrlap kiindulását (a szülő
+// szabályai, a szabad pont, a futó program), a lapról születik a gyermek (a kártya és a pont a lemezen, a gyermek a saját
+// szabályával és a programmal), a „Kód” fül a jegyzéket adja (mind megvan, a futó programmal egyezik). A vállalt kód túléli
+// a fájl-tár takarítását (egy nem vállalt fájl nem — „alap” módban, mert a „mindent” mindent tart). A B a kártyát a kézi úton
+// kapja: a tere a kártyáról ismeri a gyermeket (a tára nincs nála), és a törzs-kérelem a TELJES kódot hozza (64-nél több
+// fájl — a kérő csak az elvártat). Viselkedést mérünk (a lemezeket, a felület válaszait).
+proba('⭐⭐ D119 (①b): a koino-verzió a LAPRÓL és a kódja a vonalon — előnézet, lapról született gyermek, „Kód” fül, tér a kártyáról; a vállalt kód túléli a takarítást, a törzs-kérelem a teljes kódot hozza',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const port = 7867;
+    let fa = null;
+    let fb = null;
+    let figyelo = null;
+    const lemez = async (hely, koino) => (await readFile(join(hely, koino, 'esemenyek.jsonl'), 'utf8').catch(() => ''))
+      .split('\n').filter(Boolean).map((x) => JSON.parse(x));
+    try {
+      await fut(a, 'koino', 'Lapos szülő', 'nyilt');
+      const P = await koinoNeve(a);
+      await taggaTesziKeszulek(a, b);
+      fa = await feluletet(a, 7865);
+      const elo = await fa.hiv('/api/koinoverzio');
+      const letre = await fa.hiv('/api/koinoverzio', { method: 'POST', body: JSON.stringify({ nev: 'Lapról verzió',
+        leiras: 'A lap hozta', pont: 40, szabalyok: { tudatpontKeret: 5000 } }) });
+      const K = letre.adat?.gyermek ?? null;
+      const kartya = letre.adat?.kartya ?? '';
+      const kod = await fa.hiv('/api/kod?kartya=' + encodeURIComponent(kartya));
+      const prog = await fa.hiv('/api/program');
+      fa.folyamat.kill();
+      fa = null;
+      await varj(500);
+      if (!P || !K) return false;
+      const kv = (await lemez(a, P)).find((e) => e.azonosito === kartya);
+      const kSzul = (await lemez(a, K)).find((e) => e.azonosito === K);
+      const jegyzek = kod.adat?.jegyzek ?? [];
+      // a vállalt kód túléli a fájl-tár takarítását — egy nem vállalt fájl nem
+      const blobA = fajlBlobTarolo(P, a);
+      const szemet = await blobA.ir(new TextEncoder().encode('nem vállalt fájl ' + Date.now()));
+      await fut(a, 'tomorit', { KOINO_FAJL_ATMENETI: '0', KOINO_FAJL_FRISS: '0', KOINO_KISZOLGALAS: 'alap' });
+      let aMegvan = 0;
+      for (const f of jegyzek) if (await blobA.van(f[1])) aMegvan++;
+      const szemetMaradt = await blobA.van(szemet.lenyomat);
+      // a B a kártyát a kézi úton kapja — a tere a kártyáról ismeri a gyermeket, a törzs-kérelem a teljes kódot hozza
+      await fut(a, 'kivisz', join(a, 'szulo2.jsonl'));
+      await fut(b, 'behoz', join(a, 'szulo2.jsonl'));
+      fb = await feluletet(b, 7866);
+      const ter = await fb.hiv('/api/ter');
+      fb.folyamat.kill();
+      fb = null;
+      await varj(500);
+      const pk = (ter.adat?.kartyak ?? []).find((x) => x.azonosito === P);
+      figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+        env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: 'ignore'
+      });
+      await varj(2000);
+      const torzs = await fut(b, 'kerelem', 'torzs', kartya, '127.0.0.1', String(port));
+      figyelo.kill();
+      figyelo = null;
+      await varj(800);
+      const blobB = fajlBlobTarolo(P, b);
+      let bMegvan = 0;
+      for (const f of jegyzek) if (await blobB.van(f[1])) bMegvan++;
+      const ok = elo.adat?.lehet === true && elo.adat?.program?.fajlok > 100 && elo.adat?.szabalyok?.tudatpontKeret === 10000
+        && elo.adat?.szabadPont === 10000 && letre.adat?.success === true && letre.adat?.pont === 40
+        && kv?.adat?.tipus === 'KoinoVerzio' && kSzul?.adat?.szabalyok?.tudatpontKeret === 5000
+        && kSzul?.adat?.program?.lenyomat === elo.adat?.program?.lenyomat
+        && jegyzek.length === elo.adat?.program?.fajlok && kod.adat?.megvan === jegyzek.length && kod.adat?.egyezik === true
+        && prog.adat?.sajat?.lenyomat === elo.adat?.program?.lenyomat
+        && aMegvan === jegyzek.length && !szemetMaradt
+        && !!pk?.gyermekek?.some((g) => g.azonosito === K && g.kartyarol === true && g.nev === 'Lapról verzió')
+        && jegyzek.length > 64 && bMegvan === jegyzek.length;
+      if (!ok) process.stderr.write('    (a kimenetek: ' + JSON.stringify({ elo: elo.adat && { ...elo.adat, szabalyok: undefined },
+        letre: letre.adat, kod: kod.adat && { ...kod.adat, jegyzek: jegyzek.length }, prog: prog.adat, kv: !!kv,
+        kKeret: kSzul?.adat?.szabalyok?.tudatpontKeret, aMegvan, szemetMaradt, pk: pk?.gyermekek, bMegvan,
+        torzs: torzs.slice(0, 400) }) + ')\n');
+      return ok;
+    } finally {
+      for (const x of [fa, fb]) if (x) x.folyamat.kill();
+      if (figyelo) figyelo.kill();
+      await varj(500);
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ⭐⭐ D118 (②b): A KAPU KOINÓ-SZABÁLYA a parancssoron és a cserén. Az A a szülőben ír egy gondolatot a gyermek születése
 // ELŐTT és egyet UTÁNA; a szülő kivitele a gyermekbe behozva csak az elsőt adja (a második a szülő jelene — „másik koinóé”),
 // és a csere (két „mindent” készülék) ugyanígy viszi tovább a B-nek. Viselkedést mérünk (a két lemezt). ⚠️ A számítás még

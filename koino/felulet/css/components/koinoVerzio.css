@@ -1,0 +1,175 @@
+/* koino/felulet/css/components/koinoVerzio.css */
+
+/* Felelősség: ⭐⭐ D119 (①b) — a koino-verzió kártya jele és „Kód” füle, és az „Új koino-verzió” űrlap (koinós többlet, a
+   prototípusban nincs ilyen). Használja: `felulet/js/koinoVerzio.js`. */
+
+/* ===== A KÁRTYA ===== */
+.koino-verzio-jel {
+  display: inline-block;
+  margin-right: 0.5em;
+  padding: 0.05em 0.45em;
+  border-radius: 0.6em;
+  background: #ede7f6;
+  color: #4527a0;
+  font-size: 0.8em;
+  white-space: nowrap;
+}
+
+.koino-kod {
+  font-size: 0.9em;
+}
+
+.koino-kod__leiras,
+.koino-kod__allas {
+  margin: 0.3em 0;
+}
+
+.koino-kod__egyezik {
+  margin: 0.3em 0;
+  color: #2e7d32;
+}
+
+.koino-kod__mas {
+  margin: 0.3em 0;
+  color: #b71c1c;
+}
+
+.koino-kod__lista {
+  max-height: 14em;
+  overflow-y: auto;
+  margin: 0.4em 0;
+  padding-left: 1.2em;
+}
+
+.koino-kod__fajl {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #1565c0;
+  cursor: pointer;
+  font-family: monospace;
+  text-align: left;
+  /* a hosszú útvonal telefonon tördelődjön (különben kilóg a listából — böngészőben nézve) */
+  overflow-wrap: anywhere;
+}
+
+.koino-kod__fajl:hover {
+  text-decoration: underline;
+}
+
+.koino-kod__meret {
+  color: #777;
+  font-size: 0.85em;
+}
+
+.koino-kod__ut {
+  margin: 0.4em 0 0.2em;
+  font-family: monospace;
+  font-weight: bold;
+}
+
+.koino-kod__szoveg {
+  max-height: 24em;
+  overflow: auto;
+  margin: 0;
+  padding: 0.5em;
+  background: #f6f6f6;
+  border: 1px solid #ddd;
+  font-size: 0.8em;
+  white-space: pre;
+}
+
+/* ===== AZ ŰRLAP ===== */
+.koino-verzio-urlap__leiras,
+.koino-verzio-urlap__program {
+  margin: 0.4em 0;
+  font-size: 0.92em;
+}
+
+.koino-verzio-urlap__mezo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  margin: 0.5em 0;
+}
+
+.koino-verzio-urlap__mezo input,
+.koino-verzio-urlap__mezo textarea {
+  font: inherit;
+  padding: 0.3em;
+}
+
+.koino-verzio-urlap__jelolo {
+  display: block;
+  margin: 0.5em 0;
+}
+
+.koino-verzio-urlap__szabalyok {
+  margin: 0.6em 0;
+  border: 1px solid #ddd;
+  padding: 0.4em 0.6em;
+}
+
+.koino-verzio-urlap__szabaly {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5em;
+  margin: 0.25em 0;
+  font-size: 0.9em;
+}
+
+.koino-verzio-urlap__szabaly input {
+  width: 8em;
+  font: inherit;
+}
+
+.koino-verzio-urlap__figyelem {
+  margin: 0.6em 0;
+  padding: 0.4em 0.6em;
+  background: #fff8e1;
+  border-left: 3px solid #f9a825;
+}
+
+.koino-verzio-urlap__siker {
+  font-size: 1.05em;
+}
+
+.koino-verzio-urlap__gombok {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5em;
+  margin-top: 0.6em;
+}
+
+.koino-verzio-urlap__gomb {
+  padding: 0.35em 0.9em;
+  cursor: pointer;
+}
+
+.koino-verzio-urlap__gomb--fo {
+  background: #4527a0;
+  color: #fff;
+  border: none;
+  border-radius: 0.3em;
+}
+
+.koino-verzio-urlap__gomb:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ===== AZ ALSÓ SÁV: A MÁS PROGRAMVERZIÓ JELZÉSE ===== */
+/* ⚠️ A sáv sötétzöld: a piros alig olvasható rajta (böngészőben nézve) — világos narancs. */
+.also-sav__program {
+  color: #ffd180;
+  font-weight: bold;
+  cursor: help;
+}
+
+@media (max-width: 600px) {
+  .koino-verzio-urlap__szabaly {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

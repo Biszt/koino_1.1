@@ -6115,7 +6115,9 @@ fülén a teljes program, és a gyermek születése a kód lenyomatát is megnev
 (a kód-csomag: 331 fájl / 6,4 MB, a jegyzék 28,5 KB) és ✅ **az ①a** (a program oldala: a kód-csomag, a születés programja, a
 kártya a kapuval, a `koinoverzio` parancs, a gyermek a kártyából — elágazás 205). ✅ **D119/A** (Csaba, 2026-10-25: „(A) Nem
 költözik”): a kártyára tett pont a szülő ügye — a program a beköltözés és (új) a gyermek születésének `elhagy`-ába írja, az
-elhagyott, de látott pont tudás (elágazás 206). ⏭️ Az ①b: a kártya törzse, a „Kód” fül, az űrlap, a jelzés a lapon.
+elhagyott, de látott pont tudás (elágazás 206). ✅ **Az ①b** (a kártya kódja a fájl-igényben és a törzs-kérelemben, az
+elvárás-őr a kérőnél, a kapu útvonalai, a „Kód” fül, az űrlap a fő menüben, a más verzió jelzése; elágazás 207) — ⭐ **az ①
+kész.** ⏭️ ② a koinó-példány.
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal

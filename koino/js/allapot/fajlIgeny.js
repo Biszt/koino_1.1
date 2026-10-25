@@ -77,8 +77,26 @@ export function entitasFajljai(entitas) {
   // ⭐ D72: és egy harmadik — a szöveg-hivatkozás. A DARAB maga is igény (úgy jön, mint egy kép);
   // a benne lévő képeket a `fajlIgenyek` a darab megérkezése után látja.
   if (szovegHivatkozasE(entitas?.szoveg)) talalt.add(entitas.szoveg.lenyomat);
+  // ⭐⭐ D119 (①b): és egy negyedik — a koino-verzió kártya KÓDJA. A jegyzék maga is igény (úgy jön, mint a szöveg-darab); a
+  // benne felsorolt fájlokat a `fajlIgenyek` a jegyzék megérkezése után látja (`kodOlvas`).
+  if (szovegHivatkozasE(entitas?.koinoVerzio?.kod)) talalt.add(entitas.koinoVerzio.kod.lenyomat);
 
   return talalt;
+}
+
+/**
+ * ⭐⭐ D119 (①b): a koino-verzió kártya kódjának fájljai — a jegyzékből (a hívó `kodOlvas`-a: async hivatkozás → a jegyzék,
+ * ha megvan; különben null). A jegyzék nélkül üres (a jegyzék maga az `entitasFajljai`-ban igény).
+ * @param {Object} entitas
+ * @param {Function|null} kodOlvas
+ * @returns {Promise<Array<string>>}
+ */
+export async function kodFajljai(entitas, kodOlvas) {
+  const h = entitas?.koinoVerzio?.kod;
+  if (!szovegHivatkozasE(h) || typeof kodOlvas !== 'function') return [];
+  let j = null;
+  try { j = await kodOlvas(h); } catch { return []; }
+  return Array.isArray(j?.fajlok) ? j.fajlok.map((f) => f?.[1]).filter((l) => typeof l === 'string') : [];
 }
 
 /**
@@ -126,6 +144,8 @@ export async function fajlIgenyek(allapot, megvanE, beallitas = {}) {
     const vallaltam = vallaltamE(entitas);
     for (const lenyomat of entitasFajljai(entitas)) felvesz(lenyomat, entitas.azonosito, vallaltam);
     for (const lenyomat of await szovegKepei(entitas.szoveg)) felvesz(lenyomat, entitas.azonosito, vallaltam);
+    // ⭐ D119 (①b): a kártya vállalása a kódjára is vállalás (a fájl-tár kerete védi, a fájl-randevú kiszolgálja).
+    for (const lenyomat of await kodFajljai(entitas, beallitas.kodOlvas)) felvesz(lenyomat, entitas.azonosito, vallaltam);
   }
 
   // ⭐ D72: A JAVASLATOK ÚJ SZÖVEGE IS IGÉNY — aki szavaz, annak el kell tudnia olvasni, mire.

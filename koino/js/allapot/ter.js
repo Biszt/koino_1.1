@@ -238,6 +238,13 @@ export async function terKartyai(hely = alapHely(), beallitas = {}) {
     k.szuloIsmert = !!k.szulo && nevSzerint.has(k.szulo);
     k.szuloNev = k.szuloIsmert ? nevSzerint.get(k.szulo) : null;
     k.gyermekek = kartyak.filter((g) => g.szulo === k.azonosito).map((g) => ({ azonosito: g.azonosito, nev: g.nev }));
+    // ⭐⭐ D119 (①b): és a koino-verzió kártyákról ismert gyermekek — a tárukat a készülék még nem ismeri (a kártya a szülő
+    // cseréjével jön); a hívó adja (`kartyaGyermekek`: koinó → [{ azonosito, nev }]).
+    for (const g of beallitas.kartyaGyermekek?.get?.(k.azonosito) ?? []) {
+      if (!k.gyermekek.some((x) => x.azonosito === g.azonosito)) {
+        k.gyermekek.push({ azonosito: g.azonosito, nev: g.nev ?? null, kartyarol: true });
+      }
+    }
   }
 
   // ----- A SORREND -----

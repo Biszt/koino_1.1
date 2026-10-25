@@ -120,6 +120,8 @@ export class AlsoSav {
     document.addEventListener('visibilitychange', () => { if (!document.hidden) this._csereKerdezese(); });
     this.ketyego = setInterval(() => this._csereKiirasa(), 1000);
     this._csereKerdezese();
+    // ⭐⭐ D119 (①b): a programverzió — egyszer (a futó program és a koinó születése futás közben nem változik)
+    this._programKerdezese();
 
     this.adatokBetoltese();
     console.log('AlsoSav.init - VÉGE');
@@ -423,6 +425,26 @@ export class AlsoSav {
     this.adatokBetoltese();
     if (kezzel) this._csereKerdezese();
     console.log('AlsoSav._csereUtaniFrissites - VÉGE', { megtortent });
+  }
+
+  /**
+   * ⭐⭐ D119 (①b): ha ezen a készüléken MÁS program fut, mint amivel a koinó született (a koino-verzió kártyája mondja), a sáv
+   * kimondja — nem tiltja (CS3). A gyökér-koinónak nincs programja (nincs kártyája): ott nincs jelzés.
+   */
+  async _programKerdezese() {
+    try {
+      const p = await apiGet('program');
+      const elem = document.getElementById('info-program');
+      const elv = document.getElementById('info-program-elvalaszto');
+      if (!elem || p?.egyezik !== false) return;
+      elem.hidden = false;
+      if (elv) elv.hidden = false;
+      elem.title = 'Ez a koinó ezzel a kóddal született: ' + String(p.koinoe?.lenyomat ?? '?').slice(0, 12) + '… (a koino-verzió '
+        + 'kártyáján ellenőrizhető). Ezen a készüléken más fut: ' + String(p.sajat?.lenyomat ?? '?').slice(0, 12) + '…. Nem tiltjuk '
+        + '— de ha a két verzió szabálya eltér, a számításuk is eltérhet.';
+    } catch (hiba) {
+      console.log('AlsoSav._programKerdezese - nem kérdezhető', { hiba: hiba.message });
+    }
   }
 
   /** A felirat: mikor volt az utolsó csere (és hozott-e újat), és mikor jön a következő kör. */

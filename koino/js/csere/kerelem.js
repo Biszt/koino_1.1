@@ -40,7 +40,9 @@ import {
   mintaHelyekOsszegre, MINTA_KORLAT, RESZFA_HOSSZ, RESZFA_PONT, RESZFA_DARAB, RESZFA_GYEREK
 } from '../allapot/osszPont.js';
 import { osszegzesAlakja } from '../esemeny/osszegzoFa.js';
-import { entitasFajljai, lenyomatUrlbol } from '../allapot/fajlIgeny.js';
+import { entitasFajljai, lenyomatUrlbol, kodFajljai } from '../allapot/fajlIgeny.js';
+// ⭐ D119 (①b): a kód-csomag fájl-korlátja — a kártya törzsének felső határa.
+import { KOD_FAJL_KORLAT } from '../tar/kodCsomag.js';
 import { szovegDarabbol } from '../esemeny/szovegDarab.js';
 // ⭐ D107 L4 (④c): a felajánlás kulcsa egy kereső-régió; a korlátok a felajánlás moduljáé.
 import { keresoRegioBol } from './keresoReteg.js';
@@ -73,6 +75,9 @@ export const BEJARAS_LEPES_KORLAT = 5000;
 export const MINTAZOTT_FEJLEC_KORLAT = 8;
 /** Egy törzsben legfeljebb ennyi fájl-lenyomat. */
 export const TORZS_KORLAT = 64;
+/** ⭐⭐ D119 (①b): a koino-verzió kártya törzse a teljes kód-csomag — a jegyzék, a fájljai és a leírás darabja. ⚠️ A kérő ennyit
+ * csak az ELVÁRT fájlokból hoz el (a saját tudásából — `torzsElvart`), különben a régi 64-et (egy hamis tartó ne tömhesse tele). */
+export const TORZS_KOD_KORLAT = KOD_FAJL_KORLAT + 2;
 
 /**
  * A pakli alapértelmezése (62. mérés): a kiválasztott ág k = 8, a legfelső 3 testvér k = 4. ⭐ D116: és a DARAB (az ág mérete
@@ -510,7 +515,7 @@ async function tetelEllenorzese(t, helyesSzulo) {
  * @param {Function} [darabOlvas] - async (lenyomat) → bájtok | null
  * @returns {Promise<Array<string>>}
  */
-export async function torzsLenyomatai(entitas, darabOlvas = null) {
+export async function torzsLenyomatai(entitas, darabOlvas = null, kodOlvas = null) {
   const ki = new Set(entitasFajljai(entitas));
   const sz = entitas?.szoveg;
   if (darabOlvas && sz && typeof sz === 'object' && !Array.isArray(sz) && typeof sz.lenyomat === 'string') {
@@ -520,5 +525,7 @@ export async function torzsLenyomatai(entitas, darabOlvas = null) {
       if (Array.isArray(szoveg)) for (const blokk of szoveg) { const l = lenyomatUrlbol(blokk?.url); if (l) ki.add(l); }
     } catch { /* a hibás darab nem dönti el a törzset */ }
   }
-  return [...ki].slice(0, TORZS_KORLAT);
+  // ⭐⭐ D119 (①b): a koino-verzió kártya kódja — a jegyzék fájljai (ha a jegyzék megvan), a jegyzék után
+  for (const l of await kodFajljai(entitas, kodOlvas)) ki.add(l);
+  return [...ki].slice(0, entitas?.koinoVerzio ? TORZS_KOD_KORLAT : TORZS_KORLAT);
 }

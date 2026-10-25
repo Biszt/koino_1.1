@@ -59,7 +59,10 @@ const STATUSZ_KIFELE = {
 export function kartyaAdatta(k) {
   return {
     entitasId: k.azonosito,
-    entitasTipus: k.tipus,
+    // ⭐⭐ D119 (①b): a koino-verzió kártyát a lap a GONDOLAT kártyájával rajzolja (a prototípusban nincs ilyen típus) — a
+    // koinós többlet (`koinoVerzio.js`) a `koinoVerzio` mezőből ismeri fel, és teszi hozzá a jelet és a „Kód” fület.
+    entitasTipus: k.tipus === 'KoinoVerzio' ? 'Gondolat' : k.tipus,
+    ...(k.koinoVerzio ? { koinoVerzio: k.koinoVerzio } : {}),
 
     // ⭐ D101 ⑥: az ága alatti olvasatlan értesítések — a program számolja (a postafiók ős-láncaiból, `koino.js`).
     olvasatlanErtesitesek: Number.isInteger(k.olvasatlanErtesitesek) ? k.olvasatlanErtesitesek : 0,

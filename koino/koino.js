@@ -146,7 +146,7 @@ import {
   KOINO_VERZIO, koinoVerzioE
 } from './js/esemeny/esemeny.js';
 // ⭐⭐ D119 (①a): a kód-csomag — a futó program kódja a koino-verzió kártyájára, és a koinó programjával összevetve.
-import { sajatKodCsomag, kodCsomagTarolasa } from './js/tar/kodCsomag.js';
+import { sajatKodCsomag, kodCsomagTarolasa, kodJegyzekOlvasasa } from './js/tar/kodCsomag.js';
 import { szabalyokAlakiHibaja, ALAP_SZABALYOK, koinoSzabalyai, teljesSzabalyok } from './js/esemeny/koinoSzabalyok.js';
 import { szuletesLanc, szuloTagsagaEpitese, bekoltozesekEllenorzese, koinoNezete, lancNezete } from './js/allapot/koinoLanc.js';
 import { koinoKepe } from './js/allapot/ketReteg.js';
@@ -553,6 +553,35 @@ async function koinoVerzioKartyak(ptar, azonositok) {
     if (koinoVerzioE(e)) ki.add(az);
   }
   return ki;
+}
+
+/**
+ * ⭐⭐ D119 (①b): AZ ÚJ KOINO-VERZIÓ ELŐNÉZETE — az űrlap kiindulása: a szülő (a mostani koinó) neve, szabályai, zártsága, a
+ * szabad pontom, a futó program kód-csomagja, és hogy létrehozhatok-e (ha nem, miért — az előkészítés kimondott oka; ugyanaz,
+ * mint a parancsé). Semmit nem ír.
+ */
+async function koinoVerzioElonezete() {
+  const sz = await koinoSzuletese();
+  let ok = azonositoAlaku(KOINO) ? null : 'Ez a koinó régi alakú — koino-verziója (gyermeke) nem lehet.';
+  if (!ok) {
+    try { await gyermekSzuletesElokeszitese(KOINO, { nyilt: false, szabalyok: {} }); } catch (hiba) { ok = hiba.message; }
+  }
+  const csomag = await sajatKodCsomag(PROGRAM_GYOKER);
+  return { koino: KOINO, nev: sz?.adat?.nev ?? null, zart: sz?.adat?.zart !== false, szabalyok: koinoSzabalyai(sz),
+    szabadPont: await szabadTudatpontjaim(kornyezet), kezdoPont: KEZDO_PONT, lehet: ok === null, ok,
+    program: { ...csomag.hivatkozas, fajlok: csomag.jegyzek.fajlok.length,
+      osszBajt: csomag.jegyzekBajtok.length + csomag.jegyzek.fajlok.reduce((s, f) => s + f[2], 0) } };
+}
+
+/**
+ * ⭐⭐ D119 (①b): a tér gyermekei a koino-verzió kártyákból — a mostani koinóé (a tára még nincs a készüléken: a kártya a
+ * szülő cseréjével jön). A tér a készüléken ismert tárakból számol; ez a hiányt pótolja.
+ * @returns {Promise<Map<string, Array<{azonosito: string, nev: string|null}>>>}
+ */
+async function terKartyaGyermekei() {
+  if (!azonositoAlaku(KOINO)) return new Map();
+  const k = await gyermekKartyai().catch(() => new Map());
+  return new Map([[KOINO, [...k.values()].map((x) => ({ azonosito: x.szuletes.azonosito, nev: x.szuletes.adat?.nev ?? null }))]]);
 }
 
 /** ⭐ D119 (①a): a koino-verzió (a gyermek) kiírása — a parancsé és a `koino … szulo=`-é. */
@@ -1544,6 +1573,33 @@ function szovegOlvasoKeszites(blob) {
 }
 
 /**
+ * ⭐⭐ D119 (①b): a koino-verzió kártya kódjának olvasója a fájl-igényhez és a törzshöz — a jegyzék a hivatkozásából (ha
+ * megvan, és jegyzék alakú; a fájl-tár olvasása a lenyomatot ellenőrzi).
+ */
+function kodOlvasoKeszites(blob) {
+  return (hivatkozas) => kodJegyzekOlvasasa(hivatkozas, (l) => blob.olvas(l));
+}
+
+/**
+ * ⭐⭐ D119 (①b): mely törzs-fájlokat VÁROK egy entitástól — a saját tudásomból: a koino-verzió kártyánál a jegyzék, és ha
+ * már megvan, a fájljai. A kérő egy hosszú (64-nél több fájlos) törzsből csak ezeket hozza el. null: nem kártya — a régi,
+ * 64-es határ.
+ */
+const torzsElvartEmlek = new Map();   // kulcs → { e, ido } — a kérő minden megjött fájl után újra kérdez (a jegyzékért)
+async function torzsElvartja(kulcs) {
+  let m = torzsElvartEmlek.get(kulcs);
+  if (!m || Date.now() - m.ido > 60 * 1000) {
+    const { allapot } = await kepetKeszit();
+    m = { e: allapot.entitasok.get(kulcs) ?? null, ido: Date.now() };
+    if (torzsElvartEmlek.size >= 64) torzsElvartEmlek.clear();
+    torzsElvartEmlek.set(kulcs, m);
+  }
+  if (!m.e?.koinoVerzio) return null;
+  const blob = fajlBlobTarolo(KOINO);
+  return new Set(await torzsLenyomatai(m.e, (x) => blob.olvas(x), kodOlvasoKeszites(blob)));
+}
+
+/**
  * ⭐ D72: egy randevún megérkezett fájlból kiderülhet, hogy más fájlok is kellenek — ha a fájl
  * egy SZÖVEG-DARAB, a benne hivatkozott (nálunk még hiányzó) képek. Így a kép ugyanabban a
  * randevúban jön, mint a szöveg, nem egy bulival később.
@@ -1597,7 +1653,7 @@ async function fajlTarTakaritasa({ kenyszer = false, proba = false } = {}) {
   await atmeneti.frissit();
   const rogzitett = atmeneti.rogzitettKulcsok?.() ?? new Set();
   const { vallaltLenyomatok } = await fajlIgenyek(allapot, (l) => blob.van(l), {
-    szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob),
+    szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob), kodOlvas: kodOlvasoKeszites(blob),
     vallaltE: (e) => !!e && ((e.hozzajarulok?.get(szerzo)?.pont ?? 0) > 0 || e.szerzo === szerzo || vallalas.szeletek.has(e.azonosito)
       || rogzitett.has(e.azonosito))
   });
@@ -1626,7 +1682,7 @@ async function fajlResz() {
     const jegyzo = fajlJegyzekTarolo(KOINO);
     // ⭐ D72: a szöveg-darabok és a javaslatok új szövege is igény; a meglévő szöveg képei is.
     const { hianyzok, vallaltLenyomatok } = await fajlIgenyek(allapot, megvanE,
-      { szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob) });
+      { szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob), kodOlvas: kodOlvasoKeszites(blob) });
     if (!mindent) kiadhato = vallaltLenyomatok;
     // ⭐ A RITKÁBBAT ELŐBB (Csaba döntése) — a jelzés a korábbi bulikból már megvan.
     kerelem = kerelemOsszeallitasa(ritkasagSzerint(hianyzok, await jegyzo.olvas()));
@@ -2874,7 +2930,7 @@ async function felderitesKor() {
         const e = a.entitasok.get(az);
         if (!e) continue;
         let hianyzik = false;
-        for (const l of await torzsLenyomatai(e, (x) => blob.olvas(x))) {
+        for (const l of await torzsLenyomatai(e, (x) => blob.olvas(x), kodOlvasoKeszites(blob))) {
           if (meretek.has(l)) bajt += meretek.get(l); else hianyzik = true;
         }
         if (hianyzik) torzsKerendo.push({ fajta: 'torzs', kulcs: az });
@@ -3283,7 +3339,7 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
         ...await azonossagBeallitasa(),
         mintaValaszto: (valasz) => mintaKeres(valasz),
         megvan: (await kepetKeszit()).esemenyek.map((e) => e.azonosito).slice(-5000),
-        blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT,
+        blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT, torzsElvart: torzsElvartja,
         // ⭐ D114 (T1): a törzs fájljai a közös munkán (ha egy randevú épp ugyanazt hozza, csatlakozunk).
         kozosMunka: fajlMunkak, forras: tars.cim + ':' + tars.port });
   } catch (hiba) {
@@ -3374,7 +3430,7 @@ async function fuggoKerelemSorozatMunkaja(allapot, halo, tars, fks) {
       ...await azonossagBeallitasa(),
       mintaValaszto: (valasz) => mintaKeres(valasz),
       megvan: (await kepetKeszit()).esemenyek.map((e) => e.azonosito).slice(-5000),
-      blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT,
+      blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT, torzsElvart: torzsElvartja,
       kozosMunka: fajlMunkak, forras: tars.cim + ':' + tars.port });
   } catch (hiba) {
     kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' — a kérelem-sorozat (' + fks.length + ') nem ment át: '
@@ -3740,7 +3796,7 @@ function kerelemKiszolgaloja() {
       // ⭐ D109 (KK6): a fájlok a keret maradékáig (a base64 miatt a fájl ~4/3-a utazik) — a többire „később”.
       let osszeg = 0;
       let kimaradt = false;
-      for (const l of await torzsLenyomatai(allapot.entitasok.get(k.kulcs), (x) => blob.olvas(x))) {
+      for (const l of await torzsLenyomatai(allapot.entitasok.get(k.kulcs), (x) => blob.olvas(x), kodOlvasoKeszites(blob))) {
         if (!(await blob.van(l))) continue;
         if (Number.isFinite(maradekBajt)) {
           const bajtok = await blob.olvas(l);
@@ -5800,7 +5856,7 @@ try {
       const { allapot, javaslatok } = await kepetKeszit();
       const blob = fajlBlobTarolo(KOINO);
       const { hianyzok: nyersHianyzok, megvan, osszes } = await fajlIgenyek(allapot,
-        (l) => blob.van(l), { szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob) });
+        (l) => blob.van(l), { szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob), kodOlvas: kodOlvasoKeszites(blob) });
 
       // ⭐ A RITKÁBBAT ELŐBB (Csaba döntése) — és a `birtokosok` szám innentől látszik is.
       const jegyzet = await fajlJegyzekTarolo(KOINO).olvas();
@@ -5857,7 +5913,8 @@ try {
       const { kartyak, koinok, csakAmitIsmerunk } = await terKartyai(alapHely(), {
         szerzo,
         rendezes: ervek[0] || undefined,
-        irany: ervek[1] || undefined
+        irany: ervek[1] || undefined,
+        kartyaGyermekek: await terKartyaGyermekei()   // ⭐ D119 (①b)
       });
 
       kiir(SZIN.vastag + 'A BELÉPŐ TÉR' + SZIN.vege + '  (' + koinok + ' koino)');
@@ -6729,7 +6786,7 @@ try {
       const { kapu } = await keziKapuNyitasa((halo, t) => kerelemUdpResen(halo, t.cim, t.port, KOINO, k, {
         ...azonossag,
         mintaValaszto: (valasz) => mintaKeres(valasz), megvan,
-        blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT,
+        blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT, torzsElvart: torzsElvartja,
         kozosMunka: fajlMunkak, forras: t.cim + ':' + t.port
       }));
       let kor;
@@ -8400,6 +8457,30 @@ try {
           // A lap csak kéri (7. szabály): a beállítás határait a program szabja (`felderites.js`), a felderítést az őrjárat
           // végzi; itt az első lépés fut (a kérések felvétele). Csak a saját (az indításkori) koinóban.
           // ===================================
+          // ⭐⭐ D119 (①b): AZ ÚJ KOINO-VERZIÓ A LAPRÓL — ugyanaz a függvény, mint a `koinoverzio` parancsé (a kód-csomag a kártyára, a
+          // gyermek születése a kód nevével, a kártya és a pont). ⚠️ Visszavonhatatlan: a lap előbb megerősítést kér.
+          // ===================================
+          if (utvonal === '/api/koinoverzio') {
+            if (!sajatKoino) return { allapot: 400, adat: { hiba: 'Koino-verziót a saját (indításkori) koinódban lehet létrehozni.' } };
+            try {
+              const nev = typeof test?.nev === 'string' ? test.nev.trim() : '';
+              if (!nev) return { allapot: 400, adat: { hiba: 'Mi legyen a gyermek (a koino-verzió) neve?' } };
+              const szabalyok = test?.szabalyok && typeof test.szabalyok === 'object' && !Array.isArray(test.szabalyok)
+                ? test.szabalyok : {};
+              const szabalyHiba = szabalyokAlakiHibaja(Object.keys(szabalyok).length ? szabalyok : undefined);
+              if (szabalyHiba) return { allapot: 400, adat: { hiba: 'A gyermek szabályai: ' + szabalyHiba } };
+              const v = await koinoVerzioKeszitese(KOINO, { nev,
+                leiras: typeof test?.leiras === 'string' && test.leiras.trim() ? test.leiras.trim() : null,
+                nyilt: test?.nyilt === true, szabalyok, pont: Number.isSafeInteger(test?.pont) ? test.pont : KEZDO_PONT });
+              pakliNezet.horgony = null;
+              return { adat: { success: true, gyermek: v.szuletes.azonosito, nev, kartya: v.kv.azonosito, kod: v.kod, pont: v.pont,
+                hozottOsszeg: v.hozottOsszeg, fajlok: v.kodFajlok, bajt: v.kodBajt } };
+            } catch (hiba) {
+              return { allapot: 400, adat: { hiba: hiba.message } };
+            }
+          }
+
+          // ===================================
           // ⭐⭐ D118 (⑥): A KÖLTÖZÉS A LAPRÓL — ugyanaz a függvény, mint a `koltozes` parancsé (a kiköltözés itt, az első kitöltés,
           // a beköltözés a gyermekben). ⚠️ Visszavonhatatlan: a lap előbb megerősítést kér.
           // ===================================
@@ -8836,6 +8917,40 @@ try {
 
         if (modszer !== 'GET') return { allapot: 405, adat: { hiba: 'nem támogatott művelet' } };
 
+        // ⭐⭐ D119 (①b): AZ ÚJ KOINO-VERZIÓ ŰRLAPJA — a kiindulás (`koinoVerzioElonezete`: a szülő szabályai, a szabad pont, a futó
+        // program, és hogy létrehozhatok-e). Semmit nem ír.
+        if (utvonal === '/api/koinoverzio') {
+          if (!sajatKoino) return { adat: { lehet: false, ok: 'Koino-verziót a saját (indításkori) koinódban lehet létrehozni.' } };
+          try {
+            return { adat: await koinoVerzioElonezete() };
+          } catch (hiba) {
+            return { allapot: 400, adat: { hiba: hiba.message } };
+          }
+        }
+
+        // ⭐⭐ D119 (①b): A KÁRTYA „KÓD” FÜLE — a koino-verzió jegyzéke (ha megvan a készüléken), hány fájlja van meg, és a futó
+        // program neve (egyezik-e a kártyáéval). Egy fájl tartalma a meglévő `/api/fajl/<lenyomat>` úton jön.
+        if (utvonal === '/api/kod') {
+          if (!sajatKoino) return { allapot: 400, adat: { hiba: 'A kódot a saját (indításkori) koinódban lehet megnézni.' } };
+          const { allapot } = await kepetKeszit();
+          const e = allapot.entitasok.get(kereses.get('kartya') ?? '');
+          const kod = e?.koinoVerzio?.kod;
+          if (!kod) return { allapot: 404, adat: { hiba: 'Nincs ilyen koino-verzió kártya ezen a készüléken.' } };
+          const blob = fajlBlobTarolo(KOINO);
+          const jegyzek = await kodJegyzekOlvasasa(kod, (l) => blob.olvas(l));
+          let megvan = 0;
+          for (const f of jegyzek?.fajlok ?? []) if (await blob.van(f[1])) megvan++;
+          const sajat = (await sajatKodCsomag(PROGRAM_GYOKER)).hivatkozas;
+          return { adat: { kartya: e.azonosito, gyermek: e.koinoVerzio.gyermek, kod, jegyzek: jegyzek?.fajlok ?? null, megvan,
+            sajat, egyezik: sajat.lenyomat === kod.lenyomat } };
+        }
+
+        // ⭐⭐ D119 (①b): A PROGRAM VERZIÓJA — a koinó születésének programja és a futó programé (a lap kimondja, ha más).
+        if (utvonal === '/api/program') {
+          if (!sajatKoino) return { adat: { koinoe: null, sajat: null, egyezik: null } };
+          return { adat: await programVerzioja() };
+        }
+
         // ⭐ D112 ⑤: a felderítések és az állásuk (a rögzített rész mérete az átmeneti tárból), és a beállítás határai.
         // ⭐⭐ D118 (⑥): A KÖLTÖZÉS ELŐNÉZETE — a saját koinóm ismert gyermekei, és mindegyiknél: költözhetek-e (ha nem, miért), a
         // kerete, a hozott pontjaim. Semmit nem ír (`koltozesElonezete` — a parancs előkészítése, KZ3 nélkül).
@@ -8877,7 +8992,8 @@ try {
             const ter = await terKartyai(alapHely(), {
               szerzo,
               rendezes: kereses.get('rendezes') ?? undefined,
-              irany: kereses.get('irany') ?? undefined
+              irany: kereses.get('irany') ?? undefined,
+              kartyaGyermekek: await terKartyaGyermekei()   // ⭐ D119 (①b): a kártyákról ismert gyermekek is
             });
             // ⭐ A lap tudni akarja, MELYIK koinóban áll éppen — a tér ebből emeli ki az
             // aktív kártyát.

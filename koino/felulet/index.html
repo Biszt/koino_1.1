@@ -137,6 +137,10 @@
          Kattintásra azonnal frissít (a pakli, az infók, az értesítés-számláló). -->
     <button type="button" class="also-sav__info-elem also-sav__info-elem--betoltes also-sav__csere" id="info-csere"
       aria-label="A csere: az utolsó és a következő">🔄 ...</button>
+    <!-- ⭐⭐ D119 (①b): ha ezen a készüléken MÁS program fut, mint amivel a koinó született (a koino-verzió kártyája) — csak
+         akkor látszik. -->
+    <span class="also-sav__elvalaszto" aria-hidden="true" id="info-program-elvalaszto" hidden>·</span>
+    <span class="also-sav__info-elem also-sav__program" id="info-program" hidden>⚠ más programverzió</span>
   </div>
 </div>
 
@@ -153,6 +157,8 @@ import { TerNezet } from './js/terNezet.js';
 import './js/koinoModalok.js';
 // ⭐ D112 ⑤: a felderítés — a kártya menüjének „📷 Felderítés…” pontja (a kártya bővítési pontján) a betöltéskor.
 import './js/koinoFelderites.js';
+// ⭐⭐ D119 (①b): a koino-verzió kártya „Kód” füle (a gondolat-kártya köré, a betöltéskor) és az űrlapja (a fő menüből).
+import './js/koinoVerzio.js';
 import { FoMenu } from './js/foMenu.js';
 // ⭐ Az alsó sáv (2026-10-15): vissza/előre, infók, és a csere — ha egy csere újat hozott, a lap magától frissül.
 import { AlsoSav } from './js/alsoSav.js';

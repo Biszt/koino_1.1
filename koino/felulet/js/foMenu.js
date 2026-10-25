@@ -40,6 +40,8 @@ import { apiGet } from './utils/apiHelper.js';
 import { felderitesekMegnyitasa, felderitesInditasa } from './koinoFelderites.js';
 // ⭐ D118 (⑥): a költözés ablaka (koinós többlet — a prototípusban nincs költözés).
 import { koltozesMegnyitasa } from './koinoKoltozes.js';
+// ⭐⭐ D119 (①b): az új koino-verzió (gyermek-koinó) űrlapja.
+import { koinoVerzioMegnyitasa } from './koinoVerzio.js';
 
 const MODAL_KONTENER = 'modal-kontener';
 
@@ -109,6 +111,9 @@ export class FoMenu {
       ...(this.terMegnyitasa ? [{ ikon: '🌐', felirat: 'A tér — a koinóim', akcio: () => this._terMegnyitasa() }] : []),
       // ⭐ D118 (⑥): a költözés egy gyermek-koinóba (a sikeres költözés után a tér nyitható — ott a családfa)
       { ikon: '🧳', felirat: 'Költözés…', akcio: () => koltozesMegnyitasa({
+        terMegnyitasa: this.terMegnyitasa ? () => this._terMegnyitasa() : null }) },
+      // ⭐⭐ D119 (①b): egy gyermek-koinó a koino-verzió kártyájával (a kód a futó program)
+      { ikon: '🧬', felirat: 'Új koino-verzió (gyermek)…', akcio: () => koinoVerzioMegnyitasa({
         terMegnyitasa: this.terMegnyitasa ? () => this._terMegnyitasa() : null }) },
       // ⭐ D112 ⑤ (F5): a felderítések (pillanatképek) — az állás, újra, törlés; és az egész koinó felderítése
       { ikon: '📷', felirat: 'Felderítések', akcio: () => felderitesekMegnyitasa() },

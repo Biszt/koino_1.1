@@ -192,6 +192,8 @@ function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
     // ki vagy. ⚠️ A `pakli.js` ezt nem találhatja ki: a hívó adja meg (`beallitas.szerzo`),
     // mert a személyazonosság a kulcs-rétegé, nem az állapoté.
     sajatPont: en ? (entitas.hozzajarulok.get(en)?.pont ?? 0) : 0,
+    // ⭐⭐ D119 (①b): a koino-verzió kártya a gyermeket és a kódot nevezi meg (a lap a „Kód” fület ebből építi).
+    ...(entitas.koinoVerzio ? { koinoVerzio: entitas.koinoVerzio } : {}),
 
     // ----- ⭐ A DÖNTÉS, HA EZ EGY JAVASLAT -----
     //

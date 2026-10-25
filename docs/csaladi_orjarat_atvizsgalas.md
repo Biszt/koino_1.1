@@ -184,3 +184,33 @@ címei („MÁSIK család” nem elérés) → ⑥ **a lap** (csatlakozás egy k
 - ⏭️ **Az ①b:** a kártya törzse a vállalásban és a törzs-kérelemben (a jegyzék és a fájlok — ma a fájl-tár kerete nem védi
   őket, és a törzs-kérelem 64 fájlnál megállna), a „Kód” fül, az űrlap a fő menüben, a „más verziót futtatsz” jelzés a lapon,
   a tér a kártyákból.
+
+## 11. ✅ Az ①b — a kártya kódja a vonalon és a lap (2026-10-25) — ⭐ az ① kész
+
+- **A kód igény és törzs:** a kártya kódja a fájl-igényben úgy él, mint a szöveg-darab: a jegyzék maga is igény, és ha
+  megjött, a benne felsorolt fájlok is (`fajlIgeny.js` `kodFajljai`; a hívó `kodOlvas`-a — `koino.js` `kodOlvasoKeszites`).
+  Ettől a kártya vállalása a kódjára is vállalás: a fájl-tár kerete védi (a takarítás nem dobja el), és a fájl-randevú
+  kiszolgálja. A törzs-kérelem a kártyánál a TELJES kód-csomagot adja (`kerelem.js` `TORZS_KOD_KORLAT` = a kód-csomag
+  fájl-korlátja + 2 — eddig 64 fájlnál megállt volna).
+- ⛔ **Az elvárás-őr (a kérő oldalán):** egy hosszú (64-nél több fájlos) törzsből a kérő CSAK azt hozza el, amit a saját tudása
+  szerint vár (`vonal.js` — a `torzsElvart`: `koino.js` `torzsElvartja` — a kártyánál a jegyzék, és a megjött jegyzék után a
+  fájljai); elvárás nélkül a régi 64-es határ. Különben egy hamis tartó ezernyi idegen fájllal tömhetné tele (a próba mérte:
+  elvárással 0 idegen fájl jön, nélküle 63).
+- **A kapu új útvonalai:** `GET /api/koinoverzio` (az űrlap kiindulása: a szülő szabályai és zártsága, a szabad pont, a futó
+  program, és hogy létrehozhatok-e — ha nem, miért), `POST /api/koinoverzio` (ugyanaz a függvény, mint a parancsé —
+  `koinoVerzioKeszitese`), `GET /api/kod?kartya=` (a jegyzék, hány fájl van meg, egyezik-e a futó programmal), `GET
+  /api/program` (a koinó születésének programja és a futóé); a tér a kártyákról ismert gyermekeket is mutatja (`ter.js`
+  `kartyaGyermekek` — a tára még nincs a készüléken: „a koino-verzió kártyájáról”).
+- **A lap** (`felulet/js/koinoVerzio.js`, `css/components/koinoVerzio.css` — a prototípus fájljai bájtra változatlanok): a
+  kártyát a lap a gondolat-kártyával rajzolja (`kartyaAdat.js` fordít — a prototípusban nincs ilyen típus), a fejlécben
+  „🧬 koino-verzió” jel, a törzsben „Leírás” és „🧬 Kód” fül (a jegyzék, az állás, egy fájlra kattintva a tartalma — a meglévő
+  `/api/fajl/…` úton); a fő menüben „🧬 Új koino-verzió (gyermek)…” (név, leírás, pont, nyíltság, a szabályok — a szülőé az
+  alap, csak a megváltoztatott megy —, megerősítés); az alsó sávon „⚠ más programverzió”, ha a készüléken más fut, mint
+  amivel a koinó született (csak akkor látszik). Böngészőben végigjárva (asztali és telefon-szélesség): a kártya, a „Kód” fül,
+  egy fájl, az űrlap (egy gyermek a lapról, 5000-es kerettel), a tér családfája, a jelzés; két lelet javítva (a piros jelzés
+  a zöld sávon olvashatatlan volt; a hosszú útvonal telefonon kilógott).
+- **A próbák:** `koinoVerzioProba.js` (+2: a kód igény, a törzs > 64), `kerelemProba.js` (+1: az elvárás-őr egy hamis tartóval),
+  a parancssor (+1: az előnézet, a lapról született gyermek, a „Kód” fül, a program, a takarítás túlélése, a tér a kártyáról,
+  a törzs-kérelem a teljes kóddal); 13 rontás, mind bukott.
+- ⭐ **Az ① KÉSZ.** ⏭️ **②: a koinó-példány** (a `koino.js` koinó-szintű része egy gyárba — gépies, a teljes sor a háló), utána
+  ③ a családi csere.

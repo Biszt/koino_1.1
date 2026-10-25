@@ -82,7 +82,7 @@ import { ervenyesValtozat, halmazUzenet, halmazAlkalmazasa, kozosSzuro } from '.
 // mert a szelet-határokat ugyanúgy ő számolja.
 import { SZELET_MERET, szeletEllenorzes, ujMunkamegosztas } from './fajlAtvitel.js';
 // ⭐ D92/6: a kérelem alakja (a menet itt, a tartalom a `kerelem.js`-é — az nem importál hálózatot).
-import { kerelemAlakja, valaszAlakja, felajanlasValaszAlakja, SOROZAT_KORLAT } from './kerelem.js';
+import { kerelemAlakja, valaszAlakja, felajanlasValaszAlakja, SOROZAT_KORLAT, TORZS_KOD_KORLAT } from './kerelem.js';
 // ⭐ A kereső-réteg ⑤: a kérdés válaszának alakja (a találatokat a kérdező maga ellenőrzi).
 import { keresesValaszAlakja } from './kereses.js';
 
@@ -1848,8 +1848,13 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
   }
 
   // TÖRZS: a fájlok egymás után, ugyanazon a kapcsolaton (`nyitvaHagy`), a végén egy KESZ.
+  // ⭐⭐ D119 (①b): ha a hívó megmondja, mit vár (`torzsElvart` — a saját tudásából: a koino-verzió kártya kódja a jegyzéke
+  // szerint), a hosszú törzsből CSAK az elvártat hozzuk (és a megjött jegyzék után újra kérdezzük — a fájljai attól várhatók);
+  // elvárás nélkül a régi 64-es határ. ⛔ Egy hamis tartó így nem tömhet tele ezernyi idegen fájllal.
+  const elvartFv = typeof beallitas.torzsElvart === 'function' ? beallitas.torzsElvart : null;
+  let elvart = elvartFv ? await elvartFv(kerelem.kulcs).catch(() => null) : null;
   const lenyomatok = (Array.isArray(u.lenyomatok) ? u.lenyomatok : [])
-    .filter((l) => typeof l === 'string' && /^[A-Za-z0-9_-]{43}$/.test(l)).slice(0, 64);
+    .filter((l) => typeof l === 'string' && /^[A-Za-z0-9_-]{43}$/.test(l)).slice(0, elvart ? TORZS_KOD_KORLAT : 64);
   const fajlok = [];
   if (beallitas.blob) {
     // ⭐ D114 (T1): ha a hívó közös munka-jegyzéket ad (a valódi fájl-tárhoz), a törzs fájljai ugyanazon a
@@ -1857,6 +1862,7 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
     // törzs egy kapcsolat, sorban: a helyet foglalja, de a korlát nem tartja vissza (`kotelezo`).
     const km = beallitas.kozosMunka ?? null;
     for (const l of lenyomatok) {
+      if (elvart && !elvart.has(l)) continue;   // ⭐ D119: nem várt fájl — nem hozzuk
       if (await beallitas.blob.van(l)) { fajlok.push({ lenyomat: l, kesz: true, megvolt: true }); continue; }
       const munka = km ? await km.belep(l, () => beallitas.blob.reszlegesSzeletek(l), { kotelezo: true }) : null;
       try {
@@ -1864,6 +1870,8 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
           { korlat: beallitas.korlat, nyitvaHagy: true, sor,
             ...(munka ? { munka, adott: () => km.adott(l, beallitas.forras) } : {}) });
         fajlok.push({ lenyomat: l, kesz: r.kesz, ok: r.ok ?? null, ...(r.romlott ? { romlott: true } : {}) });
+        // ⭐ D119: a megjött jegyzék után a kód fájljai is várhatók
+        if (elvart && r.kesz) elvart = (await elvartFv(kerelem.kulcs).catch(() => null)) ?? elvart;
       } finally {
         if (km) km.kilep(l);
       }

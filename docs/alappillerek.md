@@ -1517,3 +1517,9 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     pont tudás — a D14 ítélhet, a kártya (és bármely elhagyott entitás) nem marad szellemként a gyermekben** · a lelet: a
     második, kisebb keretű gyermek nem született meg (az első kártya pontja is hozott volt) · ⛔ nem a számítás ismeri fel a
     kártyát (a létrehozó eseményét nem minden készülék ismeri — két kép lenne) · `csaladi_orjarat_atvizsgalas.md` 10. szakasz.
+207. **2026-10-25 · D119 ①b — a kártya kódja a vonalon és a lap**
+    → **a kód a fájl-igényben, mint a szöveg-darab (a jegyzék igény, utána a fájljai — a kártya vállalása a kódjára is
+    vállalás), a törzs-kérelem a kártyánál a teljes kód-csomag, és a kérő egy hosszú törzsből CSAK az elvártat hozza; a kapun
+    az űrlap, a „Kód” fül és a programverzió útvonalai; a lap a gondolat-kártyával rajzol (+ jel és „Kód” fül), a fő menüben az
+    űrlap, az alsó sávon a más verzió jelzése** · ⛔ az elvárás-őr nélkül egy hamis tartó ezernyi idegen fájlt küldhetett volna (a
+    régi 64-es határ helyett) · az ① kész · `csaladi_orjarat_atvizsgalas.md` 11. szakasz.

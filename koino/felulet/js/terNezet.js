@@ -180,7 +180,8 @@ export class TerNezet {
     if (koino.szulo) {
       sorok.push(['↑ a szülője:', [{ azonosito: koino.szulo, nev: koino.szuloNev, ismert: koino.szuloIsmert }]]);
     }
-    if (koino.gyermekek?.length) sorok.push(['↓ a gyermekei:', koino.gyermekek.map((g) => ({ ...g, ismert: true }))]);
+    // ⭐ D119 (①b): a kártyáról ismert gyermek tára még nincs a készüléken — a neve igen (a „Költözés…” onnan is visz)
+    if (koino.gyermekek?.length) sorok.push(['↓ a gyermekei:', koino.gyermekek.map((g) => ({ ...g, ismert: !g.kartyarol }))]);
     const koltozesek = [];
     if (koino.enBekoltoztem) koltozesek.push('🧳 ide költöztél (a szülőből)');
     for (const gy of koino.kikoltoztem ?? []) {
@@ -210,7 +211,9 @@ export class TerNezet {
           // ⚠️ A hiány megnevezve, nem kitalálva (D19): a szülő születése nincs a készüléken.
           const nev = document.createElement('span');
           nev.className = 'koino-kartya__csalad-nev koino-kartya__csalad-nev--ismeretlen';
-          nev.textContent = 'ezen a készüléken nem ismert (' + k.azonosito.slice(0, 8) + '…)';
+          nev.textContent = k.kartyarol
+            ? (k.nev ?? k.azonosito.slice(0, 8) + '…') + ' (a koino-verzió kártyájáról — a tára még nincs ezen a készüléken)'
+            : 'ezen a készüléken nem ismert (' + k.azonosito.slice(0, 8) + '…)';
           sor.appendChild(nev);
         }
       });

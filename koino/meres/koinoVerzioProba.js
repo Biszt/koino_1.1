@@ -8,7 +8,9 @@
 // más szerzőjét, a nem tagét, a más koinó gyermekéét, a kódjától eltérő programot és a nem legfelső szintűt; a születés
 // `program`-ja csak új alakban és hivatkozás alakban; (4) a képben a koino-verzió entitás, a gyermekével és a kódjával;
 // (5) ⭐ Csaba döntése („(A) Nem költözik”): a kártyára tett pont a szülő ügye — a gyermek születése elhagyja (`elhagy`),
-// és a gyermek képében a testvér kártyája nem él (szellemként sem), a létrehozó többi hozott pontja igen.
+// és a gyermek képében a testvér kártyája nem él (szellemként sem), a létrehozó többi hozott pontja igen; (6) ⭐ ①b: a kártya
+// kódja igény (a jegyzék, és ha megvan, a fájljai — a kártya vállalása a kódjára is vállalás), és a törzse a teljes
+// kód-csomag (64-nél több fájl), a nem kártya törzse a régi 64-ig.
 
 import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -24,6 +26,8 @@ import { koinoKepe } from '../js/allapot/ketReteg.js';
 import { teljesSzabalyok } from '../js/esemeny/koinoSzabalyok.js';
 import { kodCsomagKeszitese, kodCsomagTarolasa, kodJegyzekAlakja, kodJegyzekOlvasasa, programFajljai, KOD_FAJTA }
   from '../js/tar/kodCsomag.js';
+import { fajlIgenyek } from '../js/allapot/fajlIgeny.js';
+import { torzsLenyomatai, TORZS_KORLAT } from '../js/csere/kerelem.js';
 
 const { proba, futtatas } = probaGyujtemeny('A koino-verzió és a kód-csomag (D119 ①a)');
 
@@ -246,6 +250,51 @@ proba('⭐⭐ D119 (A): a koino-verzió kártyára tett pont nem költözik — 
     if (!ok) process.stderr.write('    ' + JSON.stringify({ vele: [...vele.keys()].length, kvVele: vele.get(s.kv.azonosito)?.osszesPont,
       kvNelkule: nelkule.get(s.kv.azonosito)?.osszesPont, g: vele.get(s.G.azonosito)?.osszesPont }) + '\n');
     return ok;
+  });
+
+// ===================================
+// 4. A KÁRTYA KÓDJA: IGÉNY ÉS TÖRZS (①b)
+// ===================================
+
+/** Egy kártya a képben (a fájl-igényhez és a törzshöz) — és egy n fájlos jegyzék a memóriában. */
+async function kartyaKoddal(n) {
+  const blob = memoriaBlob();
+  const fajlok = [];
+  for (let i = 0; i < n; i++) {
+    const t = new TextEncoder().encode('fájl ' + i);
+    const l = (await blob.ir(t)).lenyomat;
+    fajlok.push(['f' + String(i).padStart(4, '0') + '.js', l, t.length]);
+  }
+  const jegyzekBajtok = new TextEncoder().encode(JSON.stringify({ fajlok, fajta: KOD_FAJTA }));
+  const h = { lenyomat: (await blob.ir(jegyzekBajtok)).lenyomat, bajt: jegyzekBajtok.length };
+  const kodOlvas = (x) => kodJegyzekOlvasasa(x, (l) => blob.olvas(l));
+  const entitas = { azonosito: 'V'.repeat(43), tipus: KOINO_VERZIO, szoveg: null, koinoVerzio: { gyermek: 'G'.repeat(43), kod: h },
+    hozzajarulok: new Map([['en', { pont: 10 }]]) };
+  return { blob, fajlok, h, kodOlvas, entitas };
+}
+
+proba('⭐⭐ D119 (①b): a kártya kódja igény — a jegyzék, és ha megvan, a fájljai (a kártya vállalása a kódjára is vállalás)',
+  async () => {
+    const { fajlok, h, kodOlvas, entitas } = await kartyaKoddal(5);
+    const allapot = { entitasok: new Map([[entitas.azonosito, entitas]]) };
+    const nincs = () => false;
+    const jegyzekNelkul = await fajlIgenyek(allapot, nincs, { szerzo: 'en' });
+    const vele = await fajlIgenyek(allapot, nincs, { szerzo: 'en', kodOlvas });
+    const lenyomatok = (r) => r.hianyzok.map((x) => x.lenyomat).sort().join();
+    const vart = [h.lenyomat, ...fajlok.map((f) => f[1])].sort().join();
+    return lenyomatok(jegyzekNelkul) === h.lenyomat && lenyomatok(vele) === vart && vele.hianyzok.every((x) => x.vallaltam)
+      && vele.vallaltLenyomatok.size === fajlok.length + 1;
+  });
+
+proba('⭐⭐ D119 (①b): a kártya törzse a teljes kód-csomag (64-nél több fájl) — a jegyzék elöl; a nem kártya törzse a régi 64-ig',
+  async () => {
+    const { fajlok, h, kodOlvas, entitas, blob } = await kartyaKoddal(100);
+    const t = await torzsLenyomatai(entitas, (l) => blob.olvas(l), kodOlvas);
+    const kepek = Array.from({ length: 100 }, (_, i) => ({ tipus: 'kep', url: '/api/fajl/' + String(i).padStart(43, 'K') }));
+    const gondolat = { azonosito: 'X'.repeat(43), tipus: 'Gondolat', szoveg: kepek, hozzajarulok: new Map() };
+    const g = await torzsLenyomatai(gondolat, null, kodOlvas);
+    return t.length === fajlok.length + 1 && t[0] === h.lenyomat && fajlok.every((f) => t.includes(f[1]))
+      && g.length === TORZS_KORLAT;
   });
 
 proba('⛔ D119 (A): az elhagyás csak a gyermek születésén, és csak entitás-azonosítók listájaként', async () => {

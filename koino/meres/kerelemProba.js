@@ -452,6 +452,43 @@ proba('⭐⭐ a TÖRZS a védett résen: a vállaló a szöveg-darabot adja, és
   }
 });
 
+// ⛔ D119 (①b): a koino-verzió kártya törzse 64-nél több fájl — a kérő ezért egy hosszú listából CSAK azt hozza, amit a
+// saját tudása szerint vár (`torzsElvart`). Egy hamis tartó 100 idegen fájlt sorol fel a szöveg-darab mellé: elvárással a
+// kérő csak a szöveget hozza el, elvárás nélkül a régi 64-es határig.
+proba('⛔ D119 (①b): a kérő a hosszú törzsből csak az ELVÁRTAT hozza — egy hamis tartó 100 idegen fájlja nem jön; elvárás nélkül a régi 64-ig',
+  async () => {
+    const egy = async (elvart) => {
+      const p = await udpPar();
+      const gazdaHely = await mkdtemp(join(tmpdir(), 'koino-torzs-e-'));
+      const keroHely = await mkdtemp(join(tmpdir(), 'koino-torzs-f-'));
+      try {
+        const v = await szovegesVilag(gazdaHely);
+        const idegenek = [];
+        for (let i = 0; i < 100; i++) idegenek.push((await v.blob.ir(new TextEncoder().encode('idegen ' + i))).lenyomat);
+        const tar = await esemenyTarNyitasa('proba', gazdaHely);
+        const keroBlob = fajlBlobTarolo('proba', keroHely);
+        const hamis = { async torzs() { return [v.lenyomat, ...idegenek]; } };
+        const [, kapott] = await Promise.all([
+          tartoResen(p.egyik, p.masikPort, tar, { kerelemKiszolgalo: hamis, fajlOlvas: (l) => v.blob.olvas(l) }),
+          kerelemUdpResen(p.masik, '127.0.0.1', p.egyikPort, 'proba', { fajta: 'torzs', kulcs: v.g },
+            { blob: keroBlob, ...(elvart ? { torzsElvart: async () => new Set([v.lenyomat]) } : {}) })
+        ]);
+        let idegenNala = 0;
+        for (const l of idegenek) if (await keroBlob.van(l)) idegenNala++;
+        return { szoveg: await keroBlob.van(v.lenyomat), idegenNala, kesz: kapott.fajlok.filter((f) => f.kesz).length };
+      } finally {
+        p.bezar();
+        await rm(gazdaHely, { recursive: true, force: true });
+        await rm(keroHely, { recursive: true, force: true });
+      }
+    };
+    const vele = await egy(true);
+    const nelkule = await egy(false);
+    const ok = vele.szoveg && vele.idegenNala === 0 && vele.kesz === 1 && nelkule.szoveg && nelkule.idegenNala === 63;
+    if (!ok) process.stderr.write('    ' + JSON.stringify({ vele, nelkule }) + '\n');
+    return ok;
+  });
+
 proba('⛔ D84/1: aki NEM vállalja, az a törzset nem adja ki — üres lista, és semmi nem érkezik', async () => {
   const p = await udpPar();
   const gazdaHely = await mkdtemp(join(tmpdir(), 'koino-torzs-c-'));
