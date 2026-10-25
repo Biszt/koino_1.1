@@ -442,16 +442,27 @@ async function koinoTaraNyitasa(koino) {
   });
 }
 
-const tar = await koinoTaraNyitasa(KOINO);
-
-// ⭐ D118 (⑥): a többi koinó tára folyamatonként EGYSZER nyílik (a felület aktív koinója és a költözés gyermeke ugyanazt a
-// tárat kapja — két példány ugyanarra a mappára két mutatót és két író-jelöltet jelentene).
+// ⭐ D118 (⑥), D119 (②): egy koinó tára folyamatonként EGYSZER nyílik — a koinó-példány, a felület aktív koinója és a költözés
+// gyermeke ugyanazt a tárat kapja (két példány ugyanarra a mappára két mutatót és két író-jelöltet jelentene).
 const nyitottKoinoTarak = new Map();
 function koinoTaraEgyszer(koino) {
-  if (koino === KOINO) return Promise.resolve(tar);
   if (!nyitottKoinoTarak.has(koino)) nyitottKoinoTarak.set(koino, koinoTaraNyitasa(koino));
   return nyitottKoinoTarak.get(koino);
 }
+
+// ===================================
+// ⭐⭐ D119 (②): A KOINÓ-PÉLDÁNY — a koinó-szintű rész egy gyárban
+// ===================================
+//
+// A családi őrjárat (D119 — CS1, CS4 (A)) egy folyamatban a család minden koinójával dolgozik: ehhez a koinó-szintű rész (a tár,
+// az átmeneti és a kereső-tár, a művelet-környezet, a gyorsítótárak, a csere munkája, a kiszolgálás) egy GYÁRBA került — a
+// `KOINO` a gyár paramétere (bezárt változó), minden más a mai kód, változatlanul. A parancsok egy példánnyal futnak (a
+// becenév koinójával), mint eddig: a gyár a nevükön adja vissza, amit használnak (lent, a parancsok előtt).
+//
+// ⚠️ A gyár törzse NINCS behúzva — gépies átalakítás: a ~4600 sor behúzása olvashatatlan diffet adna (és sok sor a 130 jel
+// fölé csúszna). A törzs a `koinoPeldany` és a `return { … }` között tart.
+async function koinoPeldany(KOINO) {
+const tar = await koinoTaraEgyszer(KOINO);
 
 // ⭐⭐ D119 (①a): A PROGRAM MAPPÁJA — a kód-csomag gyökere (a koino-verzió kártya „Kód” fülének forrása, és a futó program
 // kódja, amit a koinó születésének programjával vetünk össze).
@@ -1403,14 +1414,6 @@ const felszabaditasJegyzet = felszabaditasTarolo();
 
 // ⭐ D72: a műveletek a szöveget KÜLÖN DARABKÉNT a fájl-tárba írják (ahol a képek is) — innen kapják.
 const kornyezet = { koino: KOINO, kulcspar, szerzo, tar, darabTar: fajlBlobTarolo(KOINO), lancTarolo: lancTarolo(KOINO) };
-
-if (ujE) {
-  kiir(SZIN.vastag + 'Új kulcs készült — ez mostantól a személyazonosságod.' + SZIN.vege);
-  kiir('  ' + rovidAzonosito(szerzo));
-  kiir(SZIN.halvany + '  A kulcs helye: ' + tarolo.fajl + SZIN.vege);
-  kiir(SZIN.halvany + '  Mentsd el: node koino/koino.js mentes <fájl>' + SZIN.vege);
-  kiir();
-}
 
 // ===================================
 // SEGÉD: AZONOSÍTÓ-RÖVIDÍTÉS FELOLDÁSA
@@ -5095,6 +5098,64 @@ async function allapotKiirasa(napokMulva) {
     kiir(SZIN.halvany + '  Állást foglalni: node koino/koino.js allast <egyezmény> '
       + 'csatlakozik|tiltakozik|utkozik' + SZIN.vege);
   }
+}
+
+return {
+  ABLAK_KESES_TURES, BEKOPOGO_KORLAT, FAJL_TAKARITAS_KOZ, KERESO_TOMORITES_KOZ, KETFOK, KEZI_KOPOGAS_MS, KOPOGAS_ARA_KORONKENT,
+  KOPOGTATO_ELEVULES, POSTAFIOK_SZAMLALO_SZUNET, PROGRAM_GYOKER, SZELET_HIRDETES_KORLAT, adatMennyiseg, aktivFajlForrasCeljai,
+  allapotKiirasa, allitasAdatai, atmeneti, atmenetiCel, atmenetiElolepetese, azonossagBeallitasa, behozandoKoinoja,
+  bejegyzesekKiseroi, bemondasok, cimjegyzekBeallitasFajl, cimjegyzekHirdetese, cimjegyzekKeresese, cimjegyzekKor,
+  csereAllapota, csereKihagyhato, dhtIsmertekMentese, dontesAzonositoja, ebrenTartas, elakadtPontokFelszabaditasa,
+  ellenorzottOsszegzesek, eszlelesEsBejelentes, fajlForrasTudas, fajlMunkak, fajlResz, fajlTanulsag, fajlTarTakaritasa,
+  fejlecTudas, fejlecValaszFeldolgozasa, felajanlasCsoportjai, felajanlasEredmenye, felajanlasKor, felderitesJegyzekIrasa,
+  felderitesJegyzekOlvasasa, felderitesKor, feloldas, frissUdpCimJegyzese, frissUdpCimek, fuggoKerelemFelvetele,
+  fuggoKerelmekAllasa, gyokerMelysegem, halozatiKereses, horgonyok, hozzarendelesMegjegyzes, kapottCimekBeolvasztasa,
+  kapuJelzesKiiro, kapuPortja, kapuPortjaFeljegyzese, kepetKeszit, kerelmekIrasa, kerelmekOlvasasa, kereses,
+  keresesFuggoAllasa, keresesMegjegyzes, keresoRegioim, keresoTar, keresoTarTomoritese, keretFajl, kesobbHivando,
+  ketFokAllapota, keziCsere, keziHibaSzovege, keziKapuNyitasa, kiszolgalasBeallitas, kiszolgalasFajl, kiszolgalasiKeretHatara,
+  kiszolgalasiKeretKapcsolo, kodOlvasoKeszites, koinoErvei, koinoSzuletese, koinoVerzioElonezete, koinoVerzioKeszitese,
+  koinoVerzioKiirasa, koltozesElonezete, koltozesVegrehajtasa, kopogtatoTemaBuffer, kornyezet, kornyezetSzam, kotesFeljegyzese,
+  kuldoKulcsai, lapHianyzoinakElkerese, laposMegjegyzes, lezarasiOsszegzesekKiadasa, meghivottProfilja, ora,
+  orjaratErtesitesei, postafiokFrissitese, postafiokMegjegyzes, postafiokModositasa, programVerzioja, rajKorCeljaim,
+  resAllapotKeszites, resMunkaKeszito, reszvetelHalmazom, sajatBejegyzesek, sajatHirdetendoTemak, sajatHorgonyom,
+  sajatOsszesCim, sajatVallalasa, sikidomMegjegyzes, strukturaMegjegyzes, szabalyokSzovege, szovegKepeiKeresre,
+  szovegOlvasoKeszites, tablaKliens, tablaKulcsBiztositasa, tablaraKiiras, tablarolOlvasas, tagsagFigyelmeztetes, tagsagKerdes,
+  tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, tovabbitasok,
+  tovabbitasokTakaritasa, tukorBeallitas, ujKoinoSzuletese
+};
+}
+
+// ⭐⭐ D119 (②): a FŐ PÉLDÁNY — a becenév koinója; a parancsok ennek a nevein futnak (mint a gyár előtt a modul-szintű nevein).
+const {
+  ABLAK_KESES_TURES, BEKOPOGO_KORLAT, FAJL_TAKARITAS_KOZ, KERESO_TOMORITES_KOZ, KETFOK, KEZI_KOPOGAS_MS, KOPOGAS_ARA_KORONKENT,
+  KOPOGTATO_ELEVULES, POSTAFIOK_SZAMLALO_SZUNET, PROGRAM_GYOKER, SZELET_HIRDETES_KORLAT, adatMennyiseg, aktivFajlForrasCeljai,
+  allapotKiirasa, allitasAdatai, atmeneti, atmenetiCel, atmenetiElolepetese, azonossagBeallitasa, behozandoKoinoja,
+  bejegyzesekKiseroi, bemondasok, cimjegyzekBeallitasFajl, cimjegyzekHirdetese, cimjegyzekKeresese, cimjegyzekKor,
+  csereAllapota, csereKihagyhato, dhtIsmertekMentese, dontesAzonositoja, ebrenTartas, elakadtPontokFelszabaditasa,
+  ellenorzottOsszegzesek, eszlelesEsBejelentes, fajlForrasTudas, fajlMunkak, fajlResz, fajlTanulsag, fajlTarTakaritasa,
+  fejlecTudas, fejlecValaszFeldolgozasa, felajanlasCsoportjai, felajanlasEredmenye, felajanlasKor, felderitesJegyzekIrasa,
+  felderitesJegyzekOlvasasa, felderitesKor, feloldas, frissUdpCimJegyzese, frissUdpCimek, fuggoKerelemFelvetele,
+  fuggoKerelmekAllasa, gyokerMelysegem, halozatiKereses, horgonyok, hozzarendelesMegjegyzes, kapottCimekBeolvasztasa,
+  kapuJelzesKiiro, kapuPortja, kapuPortjaFeljegyzese, kepetKeszit, kerelmekIrasa, kerelmekOlvasasa, kereses,
+  keresesFuggoAllasa, keresesMegjegyzes, keresoRegioim, keresoTar, keresoTarTomoritese, keretFajl, kesobbHivando,
+  ketFokAllapota, keziCsere, keziHibaSzovege, keziKapuNyitasa, kiszolgalasBeallitas, kiszolgalasFajl, kiszolgalasiKeretHatara,
+  kiszolgalasiKeretKapcsolo, kodOlvasoKeszites, koinoErvei, koinoSzuletese, koinoVerzioElonezete, koinoVerzioKeszitese,
+  koinoVerzioKiirasa, koltozesElonezete, koltozesVegrehajtasa, kopogtatoTemaBuffer, kornyezet, kornyezetSzam, kotesFeljegyzese,
+  kuldoKulcsai, lapHianyzoinakElkerese, laposMegjegyzes, lezarasiOsszegzesekKiadasa, meghivottProfilja, ora,
+  orjaratErtesitesei, postafiokFrissitese, postafiokMegjegyzes, postafiokModositasa, programVerzioja, rajKorCeljaim,
+  resAllapotKeszites, resMunkaKeszito, reszvetelHalmazom, sajatBejegyzesek, sajatHirdetendoTemak, sajatHorgonyom,
+  sajatOsszesCim, sajatVallalasa, sikidomMegjegyzes, strukturaMegjegyzes, szabalyokSzovege, szovegKepeiKeresre,
+  szovegOlvasoKeszites, tablaKliens, tablaKulcsBiztositasa, tablaraKiiras, tablarolOlvasas, tagsagFigyelmeztetes, tagsagKerdes,
+  tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, tovabbitasok,
+  tovabbitasokTakaritasa, tukorBeallitas, ujKoinoSzuletese
+} = await koinoPeldany(KOINO);
+
+if (ujE) {
+  kiir(SZIN.vastag + 'Új kulcs készült — ez mostantól a személyazonosságod.' + SZIN.vege);
+  kiir('  ' + rovidAzonosito(szerzo));
+  kiir(SZIN.halvany + '  A kulcs helye: ' + tarolo.fajl + SZIN.vege);
+  kiir(SZIN.halvany + '  Mentsd el: node koino/koino.js mentes <fájl>' + SZIN.vege);
+  kiir();
 }
 
 try {

@@ -214,3 +214,21 @@ címei („MÁSIK család” nem elérés) → ⑥ **a lap** (csatlakozás egy k
   a törzs-kérelem a teljes kóddal); 13 rontás, mind bukott.
 - ⭐ **Az ① KÉSZ.** ⏭️ **②: a koinó-példány** (a `koino.js` koinó-szintű része egy gyárba — gépies, a teljes sor a háló), utána
   ③ a családi csere.
+
+## 12. ✅ A ② — a koinó-példány (2026-10-25)
+
+- **A gyár:** a `koino.js` koinó-szintű része (~4600 sor: a tár, az átmeneti és a kereső-tár, a művelet-környezet, a
+  gyorsítótárak, a csere munkája, a kiszolgálás, a felderítés, a postafiók) egy `async function koinoPeldany(KOINO)` törzse —
+  a `KOINO` a gyár paramétere, minden más a mai kód, változatlanul. A parancsok egy példánnyal futnak (a becenév koinójával): a
+  gyár a nevükön adja vissza, amit használnak (132 név), és a parancsok előtt egy sor veszi át őket. Gépies átalakítás — az
+  elemzés (a scratchpad `peldany_elemzes.py`) mérte: a parancsok a 132 név egyikét sem írják át, és egyik sem `let` (a
+  visszaadott értékek tehát nem avulhatnak el); a gyárban két felső szintű utasítás volt (az ősök betöltése — maradt; az „új
+  kulcs” kiírása — készülék-szintű, kikerült). ⚠️ A törzs nincs behúzva (a 4600 sor diffje így olvasható; egy megjegyzés
+  mondja ki).
+- **Készülék-szintre került:** `koinoTaraNyitasa` és `koinoTaraEgyszer` (egy koinó tára folyamatonként egyszer — a példány, a
+  felület aktív koinója és a költözés gyermeke ugyanazt kapja; eddig a saját koinó különeset volt).
+- ⏭️ **A ④-re (a kör a családra) — ami ma példányonkénti, de a családban közösnek kell lennie:** a kiszolgálási keret
+  (`kiszolgalasiKeretPeldany` — a készülék munkája MÁSOKNAK: családonként egy keret, különben a koinók száma szorozná), a
+  fájl-munkák közös jegyzéke (`fajlMunkak` — a lenyomat a családban is egy), a „később”-t mondó társak (`kesobbTarsak`), a
+  társankénti utolsó csere (`utolsoCsereTarssal`); és a kapu munka-készítője (`resMunkaKeszito`) a családi nyitás szerint
+  választ példányt (③).

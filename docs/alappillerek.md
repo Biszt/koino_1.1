@@ -1523,3 +1523,8 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     az űrlap, a „Kód” fül és a programverzió útvonalai; a lap a gondolat-kártyával rajzol (+ jel és „Kód” fül), a fő menüben az
     űrlap, az alsó sávon a más verzió jelzése** · ⛔ az elvárás-őr nélkül egy hamis tartó ezernyi idegen fájlt küldhetett volna (a
     régi 64-es határ helyett) · az ① kész · `csaladi_orjarat_atvizsgalas.md` 11. szakasz.
+208. **2026-10-25 · D119 ② — a koinó-példány (`koinoPeldany(KOINO)`)**
+    → **a `koino.js` koinó-szintű része egy gyárba került, a `KOINO` a paramétere; a parancsok a fő példány nevein futnak; a
+    tárak egyszeri nyitása készülék-szintű** · gépies átalakítás (a parancsok a 132 visszaadott név egyikét sem írják át, egyik
+    sem `let`), a teljes próbasor a háló · a ④-re: a kiszolgálási keret, a fájl-munkák, a „később” és a társankénti csere a
+    családban közös legyen · `csaladi_orjarat_atvizsgalas.md` 12. szakasz.
