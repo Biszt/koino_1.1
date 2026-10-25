@@ -5372,6 +5372,22 @@ nézet jele, a sorrendet nem dönti el. → a felderítetlen rész (D116).
 
 ---
 
+## 84. ⭐ A KÓD-CSOMAG MÉRETE — mennyi a teljes program a koino-verzió kártyán? (D119, M2', 2026-10-25)
+
+`node koino/meres/kodCsomagMeres.js [régi-commit]` — a git által követett `koino/` fájlok, sorvég nélkül (a 6. szabály mércéje).
+
+- **A teljes program:** 331 fájl, **6407 KB**; fájlonként tömörítve 2103 KB, egyben tömörítve **1865 KB** (a CLAUDE.md régi
+  „tar.gz ~80 KB” adata elavult volt — javítva). Kiterjesztés szerint: js 5777 KB, md 381, css 197, html 51.
+- **A jegyzék** (útvonal → a fájl lenyomata): **28,5 KB** (tömörítve 13,6 KB). **A legnagyobb fájl** a `koino.js`, 532 KB — a
+  fájl-korlát (2 MB) alatt.
+- **Egy új verzió** csak az új és a változott fájlokat viszi (a fájlok tartalom-címzettek): a ④b (`d20af3c`) óta 25 fájl,
+  **1,4 MB**; két nap (`3e46844`) óta 53 fájl, **2,5 MB** — a nagy fájlok (a `koino.js`, a parancssor-próbák) szinte minden
+  verzióban változnak.
+
+⭐ **Amit mutat:** a koino-verzió kártya maga kicsi (a jegyzék lenyomata az eseményben, a jegyzék ~29 KB darab); a kód
+(~6,4 MB, egy új verzióval ~1–2,5 MB) TÖRZS — csak annak utazik, aki a „Kód” fület megnyitja vagy költözik, a vállalóktól (a
+D84/1 törzs-útja). ⏸️ A fájlonkénti tömörítés a kétharmadát spórolná meg — a fájl-átvitel ma nem tömörít (külön kérdés).
+
 ## 83. ⭐ A KÉT RÉTEG ÁRA — mennyibe kerül a múlt a gyermek képében? (D118, a költözés ③, 2026-10-24, a laptopon)
 
 `node koino/meres/ketRetegMeres.js [N ...]` — a megépült kódon (`ketReteg.js` `koinoKepe`). *(A ③ előtt a 76. mérés számaival

@@ -628,6 +628,8 @@ node koino/meres/lancKorMeres.js [n ...]  # ⭐ A LÁNC-KÖR ÁRA (71., D98/2–
                                  # részfa-gyorsítótárral 9–42 ms (nélküle 5000 eseménynél 1,9 s)
 node koino/meres/koltozesMeres.js  # ⭐ A KÖLTÖZÉS ÁRA (82., D118 ④): kiköltözés 0,5 KB, beköltözés ~1 KB tagsági lépésenként (13 lépés
                                  # 13,8 KB), a születések lánca ~0,8 KB nemzedékenként — mind egyszeri
+node koino/meres/kodCsomagMeres.js [régi-commit]  # ⭐ A KÓD-CSOMAG (84., D119): a teljes program a koino-verzió kártyán —
+                                 # 331 fájl / 6,4 MB (egyben tömörítve 1,9 MB), a jegyzék 28,5 KB; egy új verzió ~1–2,5 MB
 node koino/meres/ketRetegMeres.js [N ...]  # ⭐ A KÉT RÉTEG ÁRA (83., D118 ③): a gyermek első képe ~1,6× a szülő nélküliének, a múlt
                                  # gyorsítótárával kisebb; a nemzedékekkel enyhén nő (minden szint az ősök szerkezetét újraolvassa)
 node koino/meres/darabMeres.js [gondolatok ...]  # ⭐ AZ ÖSSZ-DARAB A VONALON (81., D116): a fejléc-kérdések bájtjai (KOINO_KOD=<régi
@@ -687,7 +689,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés; TCP-n 334 bájt volt). ⚠️ Két készülék között ma körönként akár **négy** is lemegy (két cím × két irány, 43. mérés; a 45. mérés szétszedte: a két tényező független, és terepen egy címen is két csere megy percenként) — egyperces körrel ez társanként ~8 MB/nap, ötperccel ~1,6 MB. ⭐ A címek tényezőjét a D71 (ii) megszüntette (46. mérés: két címen is 1 csere/ablak); az irányokét a (iii) döntés felezné. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 331 fájl, 6403,3 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 331 fájl, 6403,3 KB (egyben tömörítve ~1,9 MB — 84. mérés), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 
