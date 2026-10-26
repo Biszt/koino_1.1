@@ -6117,8 +6117,12 @@ kártya a kapuval, a `koinoverzio` parancs, a gyermek a kártyából — elágaz
 költözik”): a kártyára tett pont a szülő ügye — a program a beköltözés és (új) a gyermek születésének `elhagy`-ába írja, az
 elhagyott, de látott pont tudás (elágazás 206). ✅ **Az ①b** (a kártya kódja a fájl-igényben és a törzs-kérelemben, az
 elvárás-őr a kérőnél, a kapu útvonalai, a „Kód” fül, az űrlap a fő menüben, a más verzió jelzése; elágazás 207) — ⭐ **az ①
-kész.** ✅ **A ②** (a koinó-példány: a `koino.js` koinó-szintű része egy gyárban — `koinoPeldany(KOINO)`; elágazás 208). ⏭️ ③ a
-családi csere.
+kész.** ✅ **A ②** (a koinó-példány: a `koino.js` koinó-szintű része egy gyárban — `koinoPeldany(KOINO)`; elágazás 208). ✅ **A ③
+a családi csere** (2026-10-26, elágazás 209–211, 85. mérés): a nyitás a család többi koinóját is megnevezi (`cs`), a két fél
+ugyanazt a közös listát számolja, a közös koinók ugyanabban a munkában jönnek (koinónként új kézfogással), a más koinóra
+nyitott csere is a családot cseréli, a más koinónak szóló kérelem a példányához kerül; a postaláda és az őrjárat a családot
+szolgálja. Közben két szállítási hiba (mérve) és a randevú vége (`FAJLVEGE` — a kiszolgáló nem várja ki a tétlenségi órát).
+⏭️ ④ a kör a családra.
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal

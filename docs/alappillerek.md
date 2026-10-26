@@ -1528,3 +1528,32 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     tárak egyszeri nyitása készülék-szintű** · gépies átalakítás (a parancsok a 132 visszaadott név egyikét sem írják át, egyik
     sem `let`), a teljes próbasor a háló · a ④-re: a kiszolgálási keret, a fájl-munkák, a „később” és a társankénti csere a
     családban közös legyen · `csaladi_orjarat_atvizsgalas.md` 12. szakasz.
+209. **2026-10-26 · D119 ③ — a családi csere (a nyitás a családot mondja, a közös koinók egy munkában)**
+    → **a NYITAS `cs` jele a család többi koinója (≤ 64; a régi program nem küldi — akkor nincs családi kör); a két fél
+    ugyanazt a közös listát számolja (a társ nyitott koinója és a `cs` metszete a sajátjaimmal, rendezve, a már lement nyitott
+    koinó nélkül), és a fő példány munkája után sorban lemennek, ugyanabban a munkában — koinónként ÚJ kézfogással; a később
+    végző félre a korábban végző kivár (`UTOLAGOS_KEZFOGAS_IDO` = 3 × a tétlenségi óra); a „MÁSIK koinó”-ra nyitott csere is a
+    családot cseréli (az eredmény akkor elérés); a család másik koinójának szóló kérelem / válasz a példányához kerül (az
+    első üzenettel és az üzenetsorral, a kézfogás hitelesítése arra a koinóra); a postaláda és az őrjárat a családot nyitja
+    meg (az író-szereppel); egy közös koinó bukása nem dönti el a már lement cserét** · ⛔ elvetve: a közös koinók egy
+    kapcsolaton, egymás után — mérve: egy védett résen az egymást követő kapcsolatok a következő első darabját elveszítették
+    (a nyitott vagy utóhangban figyelő előző nyugtázta) · a 85. mérés: a „nincs újdonság” családi csere koinónként ~2,2 KB
+    és ~200 ms (k = 1: 2,3 KB, k = 5: 11,8 KB), a nyitás `cs` jele koinónként +46 B · `csaladi_orjarat_atvizsgalas.md` 13.
+    szakasz.
+210. **2026-10-26 · D119 ③ — a fájl-randevú vége kimondva (`FAJLVEGE`)**
+    → **a kérő a kérései végén egy `FAJLVEGE`-t küld egy CSAK KÜLDŐ kapcsolaton (a nyugtára vár, legfeljebb az utóhangig, adatot
+    nem fogad), és a kiszolgáló azonnal zár** · a lelet (mérve, a családi csere kézi próbáján): a kiszolgáló a kérő utolsó
+    fájlja után a tétlenségi óráig (a kezdőnél a kétszereséig) várt — a két fél 10–20 mp különbséggel ért a munka végére, a
+    családi munka következő kézfogása ezt kivárta, és a társ következő kérése „foglalt”-at kapott; most a csere a kód-fájllal
+    11,4 s helyett 1,3 s · ⭐ kompatibilis: a régi program „nem fájl-kérés”-nek olvassa és ugyanígy zár; ha elvész, a régi óra
+    zár · ⛔ „később” után nem megy (a kiszolgáló már nem figyel) · ⛔ a nyugtát nem fogadó kapcsolaton: egy fogadó a társ
+    következő fázisának első kérését a sajátjának olvasná · `csaladi_orjarat_atvizsgalas.md` 13. szakasz.
+211. **2026-10-26 · két rejtett szállítási hiba (mérve, a családi csere kézi próbáján)**
+    → **(a) a `parbeszed` az üzenetsort az ELSŐ `await` előtt köti a kapcsolatra** — eddig a nyitó lenyomat számítása (a
+    születés halmaz-lenyomata, a szelet-párok) után, és ha a társ nyitása épp ebben a résben érkezett, a kapcsolat nyugtázta,
+    de senki nem hallgatott rá: elveszett (~6 futásból egyszer — „Várt üzenet: NYITAS, érkezett: CIMEK”); **(b) a NYITOTT
+    `udpKapcsolat` is csak a `k`-t vivő, bájtra azonos ismétlést nyugtázza a sorszáma alatt** (az utóhang 2026-09-26-i
+    szabálya) — eddig bármit, és a fájl-kiszolgáló még nyitott előző kapcsolata (a keret könyvelése alatt) a kérő következő
+    kapcsolatának első darabját „ismétlésként” elnyelte · ⭐ egy valódi ismétlés mindig visz `k`-t, és a fogadó ablakán belül
+    van (a küldő ablaka ≤ a fogadóé) · ⏸️ MÉRENDŐ: a kisebb nyitottak szeszélyes „a másik fél nem válaszol (10000 ms)”
+    bukásai közül melyik volt ez (a javítás után a teljes sor 1336/1336) · `csaladi_orjarat_atvizsgalas.md` 13. szakasz.

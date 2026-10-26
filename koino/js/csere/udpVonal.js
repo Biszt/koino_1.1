@@ -263,6 +263,11 @@ const GYORS_KUSZOB = 3;
 // `csereVonalon` használ TCP-n — a hívó felülírhatja (`beallitas.varakozasiIdo`).
 const TETLENSEG_ALAP = 10000;
 
+// ⭐ D119 (③): az UTÓLAGOS kézfogás türelme (a családi munka következő koinójánál). Mérve: a két fél nem egyszerre ér a munka
+// végére — a fájl-randevú kiszolgálója a társ utolsó kérése után még a tétlenségi óráig vár (a kezdő fél kétszereséig —
+// `kiszolgaloFazis`), a korábban végző fél kézfogása tehát ennyit is kivár, és még egy tétlenségi órát.
+export const UTOLAGOS_KEZFOGAS_IDO = 3 * TETLENSEG_ALAP;
+
 // ⭐ AZ UTÓHANG: a lezárás után még ennyi ideig felelünk a másik fél ISMÉTELT darabjaira.
 //
 // ⛔ Nem díszítés — mérve (2026-09-14): enélkül a 30%-os vesztésű csere beragad, mert a
@@ -991,6 +996,10 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
 
     if (!Number.isInteger(uzenet.sz) || typeof uzenet.a !== 'string') return;
 
+    // ⭐ D119 (③): a CSAK KÜLDŐ kapcsolat (a randevú vége — `fajlRandevu`) adatot nem fogad, és nem is nyugtáz: ami ilyenkor
+    // jön, az a társ KÖVETKEZŐ kapcsolatáé (az első darabja), és a küldője nyugta nélkül megismétli, mire az a kapcsolat él.
+    if (beallitas.csakKuld === true) return;
+
     // ⭐ ISMÉTLÉS: nyugtázzuk — a nyugta is elveszhetett —, de nem tároljuk újra.
     // ⭐ A nyugta VISSZAMONDJA a küldés sorszámát — ettől lesz a minta pontos a túloldalon.
     const nyugtaz = () => csomagot(Number.isInteger(uzenet.k)
@@ -1012,13 +1021,18 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
     // És ami `k`-val jön, az is csak akkor a miénk, ha BÁJTRA azt hozza, amit mi kaptunk
     // azon a sorszámon. A lezárt példány új adatot sem fogad (`sz >= vartSorszam`): a
     // párbeszéd csak akkor zár, ha a társ minden üzenetét elolvasta.
-    if (lezarva) {
+    //
+    // ⛔⛔ ÉS A NYITOTT PÉLDÁNYRA IS (2026-10-26, D119 ③ — mérésből): a fájl-randevú kiszolgálója egy fájl után még könyvel
+    // (a kiszolgálási keret), mielőtt lezárná a kapcsolatot és megnyitná a következőt — és a kérő következő kapcsolatának első
+    // darabját (a következő kérést, a randevú végét) a még NYITOTT régi példány nyugtázta „ismétlésként”. Ugyanaz a hiba, mint
+    // az utóhangé, csak a lezárás előtt: a régi feltevés („ami a sorszám alatt van, az ismétlés”) a nyitott példányra sem
+    // igaz. Egy valódi ismétlés mindig visz `k`-t, és a fogadó ablakán belül van (a küldő ablaka ≤ a fogadóé), tehát a
+    // megőrzött darabok közt.
+    if (lezarva || uzenet.sz < vartSorszam) {
       if (Number.isInteger(uzenet.k) && uzenet.sz < vartSorszam
         && utolsoKapottak.get(uzenet.sz) === uzenet.a) nyugtaz();
       return;
     }
-
-    if (uzenet.sz < vartSorszam) { nyugtaz(); return; }
 
     // ⛔⛔ AZ ABLAKON TÚLIT NEM FOGADJUK EL, ÉS NEM IS NYUGTÁZZUK (2026-09-14).
     //
@@ -1399,6 +1413,24 @@ export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) 
         if (munka) kozosMunka.kilep(lenyomat);
       }
     }
+    // ⭐⭐ D119 (③): A KÉRŐ KIMONDJA, HOGY VÉGZETT — mérve (a családi csere kézi próbáján): a kiszolgáló eddig a tétlenségi
+    // óráig (a kezdőnél a kétszereséig) várta a következő kérést, a két fél így 10–20 mp különbséggel ért a munka végére — a
+    // családi munka következő koinójának kézfogása és a társ következő kérése („foglalt”) ezt várta ki. ⭐ A kiszolgáló épp akkor
+    // vár, ha nekem volt mit kérnem (az én kérhetőim az ő adhatói — a két fél ugyanarra jut). CSAK KÜLDŐ kapcsolaton
+    // (`csakKuld`): a nyugtára vár (legfeljebb az utóhangig), de adatot nem fogad — egy fogadó a társ következő fázisának első
+    // kérését a sajátjának olvasná (a sorszámok minden kapcsolatban 1-től indulnak); azt a társ megismétli, mire a mi
+    // következő kapcsolatunk él. Ha nem ér célba, a kiszolgáló a régi módon, a tétlenségi órával zár; a régi program „nem
+    // fájl-kérés”-nek olvassa, és ugyanígy zár. ⛔ „Később” után nem megy: a kiszolgáló már nem figyel.
+    if (kerhetok.length && kesobb === null) {
+      const vege = udpKapcsolat(halo, tarsCim, tarsPort, { torlodasJel: 'nincs', csakKuld: true });
+      vege.write(JSON.stringify({ uzenet: 'FAJLVEGE' }) + '\n');
+      let ora = null;
+      const kiment = await Promise.race([vege.kiurites(),
+        new Promise((t) => { ora = setTimeout(() => t(false), UTOHANG); })]);
+      clearTimeout(ora);
+      vege.end();
+      utana({ mi: 'VEGET-MONDTAM', nyugtazva: kiment === true });
+    }
   };
 
   /**
@@ -1644,7 +1676,11 @@ export async function csereUdpResen(halo, tarsCim, tarsPort, tar, koino, beallit
 
   try {
     const eredmeny = await parbeszed(kapcsolat, tar, koino,
-      { ...beallitas, kezfogas: kezfogasHitelesitese(res, beallitas, koino) });
+      { ...beallitas, kezfogas: kezfogasHitelesitese(res, beallitas, koino),
+        // ⭐⭐ D119 (③): a család másik koinójának szóló kérés átadásakor a kézfogás hitelesítése AZ a koinó (a személyes
+        // aláírás a koinóval együtt szól — a zárt kapu annak a koinónak a tagságát nézi).
+        ...(typeof beallitas.atadas === 'function' ? { atadas: (u, x) => beallitas.atadas(u,
+          { ...x, kezfogas: (k, b) => kezfogasHitelesitese(res, b, k) }) } : {}) });
 
     // ⭐ ELŐBB KIÜRÍTÉS, CSAK UTÁNA ZÁRÁS. A párbeszéd akkor is véget érhet, amikor a MI
     // utolsó üzenetünk még úton van (a `parbeszed` az utolsó LENYOMAT-ra már nem vár

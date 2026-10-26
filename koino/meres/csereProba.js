@@ -20,7 +20,7 @@ import {
 } from '../js/csere/csere.js';
 // ⚠️ 2026-09-26 óta (D69/2) a vonal-próbák a UDP-résen futnak: a `vonal.js` TCP-nyitói
 // (`figyeloIndulasa`, `csereVonalon`, `tcpNyito`) és a `tcpPajzsfuras` kikerültek.
-import { parbeszed } from '../js/csere/vonal.js';
+import { parbeszed, csaladNyitasbol, CSALAD_KORLAT } from '../js/csere/vonal.js';
 import { pajzsfuras, pajzsfurasTobbfele, stunbolCim } from '../js/csere/pajzsfuro.js';
 import {
   csereUdpResen, udpKapcsolat, fajlRandevu, fajlUdpResen, szeletUdpResen
@@ -794,6 +794,44 @@ proba('⭐ MÁS KOINO: a csere azonnal véget ér, és nem keveredik semmi', asy
     && eredmeny.masikEredmenye.masKoino === MASIK                // a másik is felismerte
     && (await koinoEsemenyei(mienk, KOINO)).length === 3        // a mi tárunk érintetlen
     && (await koinoEsemenyei(ove, MASIK)).length === 3;         // az övé is
+});
+
+proba('⛔ a társ nyitása a nyitó lenyomat számítása KÖZBEN érkezik — nem vész el (az üzenetsor az első await előtt)', async () => {
+  // ⚠️ Mérve (2026-10-26, a D119 ③ kézi próbáján, ~6 futásból egyszer): a kapcsolat a megérkezett darabot nyugtázza és
+  // továbbadja; ha az üzenetsor még nem hallgatott rá (a születés halmaz-lenyomatát számoltuk), a társ nyitása elveszett, és az
+  // első olvasott üzenet a következője lett („Várt üzenet: NYITAS, érkezett: CIMEK”).
+  const anna = await ujEember(KOINO);
+  const szuletes = await anna.tesz('KoinoLetrehozas', { nev: 'Próba', leiras: null, alapitok: [], zart: false });
+  const mienk = await ujTar(); await ment(mienk, [szuletes]);
+  const { EventEmitter } = await import('node:events');
+  const k = new EventEmitter();
+  Object.assign(k, { remoteAddress: '127.0.0.1', remotePort: 1, setEncoding() {}, write: () => true,
+    end() { k.emit('end'); }, destroy(h) { if (h) k.emit('error', h); else k.emit('close'); } });
+  // A társ nyitása a KÖVETKEZŐ ütemben jön — a mi párbeszédünk ekkor még a nyitó lenyomatát számolja.
+  setImmediate(() => k.emit('data', JSON.stringify({ uzenet: 'NYITAS', koino: 'masik-koino', lenyomat: 'x' }) + '\n'));
+  const ora = setTimeout(() => k.emit('end'), 3000);
+  try {
+    const r = await parbeszed(k, mienk, KOINO, { koinoSzuletes: szuletes });
+    return r.masKoino === 'masik-koino';
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(ora);
+  }
+});
+
+proba('⭐ D119 (③): a társ családja a nyitásából — a nyitott koinója és a „cs” lista; a régi és a hibás nyitás nem család', () => {
+  const k1 = 'A'.repeat(43), k2 = 'B'.repeat(43), k3 = 'C'.repeat(43);
+  const jo = csaladNyitasbol({ uzenet: 'NYITAS', koino: k1, cs: [k2, k3, k2] });
+  const ures = csaladNyitasbol({ uzenet: 'NYITAS', koino: k1, cs: [] });
+  return JSON.stringify(jo) === JSON.stringify([k1, k2, k3])   // a nyitott koinó is benne (a két fél így ugyanazt számolja)
+    && JSON.stringify(ures) === JSON.stringify([k1])
+    && csaladNyitasbol({ uzenet: 'NYITAS', koino: k1 }) === null                              // a régi program: nincs család
+    && csaladNyitasbol({ uzenet: 'NYITAS', koino: k1, cs: 'x' }) === null
+    && csaladNyitasbol({ uzenet: 'NYITAS', koino: k1, cs: [k2, 7] }) === null
+    && csaladNyitasbol({ uzenet: 'NYITAS', koino: k1, cs: ['x'.repeat(65)] }) === null
+    && csaladNyitasbol({ uzenet: 'NYITAS', cs: [k2] }) === null
+    && csaladNyitasbol({ uzenet: 'NYITAS', koino: k1, cs: Array.from({ length: CSALAD_KORLAT + 1 }, () => k2) }) === null;
 });
 
 proba('⭐ A MAPPA is tiszta marad — nem csak a számított állapot', async () => {
@@ -1571,6 +1609,44 @@ proba('⛔ A KORLÁT A RÉTEGBEN VAN — keret nélkül hívva is legfeljebb KER
     ujKerhetok: async () => Array.from({ length: KERELEM_KORLAT + 30 }, (_, i) => hamisLenyomat(700 + i))
   });
   return b.kesz === 1 && b.kesz + b.bukott === KERELEM_KORLAT && b.korlatElerve === true;
+});
+
+proba('⭐ D119 (③): a kérő kimondja, hogy végzett (FAJLVEGE) — a kiszolgáló nem várja ki a tétlenségi órát', async () => {
+  // ⚠️ Mérve (a családi csere kézi próbáján): a kiszolgáló a kérő utolsó fájlja után még a tétlenségi óráig (a kezdőnél a
+  // kétszereséig) várt — a két fél 10–20 mp különbséggel ért a munka végére. Itt az óra 4 mp: a kiszolgáló a kérő után
+  // legfeljebb 1,5 mp-cel végez (a FAJLVEGE nélkül ≥ 4 mp).
+  const { fajlBlobTarolo } = await import('../js/tar/fajlTar.js');
+  const helyA = await mkdtemp(join(tmpdir(), 'koino-vege-a-'));
+  const helyB = await mkdtemp(join(tmpdir(), 'koino-vege-b-'));
+  mappak.push(helyA, helyB);
+  const blobA = fajlBlobTarolo(KOINO, helyA);
+  const blobB = fajlBlobTarolo(KOINO, helyB);
+  const { lenyomat } = await blobA.ir(new Uint8Array(4096).fill(3));
+  const p = await udpParos();
+  const [tarA, tarB] = [await ujTar(), await ujTar()];
+  let aVege = 0, bVege = 0;
+  const aEsemenyek = [];
+  try {
+    await Promise.all([
+      fajlRandevu(p.egyik, '127.0.0.1', p.masikPort, {
+        sajatCim: '127.0.0.1:' + p.egyikPort, kerhetok: [], blob: blobA, tar: tarA, koino: KOINO,
+        fajlOlvas: (l) => blobA.olvas(l), varakozasiIdo: 4000, utana: (e) => aEsemenyek.push(e)
+      }).then(() => { aVege = Date.now(); }),
+      fajlRandevu(p.masik, '127.0.0.1', p.egyikPort, {
+        sajatCim: '127.0.0.1:' + p.masikPort, kerhetok: [lenyomat], blob: blobB, tar: tarB, koino: KOINO,
+        kiszolgalasKell: false, varakozasiIdo: 4000
+      }).then(() => { bVege = Date.now(); })
+    ]);
+  } finally {
+    p.bezar();
+  }
+  const megjott = await blobB.van(lenyomat);
+  const kulonbseg = aVege - bVege;
+  const vege = aEsemenyek.find((e) => e.mi === 'KISZOLGALAS-VEGE');
+  const ok = megjott && kulonbseg < 1500 && /FAJLVEGE/.test(vege?.ok ?? '');
+  if (!ok) process.stderr.write('    (megjött: ' + megjott + ', a kiszolgáló ennyivel később: ' + kulonbseg + ' ms, a vége: '
+    + JSON.stringify(vege) + ')\n');
+  return ok;
 });
 
 // ⭐ ÉS A PÁRJA: a keret alatt semmi nem változik — nincs „korlát elérve", minden kép jön.

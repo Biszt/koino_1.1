@@ -5372,6 +5372,28 @@ nézet jele, a sorrendet nem dönti el. → a felderítetlen rész (D116).
 
 ---
 
+## 85. ⭐ A CSALÁDI CSERE ÁRA — mennyibe kerül, hogy egy csere a családot cseréli? (D119 ③, M1, 2026-10-26, a laptopon)
+
+`node koino/meres/csaladCsereMeres.js [k ...]` — a megépült kódon: két készülék, egy k koinós család (a szülő és k − 1 gyermek,
+koino-verzió kártyával), B a szülő tagja és minden gyermekbe beköltözött; A postaládát futtat a SZÜLŐRE, B a szülőre nyitva
+cserél, amíg egy csere semmit nem hoz. A bájtok a résen, titkosítva, a kézfogás nélkül (a kimenet „csere a résen” sorai).
+
+- **A nyitás `cs` jele** (nyílt, a `NYITAS`-ban, irányonként egyszer): k = 1: 8 B · 2: 53 B · 5: 191 B · 16: 697 B · 64: 2,9 KB —
+  koinónként +46 B (a koinó neve).
+- **A „nincs újdonság” családi csere:** k = 1: **2,3 KB** (1,0 s) · k = 2: **4,4 KB** (2,5 + 1,9; 1,05 s) · k = 3: **6,7 KB**
+  (1,35 s) · k = 5: **11,8 KB** (2,9 + 4 × 2,2; 1,8 s). ⭐ Koinónként ~2,2 KB és ~200 ms — lineáris, ugyanaz, mintha minden
+  koinó külön cserélne (a mérce: egy koinó cseréje), csak egy kopogással és egy munkában.
+- **Az első csere** (A minden koinóba írt egy gondolatot): k = 5: 63 KB, 2,3 s — minden új gondolat megjött.
+- ⚠️ **A kártyák kódja:** a nem vállaló B a kártyák kódját is elhozta (6,5 MB, 9 cserében — randevúnként ≤ 50 fájl); alapból a
+  kiszolgálási keret (társanként ~150 kérés / óra) a harmadik csere után „később”-t mond — ezért a mérés a postaládának nagy
+  keretet ad (`KOINO_KERET`). Lásd lent (Csabánál).
+
+⭐ **Amit mutat:** a családi kör nem drágítja a cserét: a teher a közös koinók számával lineárisan nő (a készülék maga
+választotta őket — 9. szabály), a nyitás jele elhanyagolható. ⏸️ **Csabánál:** a kártya kódját a fájl-igény MINDEN látott
+entitásra kéri (a ①b óta — a 84. mérés leírása szerint csak a „Kód” fület megnyitónak és a költözőnek utazna).
+
+---
+
 ## 84. ⭐ A KÓD-CSOMAG MÉRETE — mennyi a teljes program a koino-verzió kártyán? (D119, M2', 2026-10-25)
 
 `node koino/meres/kodCsomagMeres.js [régi-commit]` — a git által követett `koino/` fájlok, sorvég nélkül (a 6. szabály mércéje).

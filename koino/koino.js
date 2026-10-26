@@ -300,8 +300,11 @@ import {
 // ⭐ A RANDEVÚ (2026-09-14): a csere ÉS a fájlok is átmennek az átfúrt résen.
 // ⭐ És a szelet-kérés is a résen (D69/2): a `hozd` 2026-09-26 óta ezen megy.
 import {
-  csereUdpResen, fajlRandevu, szeletUdpResen, kezfogasUdpResen, kerelemUdpResen, kerelemSorozatUdpResen, valaszUdpResen
+  csereUdpResen, fajlRandevu, szeletUdpResen, kezfogasUdpResen, kerelemUdpResen, kerelemSorozatUdpResen, valaszUdpResen,
+  UTOLAGOS_KEZFOGAS_IDO
 } from './js/csere/udpVonal.js';
+// ⭐⭐ D119 (③): a családi csere — a család a nyitásban (`cs`), és a család másik koinójának szóló kérés átadása.
+import { parbeszed, CSALAD_KORLAT } from './js/csere/vonal.js';
 // ⭐⭐ D92: a kérelem (az alapkérdések) és az össz-pont.
 import {
   fejlecekValasza, fejlecKepe, mintakValasza, mintaKeres, fejlecekEllenorzese, torzsLenyomatai, kerelemAlakja, tovabbiUgras, UGRAS_MAX,
@@ -449,6 +452,9 @@ function koinoTaraEgyszer(koino) {
   if (!nyitottKoinoTarak.has(koino)) nyitottKoinoTarak.set(koino, koinoTaraNyitasa(koino));
   return nyitottKoinoTarak.get(koino);
 }
+
+// ⭐⭐ D119 (③): A CSALÁD PÉLDÁNYAI ebben a folyamatban — koinó → példány (a fő, és amit a hálózati parancs megnyitott a családból).
+const csaladPeldanyok = new Map();
 
 // ===================================
 // ⭐⭐ D119 (②): A KOINÓ-PÉLDÁNY — a koinó-szintű rész egy gyárban
@@ -1706,7 +1712,7 @@ async function fajlResz() {
 
 // ⚠️ ITT ÁLLT 2026-09-26-IG A `fajlokElhozasa` ÉS A `fajlAtvitelKiirasa`: a kör UTÁN, TCP-n
 // hozták el a hiányzó fájlokat, több forrásból egyszerre (D68). ⛔ A D69/2 óta nincs TCP a
-// készülékek között — a fájl a résen jön, a randevún (`resMunkaKeszito`); a több forrás a D114 óta ott (lent).
+// készülékek között — a fájl a résen jön, a randevún (`csaladMunkaKeszito`); a több forrás a D114 óta ott (lent).
 
 // ⭐⭐ D114 (T1): A KÖZÖS MUNKA-JEGYZÉK — a folyamat minden fájl-hozatala (a randevú, a kérelem törzse) ezen át: ugyanaz a
 // fájl két tartótól egy munkamegosztáson jön (a 79. mérés: e nélkül minden szelet kétszer, ×1,0), és itt áll a „3 egyidejű
@@ -4339,20 +4345,38 @@ async function csereKihagyhato(alairo, felKor) {
   }
 }
 
-function resMunkaKeszito(allapot) {
-  return async (nyersHalo, tars) => {
-    // ⭐⭐ D89/1: EGY KÉZFOGÁS A MUNKA ELEJÉN — a csere és a randevú ugyanazon a VÉDETT résen megy (a
-    // kézfogás munkánként egy; az egyszeri kulcs a munka végén elvész).
-    const halo = await kezfogasUdpResen(nyersHalo, tars.cim, tars.port);
-    try {
-      return await resMunka(allapot, halo, tars);
-    } finally {
-      halo.zar();
-    }
-  };
+// ⭐ D119 (③): a munka-készítő a családi (`csaladMunkaKeszito`, a gyár után): a kézfogás munkánként egy (D89/1 — a csere és a
+// randevú ugyanazon a VÉDETT résen megy, az egyszeri kulcs a munka végén elvész), és a fő példány munkája után a család közös
+// koinóié jön, ugyanazon a résen.
+
+/**
+ * ⭐⭐ D119 (③): a családom TÖBBI koinója ebben a folyamatban (a nyitás `cs` jele) — a megnyitott példányok, ennek a koinónak a
+ * nélkül, rendezve, korlátosan. A társ ebből (és a nyitott koinómból) tudja, mely koinóink közösek.
+ */
+function csaladTobbiKoinoja() {
+  return [...csaladPeldanyok.keys()].filter((k) => k !== KOINO).sort().slice(0, CSALAD_KORLAT);
 }
 
-/** A munka a VÉDETT résen (`resMunkaKeszito`): csere, kötés, tanulás, randevú. */
+/**
+ * ⭐⭐ D119 (③): A CSALÁD MÁSIK KOINÓJÁNAK SZÓLÓ KÉRÉS ÁTVÉTELE — egy másik példány cseréje olvasta el az első üzenetet (a
+ * kérelmet vagy egy továbbadott kérelem válaszát, ennek a koinónak a nevével), és átadja: ugyanazon a kapcsolaton, az
+ * üzenetsorával, ennek a koinónak a tárából és beállításaival szolgáljuk ki (a kézfogás hitelesítése is erre a koinóra).
+ * @param {Object} u - az első üzenet
+ * @param {{kapcsolat: Object, sor: Object, kezfogas?: Function}} x
+ */
+async function kerelemAtvetele(u, x) {
+  await tar.frissit?.();
+  const fajlok = await fajlResz();
+  const b = {
+    ...await azonossagBeallitasa(), ...await ketFokBeallitasai(), ...tagsagBeallitasai(),
+    kerelemKiszolgalo: kerelemKiszolgaloja(), kiszolgalasiKeret: kiszolgalasiKeretKapcsolo(), valaszFogado: valaszFogadasa,
+    keresoTar, fajlOlvas: fajlok.olvas
+  };
+  return parbeszed(x.kapcsolat, tar, KOINO, { ...b, sor: x.sor, elsoUzenet: u,
+    ...(typeof x.kezfogas === 'function' ? { kezfogas: x.kezfogas(KOINO, b) } : {}) });
+}
+
+/** A munka a VÉDETT résen (`csaladMunkaKeszito` — koinónként): csere, kötés, tanulás, randevú. */
 function resMunka(allapot, halo, tars) {
   return (async () => {
     // ⛔⛔ ÉS A TÁR IS FRISS (2026-09-26, 43. mérés): amit a futás közben MÁSIK folyamat írt
@@ -4472,6 +4496,10 @@ function resMunka(allapot, halo, tars) {
       keresoTar,
       keresoMelyseg: keresoMelysegem,
       valaszFogado: valaszFogadasa,
+      // ⭐⭐ D119 (③): a családom többi koinója (a nyitás `cs` jele — a társ ebből tudja, mi közös), és a családom másik
+      // koinójának szóló kérés átadása annak a példányának.
+      csalad: csaladTobbiKoinoja(),
+      atadas: kerelemAtadasa(),
       fajlKerelem: fajlok.kerelem,
       fajlValasz: async (kertek) => {
         const van = await fajlok.valasz(kertek);
@@ -4507,7 +4535,10 @@ function resMunka(allapot, halo, tars) {
     const alairo = ervenyesTablaKulcs(csere.kapottTablaKulcs) ? csere.kapottTablaKulcs.alairo : null;
     const alap = { uj: csere.uj ?? 0, kuldott: csere.kuldott ?? 0, korok: csere.korok ?? 0,
       bajt, masKoino: csere.masKoino ?? null, kivulrolIgyLatszom: csere.kivulrolIgyLatszom ?? null,
-      szeletKiszolgalva: csere.szeletKiszolgalva ?? null, alairo };
+      szeletKiszolgalva: csere.szeletKiszolgalva ?? null, alairo,
+      // ⭐⭐ D119 (③): a társ családja (a nyitásából) — a családi munka ebből számolja a közös koinókat (csak a lement vagy a
+      // MÁSIK koinós nyitásnál; a „később” és a kérelem nem hozza — a két fél így ugyanott áll meg).
+      tarsCsalad: csere.tarsCsalad ?? null };
 
     // ⚠️ MÁSIK KOINO: nincs miről beszélni, és tanulni sem tanulunk tőle — kimondjuk (D19).
     if (csere.masKoino) {
@@ -4748,14 +4779,16 @@ async function keziKapuNyitasa(munka) {
 
 /**
  * ⭐ KÉZI CSERE A KAPUN (D69/2) — a `csere` és a `tukor` közös útja: kapu a parancs idejére,
- * kopogás a célokra, a munka a közös gépezet (`resMunkaKeszito`), a végén zárás.
+ * kopogás a célokra, a munka a közös gépezet (`csaladMunkaKeszito`), a végén zárás.
  *
  * @param {Array<{hoszt: string, port: number}>} celok
  * @returns {Promise<{kor: Object, allando: boolean, kapuPort: number}>}
  */
 async function keziCsere(celok) {
   const res = await resAllapotKeszites();
-  const { kapu, allando } = await keziKapuNyitasa(resMunkaKeszito(res));
+  // ⭐⭐ D119 (③): a kézi csere a CSALÁDOT cseréli — a család koinói ezen a készüléken (példányként), egy munkában társanként.
+  await csaladMegnyitasa();
+  const { kapu, allando } = await keziKapuNyitasa(csaladMunkaKeszito(res));
   res.allando = allando;
   try {
     // ⭐ EGYSZER állítjuk össze a fájl-kérelmet, és minden társnak ugyanazt adjuk.
@@ -5117,15 +5150,20 @@ return {
   koinoVerzioKiirasa, koltozesElonezete, koltozesVegrehajtasa, kopogtatoTemaBuffer, kornyezet, kornyezetSzam, kotesFeljegyzese,
   kuldoKulcsai, lapHianyzoinakElkerese, laposMegjegyzes, lezarasiOsszegzesekKiadasa, meghivottProfilja, ora,
   orjaratErtesitesei, postafiokFrissitese, postafiokMegjegyzes, postafiokModositasa, programVerzioja, rajKorCeljaim,
-  resAllapotKeszites, resMunkaKeszito, reszvetelHalmazom, sajatBejegyzesek, sajatHirdetendoTemak, sajatHorgonyom,
+  resAllapotKeszites, reszvetelHalmazom, sajatBejegyzesek, sajatHirdetendoTemak, sajatHorgonyom,
   sajatOsszesCim, sajatVallalasa, sikidomMegjegyzes, strukturaMegjegyzes, szabalyokSzovege, szovegKepeiKeresre,
   szovegOlvasoKeszites, tablaKliens, tablaKulcsBiztositasa, tablaraKiiras, tablarolOlvasas, tagsagFigyelmeztetes, tagsagKerdes,
   tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, tovabbitasok,
-  tovabbitasokTakaritasa, tukorBeallitas, ujKoinoSzuletese
+  tovabbitasokTakaritasa, tukorBeallitas, ujKoinoSzuletese,
+  // ⭐ D119 (③): a családi munkának (a parancsok nem használják)
+  resMunka, kerelemAtvetele
 };
 }
 
 // ⭐⭐ D119 (②): a FŐ PÉLDÁNY — a becenév koinója; a parancsok ennek a nevein futnak (mint a gyár előtt a modul-szintű nevein).
+// ⭐ D119 (③): és a család első példánya (a hálózati parancsok a család többi koinóját is megnyitják — `csaladMegnyitasa`).
+const foPeldany = await koinoPeldany(KOINO);
+csaladPeldanyok.set(KOINO, foPeldany);
 const {
   ABLAK_KESES_TURES, BEKOPOGO_KORLAT, FAJL_TAKARITAS_KOZ, KERESO_TOMORITES_KOZ, KETFOK, KEZI_KOPOGAS_MS, KOPOGAS_ARA_KORONKENT,
   KOPOGTATO_ELEVULES, POSTAFIOK_SZAMLALO_SZUNET, PROGRAM_GYOKER, SZELET_HIRDETES_KORLAT, adatMennyiseg, aktivFajlForrasCeljai,
@@ -5143,12 +5181,123 @@ const {
   koinoVerzioKiirasa, koltozesElonezete, koltozesVegrehajtasa, kopogtatoTemaBuffer, kornyezet, kornyezetSzam, kotesFeljegyzese,
   kuldoKulcsai, lapHianyzoinakElkerese, laposMegjegyzes, lezarasiOsszegzesekKiadasa, meghivottProfilja, ora,
   orjaratErtesitesei, postafiokFrissitese, postafiokMegjegyzes, postafiokModositasa, programVerzioja, rajKorCeljaim,
-  resAllapotKeszites, resMunkaKeszito, reszvetelHalmazom, sajatBejegyzesek, sajatHirdetendoTemak, sajatHorgonyom,
+  resAllapotKeszites, reszvetelHalmazom, sajatBejegyzesek, sajatHirdetendoTemak, sajatHorgonyom,
   sajatOsszesCim, sajatVallalasa, sikidomMegjegyzes, strukturaMegjegyzes, szabalyokSzovege, szovegKepeiKeresre,
   szovegOlvasoKeszites, tablaKliens, tablaKulcsBiztositasa, tablaraKiiras, tablarolOlvasas, tagsagFigyelmeztetes, tagsagKerdes,
   tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, tovabbitasok,
   tovabbitasokTakaritasa, tukorBeallitas, ujKoinoSzuletese
-} = await koinoPeldany(KOINO);
+} = foPeldany;
+
+// ===================================
+// ⭐⭐ D119 (③): A CSALÁDI MUNKA — egy társsal EGY munka (CS2 (A)), a közös koinók sorban ugyanazon a védett résen
+// ===================================
+//
+// A csere nyitása a családomat is viszi (`cs`): a két fél a nyitott koinója és a társáé alapján ugyanazt a közös listát számolja
+// (rendezve — a két oldal sorrendje így ugyanaz). Ha a két nyitott koinó egyezik, az a csere lement, utána a többi közös; ha
+// nem („MÁSIK koinó”), mind sorban. A más koinónak szóló kérést a fő példány átadja (`kerelemAtadasa`). A régi program nem
+// küldi a családját — akkor csak a nyitott koinó cseréje fut (mint eddig).
+
+// Egy folyamatban legfeljebb ennyi családtag-példány (a terhe a készülék koinóival nő, amiket ő választott — 9. szabály).
+const CSALAD_PELDANY_KORLAT = 16;
+
+/** Egy koinó családja: a születések láncának legfelső eleme (a gyökér); régi alakú koinónál maga a koinó. */
+async function koinoCsaladGyokere(k) {
+  if (!azonositoAlaku(k)) return k;
+  const { lanc } = await szuletesLanc(await koinoTaraEgyszer(k), k);
+  return lanc.at(-1)?.azonosito ?? k;
+}
+
+/**
+ * ⭐⭐ D119 (③): A CSALÁD MEGNYITÁSA — a készüléken ismert koinók közül, amelyik a fő koinó családjába tartozik (közös gyökér —
+ * CS1), példányként (korlátosan). A hálózati parancsok hívják (a kézi csere, a postaláda, az őrjárat). Az `iro`: a hosszan futó
+ * folyamat a család tárainak írója is lesz (mint a fő koinóénak).
+ */
+async function csaladMegnyitasa({ iro = false } = {}) {
+  if (!azonositoAlaku(KOINO)) return csaladPeldanyok;
+  const gyoker = await koinoCsaladGyokere(KOINO);
+  for (const k of await ismertKoinok(alapHely())) {
+    if (csaladPeldanyok.size >= CSALAD_PELDANY_KORLAT) break;
+    if (csaladPeldanyok.has(k) || !azonositoAlaku(k)) continue;
+    try {
+      if (!(await (await koinoTaraEgyszer(k)).esemeny(k))) continue;   // a születése még nincs a készüléken
+      if ((await koinoCsaladGyokere(k)) !== gyoker) continue;           // független család (CS4 — másik őrjárat)
+      const p = await koinoPeldany(k);
+      if (iro) await p.tar.iroLeszek?.();
+      csaladPeldanyok.set(k, p);
+    } catch (hiba) {
+      kiir(SZIN.halvany + '  · a család egy koinója nem nyitható (' + rovidAzonosito(k) + '): ' + hiba.message + SZIN.vege);
+    }
+  }
+  return csaladPeldanyok;
+}
+
+/** ⭐⭐ D119 (③): a családom másik koinójának szóló kérés átadása annak a példányának (null, ha nincs ilyen példány). */
+function kerelemAtadasa() {
+  return async (u, x) => {
+    const p = csaladPeldanyok.get(u?.koino);
+    return p ? p.kerelemAtvetele(u, x) : null;
+  };
+}
+
+/** ⭐⭐ D119 (③): a családi munka eredménye — az első (a nyitott koinó) és a többi közös koinó munkája együtt. */
+function csaladEredmenye(elso, tobbi, kozos) {
+  if (!tobbi.length) return elso;
+  const osszeg = (m) => [elso, ...tobbi].reduce((s, r) => s + (Number.isFinite(r?.[m]) ? r[m] : 0), 0);
+  return { ...elso, uj: osszeg('uj'), kuldott: osszeg('kuldott'), bajt: osszeg('bajt'), korok: osszeg('korok'),
+    // ⭐ ha a nyitott koinóink eltértek, de a család közös koinói lementek, az elérés — nem „MÁSIK koinó”
+    masKoino: null, alairo: elso.alairo ?? tobbi.find((r) => r?.alairo)?.alairo ?? null, csaladKoinok: kozos };
+}
+
+/**
+ * ⭐⭐ D119 (③): A CSALÁDI MUNKA-KÉSZÍTŐ — a kapu munkája (a kézi csere, a postaláda, az őrjárat): egy kézfogás, a fő példány
+ * munkája (a nyitásban a családommal), aztán a társsal KÖZÖS többi koinó munkája sorban, ugyanazon a védett résen.
+ */
+function csaladMunkaKeszito(allapot) {
+  return async (nyersHalo, tars) => {
+    const halo = await kezfogasUdpResen(nyersHalo, tars.cim, tars.port);
+    let elso;
+    try {
+      elso = await foPeldany.resMunka(allapot, halo, tars);
+    } finally {
+      halo.zar();
+    }
+    if (!Array.isArray(elso?.tarsCsalad)) return elso;
+    const kesz = elso.masKoino ? null : KOINO;
+    const kozos = elso.tarsCsalad.filter((k) => k !== kesz && csaladPeldanyok.has(k)).sort();
+    const tobbi = [], lement = [];
+    let bukas = null;
+    for (const k of kozos) {
+      try {
+        // ⛔ Koinónként ÚJ kézfogás (új védett rés) — mérve: a két fél az előző munka végét nem egyszerre éri el (a fájl-randevú
+        // kiszolgálója a tétlenségi óráig vár), és egy még nyitott (vagy utóhangban figyelő) kapcsolat a következő munka első
+        // darabját a SAJÁT ismétlésének nézi (nyugtázza, és elvész — mindkét fél a másikra vár). A más kulcsú csomagot a régi rés
+        // eldobja, a régi rés a lezárt beszélgetés után kézfogásra nem felel, és a korábban végző fél kivárja a lassabbat
+        // (`UTOLAGOS_KEZFOGAS_IDO`).
+        const haloK = await kezfogasUdpResen(nyersHalo, tars.cim, tars.port, { varakozasiIdo: UTOLAGOS_KEZFOGAS_IDO });
+        try {
+          // ⚠️ A koinó saját fájl-része (nem a fő koinóé) — a kör egyszer összeállított fájl-kérelme a fő koinóé.
+          tobbi.push(await csaladPeldanyok.get(k).resMunka({ ...allapot, korFajlok: null, rajKor: null }, haloK, tars));
+          lement.push(k);
+        } finally {
+          haloK.zar();
+        }
+      } catch (hiba) {
+        // ⭐ A nyitott koinó cseréje már lement — az áll; a többi közös a következő munkában (a társ valószínűleg elment).
+        bukas = { koino: k, ok: hiba.message };
+        break;
+      }
+    }
+    if (lement.length) {
+      kiir(SZIN.halvany + '  ⛬ ' + ora() + ' ' + tars.cim + ':' + tars.port + ' — a család közös koinói is: '
+        + lement.map((k) => rovidAzonosito(k)).join(', ') + SZIN.vege);
+    }
+    if (bukas) {
+      kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' — a család ' + rovidAzonosito(bukas.koino)
+        + ' koinójának cseréje elmaradt: ' + bukas.ok + SZIN.vege);
+    }
+    return { ...csaladEredmenye(elso, tobbi, lement), ...(bukas ? { csaladBukas: bukas } : {}) };
+  };
+}
 
 if (ujE) {
   kiir(SZIN.vastag + 'Új kulcs készült — ez mostantól a személyazonosságod.' + SZIN.vege);
@@ -6651,7 +6800,7 @@ try {
       // ha ÁTVESZI, ELTÁROLJA, és a következő beszélgetésnél TOVÁBBADJA.
       //
       // ⭐ A KAPU A RÉGI TCP-KAPU HELYÉN: bármikor felel a kopogásra, a bekopogóra visszakopog,
-      // és vele ugyanazt a munkát végzi, mint az őrjárat (`resMunkaKeszito`). ⚠️ Ő maga nem
+      // és vele ugyanazt a munkát végzi, mint az őrjárat (`csaladMunkaKeszito`). ⚠️ Ő maga nem
       // kopog senkire — ezért kívülről csak az éri el, aki átjut a portásán: a wifin bárki,
       // nyilvános címen bárki, NAT mögött az, akire ő is kiszólt (vagy akinek a `kapu`
       // paranccsal állandó szabályt kért a routertől).
@@ -6659,9 +6808,11 @@ try {
       // ⭐ D70: a postaláda a futása végéig tartja az író-szerepet, ha most senki nem író —
       // a kézi parancsok ilyenkor NEKI adják át az eseményt, és a lánc vége egy helyen dől el.
       await tar.iroLeszek();
+      // ⭐⭐ D119 (③): a postaláda a CSALÁDOT szolgálja — a család koinói ezen a készüléken (példányként, az író-szereppel is).
+      await csaladMegnyitasa({ iro: true });
       const res = await resAllapotKeszites();
       const kapu = await udpKapuNyitasa({
-        port, munka: resMunkaKeszito(res), bekopogoKorlat: BEKOPOGO_KORLAT,
+        port, munka: csaladMunkaKeszito(res), bekopogoKorlat: BEKOPOGO_KORLAT,
         jelez: kapuJelzesKiiro()
       });
       await kapuPortjaFeljegyzese(kapu.port);
@@ -7190,7 +7341,7 @@ try {
       // bulit kér, a cím 2 percig érdekes. *Nincs varázsszám (9. szabály): a határ abból
       // következik, ami amúgy is adott.*
       const udpElevules = Math.max(60000, Math.round(perc * 60 * 1000));
-      // ⭐ A RÉSEN VÉGZETT MUNKA ÁLLAPOTA — a kör frissíti, a munka olvassa (`resMunkaKeszito`).
+      // ⭐ A RÉSEN VÉGZETT MUNKA ÁLLAPOTA — a kör frissíti, a munka olvassa (`csaladMunkaKeszito`).
       // Benne a tábla-kulcs (⛔ nem az azonosságunk, D6), a kötések és a friss UDP-címek.
       const res = await resAllapotKeszites({ udpElevules });
       const kotesTar = res.kotesTar;
@@ -7223,9 +7374,12 @@ try {
       // ⭐ D70: az őrjárat a futása végéig tartja az író-szerepet, ha most senki nem író —
       // a kézi parancsok ilyenkor NEKI adják át az eseményt, és a lánc vége egy helyen dől el.
       await tar.iroLeszek();
+      // ⭐⭐ D119 (③): az őrjárat munkája a CSALÁDOT cseréli (a közös koinók egy munkában, társanként) — a kör céljai még a fő
+      // koinóéi (a ④ teszi a családra).
+      await csaladMegnyitasa({ iro: true });
       const kapu = await udpKapuNyitasa({
         port,
-        munka: resMunkaKeszito(res),
+        munka: csaladMunkaKeszito(res),
         bekopogoKorlat: BEKOPOGO_KORLAT,
         jelez: kapuJelzesKiiro()
       });
@@ -8224,7 +8378,7 @@ try {
 
     case 'csere': {
       // ⭐ 2026-09-26 ÓTA A KAPUN (D69/2): a kézi csere ugyanazt a munkát végzi, mint az
-      // őrjárat és a postaláda (`resMunkaKeszito`) — csere, kötés, tanulás, fájl-randevú.
+      // őrjárat és a postaláda (`csaladMunkaKeszito`) — csere, kötés, tanulás, fájl-randevú.
       // *Ami csak az őrjáratban megy, arról nem tudjuk, hogy kézzel is működik-e — és fordítva.*
       const tarolo = tarsakTarolo();
       const kezdet = Date.now();

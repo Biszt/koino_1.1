@@ -685,6 +685,66 @@ proba('⭐⭐ D119 (①b): a koino-verzió a LAPRÓL és a kódja a vonalon — 
     }
   });
 
+// ⭐⭐ D119 (③): A CSALÁDI CSERE a parancssoron és a vonalon. A és B a szülő (P) tagja, A létrehozza a gyermeket (C — a
+// koino-verzió kártyával), B beköltözik. A mindkét koinóba ír, és egy postaládát futtat a szülőre (`figyel`). (1) B EGY
+// cserével a szülőre mindkét újat megkapja (a nyitás a családot is mondja, a közös gyermek ugyanabban a munkában jön). (2) B a
+// gyermekre nyitva cserél (a két nyitott koinó más — „MÁSIK koinó”), és a család két közös koinója mégis lemegy. (3) B a
+// gyermekre kér (kérelem — a gyökér fejlécei), a postaláda a szülőre fut: a kérés a gyermek példányához kerül (a válasz a
+// gyermek gondolatait hozza, nem a szülőéit). Viselkedést mérünk (B lemezét és a kérelem válaszát).
+proba('⭐⭐ D119 (③): a családi csere — egy cserével a szülő és a gyermek is; a más koinóra nyitott csere is a családot cseréli; a gyermeknek szóló kérelem a szülő postaládájánál a gyermek példányához kerül',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const port = 7873;
+    let figyelo = null;
+    const lemez = async (hely, koino) => (await readFile(join(hely, koino, 'esemenyek.jsonl'), 'utf8').catch(() => ''))
+      .split('\n').filter(Boolean).map((x) => JSON.parse(x));
+    const cimek = async (hely, koino) => new Set((await lemez(hely, koino)).map((e) => e.adat?.cim).filter(Boolean));
+    try {
+      await fut(a, 'koino', 'Családi szülő', 'nyilt');
+      const P = await koinoNeve(a);
+      await taggaTesziKeszulek(a, b);
+      await fut(a, 'kivisz', join(a, 'p1.jsonl'));
+      await fut(b, 'behoz', join(a, 'p1.jsonl'));
+      await fut(b, 'gondolat', 'B A SZÜLŐBEN');
+      await fut(a, 'koinoverzio', 'Családi gyermek', 'pont=10', 'becenev=gy');
+      const C = await koinoNeve(a, 'gy');
+      await fut(a, 'kivisz', join(a, 'p2.jsonl'));
+      await fut(b, 'behoz', join(a, 'p2.jsonl'));
+      const koltozes = await fut(b, 'koltozes', C);
+      await fut(a, 'kiszolgalas', 'mindent');
+      await fut(a, 'gondolat', 'ELSŐ A SZÜLŐBEN');
+      await fut(a, 'gondolat', 'ELSŐ A GYERMEKBEN', { KOINO_AZONOSITO: 'gy' });
+      figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+        env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: 'ignore' });
+      await varj(2500);
+      // (1) egy csere a szülőre
+      const csere1 = await fut(b, 'csere', '127.0.0.1', String(port));
+      const egyP = (await cimek(b, P)).has('ELSŐ A SZÜLŐBEN');
+      const egyC = (await cimek(b, C)).has('ELSŐ A GYERMEKBEN');
+      // (2) a gyermekre nyitva — a postaláda a szülőre fut
+      await fut(a, 'gondolat', 'MÁSODIK A SZÜLŐBEN');
+      await fut(a, 'gondolat', 'MÁSODIK A GYERMEKBEN', { KOINO_AZONOSITO: 'gy' });
+      const csere2 = await fut(b, 'csere', '127.0.0.1', String(port), { KOINO_AZONOSITO: C });
+      const ketP = (await cimek(b, P)).has('MÁSODIK A SZÜLŐBEN');
+      const ketC = (await cimek(b, C)).has('MÁSODIK A GYERMEKBEN');
+      // (3) a gyermeknek szóló kérelem a szülő postaládájánál
+      await fut(a, 'gondolat', 'HARMADIK A GYERMEKBEN', { KOINO_AZONOSITO: 'gy' });
+      const kerelem = await fut(b, 'kerelem', 'fejlecek', 'gyoker', '127.0.0.1', String(port), { KOINO_AZONOSITO: C });
+      const ok = /Kiköltöztél/.test(koltozes) && egyP && egyC && /a család közös koinói is/.test(csere1)
+        && ketP && ketC && /FEJLÉCEK: a gyökér/.test(kerelem) && /HARMADIK A GYERMEKBEN/.test(kerelem)
+        // ⭐ a szülő vágás utáni gondolatai nincsenek benne (a „B A SZÜLŐBEN” igen: B hozott gondolata)
+        && !/ELSŐ A SZÜLŐBEN|MÁSODIK A SZÜLŐBEN/.test(kerelem) && /B A SZÜLŐBEN/.test(kerelem);
+      if (!ok) process.stderr.write('    (a kimenetek: ' + JSON.stringify({ koltozes: koltozes.slice(0, 200), egyP, egyC,
+        csere1: csere1.slice(-500), ketP, ketC, csere2: csere2.slice(-500), kerelem: kerelem.slice(0, 700) }) + ')\n');
+      return ok;
+    } finally {
+      if (figyelo) figyelo.kill();
+      await varj(500);
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ⭐⭐ D118 (②b): A KAPU KOINÓ-SZABÁLYA a parancssoron és a cserén. Az A a szülőben ír egy gondolatot a gyermek születése
 // ELŐTT és egyet UTÁNA; a szülő kivitele a gyermekbe behozva csak az elsőt adja (a második a szülő jelene — „másik koinóé”),
 // és a csere (két „mindent” készülék) ugyanígy viszi tovább a B-nek. Viselkedést mérünk (a két lemezt). ⚠️ A számítás még

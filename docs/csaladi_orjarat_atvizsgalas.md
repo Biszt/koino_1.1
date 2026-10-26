@@ -232,3 +232,47 @@ címei („MÁSIK család” nem elérés) → ⑥ **a lap** (csatlakozás egy k
   fájl-munkák közös jegyzéke (`fajlMunkak` — a lenyomat a családban is egy), a „később”-t mondó társak (`kesobbTarsak`), a
   társankénti utolsó csere (`utolsoCsereTarssal`); és a kapu munka-készítője (`resMunkaKeszito`) a családi nyitás szerint
   választ példányt (③).
+
+## 13. ✅ A ③ — a családi csere (2026-10-26)
+
+- **A nyitás a családot mondja:** a `NYITAS` `cs` jele a család TÖBBI koinója ezen a készüléken (`vonal.js` `CSALAD_KORLAT` =
+  64; a megnyitott példányok — `koino.js` `csaladTobbiKoinoja`); a társé a nyitásából (`csaladNyitasbol` — a nyitott koinója
+  és a lista; a régi program nem küldi, akkor nincs családi kör). Egy koinós családnál `"cs":[]` (8 B), koinónként +46 B.
+- **A közös koinók egy munkában:** a kapu munkája a családi munka-készítő (`csaladMunkaKeszito` — a kézi csere, a postaláda és
+  az őrjárat is): egy kézfogás, a fő példány munkája (a nyitásban a családommal), aztán a társsal KÖZÖS többi koinó munkája
+  sorban — mindkét fél ugyanazt a listát számolja (a rendezett metszet; ha a két nyitott koinó egyezett, az nélkül). Koinónként
+  ÚJ kézfogás: mérve, egy védett résen az egymást követő kapcsolatok a következő első darabját elveszítették (az előző nyitott
+  vagy utóhangban figyelő példány nyugtázta), a más kulcsú csomagot viszont a régi rés eldobja. A korábban végző fél kivár
+  (`udpVonal.js` `UTOLAGOS_KEZFOGAS_IDO` = 3 × a tétlenségi óra). Egy közös koinó bukása nem dönti el a már lementet (kimondja:
+  „a család … koinójának cseréje elmaradt”).
+- **A „MÁSIK koinó”-ra nyitott csere is a családot cseréli:** ha a két nyitott koinó más, de a család közös, a közös koinók
+  mind lemennek, és az eredmény elérés (`csaladEredmenye` — nem „MÁSIK koinó”) — a kézi próba 3. leletének (a másik koinó
+  portján megálló őrjárat) a csere-oldali fele; a kör-oldali (a célok a családra) a ④.
+- **A más koinónak szóló kérés átadása:** a kérelem és a továbbadott kérelem válasza megnevezi a koinóját — ha az a családom
+  egy másik koinója, a nyitott példány az első üzenettel és az üzenetsorral annak a példányának adja át (`parbeszed`
+  `beallitas.atadas` → `kerelemAtadasa` → `kerelemAtvetele`; a kézfogás hitelesítése arra a koinóra — a zárt kapu annak a
+  tagságát nézi). Eddig a nyitott koinó tárából feleltünk volna egy másik koinó kérdésére.
+- **A postaláda és az őrjárat a családot szolgálja:** `csaladMegnyitasa` — a készüléken ismert koinók közül a közös gyökerűek
+  (CS1; a független családok külön — CS4), példányként (≤ 16), a hosszan futó folyamat ezeknek is az írója.
+- ⭐ **A randevú vége kimondva (`FAJLVEGE`, elágazás 210):** a kérő a kérései végén szól, a kiszolgáló azonnal zár (eddig a
+  tétlenségi óráig — a kezdőnél a kétszereséig — várt). A kódot hozó csere 11,4 s helyett 1,3 s, és a társ következő kérése nem
+  kap „foglalt”-at.
+- ⛔ **Két rejtett szállítási hiba (elágazás 211):** (a) a `parbeszed` üzenetsora az első `await` után kötődött a kapcsolatra —
+  a társ nyitása ~6 futásból egyszer elveszett; (b) a nyitott `udpKapcsolat` bármit nyugtázott a sorszáma alatt — most csak a
+  `k`-t vivő, bájtra azonos ismétlést (az utóhang szabálya).
+- **A 85. mérés** (`csaladCsereMeres.js` — két készülék, k koinós család, a postaláda a szülőre, B minden gyermekbe költözött):
+  a „nincs újdonság” családi csere koinónként ~2,2 KB és ~200 ms (k = 1: 2,3 KB · 2: 4,4 · 3: 6,7 · 5: 11,8 KB) — lineáris, a
+  mérce (egy koinó cseréje) szerint.
+- **A próbák:** `csereProba.js` (+3: a nyitás az első `await` közben; a `FAJLVEGE`; a nyitás családja), a parancssor (+1: egy
+  csere a szülőre a gyermeket is hozza; a gyermekre nyitott csere a szülő postaládájánál a családot cseréli; a gyermeknek
+  szóló kérelem a gyermek példányához kerül). Rontások: az üzenetsor a régi helyén, a `FAJLVEGE` nélkül, a családi kör nélkül,
+  a nyitott koinó nélkül a családban, az átadás nélkül — mind bukott.
+- ⏸️ **Két megfigyelés (Csabánál):** (1) ⚠️ a koino-verzió kártya KÓDJÁT (~6,4 MB) minden készülék elhozza, amelyik a kártyát
+  látja — a ①b óta a kód a fájl-igényben él, mint egy gondolat képei, és a fájl-igény MINDEN látott entitás fájljait kéri (a
+  kiszolgáló csak a vállaltat adja ki); a mérésben a nem vállaló B 9 cserében 6,5 MB-ot hozott (alapból a kiszolgálási keret
+  óránként ~150 kérésnél megállítja). A 84. mérés leírása szerint a kód „csak annak utazik, aki a Kód fület megnyitja vagy
+  költözik” — a kettő ellentmond. (2) Aki a gyermekbe nem költözött be (csak a kézi úton kapta meg), az ott semmit nem vállal,
+  és a gyermek cseréje nála üres — a gyermek tagjai a költözők (a mai részvételi szabály, a ③-tól független).
+- ⏭️ **A ④: a kör a családra** — a kör céljai a család minden koinójából, a tábla-kulcs szerint összefésülve, egy munka
+  társanként (a kézi próba 1. lelete); és a családban közös: a kiszolgálási keret, a fájl-munkák, a „később”, a társankénti
+  utolsó csere.

@@ -90,6 +90,23 @@ import { keresesValaszAlakja } from './kereses.js';
 // a 8 MB tehát bőven elég, de egy végtelen sor már nem fér bele.
 const SOR_KORLAT = 8 * 1024 * 1024;
 
+// ⭐⭐ D119 (③): A CSALÁD A NYITÁSBAN — a nyitott koinón kívül a család többi koinója (amivel ez a munka cserélni tud), legfeljebb
+// ennyi. Egy koinós családnál üres lista (`"cs":[]` — ~8 bájt csereként); a régi program nem küldi (akkor nincs családi kör).
+export const CSALAD_KORLAT = 64;
+
+/**
+ * ⭐⭐ D119 (③): a társ családja a nyitásából — a nyitott koinója és a `cs` lista (korlátosan, szövegek). Null, ha nem mondta (régi
+ * program) vagy hibás: akkor nincs családi kör.
+ * @param {Object} nyitas
+ * @returns {Array<string>|null}
+ */
+export function csaladNyitasbol(nyitas) {
+  const cs = nyitas?.cs;
+  if (!Array.isArray(cs) || cs.length > CSALAD_KORLAT || typeof nyitas.koino !== 'string') return null;
+  if (!cs.every((k) => typeof k === 'string' && k.length >= 1 && k.length <= 64)) return null;
+  return [...new Set([nyitas.koino, ...cs])];
+}
+
 // Egy egyeztetés legfeljebb ennyi oda-vissza lépés. Nem díszítés: ha valami körbe-körbe járna,
 // azt HIBAKÉNT akarjuk látni, nem végtelen ciklusként. (A tartomány-egyeztetés log16(méret)
 // lépésben ér véget — 100 000 eseménynél ~5.)
@@ -254,6 +271,13 @@ function uzenetSor(kapcsolat) {
 export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   console.log('parbeszed - KEZDÉS', { koino });
 
+  // ⛔⛔ AZ ÜZENETSOR AZ ELSŐ `await` ELŐTT (2026-10-26 — mérve, a D119 ③ kézi próbáján, ~6 futásból egyszer): a kapcsolat a
+  // megérkezett darabot nyugtázza és továbbadja (`data`), és ha még senki nem hallgat rá, ELVÉSZ — a küldő nem ismétli. Az
+  // üzenetsor eddig a nyitó lenyomat számítása (a halmaz-lenyomat, a szelet-párok — `await`) UTÁN kötődött rá, és ha a társ
+  // nyitása épp ebben a résben ért ide, az első olvasott üzenet a következője volt („Várt üzenet: NYITAS, érkezett: CIMEK”).
+  // ⭐ D119 (③): a családi körben a kapcsolatot (és az üzenetsorát) egy átadott kérés hozhatja — akkor az a hívóé.
+  const sor = beallitas.sor ?? uzenetSor(kapcsolat);
+
   // ===== ⭐⭐ D95/4: A GYÖKÉR DARABJAI =====
   //
   // Ha a hívó megadja a gyökér mélységét, a gyökér nem egészében, hanem DARABONKÉNT cserélődik: a darabjaim (a
@@ -324,7 +348,6 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // ⭐ Amit a társtól megtudtunk a fájlokról (5.7) — a hívó dolga elrakni.
   let fajlokNala = [];
 
-  const sor = uzenetSor(kapcsolat);
   // ⭐ A MÉRÉSEK műszere (70. mérés): ha a hívó ad egy Map-et, üzenet-típusonként összeadjuk a kiküldött (nyílt) bájtokat.
   const uzenetMeres = beallitas.uzenetMeres instanceof Map ? beallitas.uzenetMeres : null;
   const kuld = (uzenet) => {
@@ -365,13 +388,15 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let lancEredmeny = null;          // ⭐ D98/2–3: a lánc-kör eredménye (a hívóé)
   let ujBejegyzesek = 0, kuldottBejegyzesek = 0;   // ⭐ D107 L2: a kereső-régió bejegyzései (felvett · elküldött)
   let tarsMelysegei = null;         // ⭐ D110: a társ bemondott mélységei a NYITÁS jeleiből (a hívó tanul belőlük)
+  let tarsCsalad = null;            // ⭐ D119 (③): a társ családja a nyitásából (a hívó ebből számolja a közös koinókat)
 
   const eredmeny = () => ({
     korok: 1, uj, kuldott, reszletesAllasok: 0, masKoino, kivulrolIgyLatszom, kapottUdpCimek,
     kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek, ujAzonositok, kapottRaj,
     tarsKorlatozva, tarsAzonossaga, osszegzesEredmeny, tagsagEredmeny, kezbesitve, lancEredmeny,
     ...(ujBejegyzesek || kuldottBejegyzesek ? { ujBejegyzesek, kuldottBejegyzesek } : {}),
-    ...(tarsMelysegei ? { tarsMelysegei } : {})
+    ...(tarsMelysegei ? { tarsMelysegei } : {}),
+    ...(tarsCsalad ? { tarsCsalad } : {})
   });
 
   // ===== ⭐⭐ D93/3: A ZÁRT KOINÓ KAPUJA — a hívóé (`beallitas.zartKapu`), a vonal semmit nem tud a tagságról =====
@@ -464,10 +489,13 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       sajatNaplo = null;
     }
   }
-  kuld({
+  // ⭐ D119 (③): ha az első üzenetet egy másik koinó cseréje már elolvasta és átadta, a nyitást is az küldte el — itt nincs újabb.
+  if (!beallitas.elsoUzenet) kuld({
     // ⭐ A változatot maga az üzenet neve jelzi (a régi program LENYOMAT-tal nyit) — külön mező
     // nélkül: az minden cserén utazna (6. szabály; mérve +28 bájt oda-vissza).
     uzenet: 'NYITAS', koino, lenyomat: sajatLenyomat,
+    // ⭐⭐ D119 (③): a családom többi koinója (amivel ez a munka cserélni tud) — a két fél ebből számolja a közöseket.
+    ...(Array.isArray(beallitas.csalad) ? { cs: beallitas.csalad.slice(0, CSALAD_KORLAT) } : {}),
     ...(tablaKulcs ? { tabla: tablaKulcs } : {}),
     ...(tablaKulcs && typeof kezfogas?.alairas === 'string' ? { aa: kezfogas.alairas } : {}),
     latlak: { cim: kapcsolat.remoteAddress, port: kapcsolat.remotePort },
@@ -481,7 +509,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     ...(sajatNaplo ? { pv: sajatNaplo.v } : {})
   });
 
-  const elsoUzenet = await sor.kovetkezo();
+  const elsoUzenet = beallitas.elsoUzenet ?? await sor.kovetkezo();
 
   // ===== ⭐⭐ A FÁJL-SZELET KISZOLGÁLÁSA (5.7 / B) — saját kapcsolat, a nyitás helyett =====
   //
@@ -496,6 +524,20 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     await fajlSzeletekKiszolgalasa(sor, kuld, beallitas.fajlOlvas, elsoUzenet);
     console.log('parbeszed - VÉGE (fájl-átvitel)');
     return { ...eredmeny(), fajlokNala: [] };
+  }
+
+  // ===== ⭐⭐ D119 (③): A CSALÁD MÁSIK KOINÓJÁNAK SZÓLÓ KÉRÉS — a hívó a koinó példányának adja át =====
+  //
+  // A kérés (a kérelem, egy továbbadott kérelem válasza) megnevezi a koinóját. Ha az a családom egy másik koinója, a hívó
+  // (`beallitas.atadas`) annak a példányával szolgálja ki, ugyanezen a kapcsolaton (az első üzenettel és az üzenetsorral) —
+  // különben a nyitott koinó tárából felelnénk egy másik koinó kérdésére. Ha a hívó nem ismeri a koinót, a régi út marad.
+  if ((elsoUzenet.uzenet === 'KERELEM' || elsoUzenet.uzenet === 'VALASZ') && typeof elsoUzenet.koino === 'string'
+      && elsoUzenet.koino !== koino && typeof beallitas.atadas === 'function') {
+    const atadott = await beallitas.atadas(elsoUzenet, { kapcsolat, sor });
+    if (atadott) {
+      console.log('parbeszed - VÉGE (a család másik koinójának átadva)', { koino: elsoUzenet.koino });
+      return atadott;
+    }
   }
 
   // ===== ⭐⭐ A KÉRELEM (D92/6): „ADD IDE EZT” — a nyitás helyett =====
@@ -701,6 +743,9 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   }
   const oveNyitas = elsoUzenet;
   if (oveNyitas.latlak?.cim) kivulrolIgyLatszom = oveNyitas.latlak;
+  // ⭐⭐ D119 (③): a társ családja (a nyitott koinója és a `cs` lista) — a MÁSIK koinós nyitásnál is: a hívó ebből tudja, mely
+  // koinóink közösek (a családi kör sorban cseréli őket).
+  tarsCsalad = csaladNyitasbol(oveNyitas);
 
   // ----- MÁSIK KOINO? Akkor nincs miről beszélni -----
   //
@@ -1536,6 +1581,12 @@ export async function fajlKiszolgalas(kapcsolat, fajlOlvas, beallitas = {}) {
   // ⚠️ Ez a hívás DOBHAT (időtúllépés, lezárás) — és ez a rendes befejezés: a társ nem
   // kért semmit. A hívó dönti el, mit kezd vele; itt nem nyeljük el (D19).
   const elso = await sor.kovetkezo();
+
+  // ⭐ D119 (③): a kérő kimondta, hogy végzett (`udpVonal.js` `fajlRandevu`) — nem várjuk ki a tétlenségi órát.
+  if (elso.uzenet === 'FAJLVEGE') {
+    console.log('fajlKiszolgalas - VÉGE (a társ végzett)');
+    return { kiszolgalt: false, vege: true, ok: 'a társ végzett (FAJLVEGE)', szeletek: 0 };
+  }
 
   if (elso.uzenet !== 'FAJLKEREK') {
     // ⚠️ Nem hiba, csak nem ez a dolgunk: megnevezzük, mi jött helyette.
