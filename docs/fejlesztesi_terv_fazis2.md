@@ -6122,7 +6122,11 @@ a családi csere** (2026-10-26, elágazás 209–211, 85. mérés): a nyitás a 
 ugyanazt a közös listát számolja, a közös koinók ugyanabban a munkában jönnek (koinónként új kézfogással), a más koinóra
 nyitott csere is a családot cseréli, a más koinónak szóló kérelem a példányához kerül; a postaláda és az őrjárat a családot
 szolgálja. Közben két szállítási hiba (mérve) és a randevú vége (`FAJLVEGE` — a kiszolgáló nem várja ki a tétlenségi órát).
-✅ **Közben a D120** (a törzs-határ — lent). ⏭️ ④ a kör a családra.
+✅ **Közben a D120** (a törzs-határ — lent). ✅ **A ④ a kör a családra** (2026-10-29, elágazás 214–216): a kör céljai a család
+minden példányából (a raj, a fájl-források, a függő kérelmek, a továbbítások, a kopogtatók), egy társnak egy munka, minden
+példány a saját munka-állapotával; a háztartás koinónként; a kiszolgálási keret és a „később” a családban egy (a határ és a
+feljegyzés a fő koinóé — mért hiba: eleinte a kérdező családtag beállítása szabta meg); a D99 a közös koinók mindegyikére.
+⏭️ ⑤ a független családok.
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal

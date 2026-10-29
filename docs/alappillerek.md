@@ -1571,3 +1571,21 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     régi korlát-ellenőrzés a nagy fájlt „rossz szeletnek” vette, és `KESZ` nélkül lépett ki — a kiszolgáló az előző kapcsolatán
     várt, a következő fájlok a tétlenségi óráig hiába kértek (három fájlból három bukott, 22 mp) · `torzs_hatar_atvizsgalas.md`
     5. szakasz.
+214. **2026-10-29 · D119 ④ — a kör a családra**
+    → **a kör céljai (a raj, a befejezetlen fájlok forrásai, a függő kérelmek, a továbbítások, a kopogtatók) a család minden
+    példányából, egy társnak egy munka; minden példány a saját munka-állapotával (`csaladAllapota`); a háztartás koinónként
+    sorban (`orjaratHazimunkaja`); a kiszolgálási keret és a „később” a családban egy (a készülék munkája); a D99 kihagyása a
+    társsal közös koinók mindegyikére** · a lelet (a kézi próba 3.): a gyermek magától nem cserélt — a kör és a háztartás a fő
+    koinóé volt · ⛔ ami koinónként marad: a fájl-munkák jegyzéke (a fájl-tár koinónként külön) és az utolsó csere ideje ·
+    `csaladi_orjarat_atvizsgalas.md` 14. szakasz.
+215. **2026-10-29 · a közös keret határa a fő koinóé (mérve, a ④a próbáján)**
+    → **a családban egy határ és egy feljegyzés — a fő koinó beállítása (`csaladFo`)** · a lelet: a közös keret a határát annak a
+    családtagnak a `kiszolgalas.json`-jéből vette, amelyik épp kérdezett — a gyermek kiinduló kerete a szülőre beállított szűk
+    keretet felülírta volna, és a feljegyzés a gyermek mappájába is íródott (a `kiszolgalas` a szülőét olvassa) · ⛔ elvetve: a
+    család legnagyobb vagy összegzett kerete (a keret a készülék munkáját fogja meg, egy szám kell, és a kiszolgáló a fő nevén
+    fut) · `csaladi_orjarat_atvizsgalas.md` 14. szakasz.
+216. **2026-10-29 · a ④c külön választása elmaradt (a rontás mérte)**
+    → **a család más koinójának függő kérelmét a közös koinó munkája viszi (a munka eleje a saját állapotával választ)** · a
+    lelet: az első alakban a munka ELŐTT is megkérdeztük a család példányait — a rontása (a választás nélkül) a próbát nem
+    buktatta, mert a kérelem a közös koinó munkájában úgyis lement; egy fölösleges út kevesebb kód, és egy kérdés kevesebb
+    minden munka előtt · `csaladi_orjarat_atvizsgalas.md` 14. szakasz.

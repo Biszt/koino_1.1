@@ -276,3 +276,43 @@ címei („MÁSIK család” nem elérés) → ⑥ **a lap** (csatlakozás egy k
 - ⏭️ **A ④: a kör a családra** — a kör céljai a család minden koinójából, a tábla-kulcs szerint összefésülve, egy munka
   társanként (a kézi próba 1. lelete); és a családban közös: a kiszolgálási keret, a fájl-munkák, a „később”, a társankénti
   utolsó csere.
+
+## 14. ✅ A ④ — a kör a családra (2026-10-29)
+
+A ③ után a családi munka a társsal közös koinókat egy munkában cseréli — de a KÖR (kire kopogunk, és a háttér-munkák) még a fő
+koinóé volt: a gyermek saját tartói (a raj, a befejezetlen fájlok forrásai), a függő kérelmei, a kopogtatói és a háztartása (a
+címjegyzék-kör, a felszabadítás, a csomagok, a tömörítés, a felderítés, a postafiók) a családi őrjáratban nem futottak. A kézi
+próba 3. lelete ennek a fele: a gyermek magától nem cserélt.
+
+- **④a a közös állapot:** ami a KÉSZÜLÉK munkája, az a családban egy — a kiszolgálási keret (a keret a készülék munkája másoknak:
+  koinónként külön a koinók száma szorozná; `koino.js` `kiszolgalasiKeretPeldany`) és a „később”-t mondó társak (`kesobbTarsak` —
+  a társ kerete a készülékre szól), a gyár előtt, modul-szinten. ⛔ **Mért hiba (elágazás 215):** a közös keret HATÁRA eleinte
+  annak a családtagnak a beállításából jött, amelyik épp kérdezett (`kiszolgalas.json` koinónként él) — a gyermek kiinduló kerete
+  a szülőre beállított szűk keretet a gyermek első kérésénél felülírta volna. ⭐ Most a határ és a feljegyzés (`keret.json`) a
+  FŐ koinóé (`csaladFo` — a készülék kiszolgálója az ő nevén fut, a `kiszolgalas keret` is azt állítja, és a `kiszolgalas` az ő
+  feljegyzését olvassa). Ami koinónként más, az marad: a fájl-munkák jegyzéke (a fájl-tár koinónként külön mappa — a részleges
+  fájl nem keveredhet), az utolsó csere ideje (koinónként). **A D99 a családra** (`csaladCsereKihagyhato`): a társ akkor hagyható
+  ki, ha a VELE KÖZÖS koinók mindegyikében nincs mondanivalóm (a közös koinókat a legutóbbi családi munka jegyzi —
+  `csaladKozosTarssal`; ha még nem cseréltünk, a fő koinó).
+- **④b a kör céljai a családból:** a kötések, a friss UDP-címek és az induló címek készülék-szintűek (egyszer); a raj, a
+  befejezetlen fájlok forrásai, a függő kérelmek céljai, a továbbítások és a kopogtatók koinónként (`korCeljaim` — egy
+  példány-függvény), a család minden példányából összegyűjtve, címre és tábla-kulcsra összefésülve (egy társnak egy munka). Minden
+  példány a saját munka-állapotával dolgozik (`csaladAllapota` — a kopogtatói, a raj-köre, a már próbált kérelmei; a
+  készülék-szintű tudást — a friss címek, a saját külső cím — a fő állapotból veszi át).
+- **④c a függő kérelem a családban:** ⭐ külön út nem kell — a közös koinó munkája (a családi munka sorában) a saját állapotával
+  fut, és a munka eleje ott is megnézi, van-e függő kérelme ehhez a társhoz (`fuggoKerelemValasztasa` — a `resMunka` elejéből
+  kiemelve). Az első alakban a munka ELŐTT is megkérdeztük a család többi példányát; a rontása (a választás nélkül) a próbát nem
+  buktatta, mert a kérelmet a közös koinó munkája úgyis elvitte — fölösleges volt, kivettük (elágazás 216).
+- **④d a háztartás koinónként:** a háttér-munka a tábla (készülék-szintű) után a család minden példányára sorban lefuttatja a
+  koinó háztartását (`orjaratHazimunkaja` — a címjegyzék-kör a saját hirdetés-idejével, a felszabadítás, az előléptetés, a
+  csomagok, a tömörítés, a kereső-tár, a felderítés, a fájl-tár, a postafiók); a gyermek sorai a naplóban a koinó jelével
+  (`[a név eleje]`).
+- **A próbák** (a parancssor, +3): (1) a gyermek függő kérelmének egyetlen célja egy csak a gyermekben ismert társ — a szülőre
+  indított őrjárat kopog rá, a kérelem lemegy, és a gyermek háztartása fut (rontás: a célok csak a fő koinóból → a kérelem nem
+  megy le; a háztartás csak a fő koinóé → nincs a gyermek sora); (2) a D99 a családra — két őrjárat 30 mp-es körrel, egymáshoz
+  10 mp-cel eltolva: újdonság nélkül a társ kimarad, a gyermekben született gondolat miatt a következő kör hívja, és a gondolat a
+  társ következő köre előtt a lemezén van (rontás: csak a fő koinót nézve → kihagyja, nem jut át; a családi kihagyás nélkül → nincs
+  kihagyás); (3) a keret a családban egy — a szülőre beállított szűk keretből egy idegen két szülőbeli kérése után a gyermeknek
+  szóló kérése „később” (rontás: koinónként külön keret, és a határ a kérdező családtagé — mindkettő bukik).
+- ⏭️ **Az ⑤: a független családok** — a nem közös gyökerű koinók külön őrjáratban (CS4); köztük a „MÁSIK koinó” megállás a
+  gyors javítással zárva.

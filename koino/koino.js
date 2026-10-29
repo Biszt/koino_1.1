@@ -460,6 +460,19 @@ function koinoTaraEgyszer(koino) {
 // ⭐⭐ D119 (③): A CSALÁD PÉLDÁNYAI ebben a folyamatban — koinó → példány (a fő, és amit a hálózati parancs megnyitott a családból).
 const csaladPeldanyok = new Map();
 
+// ⭐⭐ D119 (④a): A KÉSZÜLÉK KÖZÖS ÁLLAPOTA a családban — ami a készülék munkája, az egy: a kiszolgálási keret (a készülék
+// munkája MÁSOKNAK — koinónként külön a koinók száma szorozná; D109) és a „később”-t mondó társak (a társ kerete a készülékre
+// szól). Koinónként marad a fájl-munkák jegyzéke (a fájl-tár koinónként külön mappa) és az utolsó csere ideje.
+const kesobbTarsak = new Map();     // 'cím:port' → meddig ne hívjuk
+let kiszolgalasiKeretPeldany = null;
+let csaladFo = null;                 // a fő példány (a keret határa és feljegyzése az övé — a gyár után kap értéket)
+const keretKiirva = new Map();      // társ → mikor írtuk ki utoljára, hogy „később” (a napló ne teljen meg)
+// ⭐ D119 (④a): a D99 a családra — tábla-aláíró → a vele legutóbb cserélt koinók (a családi munkából)
+const csaladKozosTarssal = new Map();
+// ⭐ D119 (④b–④d): a család többi példányának munka-állapota (koinó → állapot: a kopogtatóik, a próbált kérelmeik, a raj-körük,
+// a címjegyzék-hirdetésük) — a fő koinóé a hívóé (az őrjárat `res`-e). Készülék-szintű: a kapu munkája is olvassa.
+const csaladAllapotok = new Map();
+
 // ===================================
 // ⭐⭐ D119 (②): A KOINÓ-PÉLDÁNY — a koinó-szintű rész egy gyárban
 // ===================================
@@ -3669,7 +3682,7 @@ async function valaszFogadasa(v, honnan) {
 //
 // ⭐ KK6, a kérő oldala: aki „később”-t mondott, azt a kör (és a függő kérelem) addig nem hívja — a raj más tartójához
 // fordulunk. Helyi, a memóriában, korlátos.
-const kesobbTarsak = new Map();     // 'cím:port' → meddig ne hívjuk
+// (a `kesobbTarsak` készülék-szintű — a gyár előtt, D119 ④a)
 function kesobbFeljegyzese(tars, mp) {
   if (!tars?.cim) return;
   kesobbTarsak.delete(tars.cim + ':' + tars.port);
@@ -3688,8 +3701,7 @@ function kesobbHivando(cim, port) {
 // környezetből szűkíthetik (`KOINO_KERET` = „bájt,kérés”). Az osztály (KK4): a KÖTÉSEM (a tábla-kulcsa a kötés-jegyzékemben
 // — a saját cserém, nem kerül a keret alá), egy bizonyított TAG (zárt koinóban), különben IDEGEN.
 
-let kiszolgalasiKeretPeldany = null;
-const keretKiirva = new Map();      // társ → mikor írtuk ki utoljára, hogy „később” (a napló ne teljen meg)
+// (a keret példánya és a kiírás jegyzéke készülék-szintű — a gyár előtt, D119 ④a: a családban egy keret)
 
 async function kiszolgalasiKeretHatara() {
   const k = String(process.env.KOINO_KERET ?? '').split(',').map((x) => Number.parseInt(x, 10));
@@ -3722,8 +3734,11 @@ async function keretAllasIrasa(keret) {
   }
 }
 
+// ⭐ D119 (④a): a családban EGY keret, EGY határral és EGY feljegyzéssel — a fő koinóé (a készülék kiszolgálója az ő nevén fut,
+// a `kiszolgalas keret` is azt állítja, és a `kiszolgalas` az ő `keret.json`-jét olvassa). ⛔ Különben a határt mindig az a
+// családtag szabná meg, amelyik épp kérdez: a gyermek kiinduló kerete a szülőre beállított szűk keretet felülírná.
 async function kiszolgalasiKeretem() {
-  const hatar = await kiszolgalasiKeretHatara();
+  const hatar = await (csaladFo?.kiszolgalasiKeretHatara ?? kiszolgalasiKeretHatara)();
   if (!kiszolgalasiKeretPeldany) kiszolgalasiKeretPeldany = ujKeret(hatar);
   else keretHatara(kiszolgalasiKeretPeldany, hatar);
   return kiszolgalasiKeretPeldany;
@@ -3787,7 +3802,7 @@ function kiszolgalasiKeretKapcsolo() {
     async feljegyez(t) {
       const keret = await kiszolgalasiKeretem();
       keretFeljegyzes(keret, { tars: await keretTarsa(t), osztaly: await keretOsztalya(t), bajt: t.bajt ?? 0, keres: t.keres ?? 0 });
-      await keretAllasIrasa(keret);
+      await (csaladFo?.keretAllasIrasa ?? keretAllasIrasa)(keret);
     }
   };
 }
@@ -4481,6 +4496,218 @@ async function csereKihagyhato(alairo, felKor) {
   }
 }
 
+/**
+ * ⭐ A FÜGGŐ KÉRELEM választása egy társhoz — a munka elején (`resMunka`; D119 ④c óta külön függvény: a család közös koinóinak
+ * munkája is ezzel kezd, a saját állapotával). Semmit nem ír.
+ * @returns {Promise<{fk?: Object, sorozat?: Array<Object>}|null>}
+ */
+async function fuggoKerelemValasztasa(allapot, tars) {
+  // ⭐⭐ D92/1: FÜGGŐ KÉRELEM ehhez a társhoz? — a célja ez a cím, vagy egy ismeretlen bekopogó, miközben
+  // kopogtatunk (a tartó a kopogtató témáján látta, hogy kérünk tőle). Akkor a csere helyett a kérelem fut.
+  // ⚠️ (2026-10-19, a ⑦b próba megnevezett bukása): a „már próbáltuk” jel IDŐRE szól, nem a futás végéig — egy
+  // átmenetileg néma tartó (épp indul, terhelt: „a másik fél nem válaszol”) különben a kérelem lejáratáig (két óra) nem
+  // kapna újra esélyt ettől a futó őrjárattól. Ugyanazt a társat ugyanazzal a kérelemmel legfeljebb kétpercenként.
+  allapot.kerelemProbaltak ??= new Map();
+  const ny = await kerelmekOlvasasa();
+  const nemProbalt = (x) => ujraProbalhato(allapot.kerelemProbaltak, x.az + '|' + tars.cim + ':' + tars.port, Date.now(),
+    KERELEM_UJRAPROBA);
+  // ⭐ D102 (J4): a társ azt viszi, amelyiknek a céllistáján ő áll a legelöl (a már próbáltakat kihagyva).
+  let fk = tarshozIllo(ny, tars.cim, tars.port, (x) => !nemProbalt(x));
+  // ⭐ D102 (J3): ha több fejléc- vagy törzs-kérelem is hozzá szól, egy SOROZATBAN megy (egy kapcsolaton).
+  const sorozatba = (x) => x.fajta === 'fejlecek' || x.fajta === 'torzs';
+  if (fk && sorozatba(fk)) {
+    const sorozat = tarshozIllok(ny, tars.cim, tars.port, (x) => !nemProbalt(x) || !sorozatba(x), SOROZAT_KORLAT);
+    if (sorozat.length > 1) return { sorozat };
+  }
+  // ⭐ A ház (D100): a „miközben kopogtatunk” pontosan — a kérelem egy kopogtató témáján TÉNYLEG jelentkeztünk (az
+  // őrjárat címjegyzék-köre: `bejelentettKopogtatok`). A lap magától ír be kérelmet; e nélkül minden új bekopogó (egy
+  // csatlakozó készülék kézi cseréje is) a csere helyett egy kérelmet kapna, amit nem tud kiszolgálni (mérve).
+  const kopogtattunk = (x) => x.kopogtatok.some((k) => allapot.bejelentettKopogtatok?.has(k.fajta + ':' + k.kulcs));
+  if (!fk && tars.bekopogo) fk = ny.fuggo.find((x) => kopogtattunk(x) && nemProbalt(x)) ?? null;
+  return fk ? { fk } : null;
+}
+
+/**
+ * ⭐⭐ D119 (④b): A KÖR KOINÓ-SZINTŰ CÉLJAI — a raj (D97/2), a befejezetlen fájlok további tartói (D114), a függő kérelmek
+ * céljai és a kopogtatók (D92/1), a továbbított kérelmek válaszának címzettjei (D92/1 (c)). A családi őrjárat a család minden
+ * példányától elkéri (a készülék-szintű célok — a kötések, a friss és az induló címek — egyszer, az őrjáratban).
+ * @param {Object} allapot - a példány munka-állapota
+ * @param {Array<{hoszt: string, port: number, alairo: string|null}>} celok - a kör eddigi céljai (a fájl-források korlátjához)
+ * @returns {Promise<{celok: Array<{hoszt: string, port: number, alairo: string|null}>, fajlForrasok: Set<string>}>}
+ */
+async function korCeljaim(allapot, celok) {
+  const kk = allapot.koinoJel ?? '';
+  const ki = [];
+  const fajlForrasok = new Set();
+  // ⭐⭐ D97/2: A RAJ A KÖRBEN — a szigorú (b) alatt a vállalt szeleteim tartói (előbb a változottaké, aztán a forgatás).
+  try {
+    for (const c of await rajKorCeljaim(allapot)) ki.push({ hoszt: c.hoszt, port: c.port, alairo: c.alairo });
+  } catch (hiba) { console.warn('a raj-célok összeállítása nem sikerült', { ok: hiba.message }); }
+  // ⭐⭐ D114 (T2 (B) — Csaba: „Aktívan, korlátosan”): a BEFEJEZETLEN (több szeletes) hiányzó fájlok további ismert
+  // tartói — körönként legfeljebb kettő, egy fájlhoz a körben lévőkkel együtt legfeljebb három. A randevújuk a közös
+  // munkán ugyanazt a fájlt hozza: a fájl több forrásból jön, és a teher a tartók között oszlik meg.
+  try {
+    const aktiv = await aktivFajlForrasCeljai([...celok, ...ki]);
+    for (const c of aktiv) { ki.push({ hoszt: c.cim, port: c.port, alairo: c.alairo }); fajlForrasok.add(c.alairo); }
+    if (aktiv.length) {
+      kiir(SZIN.halvany + '  · ' + ora() + ' ' + kk + aktiv.length + ' fájl-forrást is hívok — egy befejezetlen fájl további'
+        + ' tartói (D114)' + SZIN.vege);
+    }
+  } catch (hiba) { console.warn('a fájl-források összeállítása nem sikerült', { ok: hiba.message }); }
+  // ⭐⭐ D92/1: a FÜGGŐ KÉRELMEIM céljai (a tartók, akiktől kérek) — és a KOPOGTATÓK (akik a kopogtató
+  // témáimon jelezték, hogy tőlem kérnek): mindkét fél kopog, így a rés két NAT között is megnyílik.
+  const ny = lejartakKivetele(await kerelmekOlvasasa(), Date.now());
+  await kerelmekIrasa(ny);
+  for (const c of fuggoCelok(ny)) ki.push({ hoszt: c.hoszt, port: c.port, alairo: c.alairo ?? null });
+  // ⭐ D92/1 (c): akinek egy továbbadott kérelem válaszát viszem vissza.
+  tovabbitasokTakaritasa();
+  for (const t of tovabbitasok.values()) if (t.valasz) ki.push({ hoszt: t.honnan.cim, port: Number(t.honnan.port), alairo: null });
+  for (const [kulcs, k] of allapot.kopogtatok ?? new Map()) {
+    if (k.lejar < Date.now()) { allapot.kopogtatok.delete(kulcs); continue; }
+    ki.push({ hoszt: k.cim, port: k.port, alairo: null });
+  }
+  return { celok: ki, fajlForrasok };
+}
+
+/**
+ * ⭐⭐ D119 (④d): A KOINÓ HÁZTARTÁSA az őrjárat háttér-munkájában — a címjegyzék-kör (a hirdetés, a kopogtatók), a
+ * felszabadítás, az előléptetés, a csomagok, a tömörítés, a kereső-tár, a felderítés, a fájl-tár és a postafiók. A
+ * családi őrjárat a család minden példányára sorban lefuttatja (a saját munka-állapotával — a kopogtatói ott élnek).
+ * @param {Object} allapot - a példány munka-állapota (a fő koinóé az őrjárat `res`-e)
+ * @param {{port: number, sikeres: number}} kor - a kapu portja és a kör eredménye (a felszabadításhoz)
+ */
+async function orjaratHazimunkaja(allapot, { port, sikeres }) {
+  const kk = allapot.koinoJel ?? '';   // a napló a nem fő koinó sorait megjelöli
+  // ⭐⭐ D91/3: A CÍMJEGYZÉK HIRDETÉSE — ~20 percenként (a háló 30–60 perc alatt felejt, 58. mérés): a saját
+  // gyökér-darabom, és a beállítás szerint néhány vállalt szeletem. ⚠️ Segédeszköz: a hibája nem dönti el a kört.
+  // ⚠️ A HÁTTÉRBEN: egy bejelentés 7–17 mp (58. mérés) — a kört nem tarthatja fel, és egyszerre egy fut.
+  // ⭐ D92/1: ha egy függő kérelem kopogtató témáján még nem jelentkeztünk, nem várunk 20 percet.
+  if (!allapot.hirdetesFut) {
+    const kellene = fuggoKopogtatok(await kerelmekOlvasasa()).map((k) => k.fajta + ':' + k.kulcs);
+    if (kellene.some((k) => !(allapot.bejelentettKopogtatok ?? new Set()).has(k))) allapot.utolsoHirdetes = 0;
+  }
+  if (!allapot.hirdetesFut && Date.now() - (allapot.utolsoHirdetes ?? 0) >= HIRDETES_KOZ) {
+    allapot.utolsoHirdetes = Date.now();
+    allapot.hirdetesFut = cimjegyzekKor(allapot.sajatKulsoUdp?.port ?? port)
+      .then((h) => {
+        // ⚠️ A „nem értem el a DHT-t" és a „senki nem tárolta" két külön dolog (a 40. mérés tanulsága).
+        const tarolt = h.eredmeny.filter((e) => e.tarolta > 0).length;
+        const elerte = h.eredmeny.some((e) => e.probalt > 0);
+        kiir(SZIN.halvany + '  📇 ' + ora() + ' ' + kk + 'címjegyzék: ' + (elerte
+          ? tarolt + '/' + h.eredmeny.length + ' téma a DHT-n (' + ((h.forgalom.ki + h.forgalom.be) / 1024)
+            .toFixed(1) + ' KB)'
+          : 'a DHT most nem érhető el (egyetlen gép sem felelt) — a raj ettől még működik') + SZIN.vege);
+        // ⭐⭐ D92/1: akik a kopogtató témáimon jelezték, hogy tőlem kérnek — a következő körökben feléjük is
+        // kopogok (30 percig). A saját címemet kihagyom.
+        allapot.bejelentettKopogtatok = new Set(h.bejelentett);
+        allapot.kopogtatok ??= new Map();
+        const sajat = allapot.sajatKulsoUdp ? allapot.sajatKulsoUdp.cim + ':' + allapot.sajatKulsoUdp.port : null;
+        let ujKopogtato = 0;
+        for (const k of h.kopogtatok) {
+          const kulcs = k.cim + ':' + k.port;
+          if (kulcs === sajat || ((/^127\./.test(k.cim) || k.cim === '::1') && k.port === port)) continue;
+          if (!allapot.kopogtatok.has(kulcs)) ujKopogtato++;
+          allapot.kopogtatok.set(kulcs, { cim: k.cim, port: k.port, lejar: Date.now() + KOPOGTATO_ELEVULES });
+        }
+        if (ujKopogtato || h.bejelentve) {
+          kiir(SZIN.halvany + '  🚪 ' + ora() + ' ' + kk + 'kopogtatás: ' + (ujKopogtato ? ujKopogtato + ' kérő vár rám' : '')
+            + (ujKopogtato && h.bejelentve ? ' · ' : '') + (h.bejelentve ? h.bejelentve + ' tartónál jelentkeztem' : '')
+            + SZIN.vege);
+        }
+        // ⭐ D107 L2 (③c): a régióm többi tartója ugyanígy a kör céljai közé (a csere a közös régiót egyezteti).
+        // ⛔ A kopogtatók UTÁN (mérve — a D92/1 kopogtatás-próba): ha előbb jön, egy kérő, aki a régiómnak is
+        // tartója, már ismertnek látszik, és a „kérő vár rám” jelzés elmarad.
+        let ujRegioTars = 0;
+        for (const k of h.regioTarsak ?? []) {
+          const kulcs = k.cim + ':' + k.port;
+          if (kulcs === sajat || ((/^127\./.test(k.cim) || k.cim === '::1') && k.port === port)) continue;
+          if (!allapot.kopogtatok.has(kulcs)) ujRegioTars++;
+          allapot.kopogtatok.set(kulcs, { cim: k.cim, port: k.port, lejar: Date.now() + KOPOGTATO_ELEVULES });
+        }
+        if (ujRegioTars) {
+          kiir(SZIN.halvany + '  🔍 ' + ora() + ' ' + kk + 'a kereső-régióm ' + ujRegioTars + ' további tartója a DHT-n — a kör'
+            + ' céljai közé' + SZIN.vege);
+        }
+      })
+      .catch((hiba) => {
+        kiir(SZIN.halvany + '  ⚠ ' + kk + 'a címjegyzék hirdetése most nem sikerült: ' + hiba.message + SZIN.vege);
+      })
+      .finally(() => { allapot.hirdetesFut = null; });
+  }
+
+  // ⭐⭐ ÉS A HÁZTARTÁS: az elakadt tudatpontok visszavétele (2026-09-07).
+  // A készülék magától könyvel — de csak megülepedés után, mert egy késve érkező,
+  // határidőn belüli szavazat még visszafordíthatja a törlést. ⚠️ A csere UTÁN
+  // fut, nem előtte: így a friss események már beleszámítanak a döntésbe.
+  try {
+    // ⭐ A KÖR EREDMÉNYE DÖNTI EL, HOGY VOLT-E BULI: ha egyetlen társ sem felelt, ez
+    // a kör nem bizonyít semmit — a néma kör nem buli.
+    await elakadtPontokFelszabaditasa(true, MEGULEPEDES_BULIK, sikeres);
+  } catch (hiba) {
+    // Best-effort: a könyvelés hibája NE akassza meg az őrjáratot.
+    kiir(SZIN.halvany + '  ⚠ a felszabadítás most nem sikerült: ' + hiba.message + SZIN.vege);
+  }
+
+  // ⭐ B/2: az előléptetés (ami az átmenetiben van, de már vállalom) — körönként.
+  try { await atmenetiElolepetese(); } catch (hiba) {
+    kiir(SZIN.halvany + '  ⚠ az előléptetés most nem sikerült: ' + hiba.message + SZIN.vege);
+  }
+
+  // ⭐⭐ D85 T3: A SAJÁT LEZÁRT, TÖBB ÉRINTETTES JAVASLATAIM DÖNTÉSI CSOMAGJA (a (B): a töredékekbe).
+  // ⚠️ A csere UTÁN, mint a felszabadítás: a friss események már beleszámítanak. Ismételhető — ha
+  // minden ott van már, nem ír semmit.
+  try {
+    // ⭐ D93/2: a tagsági csomagom (ha tag lettem, vagy rövidebb láncot kaptam) — a saját azonosság-szeletembe.
+    try {
+      const tc = await tagsagiCsomagKiadasa(kornyezet);
+      if (tc.kiadva) kiir(SZIN.halvany + '  🪪 ' + ora() + ' ' + kk + 'tagsági csomag kiadva (' + tc.melyseg + '. szint)' + SZIN.vege);
+      // ⭐ D94: a 2. lépcső bemondása (ha 2. lépcsős lettem, vagy új érvényes tanúsítást kaptam).
+      const lb = await lepcsoBemondasKiadasa(kornyezet);
+      if (lb.kiadva) kiir(SZIN.halvany + '  🪪 ' + ora() + ' ' + kk + '2. lépcső-bemondás: ' + lb.ok + SZIN.vege);
+    } catch (hiba) { console.warn('a tagsági csomag kiadása nem sikerült', { ok: hiba.message }); }
+    const { kiadva } = await dontesiCsomagokKiadasa(kornyezet, { csakSajat: true });
+    if (kiadva.length) {
+      kiir(SZIN.halvany + '  📦 ' + ora() + ' ' + kk + '' + kiadva.length + ' döntési csomag a töredékekbe'
+        + ' (a lezárt, több érintettes javaslataimhoz)' + SZIN.vege);
+    }
+    // ⭐ D95/1: a nagy szelet teljes tartójaként (a „mindent” beállítással) a lezárt döntések összegzése.
+    const lo = await lezarasiOsszegzesekKiadasa();
+    if (lo) kiir(SZIN.halvany + '  📦 ' + ora() + ' ' + kk + '' + lo + ' lezárási összegzés a nagy szeletű döntésekhez' + SZIN.vege);
+    // ⭐ D75/1, D73: naponta egyszer a tár tömörítése (a szigorú (b) alatt; csak az író — az őrjárat az).
+    if (tar.iroE?.() && await tomoritesEsedekesE()) {
+      const t = await tomoritesFuttatasa();
+      if (t.kivett) kiir(SZIN.halvany + '  🗜 ' + ora() + ' ' + kk + 'tömörítés: ' + t.kivett + ' esemény az átmeneti tárba (amit már nem vállalok)' + SZIN.vege);
+    }
+    // ⭐ D107 L3 (④a, a ⑥ magja): óránként a kereső-tár tömörítése (a lejárt és a régióimon kívül eső kiesik).
+    if (Date.now() - (allapot.keresoTomorites ?? 0) >= KERESO_TOMORITES_KOZ) {
+      allapot.keresoTomorites = Date.now();
+      const kt = await keresoTarTomoritese();
+      if (kt) kiir(SZIN.halvany + '  🗜 ' + ora() + ' ' + kk + 'kereső-tár: ' + kt + ' bejegyzés kiesett (lejárt, vagy a régióimon kívül)' + SZIN.vege);
+    }
+    // ⭐ D112 ③: a felderítés köre — a futó felderítések egy lépése (rögzítés, háttér-kérések).
+    try {
+      const fk = await felderitesKor();
+      if (fk.kert || fk.lezart.length) {
+        kiir(SZIN.halvany + '  📷 ' + ora() + ' ' + kk + 'felderítés: ' + (fk.kert ? fk.kert + ' kérés' : '')
+          + (fk.kert && fk.lezart.length ? ' · ' : '') + (fk.lezart.length ? fk.lezart.length + ' lezárult' : '') + SZIN.vege);
+      }
+    } catch (hiba) { console.warn('a felderítés köre most nem ment', { ok: hiba.message }); }
+    // ⭐ D112 ① (F3): a fájl-tár kerete (ritkítva — `FAJL_TAKARITAS_KOZ`).
+    try {
+      const ft = await fajlTarTakaritasa();
+      if (ft?.torolt) kiir(SZIN.halvany + '  🗜 ' + ora() + ' ' + kk + 'fájl-tár: ' + ft.torolt + ' nem vállalt fájl kiesett ('
+        + adatMennyiseg({ bajtKuldott: ft.felszabadult }) + ' — újra elhozható)' + SZIN.vege);
+    } catch (hiba) { console.warn('a fájl-tár takarítása most nem ment', { ok: hiba.message }); }
+    // ⭐ D103: a postafiók és a készülék saját értesítése (zárt lapnál is — a felülettel zár alatt váltják egymást).
+    try {
+      const e = await orjaratErtesitesei();
+      if (e.kuldve) kiir(SZIN.halvany + '  🔔 ' + ora() + ' ' + kk + '' + e.kuldve + ' értesítés a készüléken' + SZIN.vege);
+    } catch (hiba) { console.warn('a postafiók most nem számolható', { ok: hiba.message }); }
+  } catch (hiba) {
+    kiir(SZIN.halvany + '  ⚠ a döntési csomag most nem ment ki: ' + hiba.message + SZIN.vege);
+  }
+}
+
 // ⭐ D119 (③): a munka-készítő a családi (`csaladMunkaKeszito`, a gyár után): a kézfogás munkánként egy (D89/1 — a csere és a
 // randevú ugyanazon a VÉDETT résen megy, az egyszeri kulcs a munka végén elvész), és a fő példány munkája után a család közös
 // koinóié jön, ugyanazon a résen.
@@ -4560,30 +4787,11 @@ function resMunka(allapot, halo, tars) {
       }
       return { uj: 0, kuldott: 0, korok: 1, bajt: 0, alairo: null, tovabbadva: az };
     }
-    // ⭐⭐ D92/1: FÜGGŐ KÉRELEM ehhez a társhoz? — a célja ez a cím, vagy egy ismeretlen bekopogó, miközben
-    // kopogtatunk (a tartó a kopogtató témáján látta, hogy kérünk tőle). Akkor a csere helyett a kérelem fut.
     {
-      // ⚠️ (2026-10-19, a ⑦b próba megnevezett bukása): a „már próbáltuk” jel IDŐRE szól, nem a futás végéig — egy
-      // átmenetileg néma tartó (épp indul, terhelt: „a másik fél nem válaszol”) különben a kérelem lejáratáig (két óra) nem
-      // kapna újra esélyt ettől a futó őrjárattól. Ugyanazt a társat ugyanazzal a kérelemmel legfeljebb kétpercenként.
-      allapot.kerelemProbaltak ??= new Map();
-      const ny = await kerelmekOlvasasa();
-      const nemProbalt = (x) => ujraProbalhato(allapot.kerelemProbaltak, x.az + '|' + tars.cim + ':' + tars.port, Date.now(),
-        KERELEM_UJRAPROBA);
-      // ⭐ D102 (J4): a társ azt viszi, amelyiknek a céllistáján ő áll a legelöl (a már próbáltakat kihagyva).
-      let fk = tarshozIllo(ny, tars.cim, tars.port, (x) => !nemProbalt(x));
-      // ⭐ D102 (J3): ha több fejléc- vagy törzs-kérelem is hozzá szól, egy SOROZATBAN megy (egy kapcsolaton).
-      const sorozatba = (x) => x.fajta === 'fejlecek' || x.fajta === 'torzs';
-      if (fk && sorozatba(fk)) {
-        const sorozat = tarshozIllok(ny, tars.cim, tars.port, (x) => !nemProbalt(x) || !sorozatba(x), SOROZAT_KORLAT);
-        if (sorozat.length > 1) return await fuggoKerelemSorozatMunkaja(allapot, halo, tars, sorozat);
-      }
-      // ⭐ A ház (D100): a „miközben kopogtatunk” pontosan — a kérelem egy kopogtató témáján TÉNYLEG jelentkeztünk (az
-      // őrjárat címjegyzék-köre: `bejelentettKopogtatok`). A lap magától ír be kérelmet; e nélkül minden új bekopogó (egy
-      // csatlakozó készülék kézi cseréje is) a csere helyett egy kérelmet kapna, amit nem tud kiszolgálni (mérve).
-      const kopogtattunk = (x) => x.kopogtatok.some((k) => allapot.bejelentettKopogtatok?.has(k.fajta + ':' + k.kulcs));
-      if (!fk && tars.bekopogo) fk = ny.fuggo.find((x) => kopogtattunk(x) && nemProbalt(x)) ?? null;
-      if (fk) return await fuggoKerelemMunkaja(allapot, halo, tars, fk);
+      // ⭐⭐ D92/1: FÜGGŐ KÉRELEM ehhez a társhoz? (`fuggoKerelemValasztasa`)
+      const v = await fuggoKerelemValasztasa(allapot, tars);
+      if (v?.sorozat) return await fuggoKerelemSorozatMunkaja(allapot, halo, tars, v.sorozat);
+      if (v?.fk) return await fuggoKerelemMunkaja(allapot, halo, tars, v.fk);
     }
     // ⭐ A FRISS LISTA MINDEN MUNKA ELEJÉN: a postaláda hosszan fut, és a jegyzék elévül.
     allapot.frissUdp = await frissUdpCimek(allapot.udpTarolo, allapot.udpElevules);
@@ -5289,7 +5497,7 @@ return {
   kapuJelzesKiiro, kapuPortja, kapuPortjaFeljegyzese, kepetKeszit, kerelmekIrasa, kerelmekOlvasasa, kereses,
   keresesFuggoAllasa, keresesMegjegyzes, keresoRegioim, keresoTar, keresoTarTomoritese, keretFajl, kesobbHivando,
   ketFokAllapota, keziCsere, keziHibaSzovege, keziKapuNyitasa, kiszolgalasBeallitas, kiszolgalasFajl, kiszolgalasiKeretHatara,
-  kiszolgalasiKeretKapcsolo, kodOlvasoKeszites, koinoErvei, koinoSzuletese, koinoVerzioElonezete, koinoVerzioKeszitese,
+  keretAllasIrasa, kiszolgalasiKeretKapcsolo, kodOlvasoKeszites, koinoErvei, koinoSzuletese, koinoVerzioElonezete, koinoVerzioKeszitese,
   koinoVerzioKiirasa, koltozesElonezete, koltozesVegrehajtasa, kopogtatoTemaBuffer, kornyezet, kornyezetSzam, kotesFeljegyzese,
   kuldoKulcsai, lapHianyzoinakElkerese, laposMegjegyzes, lezarasiOsszegzesekKiadasa, meghivottProfilja, ora,
   orjaratErtesitesei, postafiokFrissitese, postafiokMegjegyzes, postafiokModositasa, programVerzioja, rajKorCeljaim,
@@ -5297,6 +5505,7 @@ return {
   sajatOsszesCim, sajatVallalasa, sikidomMegjegyzes, strukturaMegjegyzes, szabalyokSzovege, szovegKepeiKeresre,
   szovegOlvasoKeszites, tablaKliens, tablaKulcsBiztositasa, tablaraKiiras, tablarolOlvasas, tagsagFigyelmeztetes, tagsagKerdes,
   tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, torzsElemKerese, torzsKerhetoi, torzsHatarBeallitasa,
+  korCeljaim, orjaratHazimunkaja,
   tovabbitasok,
   tovabbitasokTakaritasa, tukorBeallitas, ujKoinoSzuletese,
   // ⭐ D119 (③): a családi munkának (a parancsok nem használják)
@@ -5308,6 +5517,7 @@ return {
 // ⭐ D119 (③): és a család első példánya (a hálózati parancsok a család többi koinóját is megnyitják — `csaladMegnyitasa`).
 const foPeldany = await koinoPeldany(KOINO);
 csaladPeldanyok.set(KOINO, foPeldany);
+csaladFo = foPeldany;
 const {
   ABLAK_KESES_TURES, BEKOPOGO_KORLAT, FAJL_TAKARITAS_KOZ, KERESO_TOMORITES_KOZ, KETFOK, KEZI_KOPOGAS_MS, KOPOGAS_ARA_KORONKENT,
   KOPOGTATO_ELEVULES, POSTAFIOK_SZAMLALO_SZUNET, PROGRAM_GYOKER, SZELET_HIRDETES_KORLAT, adatMennyiseg, aktivFajlForrasCeljai,
@@ -5321,7 +5531,7 @@ const {
   kapuJelzesKiiro, kapuPortja, kapuPortjaFeljegyzese, kepetKeszit, kerelmekIrasa, kerelmekOlvasasa, kereses,
   keresesFuggoAllasa, keresesMegjegyzes, keresoRegioim, keresoTar, keresoTarTomoritese, keretFajl, kesobbHivando,
   ketFokAllapota, keziCsere, keziHibaSzovege, keziKapuNyitasa, kiszolgalasBeallitas, kiszolgalasFajl, kiszolgalasiKeretHatara,
-  kiszolgalasiKeretKapcsolo, kodOlvasoKeszites, koinoErvei, koinoSzuletese, koinoVerzioElonezete, koinoVerzioKeszitese,
+  keretAllasIrasa, kiszolgalasiKeretKapcsolo, kodOlvasoKeszites, koinoErvei, koinoSzuletese, koinoVerzioElonezete, koinoVerzioKeszitese,
   koinoVerzioKiirasa, koltozesElonezete, koltozesVegrehajtasa, kopogtatoTemaBuffer, kornyezet, kornyezetSzam, kotesFeljegyzese,
   kuldoKulcsai, lapHianyzoinakElkerese, laposMegjegyzes, lezarasiOsszegzesekKiadasa, meghivottProfilja, ora,
   orjaratErtesitesei, postafiokFrissitese, postafiokMegjegyzes, postafiokModositasa, programVerzioja, rajKorCeljaim,
@@ -5329,6 +5539,7 @@ const {
   sajatOsszesCim, sajatVallalasa, sikidomMegjegyzes, strukturaMegjegyzes, szabalyokSzovege, szovegKepeiKeresre,
   szovegOlvasoKeszites, tablaKliens, tablaKulcsBiztositasa, tablaraKiiras, tablarolOlvasas, tagsagFigyelmeztetes, tagsagKerdes,
   tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, torzsElemKerese, torzsKerhetoi, torzsHatarBeallitasa,
+  korCeljaim, orjaratHazimunkaja,
   tovabbitasok,
   tovabbitasokTakaritasa, tukorBeallitas, ujKoinoSzuletese
 } = foPeldany;
@@ -5384,6 +5595,42 @@ function kerelemAtadasa() {
   };
 }
 
+/**
+ * ⭐⭐ D119 (④a): A D99 A CSALÁDRA — a társ akkor hagyható ki ebben a körben, ha a VELE legutóbb közösen cserélt koinók
+ * mindegyikében (a családi munka jegyzi — `csaladKozosTarssal`; ha még nem cseréltünk, a fő koinó) nincs mondanivalóm.
+ * @param {string|null} alairo
+ * @param {number} felKor - ms
+ */
+async function csaladCsereKihagyhato(alairo, felKor) {
+  if (typeof alairo !== 'string') return false;
+  const koinok = csaladKozosTarssal.get(alairo) ?? [KOINO];
+  if (!koinok.length) return false;
+  for (const k of koinok) {
+    const p = csaladPeldanyok.get(k);
+    if (!p || !(await p.csereKihagyhato(alairo, felKor))) return false;
+  }
+  return true;
+}
+
+/**
+ * ⭐ D119 (④b): egy családi koinó munka-állapota — a fő koinóé a megadott (`fo`); a többié egyszer készül
+ * (`resAllapotKeszites`), és a készülék-szintű tudást (a friss címek, a saját külső cím) a fő állapotból veszi át.
+ */
+async function csaladAllapota(k, fo) {
+  if (k === KOINO) return fo;
+  if (!csaladAllapotok.has(k)) {
+    const a = await csaladPeldanyok.get(k).resAllapotKeszites({ udpElevules: fo.udpElevules });
+    a.koinoJel = '[' + rovidAzonosito(k) + '] ';
+    csaladAllapotok.set(k, a);
+  }
+  const a = csaladAllapotok.get(k);
+  a.frissUdp = fo.frissUdp;
+  a.sajatKulsoUdp = fo.sajatKulsoUdp;
+  a.allando = fo.allando;
+  a.hirdetendoDhtGepek = fo.hirdetendoDhtGepek;
+  return a;
+}
+
 /** ⭐⭐ D119 (③): a családi munka eredménye — az első (a nyitott koinó) és a többi közös koinó munkája együtt. */
 function csaladEredmenye(elso, tobbi, kozos) {
   if (!tobbi.length) return elso;
@@ -5399,6 +5646,9 @@ function csaladEredmenye(elso, tobbi, kozos) {
  */
 function csaladMunkaKeszito(allapot) {
   return async (nyersHalo, tars) => {
+    // ⭐ D119 (④c): a család másik koinójának FÜGGŐ KÉRELME nem kíván külön utat — a közös koinó munkája (lent) a saját
+    // állapotával fut, és a munka eleje ott is megnézi, van-e kérelme ehhez a társhoz (`fuggoKerelemValasztasa`). Mérve (a
+    // D119 ④ parancssor-próbája): a gyermek kérelme így lemegy — egy külön választás a munka előtt fölösleges volt.
     const halo = await kezfogasUdpResen(nyersHalo, tars.cim, tars.port);
     let elso;
     try {
@@ -5421,7 +5671,8 @@ function csaladMunkaKeszito(allapot) {
         const haloK = await kezfogasUdpResen(nyersHalo, tars.cim, tars.port, { varakozasiIdo: UTOLAGOS_KEZFOGAS_IDO });
         try {
           // ⚠️ A koinó saját fájl-része (nem a fő koinóé) — a kör egyszer összeállított fájl-kérelme a fő koinóé.
-          tobbi.push(await csaladPeldanyok.get(k).resMunka({ ...allapot, korFajlok: null, rajKor: null }, haloK, tars));
+          // ⭐ D119 (④b): a koinó a SAJÁT munka-állapotával (a kopogtatói, a raj-köre, a próbált kérelmei — `csaladAllapota`)
+          tobbi.push(await csaladPeldanyok.get(k).resMunka(await csaladAllapota(k, allapot), haloK, tars));
           lement.push(k);
         } finally {
           haloK.zar();
@@ -5439,6 +5690,13 @@ function csaladMunkaKeszito(allapot) {
     if (bukas) {
       kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' — a család ' + rovidAzonosito(bukas.koino)
         + ' koinójának cseréje elmaradt: ' + bukas.ok + SZIN.vege);
+    }
+    // ⭐ D119 (④a): a D99 a családra — mely koinóink mentek le ezzel a társsal (a következő kör ebből dönt a kihagyásról)
+    const alairo = elso.alairo ?? tobbi.find((r) => r?.alairo)?.alairo ?? null;
+    if (alairo) {
+      csaladKozosTarssal.delete(alairo);
+      csaladKozosTarssal.set(alairo, [...(elso.masKoino ? [] : [KOINO]), ...lement]);
+      while (csaladKozosTarssal.size > 512) csaladKozosTarssal.delete(csaladKozosTarssal.keys().next().value);
     }
     return { ...csaladEredmenye(elso, tobbi, lement), ...(bukas ? { csaladBukas: bukas } : {}) };
   };
@@ -7542,9 +7800,7 @@ try {
       // ⚠️ Bukik-e most a külső cím mérése? Csak a VÁLTOZÁST írjuk ki (40. mérés): egy
       // mobilnet nélküli telefonon körönként ugyanaz a sor csak zaj volna.
       let sajatCimMeresBukik = false;
-      // ⭐ D91/3: mikor hirdettük utoljára a címjegyzéket, és fut-e épp (a hirdetés nem tartja fel a kört).
-      let utolsoHirdetes = 0;
-      let hirdetesFut = null;
+      // (D91/3: a címjegyzék hirdetésének ideje és futása a példány munka-állapotában — D119 ④d)
       // ⭐ A KOPOGÁS SAJÁT ÜTEME (80. mérés): a tábla és a házimunka háttér-munkája (egyszerre egy), és hány kör óta fut.
       let hatterMunka = null;
       let hatterKimaradt = 0;
@@ -7631,45 +7887,28 @@ try {
           celok.push({ hoszt, port: cport, alairo });
         };
         for (const c of kopogasCeljai(kotesJegyzek, res.frissUdp)) felvesz(c.cim, c.port, c.alairo);
-        // ⭐⭐ D97/2: A RAJ A KÖRBEN — a szigorú (b) alatt a vállalt szeleteim tartói (előbb a változottaké, aztán a forgatás).
-        try {
-          for (const c of await rajKorCeljaim(res)) felvesz(c.hoszt, c.port, c.alairo);
-        } catch (hiba) { console.warn('a raj-célok összeállítása nem sikerült', { ok: hiba.message }); }
-        // ⭐⭐ D114 (T2 (B) — Csaba: „Aktívan, korlátosan”): a BEFEJEZETLEN (több szeletes) hiányzó fájlok további ismert
-        // tartói — körönként legfeljebb kettő, egy fájlhoz a körben lévőkkel együtt legfeljebb három. A randevújuk a közös
-        // munkán ugyanazt a fájlt hozza: a fájl több forrásból jön, és a teher a tartók között oszlik meg.
+        // ⭐⭐ D119 (④b): a KOINÓ-SZINTŰ célok (a raj, a befejezetlen fájlok forrásai, a függő kérelmek, a továbbítások, a
+        // kopogtatók) a család minden példányából (a fő elöl), a saját munka-állapotukkal — címre és tábla-kulcsra összefésülve
+        // (egy társnak egy munka: a kapu az azonos aláírójú címeket egy csoportként hívja).
         const fajlForrasCelok = new Set();
-        try {
-          const aktiv = await aktivFajlForrasCeljai(celok);
-          for (const c of aktiv) { felvesz(c.cim, c.port, c.alairo); fajlForrasCelok.add(c.alairo); }
-          if (aktiv.length) {
-            kiir(SZIN.halvany + '  · ' + ora() + ' ' + aktiv.length + ' fájl-forrást is hívok — egy befejezetlen fájl további'
-              + ' tartói (D114)' + SZIN.vege);
-          }
-        } catch (hiba) { console.warn('a fájl-források összeállítása nem sikerült', { ok: hiba.message }); }
-        // ⭐ Az induló címek NEM esnek a kopogás-korlát alá: a listát te töltöd, rövid marad.
-        for (const t of induloLista) felvesz(t.hoszt, Number(t.port));
-        // ⭐⭐ D92/1: a FÜGGŐ KÉRELMEIM céljai (a tartók, akiktől kérek) — és a KOPOGTATÓK (akik a kopogtató
-        // témáimon jelezték, hogy tőlem kérnek): mindkét fél kopog, így a rés két NAT között is megnyílik.
-        {
-          const ny = lejartakKivetele(await kerelmekOlvasasa(), Date.now());
-          await kerelmekIrasa(ny);
-          for (const c of fuggoCelok(ny)) felvesz(c.hoszt, c.port, c.alairo ?? null);
-          // ⭐ D92/1 (c): akinek egy továbbadott kérelem válaszát viszem vissza.
-          tovabbitasokTakaritasa();
-          for (const t of tovabbitasok.values()) if (t.valasz) felvesz(t.honnan.cim, Number(t.honnan.port));
-          for (const [kulcs, k] of res.kopogtatok ?? new Map()) {
-            if (k.lejar < Date.now()) { res.kopogtatok.delete(kulcs); continue; }
-            felvesz(k.cim, k.port);
+        for (const [k, pk] of csaladPeldanyok) {
+          try {
+            const kc = await pk.korCeljaim(await csaladAllapota(k, res), celok);
+            for (const c of kc.celok) felvesz(c.hoszt, c.port, c.alairo ?? null);
+            for (const a of kc.fajlForrasok) fajlForrasCelok.add(a);
+          } catch (hiba) {
+            console.warn('a kör céljai nem állnak össze', { koino: k, ok: hiba.message });
           }
         }
+        // ⭐ Az induló címek NEM esnek a kopogás-korlát alá: a listát te töltöd, rövid marad.
+        for (const t of induloLista) felvesz(t.hoszt, Number(t.port));
         // ⭐⭐ D99: akivel a legutóbbi fél körön belül már cseréltünk, és azóta nincs újdonságom, azt most nem hívom.
         tar.frissit?.();
         let kihagyott = 0;
         for (let i = celok.length - 1; i >= 0; i--) {
           // ⚠️ D114: a fájl-forrást a fájl miatt hívjuk, nem az újdonságért — a D99 kihagyása rá nem vonatkozik.
           if (fajlForrasCelok.has(celok[i].alairo)) continue;
-          if (await csereKihagyhato(celok[i].alairo, kozMs / 2)) { celok.splice(i, 1); kihagyott++; }
+          if (await csaladCsereKihagyhato(celok[i].alairo, kozMs / 2)) { celok.splice(i, 1); kihagyott++; }   // ⭐ D119 (④a)
         }
         if (kihagyott) {
           kiir(SZIN.halvany + '  · ' + ora() + ' ' + kihagyott + ' társat most nem hívok — ebben a fél körben már cseréltünk, és'
@@ -7911,133 +8150,14 @@ try {
             // TCP-s elhozás kikerült (D69/2). *A buli után fenntartott kapcsolat (Csaba,
             // 2026-09-12) most maga a rés — ugyanazon a foglalaton, amin a csere ment.*
 
-            // ⭐⭐ D91/3: A CÍMJEGYZÉK HIRDETÉSE — ~20 percenként (a háló 30–60 perc alatt felejt, 58. mérés): a saját
-            // gyökér-darabom, és a beállítás szerint néhány vállalt szeletem. ⚠️ Segédeszköz: a hibája nem dönti el a kört.
-            // ⚠️ A HÁTTÉRBEN: egy bejelentés 7–17 mp (58. mérés) — a kört nem tarthatja fel, és egyszerre egy fut.
-            // ⭐ D92/1: ha egy függő kérelem kopogtató témáján még nem jelentkeztünk, nem várunk 20 percet.
-            if (!hirdetesFut) {
-              const kellene = fuggoKopogtatok(await kerelmekOlvasasa()).map((k) => k.fajta + ':' + k.kulcs);
-              if (kellene.some((k) => !(res.bejelentettKopogtatok ?? new Set()).has(k))) utolsoHirdetes = 0;
-            }
-            if (!hirdetesFut && Date.now() - utolsoHirdetes >= HIRDETES_KOZ) {
-              utolsoHirdetes = Date.now();
-              hirdetesFut = cimjegyzekKor(res.sajatKulsoUdp?.port ?? port)
-                .then((h) => {
-                  // ⚠️ A „nem értem el a DHT-t" és a „senki nem tárolta" két külön dolog (a 40. mérés tanulsága).
-                  const tarolt = h.eredmeny.filter((e) => e.tarolta > 0).length;
-                  const elerte = h.eredmeny.some((e) => e.probalt > 0);
-                  kiir(SZIN.halvany + '  📇 ' + ora() + ' címjegyzék: ' + (elerte
-                    ? tarolt + '/' + h.eredmeny.length + ' téma a DHT-n (' + ((h.forgalom.ki + h.forgalom.be) / 1024)
-                      .toFixed(1) + ' KB)'
-                    : 'a DHT most nem érhető el (egyetlen gép sem felelt) — a raj ettől még működik') + SZIN.vege);
-                  // ⭐⭐ D92/1: akik a kopogtató témáimon jelezték, hogy tőlem kérnek — a következő körökben feléjük is
-                  // kopogok (30 percig). A saját címemet kihagyom.
-                  res.bejelentettKopogtatok = new Set(h.bejelentett);
-                  res.kopogtatok ??= new Map();
-                  const sajat = res.sajatKulsoUdp ? res.sajatKulsoUdp.cim + ':' + res.sajatKulsoUdp.port : null;
-                  let ujKopogtato = 0;
-                  for (const k of h.kopogtatok) {
-                    const kulcs = k.cim + ':' + k.port;
-                    if (kulcs === sajat || ((/^127\./.test(k.cim) || k.cim === '::1') && k.port === port)) continue;
-                    if (!res.kopogtatok.has(kulcs)) ujKopogtato++;
-                    res.kopogtatok.set(kulcs, { cim: k.cim, port: k.port, lejar: Date.now() + KOPOGTATO_ELEVULES });
-                  }
-                  if (ujKopogtato || h.bejelentve) {
-                    kiir(SZIN.halvany + '  🚪 ' + ora() + ' kopogtatás: ' + (ujKopogtato ? ujKopogtato + ' kérő vár rám' : '')
-                      + (ujKopogtato && h.bejelentve ? ' · ' : '') + (h.bejelentve ? h.bejelentve + ' tartónál jelentkeztem' : '')
-                      + SZIN.vege);
-                  }
-                  // ⭐ D107 L2 (③c): a régióm többi tartója ugyanígy a kör céljai közé (a csere a közös régiót egyezteti).
-                  // ⛔ A kopogtatók UTÁN (mérve — a D92/1 kopogtatás-próba): ha előbb jön, egy kérő, aki a régiómnak is
-                  // tartója, már ismertnek látszik, és a „kérő vár rám” jelzés elmarad.
-                  let ujRegioTars = 0;
-                  for (const k of h.regioTarsak ?? []) {
-                    const kulcs = k.cim + ':' + k.port;
-                    if (kulcs === sajat || ((/^127\./.test(k.cim) || k.cim === '::1') && k.port === port)) continue;
-                    if (!res.kopogtatok.has(kulcs)) ujRegioTars++;
-                    res.kopogtatok.set(kulcs, { cim: k.cim, port: k.port, lejar: Date.now() + KOPOGTATO_ELEVULES });
-                  }
-                  if (ujRegioTars) {
-                    kiir(SZIN.halvany + '  🔍 ' + ora() + ' a kereső-régióm ' + ujRegioTars + ' további tartója a DHT-n — a kör'
-                      + ' céljai közé' + SZIN.vege);
-                  }
-                })
-                .catch((hiba) => {
-                  kiir(SZIN.halvany + '  ⚠ a címjegyzék hirdetése most nem sikerült: ' + hiba.message + SZIN.vege);
-                })
-                .finally(() => { hirdetesFut = null; });
-            }
-
-            // ⭐⭐ ÉS A HÁZTARTÁS: az elakadt tudatpontok visszavétele (2026-09-07).
-            // A készülék magától könyvel — de csak megülepedés után, mert egy késve érkező,
-            // határidőn belüli szavazat még visszafordíthatja a törlést. ⚠️ A csere UTÁN
-            // fut, nem előtte: így a friss események már beleszámítanak a döntésbe.
-            try {
-              // ⭐ A KÖR EREDMÉNYE DÖNTI EL, HOGY VOLT-E BULI: ha egyetlen társ sem felelt, ez
-              // a kör nem bizonyít semmit — a néma kör nem buli.
-              await elakadtPontokFelszabaditasa(true, MEGULEPEDES_BULIK, sikeresEbbenAKorben);
-            } catch (hiba) {
-              // Best-effort: a könyvelés hibája NE akassza meg az őrjáratot.
-              kiir(SZIN.halvany + '  ⚠ a felszabadítás most nem sikerült: ' + hiba.message + SZIN.vege);
-            }
-
-            // ⭐ B/2: az előléptetés (ami az átmenetiben van, de már vállalom) — körönként.
-            try { await atmenetiElolepetese(); } catch (hiba) {
-              kiir(SZIN.halvany + '  ⚠ az előléptetés most nem sikerült: ' + hiba.message + SZIN.vege);
-            }
-
-            // ⭐⭐ D85 T3: A SAJÁT LEZÁRT, TÖBB ÉRINTETTES JAVASLATAIM DÖNTÉSI CSOMAGJA (a (B): a töredékekbe).
-            // ⚠️ A csere UTÁN, mint a felszabadítás: a friss események már beleszámítanak. Ismételhető — ha
-            // minden ott van már, nem ír semmit.
-            try {
-              // ⭐ D93/2: a tagsági csomagom (ha tag lettem, vagy rövidebb láncot kaptam) — a saját azonosság-szeletembe.
+            // ⭐⭐ D119 (④d): A HÁZTARTÁS KOINÓNKÉNT — a család minden példánya a saját munka-állapotával (a fő elöl).
+            for (const [k, pk] of csaladPeldanyok) {
               try {
-                const tc = await tagsagiCsomagKiadasa(kornyezet);
-                if (tc.kiadva) kiir(SZIN.halvany + '  🪪 ' + ora() + ' tagsági csomag kiadva (' + tc.melyseg + '. szint)' + SZIN.vege);
-                // ⭐ D94: a 2. lépcső bemondása (ha 2. lépcsős lettem, vagy új érvényes tanúsítást kaptam).
-                const lb = await lepcsoBemondasKiadasa(kornyezet);
-                if (lb.kiadva) kiir(SZIN.halvany + '  🪪 ' + ora() + ' 2. lépcső-bemondás: ' + lb.ok + SZIN.vege);
-              } catch (hiba) { console.warn('a tagsági csomag kiadása nem sikerült', { ok: hiba.message }); }
-              const { kiadva } = await dontesiCsomagokKiadasa(kornyezet, { csakSajat: true });
-              if (kiadva.length) {
-                kiir(SZIN.halvany + '  📦 ' + ora() + ' ' + kiadva.length + ' döntési csomag a töredékekbe'
-                  + ' (a lezárt, több érintettes javaslataimhoz)' + SZIN.vege);
+                await pk.orjaratHazimunkaja(await csaladAllapota(k, res), { port, sikeres: sikeresEbbenAKorben });
+              } catch (hiba) {
+                kiir(SZIN.halvany + '  ⚠ a(z) ' + rovidAzonosito(k) + ' koinó háztartása most nem ment végig: ' + hiba.message
+                  + SZIN.vege);
               }
-              // ⭐ D95/1: a nagy szelet teljes tartójaként (a „mindent” beállítással) a lezárt döntések összegzése.
-              const lo = await lezarasiOsszegzesekKiadasa();
-              if (lo) kiir(SZIN.halvany + '  📦 ' + ora() + ' ' + lo + ' lezárási összegzés a nagy szeletű döntésekhez' + SZIN.vege);
-              // ⭐ D75/1, D73: naponta egyszer a tár tömörítése (a szigorú (b) alatt; csak az író — az őrjárat az).
-              if (tar.iroE?.() && await tomoritesEsedekesE()) {
-                const t = await tomoritesFuttatasa();
-                if (t.kivett) kiir(SZIN.halvany + '  🗜 ' + ora() + ' tömörítés: ' + t.kivett + ' esemény az átmeneti tárba (amit már nem vállalok)' + SZIN.vege);
-              }
-              // ⭐ D107 L3 (④a, a ⑥ magja): óránként a kereső-tár tömörítése (a lejárt és a régióimon kívül eső kiesik).
-              if (Date.now() - (res.keresoTomorites ?? 0) >= KERESO_TOMORITES_KOZ) {
-                res.keresoTomorites = Date.now();
-                const kt = await keresoTarTomoritese();
-                if (kt) kiir(SZIN.halvany + '  🗜 ' + ora() + ' kereső-tár: ' + kt + ' bejegyzés kiesett (lejárt, vagy a régióimon kívül)' + SZIN.vege);
-              }
-              // ⭐ D112 ③: a felderítés köre — a futó felderítések egy lépése (rögzítés, háttér-kérések).
-              try {
-                const fk = await felderitesKor();
-                if (fk.kert || fk.lezart.length) {
-                  kiir(SZIN.halvany + '  📷 ' + ora() + ' felderítés: ' + (fk.kert ? fk.kert + ' kérés' : '')
-                    + (fk.kert && fk.lezart.length ? ' · ' : '') + (fk.lezart.length ? fk.lezart.length + ' lezárult' : '') + SZIN.vege);
-                }
-              } catch (hiba) { console.warn('a felderítés köre most nem ment', { ok: hiba.message }); }
-              // ⭐ D112 ① (F3): a fájl-tár kerete (ritkítva — `FAJL_TAKARITAS_KOZ`).
-              try {
-                const ft = await fajlTarTakaritasa();
-                if (ft?.torolt) kiir(SZIN.halvany + '  🗜 ' + ora() + ' fájl-tár: ' + ft.torolt + ' nem vállalt fájl kiesett ('
-                  + adatMennyiseg({ bajtKuldott: ft.felszabadult }) + ' — újra elhozható)' + SZIN.vege);
-              } catch (hiba) { console.warn('a fájl-tár takarítása most nem ment', { ok: hiba.message }); }
-              // ⭐ D103: a postafiók és a készülék saját értesítése (zárt lapnál is — a felülettel zár alatt váltják egymást).
-              try {
-                const e = await orjaratErtesitesei();
-                if (e.kuldve) kiir(SZIN.halvany + '  🔔 ' + ora() + ' ' + e.kuldve + ' értesítés a készüléken' + SZIN.vege);
-              } catch (hiba) { console.warn('a postafiók most nem számolható', { ok: hiba.message }); }
-            } catch (hiba) {
-              kiir(SZIN.halvany + '  ⚠ a döntési csomag most nem ment ki: ' + hiba.message + SZIN.vege);
             }
           })()
             .catch((hiba) => kiir(SZIN.halvany + '  ⚠ a háttér (tábla, házimunka) most nem ment végig: ' + hiba.message + SZIN.vege))
