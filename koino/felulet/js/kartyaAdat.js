@@ -97,6 +97,8 @@ export function kartyaAdatta(k) {
     koinoHiany: k.hiany && typeof k.hiany === 'object' ? k.hiany : null,
     // ⭐ (Csaba, 2026-10-23): a leszármazottak és a testvérek ismert száma és a még nem ismert — a kártya fejlécére
     koinoSzamok: k.szamok && typeof k.szamok === 'object' ? k.szamok : null,
+    // ⭐ D120: a törzs mérete (a hivatkozásból — a szöveg és a fájljai, a kártyánál a kód) — a `koinoTorzs.js` jelöli a fejlécen
+    koinoTorzsMeret: Number.isSafeInteger(k.torzsMeret) ? k.torzsMeret : null,
 
     adatok: {
       cim: k.cim ?? '',

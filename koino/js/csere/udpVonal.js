@@ -1308,6 +1308,9 @@ export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) 
   const {
     sajatCim = null, kerhetok = [], blob, tar, koino,
     fajlOlvas = null, korlat = Infinity,
+    // ⭐ D120: a korlát FÁJLONKÉNT (lenyomat → bájt | null — a vállalt és a kért elemé a régi korlát, a többié a törzs-határ);
+    // a határ fölötti fájlnál a letöltő az első szeletnél megáll, és a méretét visszaadjuk (`tulNagyok`)
+    fajlKorlat = null,
     varakozasiIdo = TETLENSEG_ALAP, utana = () => {},
     // ⭐ D72 (2026-09-26): egy megérkezett fájlból kiderülhet, hogy MÁS fájlok is kellenek —
     // a szöveg-darabban képek lehetnek. (async lenyomat, hany → további lenyomatok)
@@ -1346,6 +1349,7 @@ export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) 
   utana({ mi: 'SZEREP', szerep, sajatCim, tarsCim: ove });
 
   let kesz = 0, bukott = 0, bajt = 0, kiszolgalt = 0, kihagyott = 0;
+  const tulNagyok = [];   // ⭐ D120: [lenyomat, a teljes mérete] — a határ fölötti fájlok (nem bukás: kérésre jönnek)
   // ⭐ D109 (KK6): ha a társ „később”-t mondott (a kerete nem enged), az mp-ek — és tőle ebben a randevúban nem kérünk többet.
   let kesobb = null;
   // ⭐ Kimondjuk, ha a korlát miatt maradt ki valami (D19) — a maradék a következő körben jön.
@@ -1383,14 +1387,20 @@ export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) 
       try {
         // ⭐ D114 (T4): a türelem a fájl ismert forrásaiból (D68/2) — egy forrásnál kitartunk, sokkal nem.
         const feladasIdo = fajlForrasok ? await fajlForrasok.turelem(lenyomat) : null;
+        const fk = typeof fajlKorlat === 'function' ? fajlKorlat(lenyomat) : null;
         const e = await fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyomat,
-          { korlat, varakozasiIdo, torlodasJel: jel,
+          { korlat: Number.isSafeInteger(fk) ? fk : korlat, varakozasiIdo, torlodasJel: jel,
             ...(munka ? { munka, adott: () => kozosMunka.adott(lenyomat, forras) } : {}),
             ...(Number.isFinite(feladasIdo) && feladasIdo > 0 ? { feladasIdo } : {}) });
         if (Number.isInteger(e.kesobb)) {
           kesobb = e.kesobb;
           utana({ mi: 'KESOBB', lenyomat, kesobb });
           break;
+        }
+        if (Number.isSafeInteger(e.tulNagy)) {
+          tulNagyok.push([lenyomat, e.tulNagy]);
+          utana({ mi: 'TUL-NAGY', lenyomat, teljes: e.tulNagy });
+          continue;
         }
         if (e.kesz) { kesz++; bajt += e.bajt ?? 0; } else { bukott++; }
         if (fajlForrasok) await fajlForrasok.eredmeny(lenyomat, e, kozosMunka ? kozosMunka.adok(lenyomat) : (e.szeletek ? [forras] : []));
@@ -1538,7 +1548,7 @@ export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) 
   }
 
   const eredmeny = { kesz, bukott, bajt, kiszolgalt, szerep, torlodasJel: jel, korlatElerve, ...(kihagyott ? { kihagyott } : {}),
-    ...(kesobb ? { kesobb } : {}) };
+    ...(kesobb ? { kesobb } : {}), ...(tulNagyok.length ? { tulNagyok } : {}) };
   console.log('fajlRandevu - VÉGE', eredmeny);
   return eredmeny;
 }

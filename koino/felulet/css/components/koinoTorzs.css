@@ -1,0 +1,35 @@
+/* koino/felulet/css/components/koinoTorzs.css */
+
+/* Felelősség: ⭐⭐ D120 — a törzs-határ a lapon: a törzs mérete a kártya tudatpont-sorában, és a határ fölötti elem (kép, a
+   kártya kódja) helyén a kérés gombja (koinós többlet, a prototípusban nincs ilyen). Használja: `felulet/js/koinoTorzs.js`. */
+
+.pakli-kartya__koino-torzs {
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.koino-torzs-kerheto {
+  display: block;
+  max-width: 100%;
+  margin: 0.4em 0;
+  padding: 0.6em 0.8em;
+  border: 1px dashed #90a4ae;
+  border-radius: 0.5em;
+  background: #f5f7f8;
+  color: #37474f;
+  font: inherit;
+  font-size: 0.9em;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.koino-torzs-kerheto:hover:not(:disabled) {
+  background: #eceff1;
+}
+
+.koino-torzs-kerheto--kerve,
+.koino-torzs-kerheto:disabled {
+  cursor: default;
+  color: #607d8b;
+}

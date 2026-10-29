@@ -201,6 +201,27 @@ proba('⛔ D119 (①a): a kapu elveti a hamis koino-verziót — átírt szület
     return ok;
   });
 
+proba('⭐ D120: a kód hivatkozása a TÖRZS méretét is mondja — a jegyzék + a különböző fájlok; a kártya kódja a születés programjával együtt (a mérettel is)',
+  async () => {
+    const mappa = await mkdtemp(join(tmpdir(), 'koino-kod-'));
+    try {
+      await writeFile(join(mappa, 'a.js'), 'x\ny\n');
+      await writeFile(join(mappa, 'b.js'), 'x\ny\n');            // ugyanaz a tartalom: egyszer számít
+      await writeFile(join(mappa, 'c.css'), 'q\n');
+      const cs = await kodCsomagKeszitese(mappa);
+      const meretOk = cs.hivatkozas.torzs === cs.jegyzekBajtok.length + 4 + 2;
+      // a kártya kódja a születés programja — a mérettel együtt: ha csak a kártya mond méretet (a születés programja nem), eltér
+      const jo = await verzio();
+      const masMeret = await verzio({ kod: { ...KOD, torzs: 5000 } });
+      const eredmeny = { meretOk, jo: alakiHiba(jo.kv) === null, masMeret: alakiHiba(masMeret.kv) !== null };
+      const ok = Object.values(eredmeny).every(Boolean);
+      if (!ok) process.stderr.write('    ' + JSON.stringify({ ...eredmeny, h: cs.hivatkozas, j: cs.jegyzekBajtok.length }) + '\n');
+      return ok;
+    } finally {
+      await rm(mappa, { recursive: true, force: true });
+    }
+  });
+
 proba('⛔ D119 (①a): a születés programja — csak új alakban, és csak hivatkozás alakban', async () => {
   const A = await ujEember('regi');
   const regi = await A.tesz('KoinoLetrehozas', { nev: 'Régi', leiras: null, alapitok: [], zart: true,

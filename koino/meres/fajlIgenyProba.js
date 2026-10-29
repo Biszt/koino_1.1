@@ -164,6 +164,54 @@ proba('⭐ Fájl nélküli koino: üres válasz, nem hiba', async () => {
 
 export default futtatas;
 
+// ===================================
+// ⭐⭐ D120: A TÖRZS-HATÁR (Csaba ötlete és döntése, 2026-10-29)
+// ===================================
+
+const L4 = 'D'.repeat(43);
+const L5 = 'E'.repeat(43);
+const L6 = 'F'.repeat(43);
+const JEGYZEK = 'J'.repeat(43);
+const ENGEM = 'en';
+
+/** Egy kártya (koino-verzió) a kódjával — a jegyzékben két fájl. */
+function kartya(azonosito, pontok = {}) {
+  return { ...entitas(azonosito, {}, pontok), koinoVerzio: { gyermek: 'G'.repeat(43), kod: { lenyomat: JEGYZEK, bajt: 100, torzs: 5100 } } };
+}
+const kodOlvas = async () => ({ fajlok: [['a.js', L5, 2000], ['b.js', L6, 3000]] });
+
+proba('⭐⭐ D120: a határ mellett a nem vállalt elem korláttal kért, az ismerten nagy csak kérhető; a vállalt, a kért és a szöveg határ nélkül',
+  async () => {
+    const nem = entitas('nem', { szoveg: { lenyomat: L4, bajt: 50, torzs: 9000 } });
+    const vallalt = entitas('val', { szoveg: [kep(L2)] }, { [ENGEM]: 10 });
+    const nagyos = entitas('nagy', { szoveg: [kep(L3)] });
+    const kertes = entitas('kert', { szoveg: [kep(L1)] });
+    const allapot = allapotbol([nem, vallalt, nagyos, kertes]);
+    const nagyok = new Map([[L3, 4000], [L1, 6000]]);
+    const r = await fajlIgenyek(allapot, async () => false, { szerzo: ENGEM, hatar: 1000, nagyok, kertek: new Set([L1]) });
+    const h = new Map(r.hianyzok.map((x) => [x.lenyomat, x]));
+    return h.has(L4) && h.get(L4).korlat === undefined                 // a szöveg-darab mindig, határ nélkül
+      && h.has(L2) && h.get(L2).korlat === undefined                    // vállalt: határ nélkül
+      && !h.has(L3) && r.kerhetok.some((k) => k.elem === L3 && k.meret === 4000)   // ismerten nagy: csak kérhető
+      && h.has(L1) && h.get(L1).korlat === undefined                    // kért: határ nélkül (a nagysága ellenére)
+      // határ nélkül (a régi hívó) minden igény, korlát nélkül
+      && (await fajlIgenyek(allapot, async () => false, { szerzo: ENGEM })).hianyzok.every((x) => x.korlat === undefined);
+  });
+
+proba('⭐⭐ D120: a kártya kód-csomagja EGY elem — a jegyzék mindig, a fájljai csak a vállalónak és a kérőnek (a méretével kérhető)',
+  async () => {
+    const megvanE = async (l) => l === JEGYZEK;   // a jegyzék már megjött
+    const nem = await fajlIgenyek(allapotbol([kartya('k1')]), megvanE, { szerzo: ENGEM, hatar: 1000, kodOlvas });
+    const val = await fajlIgenyek(allapotbol([kartya('k1', { [ENGEM]: 5 })]), megvanE, { szerzo: ENGEM, hatar: 1000, kodOlvas });
+    const kert = await fajlIgenyek(allapotbol([kartya('k1')]), megvanE,
+      { szerzo: ENGEM, hatar: 1000, kodOlvas, kertek: new Set(['kod:k1']) });
+    const lenyomatok = (r) => r.hianyzok.map((x) => x.lenyomat).sort().join();
+    const kerheto = nem.kerhetok.find((k) => k.kod);
+    return lenyomatok(nem) === '' && kerheto?.elem === 'kod:k1' && kerheto.meret === 5100 && kerheto.hianyzik === 2
+      && lenyomatok(val) === [L5, L6].sort().join() && val.kerhetok.length === 0
+      && lenyomatok(kert) === [L5, L6].sort().join() && kert.hianyzok.every((x) => x.korlat === undefined);
+  });
+
 // Önállóan is futtatható: node koino/meres/fajlIgenyProba.js
 if (process.argv[1] && process.argv[1].endsWith('fajlIgenyProba.js')) {
   futtatas().then((eredmeny) => process.exit(eredmeny.bukottak.length ? 1 : 0));

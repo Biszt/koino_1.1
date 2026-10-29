@@ -1689,12 +1689,28 @@ export async function fajlHozatala(blob, koino, lenyomat, kapcsolatNyitas, beall
           return { kesz: false, ok: 'a társnál sincs meg', bajt, szeletek };
         }
 
+        // ⭐⭐ D120: A TÖRZS-HATÁR — a válasz megmondja a teljes méretet; ha nagyobb a fájl korlátjánál, MEGÁLLUNK (a határig
+        // hozni, aztán eldobni pazarlás volna), és kimondjuk (`tulNagy` — a hívó megjegyzi, a lap kérhetőként mutatja). A
+        // részlegest nem írjuk (a D114 aktív forrásai különben befejeznék). ⚠️ A `teljes` a társ szava: ha kisebbet mond, a
+        // lenti szelet-ellenőrzés a korlátnál úgyis megfogja. ⛔ A KESZ-t kimondjuk: a kiszolgáló a szelet után a következő
+        // kérésre vár ezen a kapcsolaton — nélküle a következő fájl kapcsolata a tétlenségi óráig várt (mérve: három fájlból
+        // mind a három elbukott, 22 mp alatt).
+        if (Number.isInteger(korlat) && Number.isSafeInteger(uzenet.teljes) && uzenet.teljes > korlat) {
+          if (!nyitvaHagy) { try { kapcsolat.write(JSON.stringify({ uzenet: 'KESZ' }) + '\n'); } catch { /* zárt */ } }
+          console.log('fajlHozatala - VÉGE (nagyobb a határnál)', { lenyomat, teljes: uzenet.teljes, korlat });
+          return { kesz: false, tulNagy: uzenet.teljes, ok: 'nagyobb a határnál (' + uzenet.teljes + ' > ' + korlat + ' bájt)',
+            bajt, szeletek };
+        }
+
         const darab = new Uint8Array(Buffer.from(uzenet.adat ?? '', 'base64'));
         const ellenorzes = szeletEllenorzes(kertEltolas, uzenet.eltolas, darab.length, korlat);
         if (!ellenorzes.rendben) {
           // ⛔ A ROSSZ SZELET NEM KERÜL BE, és eldobjuk a félkész fájlt: különben a következő
           // kör egy elrontott alapra építene.
           await blob.reszlegesEldobas(lenyomat);
+          // ⭐ D120 (a mérés lelete): a KESZ-t itt is kimondjuk — különben a kiszolgáló ezen a kapcsolaton a következő kérésre
+          // vár, és a következő fájl kapcsolata a tétlenségi óráig hiába kér.
+          if (!nyitvaHagy) { try { kapcsolat.write(JSON.stringify({ uzenet: 'KESZ' }) + '\n'); } catch { /* zárt */ } }
           console.warn('fajlHozatala - VÉGE (rossz szelet)', { ok: ellenorzes.ok });
           return { kesz: false, ok: ellenorzes.ok, bajt, szeletek };
         }
@@ -1904,6 +1920,10 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
   // elvárás nélkül a régi 64-es határ. ⛔ Egy hamis tartó így nem tömhet tele ezernyi idegen fájllal.
   const elvartFv = typeof beallitas.torzsElvart === 'function' ? beallitas.torzsElvart : null;
   let elvart = elvartFv ? await elvartFv(kerelem.kulcs).catch(() => null) : null;
+  // ⭐ D120: a törzs-határ a kérelem entitására (a hívótól — mi vállalt, mi kért): `korlat` (lenyomat → bájt | null) és `kihagy`
+  // (a már ismerten határ fölötti, nem kért fájl — nem is kérjük)
+  const szabaly = typeof beallitas.torzsSzabaly === 'function'
+    ? await Promise.resolve(beallitas.torzsSzabaly(kerelem.kulcs)).catch(() => null) : null;
   const lenyomatok = (Array.isArray(u.lenyomatok) ? u.lenyomatok : [])
     .filter((l) => typeof l === 'string' && /^[A-Za-z0-9_-]{43}$/.test(l)).slice(0, elvart ? TORZS_KOD_KORLAT : 64);
   const fajlok = [];
@@ -1915,12 +1935,17 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
     for (const l of lenyomatok) {
       if (elvart && !elvart.has(l)) continue;   // ⭐ D119: nem várt fájl — nem hozzuk
       if (await beallitas.blob.van(l)) { fajlok.push({ lenyomat: l, kesz: true, megvolt: true }); continue; }
+      if (szabaly?.kihagy?.(l)) { fajlok.push({ lenyomat: l, kesz: false, kihagyva: true }); continue; }   // ⭐ D120
       const munka = km ? await km.belep(l, () => beallitas.blob.reszlegesSzeletek(l), { kotelezo: true }) : null;
       try {
+        // ⭐ D120: a korlát fájlonként (a hívó tudja, mi vállalt és mi kért — a többi a törzs-határig)
+        const fk = szabaly?.korlat ? szabaly.korlat(l) : null;
+        const korlat = Number.isSafeInteger(fk) ? fk : beallitas.korlat;
         const r = await fajlHozatala(beallitas.blob, koino, l, async () => kapcsolat,
-          { korlat: beallitas.korlat, nyitvaHagy: true, sor,
+          { korlat, nyitvaHagy: true, sor,
             ...(munka ? { munka, adott: () => km.adott(l, beallitas.forras) } : {}) });
-        fajlok.push({ lenyomat: l, kesz: r.kesz, ok: r.ok ?? null, ...(r.romlott ? { romlott: true } : {}) });
+        fajlok.push({ lenyomat: l, kesz: r.kesz, ok: r.ok ?? null, ...(r.romlott ? { romlott: true } : {}),
+          ...(Number.isSafeInteger(r.tulNagy) ? { tulNagy: r.tulNagy } : {}) });
         // ⭐ D119: a megjött jegyzék után a kód fájljai is várhatók
         if (elvart && r.kesz) elvart = (await elvartFv(kerelem.kulcs).catch(() => null)) ?? elvart;
       } finally {

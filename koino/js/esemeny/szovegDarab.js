@@ -41,15 +41,26 @@ import { kanonikusBajtok, bajtLenyomat, kanonikusSzoveg } from './kanonikusAlak.
 const LENYOMAT_MINTA = /^[A-Za-z0-9_-]{43}$/;
 
 /**
- * Szöveg-hivatkozás-e? — pontosan két mező: a lenyomat és a méret.
+ * Szöveg-hivatkozás-e? — a lenyomat és a méret, és ⭐ D120 óta egy harmadik, elhagyható mező: a TÖRZS mérete (`torzs` — a darab
+ * és a benne hivatkozott fájlok együtt; a koino-verzió kódjánál a jegyzék és a fájljai). A fejlécen ebből látszik, mekkora a
+ * törzs, mielőtt bárki kérné. ⚠️ A szerző bemondása: a letöltő a valódi méretet az első szeletből tudja, és a határnál megáll.
+ * Ha nincs (a régi alak, vagy fájl nélkül — akkor a törzs maga a darab), a `bajt` a törzs.
  * @param {*} ertek
  * @returns {boolean}
  */
 export function szovegHivatkozasE(ertek) {
-  return ertek !== null && typeof ertek === 'object' && !Array.isArray(ertek)
-    && Object.keys(ertek).length === 2
-    && typeof ertek.lenyomat === 'string' && LENYOMAT_MINTA.test(ertek.lenyomat)
-    && Number.isInteger(ertek.bajt) && ertek.bajt >= 0;
+  if (ertek === null || typeof ertek !== 'object' || Array.isArray(ertek)) return false;
+  const n = Object.keys(ertek).length;
+  if (n !== 2 && !(n === 3 && Object.hasOwn(ertek, 'torzs'))) return false;
+  return typeof ertek.lenyomat === 'string' && LENYOMAT_MINTA.test(ertek.lenyomat)
+    && Number.isInteger(ertek.bajt) && ertek.bajt >= 0
+    // ⛔ ha ott van, nagyobb a darabnál (egyenlőnél elmarad — egy alak van, nem kettő) és biztonságos egész
+    && (n === 2 || (Number.isSafeInteger(ertek.torzs) && ertek.torzs > ertek.bajt));
+}
+
+/** ⭐ D120: a hivatkozott törzs mérete (a `torzs`, ha nincs, a darab) — null, ha nem hivatkozás. */
+export function hivatkozasTorzse(ertek) {
+  return szovegHivatkozasE(ertek) ? (ertek.torzs ?? ertek.bajt) : null;
 }
 
 /**

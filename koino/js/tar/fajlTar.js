@@ -1317,6 +1317,29 @@ export function melysegTarolo(koino, hely = alapHely()) {
 }
 
 /**
+ * ⭐ D120: a TÖRZS-ELEMEK helyi jegyzéke (`<koino>/torzselemek.json`): a határ fölöttinek talált fájlok (a lenyomat → a
+ * teljes mérete — az első szeletből) és a kért elemek (a lenyomat vagy `kod:<a kártya>` → mikor kértem). Az alak és a
+ * korlát a `fajlIgeny.js`-é (`torzsElemJegyzek`); helyi feljegyzés, nem esemény, nem terjed.
+ * @param {string} koino
+ * @param {string} [hely]
+ */
+export function torzsElemTarolo(koino, hely = alapHely()) {
+  const fajl = join(hely, koino, 'torzselemek.json');
+  return {
+    fajl,
+    async olvas() {
+      try { return JSON.parse(await readFile(fajl, 'utf8')); } catch { return null; }
+    },
+    async ir(jegyzek) {
+      await mkdir(dirname(fajl), { recursive: true });
+      const ideiglenes = fajl + '.' + process.pid + '.uj';
+      await writeFile(ideiglenes, JSON.stringify(jegyzek), 'utf8');
+      await rename(ideiglenes, fajl);
+    }
+  };
+}
+
+/**
  * ⭐ D98/2–3: a LÁNC-ELLENŐRZÉS helyi tára (`<koino>/lancellenorzes.json`): szerzőnként a legutóbb ellenőrzött napló-gyökér
  * és az ellenőrzött események, és a társak bemondott szerzői kulcsa (a tábla-aláírójuk alatt). A korlátokat a hívó vágja
  * (`lancEllenorzes.js` `lancJegyzekVagasa`). Helyi feljegyzés, nem esemény, nem terjed.
@@ -1558,6 +1581,11 @@ export function fajlBlobTarolo(koino, hely = alapHely()) {
     /** Megvan-e? (Olcsó kérdés: nem olvassuk be és nem ellenőrizzük.) */
     async van(lenyomat) {
       try { await access(utja(lenyomat)); return true; } catch { return false; }
+    },
+
+    /** ⭐ D120: a kész fájl mérete (bájt) — null, ha nincs meg. (Olcsó: nem olvassuk be.) */
+    async meret(lenyomat) {
+      try { return (await stat(utja(lenyomat))).size; } catch { return null; }   // a rossz név is null (az `utja` dob)
     },
 
     // ===================================
@@ -2181,6 +2209,7 @@ export function memoriaBlobTarolo(korlat = 2 * FAJL_KORLAT) {
     },
     async olvas(lenyomat) { return nevRendben(lenyomat) ? (keszek.get(lenyomat) ?? null) : null; },
     async van(lenyomat) { return nevRendben(lenyomat) && keszek.has(lenyomat); },
+    async meret(lenyomat) { return nevRendben(lenyomat) ? (keszek.get(lenyomat)?.length ?? null) : null; },
     async reszlegesSzeletek(lenyomat) { return [...(reszek.get(lenyomat)?.keys() ?? [])].sort((a, b) => a - b); },
     async reszlegesLenyomatok() { return [...reszek.keys()].sort(); },
     async reszlegesMeret(lenyomat) { return [...(reszek.get(lenyomat)?.values() ?? [])].reduce((o, b) => o + b.length, 0); },

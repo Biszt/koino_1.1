@@ -88,8 +88,9 @@ async function csaladMerese(k) {
       // ⚠️ nagy kiszolgálási keret: a mérés a cserét méri, nem a keretet (az a kód átvitelét óránként ~150 kérésnél megállítaná)
       { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', KOINO_KERET: '1000000000,100000' }, stdio: 'ignore' });
     await varj(3000);
-    // ⚠️ A kártyák kódja (a nem vállaló is kéri — a fájl-igény minden látott entitásé) randevúnként legfeljebb 50 fájl: a
-    // cseréket addig ismételjük, amíg egy se hoz semmit (se eseményt, se fájlt) — az az utolsó, a „nincs újdonság”.
+    // ⚠️ A fájlok randevúnként legfeljebb 50-esével jönnek (a D120 előtt a nem vállaló a kártyák teljes kódját is elhozta —
+    // ~6,5 MB, 9 csere; azóta csak a jegyzéket): a cseréket addig ismételjük, amíg egy se hoz semmit (se eseményt, se fájlt)
+    // — az az utolsó, a „nincs újdonság”.
     const kimenetek = [];
     let fajlBajt = 0;
     for (let i = 0; i < 12; i++) {

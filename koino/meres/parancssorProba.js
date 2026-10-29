@@ -745,6 +745,80 @@ proba('⭐⭐ D119 (③): a családi csere — egy cserével a szülő és a gye
     }
   });
 
+// ⭐⭐ D120: A TÖRZS-HATÁR a parancssoron és a vonalon. A egy nyílt koinóban két képes gondolatot ír (a lapról — a „KÉPES”
+// egy nagy, 5000 B-os és egy kicsi, 1500 B-os képpel; a „MÁSIK” egy 7000 B-ossal), pontot tesz rájuk, és egy koino-verzió
+// kártyát (a kódjával) hoz létre. B a kézi úton kapja meg az eseményeket, és a „MÁSIK”-ra pontot tesz; a határa 3000 B
+// (`KOINO_TORZS_HATAR`). B cserél A postaládájával: a szöveg-darab és a kicsi kép jön, a nagy NEM (a letöltő az első
+// szeletnél megáll, és a méretét megjegyzi); a „MÁSIK” nagy képe IGEN (vállalt — pontot tett rá); a kártya jegyzéke igen, a
+// kódja nem. A hivatkozás a törzs méretét mondja. A `torzs` a nagy képet és a kód-csomagot kérhetőnek mutatja; a kérés után
+// a következő csere a nagy képet és a kód fájljait is hozza. Viselkedést mérünk (B fájl-tárát).
+proba('⭐⭐ D120: a törzs-határ — a nagy kép és a kártya kódja nem jön magától, a vállalt igen; a fejlécen a méret; kérésre a következő csere hozza',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    let fa = null;
+    let figyelo = null;
+    const B_ENV = { KOINO_TORZS_HATAR: '3000', KOINO_KISZOLGALAS: 'alap' };   // a próbák alapból „mindent”-ek — az mindent hoz
+    const lemez = async (hely, koino) => (await readFile(join(hely, koino, 'esemenyek.jsonl'), 'utf8').catch(() => ''))
+      .split('\n').filter(Boolean).map((x) => JSON.parse(x));
+    const bajtok = (n, x) => Buffer.alloc(n, x).toString('base64');
+    try {
+      await fut(a, 'koino', 'Törzs-határ', 'nyilt');
+      const P = await koinoNeve(a);
+      await taggaTesziKeszulek(a, b);
+      fa = await feluletet(a, 7875);
+      const fel = async (n, x) => (await fa.hiv('/api/feltoltes/kep', { method: 'POST', body: JSON.stringify({ adat: bajtok(n, x) }) })).adat;
+      const nagy = await fel(5000, 1), kicsi = await fel(1500, 2), masik = await fel(7000, 3);
+      const kep = (u) => ({ id: 'k' + u.lenyomat.slice(0, 4), tipus: 'kep', url: u.url });
+      await fa.hiv('/api/gondolat', { method: 'POST', body: JSON.stringify({ cim: 'KÉPES', kezdoTudatpont: 10,
+        szoveg: [{ id: 'b1', tipus: 'szoveg', tartalom: 'Két kép' }, kep(nagy), kep(kicsi)] }) });
+      await fa.hiv('/api/gondolat', { method: 'POST', body: JSON.stringify({ cim: 'MÁSIK', kezdoTudatpont: 10,
+        szoveg: [{ id: 'b1', tipus: 'szoveg', tartalom: 'Egy kép' }, kep(masik)] }) });
+      fa.folyamat.kill();
+      fa = null;
+      await varj(500);
+      await fut(a, 'koinoverzio', 'Kódos gyermek', 'pont=5', 'becenev=gy');
+      await fut(a, 'kivisz', join(a, 'p.jsonl'));
+      await fut(b, 'behoz', join(a, 'p.jsonl'));
+      const aP = await lemez(a, P);
+      const kepes = aP.find((e) => e.adat?.cim === 'KÉPES');
+      const masikG = aP.find((e) => e.adat?.cim === 'MÁSIK');
+      const kv = aP.find((e) => e.adat?.tipus === 'KoinoVerzio');
+      await fut(b, 'pont', masikG.azonosito.slice(0, 8), '10');
+      figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', '7877'], {
+        env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: 'ignore' });
+      await varj(2500);
+      const bFajlok = join(b, P, 'fajlok');
+      const megvan = async (l) => !!(await readFile(join(bFajlok, l)).catch(() => null));
+      await fut(b, 'csere', '127.0.0.1', '7877', B_ENV);
+      const jegyzek = kv?.adat?.kod;
+      const elso = { szoveg: await megvan(kepes.adat.szoveg.lenyomat), kicsi: await megvan(kicsi.lenyomat),
+        nagy: await megvan(nagy.lenyomat), masik: await megvan(masik.lenyomat), jegyzek: jegyzek ? await megvan(jegyzek.lenyomat) : false };
+      const kodFajl = JSON.parse(await readFile(join(bFajlok, jegyzek.lenyomat), 'utf8').catch(() => '{"fajlok":[]}')).fajlok?.[0]?.[1];
+      elso.kod = kodFajl ? await megvan(kodFajl) : false;
+      // a lista: a nagy kép (a méretével) és a kód-csomag
+      const lista = await fut(b, 'torzs', B_ENV);
+      // a kérés, és a következő csere hozza
+      const keres1 = await fut(b, 'torzs', kepes.azonosito.slice(0, 8), B_ENV);
+      const keres2 = await fut(b, 'torzs', kv.azonosito.slice(0, 8), 'kod', B_ENV);
+      await fut(b, 'csere', '127.0.0.1', '7877', B_ENV);
+      const utana = { nagy: await megvan(nagy.lenyomat), kod: kodFajl ? await megvan(kodFajl) : false };
+      const ok = elso.szoveg && elso.kicsi && !elso.nagy && elso.masik && elso.jegyzek && !elso.kod
+        // ⭐ a fejlécen a méret (a hivatkozás `torzs`-a: a darab + a két kép)
+        && kepes.adat.szoveg.torzs === kepes.adat.szoveg.bajt + 6500 && Number.isSafeInteger(jegyzek?.torzs)
+        && /KÉPES/.test(lista) && /4\.9 KB/.test(lista) && /a kód-csomag/.test(lista)       // 5000 B = 4,9 KB
+        && /Kérve: 1 elem/.test(keres1) && /Kérve: 1 elem/.test(keres2) && utana.nagy && utana.kod;
+      if (!ok) process.stderr.write('    (a kimenetek: ' + JSON.stringify({ elso, utana, torzs: kepes?.adat?.szoveg, jegyzek,
+        lista: lista.slice(0, 600), keres1: keres1.slice(0, 200), keres2: keres2.slice(0, 200) }) + ')\n');
+      return ok;
+    } finally {
+      if (fa) fa.folyamat.kill();
+      if (figyelo) figyelo.kill();
+      await varj(500);
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ⭐⭐ D118 (②b): A KAPU KOINÓ-SZABÁLYA a parancssoron és a cserén. Az A a szülőben ír egy gondolatot a gyermek születése
 // ELŐTT és egyet UTÁNA; a szülő kivitele a gyermekbe behozva csak az elsőt adja (a második a szülő jelene — „másik koinóé”),
 // és a csere (két „mindent” készülék) ugyanígy viszi tovább a B-nek. Viselkedést mérünk (a két lemezt). ⚠️ A számítás még

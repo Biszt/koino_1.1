@@ -563,7 +563,7 @@ export function alakiHiba(esemeny) {
       return 'a koino-verzió a gyermek születését hozza (ennek a koinónak a gyermeke, a feltöltő hozta létre)';
     }
     const pr = sz.adat.program;
-    if (!szovegHivatkozasE(pr) || pr.lenyomat !== a.kod.lenyomat || pr.bajt !== a.kod.bajt) {
+    if (!szovegHivatkozasE(pr) || pr.lenyomat !== a.kod.lenyomat || pr.bajt !== a.kod.bajt || pr.torzs !== a.kod.torzs) {
       return 'a koino-verzió kódja a gyermek születésének programja';
     }
     if (a.cim !== sz.adat.nev) return 'a koino-verzió címe a gyermek neve';

@@ -5372,6 +5372,26 @@ nézet jele, a sorrendet nem dönti el. → a felderítetlen rész (D116).
 
 ---
 
+## 86. ⭐ A TÖRZS-HATÁR HATÁSA — mit hoz el a nem vállaló a kártyák kódjából? (D120, a 85. megismételve, 2026-10-29, a laptopon)
+
+`node koino/meres/csaladCsereMeres.js 1 2 3` — ugyanaz a menet, mint a 85.-é (B minden gyermekbe költözött, a kártyákra nem tett
+pontot), a D120 megépülte után.
+
+- **A kártyák kódja a nem vállaló B-nél:** k = 2 és 3 mellett **29,5 KB** (a jegyzék — a gyermekek ugyanazzal a programmal
+  születtek, egy jegyzék), **2 csere** — a D120 előtt 6,5 MB és 9 csere (randevúnként 50 fájl), alapból a kiszolgálási kerettel
+  a harmadik cserétől „később”.
+- **A „nincs újdonság” családi csere:** változatlan (k = 1: 2,3 KB · 2: 4,4 · 3: 6,7 KB); az első csere is (k = 3: 30,9 KB).
+- **A hivatkozás ára:** a fájlos törzsű esemény +~13 B (`"torzs":N`); fájl nélkül 0 (a mező elmarad).
+- **A határ fölötti fájl ára a letöltőnél:** egy szelet (≤ 64 KB) egyszer — az első szelet mondja meg a méretet, a letöltő ott
+  megáll, és a méretet megjegyzi (a következő kör már nem kéri). ⚠️ A 64 KB-nál kisebb fájl egész az első szeletben jön — a
+  valódi határ (1 MB) mellett ilyen nem fordul elő; a próbák kicsi határánál (3000 B) igen.
+
+⭐ **Amit mutat:** a kártya vállalása marad a kód forrása (a vállaló és a költöző teljesen hozza), a tag a böngészéshez a
+jegyzéket kapja — a „Kód” fülön a fájllista és a méret, a kód kérésre. A 6. szabály szerint ez a helyes: a program egyszer
+jön, az adat minden nap utazik.
+
+---
+
 ## 85. ⭐ A CSALÁDI CSERE ÁRA — mennyibe kerül, hogy egy csere a családot cseréli? (D119 ③, M1, 2026-10-26, a laptopon)
 
 `node koino/meres/csaladCsereMeres.js [k ...]` — a megépült kódon: két készülék, egy k koinós család (a szülő és k − 1 gyermek,

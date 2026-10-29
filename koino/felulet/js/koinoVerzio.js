@@ -19,6 +19,7 @@ import GondolatKartya from './components/kartya/GondolatKartya.js';
 import KartyaFulsav from './components/kartya/KartyaFulsav.js';
 import Modal from './components/modals/Modal.js';
 import { apiGet, apiPost } from './utils/apiHelper.js';
+import { kodKereseGomb } from './koinoTorzs.js';   // ⭐ D120: a kód kérése (a határ fölött)
 
 const MODAL_KONTENER = 'modal-kontener';
 
@@ -86,11 +87,11 @@ GondolatKartya.prototype._bodyFeltoltese = function (body, ...tobbi) {
   kod.className = 'koino-kod';
   kod.innerHTML = '<p class="koino-kod__leiras">A kód a „Kód” fülre kattintva töltődik be.</p>';
   fulek.push({ id: 'kod', felirat: '🧬 Kód', tartalomElem: kod });
-  let betoltve = false;
   this.kartyaFulsav = new KartyaFulsav(kontener, {
     fulek,
     onFulValtas: (id) => {
-      if (id === 'kod' && !betoltve) { betoltve = true; kodFulBetoltese(kod, this.entitas.entitasId); }
+      // ⭐ D120: minden megnyitáskor friss (egy kérés): a kért kód a cserével közben megjöhet — az állás ne ragadjon be
+      if (id === 'kod') kodFulBetoltese(kod, this.entitas.entitasId);
       this._kibovitesUjraertekeles?.();
     }
   });
@@ -123,9 +124,13 @@ async function kodFulBetoltese(elem, kartya) {
       + 'vállalóitól jön (D84/1): ha pontot teszel a kártyára, a csere elhozza.</p>';
     return;
   }
-  elem.innerHTML = fej + '<ul class="koino-kod__lista">' + fajlok.map((f) => '<li><button type="button" class="koino-kod__fajl"'
+  elem.innerHTML = fej + '<div class="koino-kod__keres"></div><ul class="koino-kod__lista">' + fajlok.map((f) => '<li><button type="button" class="koino-kod__fajl"'
     + ' data-lenyomat="' + html(f[1]) + '" data-ut="' + html(f[0]) + '">' + html(f[0]) + '</button> <span class="koino-kod__meret">'
     + kb(f[2]) + '</span></li>').join('') + '</ul><div class="koino-kod__tartalom" hidden></div>';
+  // ⭐ D120: ha a kód a határ fölött van (nem vállalom a kártyát), a kérés gombja a lista fölött
+  if (a.megvan < fajlok.length) {
+    kodKereseGomb(kartya).then((g) => { if (g) elem.querySelector('.koino-kod__keres')?.appendChild(g); });
+  }
   const tartalom = elem.querySelector('.koino-kod__tartalom');
   elem.querySelector('.koino-kod__lista').addEventListener('click', async (e) => {
     const gomb = e.target.closest('button[data-lenyomat]');

@@ -23,7 +23,7 @@ import { join } from 'node:path';
 
 import { probaGyujtemeny, ujEember, tagokkal, emberTaggaTarban } from './probaFuttato.js';
 import {
-  szovegDarabra, szovegDarabbol, szovegHivatkozasE, azonosSzoveg
+  szovegDarabra, szovegDarabbol, szovegHivatkozasE, azonosSzoveg, hivatkozasTorzse
 } from '../js/esemeny/szovegDarab.js';
 import { lenyomat, kanonikusBajtok } from '../js/esemeny/kanonikusAlak.js';
 import { esemenyTarNyitasa, fajlBlobTarolo } from '../js/tar/fajlTar.js';
@@ -89,6 +89,39 @@ proba('⭐⭐ A GONDOLAT ESEMÉNYE NEM HORDOZZA A SZÖVEGET — csak a hivatkoz�
     && azonosSzoveg(szovegDarabbol(darab), szoveg)
     // ⭐ D26: a tárolási vállalás a darabot is magában foglalja
     && meret === kanonikusBajtok(adatMeretNelkul).length + h.bajt;
+});
+
+proba('⭐ D120: a hivatkozás a TÖRZS méretét is mondhatja (`torzs`) — csak nagyobbat a darabnál, egész számként', () => {
+  const l = 'A'.repeat(43);
+  return szovegHivatkozasE({ lenyomat: l, bajt: 10 })
+    && szovegHivatkozasE({ lenyomat: l, bajt: 10, torzs: 11 })
+    && !szovegHivatkozasE({ lenyomat: l, bajt: 10, torzs: 10 })          // egyenlőnél elmarad (egy alak van, nem kettő)
+    && !szovegHivatkozasE({ lenyomat: l, bajt: 10, torzs: 9 })
+    && !szovegHivatkozasE({ lenyomat: l, bajt: 10, torzs: 1.5 })
+    && !szovegHivatkozasE({ lenyomat: l, bajt: 10, torzs: '20' })
+    && !szovegHivatkozasE({ lenyomat: l, bajt: 10, mas: 20 })            // más harmadik mező nem
+    && !szovegHivatkozasE({ lenyomat: l, bajt: 10, torzs: 20, mas: 1 })
+    && hivatkozasTorzse({ lenyomat: l, bajt: 10 }) === 10
+    && hivatkozasTorzse({ lenyomat: l, bajt: 10, torzs: 70 }) === 70
+    && hivatkozasTorzse('szöveg') === null;
+});
+
+proba('⭐⭐ D120: a művelet a hivatkozásba írja a törzs méretét — a darab + a hivatkozott fájlok; fájl nélkül és ismeretlen fájlnál elmarad', async () => {
+  const { kornyezet, darabTar } = await ujKornyezet();
+  const kep1 = await darabTar.ir(new Uint8Array(3000).fill(1));
+  const kep2 = await darabTar.ir(new Uint8Array(5000).fill(2));
+  const url = (l) => '/api/fajl/' + l;
+  const kepes = [{ id: 'b1', tipus: 'szoveg', tartalom: 'Képek' }, { id: 'b2', tipus: 'kep', url: url(kep1.lenyomat) },
+    { id: 'b3', tipus: 'fajl', url: url(kep2.lenyomat) }, { id: 'b4', tipus: 'kep', url: url(kep1.lenyomat) }];
+  const e1 = await gondolatLetrehozasa(kornyezet, { cim: 'Képes', szoveg: kepes });
+  const e2 = await gondolatLetrehozasa(kornyezet, { cim: 'Sima', szoveg: [{ id: 'b1', tipus: 'szoveg', tartalom: 'Csak szöveg' }] });
+  // egy fájl, ami nincs meg nálam: a méretét nem tudjuk — nem tippelünk
+  const e3 = await gondolatLetrehozasa(kornyezet, { cim: 'Idegen kép',
+    szoveg: [{ id: 'b1', tipus: 'kep', url: url('Z'.repeat(43)) }] });
+  const h1 = e1.adat.szoveg, h2 = e2.adat.szoveg, h3 = e3.adat.szoveg;
+  return szovegHivatkozasE(h1) && h1.torzs === h1.bajt + 3000 + 5000          // a kétszer hivatkozott kép egyszer számít
+    && szovegHivatkozasE(h2) && !('torzs' in h2)
+    && szovegHivatkozasE(h3) && !('torzs' in h3);
 });
 
 proba('⛔ DARAB-TÁR NÉLKÜL A MŰVELET MEGNEVEZETTEN LEÁLL — a szöveg nem kerül csendben az eseménybe', async () => {

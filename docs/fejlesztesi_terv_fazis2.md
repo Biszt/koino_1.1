@@ -6122,12 +6122,38 @@ a családi csere** (2026-10-26, elágazás 209–211, 85. mérés): a nyitás a 
 ugyanazt a közös listát számolja, a közös koinók ugyanabban a munkában jönnek (koinónként új kézfogással), a más koinóra
 nyitott csere is a családot cseréli, a más koinónak szóló kérelem a példányához kerül; a postaláda és az őrjárat a családot
 szolgálja. Közben két szállítási hiba (mérve) és a randevú vége (`FAJLVEGE` — a kiszolgáló nem várja ki a tétlenségi órát).
-⏭️ ④ a kör a családra.
+✅ **Közben a D120** (a törzs-határ — lent). ⏭️ ④ a kör a családra.
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal
 (a cserén is) „nem ellenőrizhetővé” tette az alapító — és így minden tag — döntéseit. A D118/2 zárja; ezért az építés első
 lépése. Elágazás 192.
+
+### D120. A TÖRZS-HATÁR: A NAGY TÖRZS ELEMENKÉNT, KÉRÉSRE (2026-10-29, Csaba ötlete)
+
+*Az átvizsgálás: [`torzs_hatar_atvizsgalas.md`](torzs_hatar_atvizsgalas.md). A 85. mérés lelete hozta (a nem vállaló B a
+koino-verzió kártya teljes kódját — 6,5 MB — elhozta), Csaba ötlete egy egységes szabály: „A nagyobb body-kat, egységessen kéne
+kezelni … egy bizonyos méretig, szerzi be a program a body-t, sima böngészés közben. A fejléceken, a body méretét is jelezni
+kéne. … most mondjuk, legyen 1 mb. az ennél nagyobb body-kat … kattíntással, lehet kérni, amit a következő csere hoz el.”*
+
+**A döntés** (Csaba, 2026-10-29: *„elemenként. amihez tudatpontot rendelt az természetessen tárólja teljessen. nekem mindegy a
+fejlesztési sorrend, azt rád bízom.”*):
+1. **Elemenként:** böngészés közben a törzs ELEMEI (a szöveg-darab, minden kép és csatolt fájl, a kártya kód-csomagja) közül
+   magától csak a határ alatti jön — a szöveg mindig; ami fölötte van, a saját helyén kattintással kérhető, és a következő
+   csere hozza el.
+2. **A határ 1 MB** — helyi mennyiség (a koinóban semmiről nem dönt, csak arról, mit hoz el a készülék magától); később a
+   beállításokban állítható, mint a többi határérték.
+3. **A fejlécen a törzs mérete** — hogy látsszon, mekkora, mielőtt kérem.
+4. **Amihez tudatpontot rendelt, azt teljesen tárolja** (a vállalt törzs határ nélkül — a vállaló a forrás, D84/1); a költözés
+   a teljes kódot hozza.
+
+Az építés sorrendje Csabától rám bízva: a D120 a D119 ④ ELŐTT (új mezőt hoz a hivatkozásba — minél előbb, annál kevesebb
+esemény marad nélküle; és a családi csere a kártyák kódját is széthordja).
+
+✅ **Megépült (2026-10-29, elágazás 212–213, 86. mérés):** a méret a hivatkozásban (`torzs`), a határ a fájl-igényben és a
+letöltőben (az első szeletnél megáll), a kártya kód-csomagja egy elem, a kérés (`torzs` parancs, `/api/torzs`, függő
+törzs-kérelem), a lap (a méret a kártyán, a nagy kép és a kód helyén a kérés gombja). A nem vállaló a kódból csak a jegyzéket
+hozza (29,5 KB a 6,5 MB helyett).
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 

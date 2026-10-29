@@ -96,7 +96,7 @@ export async function programFajljai(gyoker) {
 /**
  * ⭐ A KÓD-CSOMAG a program mappájából: a jegyzék, a bájtjai (a darab), a hivatkozása (a kód neve) és a fájlok tartalma.
  * @param {string} gyoker
- * @returns {Promise<{jegyzek: Object, jegyzekBajtok: Uint8Array, hivatkozas: {lenyomat: string, bajt: number},
+ * @returns {Promise<{jegyzek: Object, jegyzekBajtok: Uint8Array, hivatkozas: {lenyomat: string, bajt: number, torzs?: number},
  *   tartalmak: Map<string, Uint8Array>}>}
  */
 export async function kodCsomagKeszitese(gyoker) {
@@ -115,8 +115,13 @@ export async function kodCsomagKeszitese(gyoker) {
   if (fajlok.length > KOD_FAJL_KORLAT) throw new Error('A program túl sok fájlból áll a kód-csomaghoz: ' + fajlok.length);
   const jegyzek = { fajta: KOD_FAJTA, fajlok };
   const jegyzekBajtok = kanonikusBajtok(jegyzek);
-  return { jegyzek, jegyzekBajtok, hivatkozas: { lenyomat: await bajtLenyomat(jegyzekBajtok), bajt: jegyzekBajtok.length },
-    tartalmak };
+  // ⭐ D120: a hivatkozás a TÖRZS méretét is mondja — a jegyzék és a (különböző) fájlok együtt; a fejlécen ebből látszik, mekkora
+  // a kód, mielőtt bárki kérné (a nem vállaló csak kérésre hozza el).
+  let torzs = jegyzekBajtok.length;
+  for (const t of tartalmak.values()) torzs += t.length;
+  const hivatkozas = { lenyomat: await bajtLenyomat(jegyzekBajtok), bajt: jegyzekBajtok.length,
+    ...(torzs > jegyzekBajtok.length ? { torzs } : {}) };
+  return { jegyzek, jegyzekBajtok, hivatkozas, tartalmak };
 }
 
 /**

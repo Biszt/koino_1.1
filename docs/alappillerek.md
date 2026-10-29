@@ -1557,3 +1557,17 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     kapcsolatának első darabját „ismétlésként” elnyelte · ⭐ egy valódi ismétlés mindig visz `k`-t, és a fogadó ablakán belül
     van (a küldő ablaka ≤ a fogadóé) · ⏸️ MÉRENDŐ: a kisebb nyitottak szeszélyes „a másik fél nem válaszol (10000 ms)”
     bukásai közül melyik volt ez (a javítás után a teljes sor 1336/1336) · `csaladi_orjarat_atvizsgalas.md` 13. szakasz.
+212. **2026-10-29 · D120 — a törzs-határ: a nagy törzs elemenként, kérésre (Csaba ötlete és döntése)**
+    → **böngészés közben a nem vállalt entitás törzséből elemenként csak a határ (1 MB, helyi) alatti jön magától — a szöveg
+    mindig, egy fájl a határig, a kártya kód-csomagja egy elem; amire pontot tettem, az teljesen; a nagyobbat a lap a helyén
+    kérhetőként mutatja, és a kérés után a következő csere hozza el; a hivatkozás a törzs méretét is mondja (`torzs` — a szerző
+    bemondása, a letöltő az első szeletnél ellenőrzi és megáll)** · a lelet (a 85. mérés): a nem vállaló a kártyák teljes
+    kódját (6,5 MB) elhozta, mert a fájl-igény minden látott entitás fájljait kéri · ⛔ elvetve: a méret a tartó bemondásaként a
+    fejléc-válaszban (harmadik fél állítása, a kézi úton nem állna ott) · ⛔ a kód fájljai egyenként kicsik — a fájlonkénti határ
+    nem fogná meg őket, ezért a csomag egy elem · a 86. mérés: a nem vállaló a kódból csak a jegyzéket hozza (29,5 KB) ·
+    `torzs_hatar_atvizsgalas.md`.
+213. **2026-10-29 · a letöltő korai kilépése kimondja a `KESZ`-t (mérve, a D120 építésén)**
+    → **a határ fölötti fájlnál a megállás a szelet-ellenőrzés ELŐTT jön, és a rossz-szelet ág is `KESZ`-t küld** · a lelet: a
+    régi korlát-ellenőrzés a nagy fájlt „rossz szeletnek” vette, és `KESZ` nélkül lépett ki — a kiszolgáló az előző kapcsolatán
+    várt, a következő fájlok a tétlenségi óráig hiába kértek (három fájlból három bukott, 22 mp) · `torzs_hatar_atvizsgalas.md`
+    5. szakasz.

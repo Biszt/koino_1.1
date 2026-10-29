@@ -50,6 +50,12 @@ import { szetosztottPontok } from './allapotSzamitas.js';
 import { TUDATPONT_KERET } from './szabalyok.js';
 import { ALAP_KUSZOBOK } from './javaslatSzamitas.js';
 import { szovegFeloldasa, szovegHivatkozasE } from '../esemeny/szovegDarab.js';
+
+/** ⭐ D120: a hivatkozások által bemondott törzs-méret (a szöveg `torzs`-a + a kártya kódjáé) — null, ha egyik sem mondja. */
+function torzsMerete(entitas) {
+  const m = (h) => (szovegHivatkozasE(h) && Number.isSafeInteger(h.torzs) ? h.torzs : 0);
+  return (m(entitas?.szoveg) + m(entitas?.koinoVerzio?.kod)) || null;
+}
 import { osszPontokSzamitasa, gyerekJegyzek, ismertAlattaSzamitasa } from './osszPont.js';
 // ⭐ D102: a gyökér kulcsa a fejléc-tudásban (a kérelem válasza ez alatt jegyzi a gyökér gyerekszámát és levágását) — egy
 // forrásból, a csere rétegéből (csak az állandó; hálózatot nem hoz).
@@ -194,6 +200,9 @@ function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
     sajatPont: en ? (entitas.hozzajarulok.get(en)?.pont ?? 0) : 0,
     // ⭐⭐ D119 (①b): a koino-verzió kártya a gyermeket és a kódot nevezi meg (a lap a „Kód” fület ebből építi).
     ...(entitas.koinoVerzio ? { koinoVerzio: entitas.koinoVerzio } : {}),
+    // ⭐⭐ D120: a TÖRZS mérete (a hivatkozásból — a szerző bemondása): a szöveg és a fájljai, a kártyánál a kód is. A fejlécen
+    // ebből látszik, mekkora, mielőtt kérném; csak ha a hivatkozás mondja (fájl nélkül a törzs maga a szöveg — nem jelezzük).
+    ...(torzsMerete(entitas) ? { torzsMeret: torzsMerete(entitas) } : {}),
 
     // ----- ⭐ A DÖNTÉS, HA EZ EGY JAVASLAT -----
     //

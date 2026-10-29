@@ -118,7 +118,9 @@ import {
   // ⭐ Az alsó sáv (2026-10-15): a csere állapota a lapnak
   csereAllapotTarolo,
   // ⭐ D112 ① (F3): a fájl-tár kerete — a nem vállalt törzs átmeneti
-  FAJL_ATMENETI_KORLAT, FAJL_FRISS, fajlTakaritasTerve
+  FAJL_ATMENETI_KORLAT, FAJL_FRISS, fajlTakaritasTerve,
+  // ⭐ D120: a törzs-elemek helyi jegyzéke (a határ fölötti fájlok mérete, a kért elemek)
+  torzsElemTarolo
 } from './js/tar/fajlTar.js';
 // ⭐ Az alsó sáv (2026-10-15): mikor cserélt utoljára a készülék, és mikor jön a következő kör (helyi feljegyzés)
 import { csereAllapotAlakja, korKezdete, korVege, csereFeljegyzese, csereAllapotKepe } from './js/csere/csereAllapot.js';
@@ -234,6 +236,8 @@ import { halmazLenyomata } from './js/esemeny/halmaz.js';
 import { terKartyai } from './js/allapot/ter.js';
 // ⭐ MELY FÁJLOKRA VAN SZÜKSÉGEM? — a szállítás első fele (a felderítés).
 import { fajlIgenyek, lenyomatUrlbol } from './js/allapot/fajlIgeny.js';
+// ⭐ D120: a törzs-határ — a nem vállalt elem böngészés közben csak a határ alatt jön magától, a nagyobb kérésre.
+import { TORZS_HATAR, KOD_ELEM, torzsElemJegyzek, nagyokFeljegyzese, elemKerese } from './js/allapot/fajlIgeny.js';
 import {
   felderitesBeallitasa, uresFelderitesJegyzek, felderitesJegyzekAlakja, ujFelderites, felderitesLepese, elevultFelderitesek,
   felderitesTorlese, GYOKER_AG, FELDERITES_ALAP, FELDERITES_HATAR
@@ -1595,7 +1599,7 @@ function kodOlvasoKeszites(blob) {
  * 64-es határ.
  */
 const torzsElvartEmlek = new Map();   // kulcs → { e, ido } — a kérő minden megjött fájl után újra kérdez (a jegyzékért)
-async function torzsElvartja(kulcs) {
+async function torzsEntitasa(kulcs) {
   let m = torzsElvartEmlek.get(kulcs);
   if (!m || Date.now() - m.ido > 60 * 1000) {
     const { allapot } = await kepetKeszit();
@@ -1603,9 +1607,44 @@ async function torzsElvartja(kulcs) {
     if (torzsElvartEmlek.size >= 64) torzsElvartEmlek.clear();
     torzsElvartEmlek.set(kulcs, m);
   }
-  if (!m.e?.koinoVerzio) return null;
+  return m.e;
+}
+async function torzsElvartja(kulcs, teljes = false) {
+  const e = await torzsEntitasa(kulcs);
+  if (!e?.koinoVerzio) return null;
   const blob = fajlBlobTarolo(KOINO);
-  return new Set(await torzsLenyomatai(m.e, (x) => blob.olvas(x), kodOlvasoKeszites(blob)));
+  // ⭐ D120: a kártya kód-csomagja egy elem — a nem vállaló (és nem kérő) csak a jegyzéket várja
+  if (!teljes && !(await torzsTeljesen(e)).kod) return new Set([e.koinoVerzio.kod.lenyomat]);
+  return new Set(await torzsLenyomatai(e, (x) => blob.olvas(x), kodOlvasoKeszites(blob)));
+}
+
+/** ⭐ D120: mi jön határ nélkül egy entitás törzséből — a vállalt (pontot tettem rá) és a „mindent” készülék mindent hoz. */
+async function torzsTeljesen(e) {
+  const mindent = (await kiszolgalasBeallitas()).mindent;
+  const vallalt = mindent || (e?.hozzajarulok?.get(szerzo)?.pont ?? 0) > 0;
+  const b = vallalt ? null : await torzsHatarBeallitasa();
+  return { vallalt, b, kod: vallalt || !!b?.kertek.has(KOD_ELEM + e?.azonosito) };
+}
+
+/**
+ * ⭐ D120: a törzs-kérelem szabálya egy entitásra (`vonal.js` `torzsSzabaly`): a fájlonkénti korlát (a szöveg-darab és a
+ * jegyzék mindig, a kért és a vállalt határ nélkül, a többi a határig) és a kihagyás (a már ismerten határ fölötti, nem kért).
+ */
+async function torzsSzabalya(kulcs) {
+  const e = await torzsEntitasa(kulcs);
+  const t = await torzsTeljesen(e);
+  if (t.vallalt) return null;
+  const mindig = new Set([e?.szoveg?.lenyomat, e?.koinoVerzio?.kod?.lenyomat].filter((l) => typeof l === 'string'));
+  const hatar = t.b.hatar;
+  return {
+    korlat: (l) => (mindig.has(l) || t.b.kertek.has(l) || (t.kod && !mindig.has(l)) ? null : hatar),
+    kihagy: (l) => !mindig.has(l) && !t.b.kertek.has(l) && t.b.nagyok.has(l)
+  };
+}
+
+/** ⭐ D120: a törzs-kérelem eredményéből a határ fölötti fájlok (a jegyzékbe). */
+async function torzsTulNagyai(r) {
+  return tulNagyokFeljegyzese((r?.fajlok ?? []).filter((f) => Number.isSafeInteger(f?.tulNagy)).map((f) => [f.lenyomat, f.tulNagy]));
 }
 
 /**
@@ -1684,14 +1723,26 @@ async function fajlResz() {
   // törzs a vállalóé. ⚠️ Ha a vállalás nem állt össze, semmit nem adunk ki (alapból), nem mindent.
   const mindent = (await kiszolgalasBeallitas()).mindent;
   let kiadhato = mindent ? null : new Set();
+  // ⭐ D120: a fájlonkénti korlát (lenyomat → bájt; az igényben nem szereplő — a randevún megjött szöveg képei — a határig)
+  const korlatok = new Map();
+  const igenyben = new Set();
+  let kerhetok = [];
 
   let kerelem = [];
   try {
     const { allapot, javaslatok } = await kepetKeszit();
     const jegyzo = fajlJegyzekTarolo(KOINO);
     // ⭐ D72: a szöveg-darabok és a javaslatok új szövege is igény; a meglévő szöveg képei is.
-    const { hianyzok, vallaltLenyomatok } = await fajlIgenyek(allapot, megvanE,
-      { szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob), kodOlvas: kodOlvasoKeszites(blob) });
+    // ⭐ D120: a törzs-határ — a „mindent” készülék mindent hoz (a nagy szeletek teljes tartója).
+    const igeny = await fajlIgenyek(allapot, megvanE,
+      { szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob), kodOlvas: kodOlvasoKeszites(blob),
+        ...(mindent ? {} : await torzsHatarBeallitasa()) });
+    const { hianyzok, vallaltLenyomatok } = igeny;
+    kerhetok = igeny.kerhetok ?? [];
+    for (const h of hianyzok) {
+      igenyben.add(h.lenyomat);
+      if (Number.isSafeInteger(h.korlat)) korlatok.set(h.lenyomat, h.korlat);
+    }
     if (!mindent) kiadhato = vallaltLenyomatok;
     // ⭐ A RITKÁBBAT ELŐBB (Csaba döntése) — a jelzés a korábbi bulikból már megvan.
     kerelem = kerelemOsszeallitasa(ritkasagSzerint(hianyzok, await jegyzo.olvas()));
@@ -1706,8 +1757,91 @@ async function fajlResz() {
     kerelem: kerelem.length ? kerelem : null,
     valasz: (kertek) => fajlValaszOsszeallitasa(kertek, async (l) => (!kiadhato || kiadhato.has(l)) && megvanE(l)),
     // ⭐ ÉS A BÁJTOK KISZOLGÁLÁSA (5.7 / B): a cserét kezdeményező fél is forrás lehet — D84/1: csak a kiadható.
-    olvas: (lenyomat) => (!kiadhato || kiadhato.has(lenyomat) ? blob.olvas(lenyomat) : null)
+    olvas: (lenyomat) => (!kiadhato || kiadhato.has(lenyomat) ? blob.olvas(lenyomat) : null),
+    // ⭐ D120: a randevú fájlonkénti korlátja (null: a régi fájl-korlát), és ami a határ miatt csak kérésre jön
+    fajlKorlat: mindent ? null : (l) => (korlatok.has(l) ? korlatok.get(l) : (igenyben.has(l) ? null : torzsHatar())),
+    kerhetok
   };
+}
+
+// ===================================
+// ⭐⭐ D120: A TÖRZS-HATÁR (Csaba ötlete és döntése, 2026-10-29)
+// ===================================
+//
+// A nem vállalt entitás törzséből böngészés közben elemenként csak a határ alatti jön magától (`fajlIgeny.js`); a nagyobbat
+// a letöltő az első szeletnél felismeri, és itt jegyezzük meg (a lap és a `torzs` parancs ebből mutatja, a fájl-igény ebből
+// nem kéri újra); a kért elem (a „kattintás” — `torzsElemKerese`) határ nélkül jön, a következő cserével.
+
+/** A határ (bájt) — a próbák a környezetből szűkíthetik (`KOINO_TORZS_HATAR`). */
+function torzsHatar() {
+  return kornyezetSzam('KOINO_TORZS_HATAR', TORZS_HATAR) || TORZS_HATAR;
+}
+
+/** A helyi jegyzék (a nagyok és a kértek) a fájl-igény beállításához. */
+async function torzsHatarBeallitasa() {
+  const j = torzsElemJegyzek(await torzsElemTarolo(KOINO).olvas());
+  return { hatar: torzsHatar(), nagyok: new Map(Object.entries(j.nagy).map(([l, v]) => [l, v.teljes])),
+    kertek: new Set(Object.keys(j.kert)) };
+}
+
+// ⚠️ A jegyzéket a folyamat párhuzamos munkái írják (a kör minden társával egyszerre): az olvasás–írás sorban megy.
+let torzsElemSor = Promise.resolve();
+function torzsElemModositasa(fn) {
+  const kesz = torzsElemSor.then(async () => {
+    const t = torzsElemTarolo(KOINO);
+    await t.ir(fn(await t.olvas()));
+  });
+  torzsElemSor = kesz.catch(() => {});
+  return kesz;
+}
+
+/** ⭐ D120: a határ fölöttinek talált fájlok mérete a jegyzékbe ([lenyomat, teljes] párok — a randevúból, a törzs-kérelemből). */
+async function tulNagyokFeljegyzese(parok) {
+  const jo = (parok ?? []).filter((p) => Array.isArray(p) && typeof p[0] === 'string' && Number.isSafeInteger(p[1]));
+  if (jo.length) await torzsElemModositasa((j) => nagyokFeljegyzese(j, jo));
+  return jo.length;
+}
+
+/**
+ * ⭐ D120: a KÉRHETŐ törzs-elemek — ami a határ miatt nem jön magától (a fájl-igény kérhető listája: a határ fölöttinek talált
+ * fájlok a méretükkel, és a kártyák kód-csomagja), egy entitásra szűkítve, ha megadják; és a kért elemek.
+ * @param {string|null} [entitas]
+ */
+async function torzsKerhetoi(entitas = null) {
+  const blob = fajlBlobTarolo(KOINO);
+  const { allapot, javaslatok } = await kepetKeszit();
+  const b = await torzsHatarBeallitasa();
+  const mindent = (await kiszolgalasBeallitas()).mindent;
+  const { kerhetok } = mindent ? { kerhetok: [] } : await fajlIgenyek(allapot, (l) => blob.van(l),
+    { szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob), kodOlvas: kodOlvasoKeszites(blob), ...b });
+  const lista = entitas ? kerhetok.filter((k) => k.entitas === entitas || (k.entitasok ?? []).includes(entitas)) : kerhetok;
+  return { hatar: b.hatar, mindent, kerhetok: lista, kertek: [...b.kertek] };
+}
+
+/**
+ * ⭐⭐ D120: A KÉRÉS (a „kattintás”) — egy entitás kérhető elemei (vagy egy megnevezett eleme: a fájl lenyomata, vagy `kod` —
+ * a kártya kód-csomagja) a kért elemek közé, és egy függő törzs-kérelem az entitásra (az őrjárat viszi a tartóhoz); a randevú
+ * is határ nélkül kéri őket. A következő csere hozza el. A parancs (`torzs`) és a lap (`POST /api/torzs`) ugyanezt hívja.
+ * @param {string} entitas - a teljes azonosító
+ * @param {string|null} [elem] - egy fájl lenyomata, `kod`, vagy semmi (az entitás minden kérhető eleme)
+ */
+async function torzsElemKerese(entitas, elem = null) {
+  const { kerhetok } = await torzsKerhetoi(entitas);
+  let kulcsok;
+  if (elem === 'kod') kulcsok = [KOD_ELEM + entitas];
+  else if (typeof elem === 'string' && /^[A-Za-z0-9_-]{43}$/.test(elem)) kulcsok = [elem];
+  else if (elem) throw new Error('Melyik elem? Egy fájl lenyomata (43 jel), vagy „kod” (a kártya kódja).');
+  else kulcsok = kerhetok.map((k) => k.elem);
+  if (!kulcsok.length) return { kulcsok, fuggo: null, nincs: true };
+  for (const k of kulcsok) await torzsElemModositasa((j) => elemKerese(j, k));
+  let fuggo = null;
+  try {
+    const { r } = await fuggoKerelemFelvetele({ fajta: 'torzs', kulcs: entitas }, { dht: false });
+    fuggo = r?.az ?? null;
+  } catch (hiba) {
+    console.warn('torzsElemKerese - a függő kérelem nem vehető fel', { ok: hiba.message });
+  }
+  return { kulcsok, fuggo };
 }
 
 // ⚠️ ITT ÁLLT 2026-09-26-IG A `fajlokElhozasa` ÉS A `fajlAtvitelKiirasa`: a kör UTÁN, TCP-n
@@ -3348,9 +3482,10 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
         ...await azonossagBeallitasa(),
         mintaValaszto: (valasz) => mintaKeres(valasz),
         megvan: (await kepetKeszit()).esemenyek.map((e) => e.azonosito).slice(-5000),
-        blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT, torzsElvart: torzsElvartja,
+        blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT, torzsElvart: torzsElvartja, torzsSzabaly: torzsSzabalya,
         // ⭐ D114 (T1): a törzs fájljai a közös munkán (ha egy randevú épp ugyanazt hozza, csatlakozunk).
         kozosMunka: fajlMunkak, forras: tars.cim + ':' + tars.port });
+    if (fk.fajta === 'torzs') await torzsTulNagyai(r);   // ⭐ D120
   } catch (hiba) {
     kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' — a függő kérelem nem ment át: ' + hiba.message + SZIN.vege);
     await kerelmekIrasa(probalkozas(await kerelmekOlvasasa(), fk.az));
@@ -3439,8 +3574,9 @@ async function fuggoKerelemSorozatMunkaja(allapot, halo, tars, fks) {
       ...await azonossagBeallitasa(),
       mintaValaszto: (valasz) => mintaKeres(valasz),
       megvan: (await kepetKeszit()).esemenyek.map((e) => e.azonosito).slice(-5000),
-      blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT, torzsElvart: torzsElvartja,
+      blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT, torzsElvart: torzsElvartja, torzsSzabaly: torzsSzabalya,
       kozosMunka: fajlMunkak, forras: tars.cim + ':' + tars.port });
+    for (const e of eredmenyek ?? []) await torzsTulNagyai(e);   // ⭐ D120
   } catch (hiba) {
     kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' — a kérelem-sorozat (' + fks.length + ') nem ment át: '
       + hiba.message + SZIN.vege);
@@ -4677,10 +4813,17 @@ function resMunka(allapot, halo, tars) {
       // ⭐ D114: a közös munka (több forrás egy fájlra), ennek a társnak a neve, és a forrás-tudás.
       kozosMunka: fajlMunkak, forras: fajlForras, fajlForrasok: fajlForrasTudas(fajlForras),
       // ⭐ D109 (KK4): a fájl is kiszolgálás — a kiküldött bájtok a kereten (eddig csak a csere könyvelődött).
-      kiszolgalasiKeret: kiszolgalasiKeretKapcsolo(), keretTars: { tabla: alairo, cim: tars.cim }
+      kiszolgalasiKeret: kiszolgalasiKeretKapcsolo(), keretTars: { tabla: alairo, cim: tars.cim },
+      // ⭐ D120: a korlát fájlonként (a nem vállalt elem a törzs-határig)
+      fajlKorlat: fajlok.fajlKorlat ?? null
     });
     // ⭐ D109 (KK6): ha a tartó a fájlra „később”-t mondott, a kör addig nem hívja.
     if (randevu.kesobb) kesobbFeljegyzese(tars, randevu.kesobb);
+    // ⭐ D120: a határ fölötti fájlok mérete a jegyzékbe (a lap kérhetőként mutatja, a fájl-igény nem kéri újra)
+    if (await tulNagyokFeljegyzese(randevu.tulNagyok)) {
+      kiir(SZIN.halvany + '    ' + randevu.tulNagyok.length + ' fájl a törzs-határ fölött (' + adatMennyiseg({ bajtKuldott:
+        randevu.tulNagyok.reduce((o, p) => o + p[1], 0) }) + ') — kérésre jön: node koino/koino.js torzs' + SZIN.vege);
+    }
     if (randevu.kesz || randevu.kiszolgalt || randevu.bukott) {
       kiir(SZIN.jo + '  ✓ ' + ora() + ' fájlok a résen: ' + randevu.kesz
         + ' megjött' + (randevu.bajt ? ' (' + adatMennyiseg({ bajtKuldott: randevu.bajt }) + ')' : '')
@@ -5153,7 +5296,8 @@ return {
   resAllapotKeszites, reszvetelHalmazom, sajatBejegyzesek, sajatHirdetendoTemak, sajatHorgonyom,
   sajatOsszesCim, sajatVallalasa, sikidomMegjegyzes, strukturaMegjegyzes, szabalyokSzovege, szovegKepeiKeresre,
   szovegOlvasoKeszites, tablaKliens, tablaKulcsBiztositasa, tablaraKiiras, tablarolOlvasas, tagsagFigyelmeztetes, tagsagKerdes,
-  tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, tovabbitasok,
+  tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, torzsElemKerese, torzsKerhetoi, torzsHatarBeallitasa,
+  tovabbitasok,
   tovabbitasokTakaritasa, tukorBeallitas, ujKoinoSzuletese,
   // ⭐ D119 (③): a családi munkának (a parancsok nem használják)
   resMunka, kerelemAtvetele
@@ -5184,7 +5328,8 @@ const {
   resAllapotKeszites, reszvetelHalmazom, sajatBejegyzesek, sajatHirdetendoTemak, sajatHorgonyom,
   sajatOsszesCim, sajatVallalasa, sikidomMegjegyzes, strukturaMegjegyzes, szabalyokSzovege, szovegKepeiKeresre,
   szovegOlvasoKeszites, tablaKliens, tablaKulcsBiztositasa, tablaraKiiras, tablarolOlvasas, tagsagFigyelmeztetes, tagsagKerdes,
-  tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, tovabbitasok,
+  tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, torzsElemKerese, torzsKerhetoi, torzsHatarBeallitasa,
+  tovabbitasok,
   tovabbitasokTakaritasa, tukorBeallitas, ujKoinoSzuletese
 } = foPeldany;
 
@@ -6062,11 +6207,47 @@ try {
       break;
     }
 
+    // ⭐⭐ D120: A TÖRZS-HATÁR — mi nem jön magától (a határ fölötti elemek), és a kérésük (a következő csere hozza el)
+    case 'torzs': {
+      const { allapot } = await kepetKeszit();
+      if (!ervek[0]) {
+        const t = await torzsKerhetoi();
+        kiir(SZIN.vastag + 'KÉRHETŐ TÖRZS-ELEMEK' + SZIN.vege + SZIN.halvany + '  (a határ: ' + adatMennyiseg({ bajtKuldott: t.hatar })
+          + ' — e fölött a nem vállalt elem csak kérésre jön; amire pontot tettem, az mindig teljesen)' + SZIN.vege);
+        if (t.mindent) kiir(SZIN.halvany + '  a „mindent” készülék mindent hoz — nincs határ' + SZIN.vege);
+        else if (!t.kerhetok.length) kiir(SZIN.halvany + '  nincs — amit látok, az a határ alatt van, vagy megvan' + SZIN.vege);
+        for (const k of t.kerhetok) {
+          const e = allapot.entitasok.get(k.entitas);
+          kiir('  ' + rovidAzonosito(k.entitas) + '  ' + (e?.cim ?? '') + SZIN.halvany + '  · '
+            + (k.kod ? 'a kód-csomag (' + k.fajlok + ' fájl, ' + k.hianyzik + ' hiányzik)' : 'fájl ' + k.elem.slice(0, 8) + '…') + ' · '
+            + (Number.isSafeInteger(k.meret) ? adatMennyiseg({ bajtKuldott: k.meret }) : 'a mérete nem ismert') + SZIN.vege);
+        }
+        if (t.kertek.length) kiir(SZIN.halvany + '  kérve: ' + t.kertek.length + ' elem' + SZIN.vege);
+        if (t.kerhetok.length) {
+          kiir(SZIN.halvany + 'Kérés: node koino/koino.js torzs <entitás> [<lenyomat>|kod] — a következő csere hozza el' + SZIN.vege);
+        }
+        break;
+      }
+      const entitas = feloldas(ervek[0], allapot.entitasok.keys());
+      const r = await torzsElemKerese(entitas, ervek[1] ?? null);
+      if (r.nincs) {
+        kiir(SZIN.halvany + 'Ennek az entitásnak nincs kérhető (határ fölötti) eleme — ami kell, magától jön.' + SZIN.vege);
+        break;
+      }
+      kiir(SZIN.jo + 'Kérve: ' + r.kulcsok.length + ' elem' + SZIN.vege + SZIN.halvany + ' (' + rovidAzonosito(entitas)
+        + ') — a következő csere hozza el, határ nélkül' + (r.fuggo ? '; függő törzs-kérelem is indult' : '') + SZIN.vege);
+      break;
+    }
+
     case 'fajlok': {
       const { allapot, javaslatok } = await kepetKeszit();
       const blob = fajlBlobTarolo(KOINO);
-      const { hianyzok: nyersHianyzok, megvan, osszes } = await fajlIgenyek(allapot,
-        (l) => blob.van(l), { szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob), kodOlvas: kodOlvasoKeszites(blob) });
+      // ⭐ D120: a törzs-határ szerint — ami csak kérésre jön, az külön (a `torzs` parancs)
+      const fajlMindent = (await kiszolgalasBeallitas()).mindent;
+      const { hianyzok: nyersHianyzok, megvan, osszes, kerhetok: torzsKerhetok } = await fajlIgenyek(allapot,
+        (l) => blob.van(l), { szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob), kodOlvas: kodOlvasoKeszites(blob),
+          ...(fajlMindent ? {} : await torzsHatarBeallitasa()) });
+      const torzsNagyok = (torzsKerhetok ?? []).length;
 
       // ⭐ A RITKÁBBAT ELŐBB (Csaba döntése) — és a `birtokosok` szám innentől látszik is.
       const jegyzet = await fajlJegyzekTarolo(KOINO).olvas();
@@ -6079,8 +6260,11 @@ try {
         kiir(SZIN.halvany + '  Ebben a koinóban még nincs kép vagy fájl.' + SZIN.vege);
         break;
       }
+      if (torzsNagyok) {
+        kiir(SZIN.halvany + '  ' + torzsNagyok + ' elem a törzs-határ fölött — kérésre jön: node koino/koino.js torzs' + SZIN.vege);
+      }
       if (!hianyzok.length) {
-        kiir(SZIN.jo + '  Minden hivatkozott fájl megvan ezen a készüléken.' + SZIN.vege);
+        kiir(SZIN.jo + '  Minden hivatkozott fájl megvan ezen a készüléken' + (torzsNagyok ? ' (a kérhetőkön kívül).' : '.') + SZIN.vege);
         break;
       }
 
@@ -6998,7 +7182,7 @@ try {
       const { kapu } = await keziKapuNyitasa((halo, t) => kerelemUdpResen(halo, t.cim, t.port, KOINO, k, {
         ...azonossag,
         mintaValaszto: (valasz) => mintaKeres(valasz), megvan,
-        blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT, torzsElvart: torzsElvartja,
+        blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT, torzsElvart: (k) => torzsElvartja(k, true),   // ⭐ D120: a kimondott kérés a teljes törzs
         kozosMunka: fajlMunkak, forras: t.cim + ':' + t.port
       }));
       let kor;
@@ -8675,6 +8859,22 @@ try {
           // ⭐⭐ D119 (①b): AZ ÚJ KOINO-VERZIÓ A LAPRÓL — ugyanaz a függvény, mint a `koinoverzio` parancsé (a kód-csomag a kártyára, a
           // gyermek születése a kód nevével, a kártya és a pont). ⚠️ Visszavonhatatlan: a lap előbb megerősítést kér.
           // ===================================
+          // ⭐⭐ D120: A KÉRÉS (a „kattintás”) — egy határ fölötti elem (`elem`: a fájl lenyomata vagy `kod` — a kártya kódja) vagy
+          // egy entitás minden kérhető eleme; a következő csere hozza el. A parancs (`torzs`) és a lap ugyanazt hívja.
+          if (utvonal === '/api/torzs') {
+            if (!sajatKoino) return { allapot: 400, adat: { hiba: 'A törzs-elemeket a saját (indításkori) koinódban lehet kérni.' } };
+            try {
+              let entitas = typeof test?.entitas === 'string' && test.entitas ? test.entitas : null;
+              const elem = typeof test?.elem === 'string' && test.elem ? test.elem : null;
+              // a lap egy képnél csak a lenyomatot tudja — az entitást a kérhetők listájából keressük
+              if (!entitas && elem) entitas = (await torzsKerhetoi()).kerhetok.find((k) => k.elem === elem)?.entitas ?? null;
+              if (!entitas) return { allapot: 404, adat: { hiba: 'Nincs ilyen kérhető (határ fölötti) elem ezen a készüléken.' } };
+              return { adat: { success: true, ...(await torzsElemKerese(entitas, elem)) } };
+            } catch (hiba) {
+              return { allapot: 400, adat: { hiba: hiba.message } };
+            }
+          }
+
           if (utvonal === '/api/koinoverzio') {
             if (!sajatKoino) return { allapot: 400, adat: { hiba: 'Koino-verziót a saját (indításkori) koinódban lehet létrehozni.' } };
             try {
@@ -9158,6 +9358,16 @@ try {
           const sajat = (await sajatKodCsomag(PROGRAM_GYOKER)).hivatkozas;
           return { adat: { kartya: e.azonosito, gyermek: e.koinoVerzio.gyermek, kod, jegyzek: jegyzek?.fajlok ?? null, megvan,
             sajat, egyezik: sajat.lenyomat === kod.lenyomat } };
+        }
+
+        // ⭐⭐ D120: A KÉRHETŐ TÖRZS-ELEMEK — ami a határ miatt nem jön magától (a méretével), egy entitásra (`entitas`) vagy egy
+        // fájlra (`lenyomat`) szűkítve; és a határ, a kért elemek. A lap ebből rajzolja a „kattints” helyét.
+        if (utvonal === '/api/torzs') {
+          if (!sajatKoino) return { adat: { hatar: null, mindent: false, kerhetok: [], kertek: [] } };
+          const t = await torzsKerhetoi(kereses.get('entitas') || null);
+          const l = kereses.get('lenyomat');
+          return { adat: { hatar: t.hatar, mindent: t.mindent, kertek: t.kertek,
+            kerhetok: l ? t.kerhetok.filter((k) => k.elem === l) : t.kerhetok } };
         }
 
         // ⭐⭐ D119 (①b): A PROGRAM VERZIÓJA — a koinó születésének programja és a futó programé (a lap kimondja, ha más).

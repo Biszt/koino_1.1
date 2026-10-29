@@ -30,6 +30,7 @@ import { apiGet } from './utils/apiHelper.js';
 import { eemberMentese, aktivEntitasMentese, aktivEntitasLekerese } from './utils/authHelper.js';
 import { oldalAdatta, LAPOS_OLDAL } from './kartyaAdat.js';
 import { kartyaSzamokJelolese, testverHianyJelzo, testverHianyEltavolitasa } from './koinoFelderitetlen.js';
+import { torzsMeretJelolese } from './koinoTorzs.js';   // ⭐ D120: a törzs mérete a kártyán
 
 // ===================================
 // A CSENDES ÚJRAKÉRDEZÉS ÜTEME
@@ -471,6 +472,7 @@ export class KoinoPakli extends Pakli {
       // ⭐ D116: a leszármazottak és a testvérek száma, és ami még nincs meg (a forrás-jeltől függetlenül — a tartott kártya
       // alatt is lehet még nem ismert)
       if (dom) kartyaSzamokJelolese(dom, kartya?.entitas?.koinoSzamok ?? null);
+      if (dom) torzsMeretJelolese(dom, kartya?.entitas?.koinoTorzsMeret ?? null);   // ⭐ D120
       const forras = kartya?.entitas?.koinoForras;
       if (!dom || !forras) return;
       dom.classList.toggle('pakli-kartya--nem-tartott', !forras.tartom);

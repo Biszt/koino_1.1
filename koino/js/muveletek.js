@@ -33,6 +33,8 @@ import { lancNezete } from './allapot/koinoLanc.js';   // ⭐ D118 (③, ⑤b): 
 import { koinoSzabalyai, teljesSzabalyok } from './esemeny/koinoSzabalyok.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import { szovegDarabra } from './esemeny/szovegDarab.js';
+// ⭐ D120: a szöveg blokkjaiban hivatkozott fájlok (a törzs méretéhez).
+import { entitasFajljai } from './allapot/fajlIgeny.js';
 // ⭐ D93: a tagság (a csomag kiadásához) és a tár-alapú lánc-gyűjtés.
 import { tagsagiIndex, horgonyTagsaga, tagsagiLanc, TAGSAGI_CSOMAG } from './allapot/tagsag.js';
 import {
@@ -116,7 +118,25 @@ async function szovegDarabbaTetele(kornyezet, szoveg) {
   if (irt.lenyomat !== hivatkozas.lenyomat) {
     throw new Error('A darab-tár más lenyomatot adott, mint a szövegé — nem írunk alá rá hivatkozást.');
   }
-  return hivatkozas;
+  return torzsesHivatkozas(hivatkozas, szoveg, kornyezet.darabTar);
+}
+
+/**
+ * ⭐ D120: A TÖRZS MÉRETE A HIVATKOZÁSBAN — a darab + a szövegben hivatkozott fájlok (a képek, a csatolmányok), egyszer
+ * számolva. A fejlécen ebből látszik, mekkora a törzs, mielőtt bárki kérné (a letöltő a valódi méretet az első szeletből tudja,
+ * és a határnál megáll). Fájl nélkül elmarad (a törzs maga a darab); ha egy fájl mérete nincs meg nálam, szintén — nem
+ * tippelünk.
+ */
+async function torzsesHivatkozas(hivatkozas, szoveg, darabTar) {
+  const fajlok = [...entitasFajljai({ szoveg })];
+  if (!fajlok.length || typeof darabTar?.meret !== 'function') return hivatkozas;
+  let torzs = hivatkozas.bajt;
+  for (const l of fajlok) {
+    const m = await darabTar.meret(l);
+    if (!Number.isSafeInteger(m)) return hivatkozas;
+    torzs += m;
+  }
+  return torzs > hivatkozas.bajt ? { ...hivatkozas, torzs } : hivatkozas;
 }
 
 async function esemenytTeszek(kornyezet, tipus, adat, beallitas = {}) {
