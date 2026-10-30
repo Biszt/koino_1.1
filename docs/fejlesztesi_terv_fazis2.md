@@ -6126,7 +6126,11 @@ szolgálja. Közben két szállítási hiba (mérve) és a randevú vége (`FAJL
 minden példányából (a raj, a fájl-források, a függő kérelmek, a továbbítások, a kopogtatók), egy társnak egy munka, minden
 példány a saját munka-állapotával; a háztartás koinónként; a kiszolgálási keret és a „később” a családban egy (a határ és a
 feljegyzés a fő koinóé — mért hiba: eleinte a kérdező családtag beállítása szabta meg); a D99 a közös koinók mindegyikére.
-⏭️ ⑤ a független családok.
+🚧 **Az ⑤ a független családok** (2026-10-30, elágazás 217–218): ✅ a másik család kapuja nem elérés (a munka kimondja —
+`masutt` —, a kör a társ következő címét hívja); ⛔ közben mérve és javítva: két egyszerre induló folyamat két tábla-kulcsot írt
+(a készülék két társnak látszott) — a létrehozás kizárólagos. ⏸️ **Csabánál az ⑤c — a kötések elosztása** két független család
+között (a közös 3/5-ös jegyzékben 3 + 3 társnál senki nem lesz rendszeres): (A) családonként külön jegyzék ⭐ · (B) közös, a
+korlát a családok számával · (C) marad a közös 3/5.
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal

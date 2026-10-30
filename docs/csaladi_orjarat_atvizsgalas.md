@@ -316,3 +316,38 @@ próba 3. lelete ennek a fele: a gyermek magától nem cserélt.
   szóló kérése „később” (rontás: koinónként külön keret, és a határ a kérdező családtagé — mindkettő bukik).
 - ⏭️ **Az ⑤: a független családok** — a nem közös gyökerű koinók külön őrjáratban (CS4); köztük a „MÁSIK koinó” megállás a
   gyors javítással zárva.
+
+## 15. 🚧 Az ⑤ — a független családok (2026-10-30)
+
+Két FÜGGETLEN család (nem közös a gyökerük) egy készüléken: CS4 (A) szerint két őrjárat, két port. A kötés-jegyzék viszont
+készülék-szintű (`kotesek.json` — a tábla-kulcs szerint, ≤ 3 cím), tehát egy társ kötése mindkét családja portját jegyzi.
+
+- ✅ **⑤a a másik család kapuja nem elérés (a költözés kézi próbájának 3. lelete):** a kör a társ címeit egy csoportként hívja, és
+  amint egy címen „elérte”, a többit kihagyja — a másik család portján kapott „MÁSIK koinóé” válasz viszont SIKERES munkának
+  számított, tehát a jó portot a kör soha nem hívta. ⭐ Most a családi munka kimondja, ha a társ egy másik koinón felelt, és közös
+  koinónk sincs vele (`masutt` — `csaladMunkaKeszito`), a kapu ezt nem veszi elértnek, és a csoport következő címe jön
+  (`udpKapu.js` `munkatFigyel`; a portváltás-feltevésnél is: `dont`). A kapu a koinóról továbbra sem tud semmit — egy semleges jel.
+- ⛔ **⑤b a tábla-kulcs versenye (mérve, az ⑤a próbáján):** két egyszerre induló folyamat egy friss készüléken (a két család
+  postaládája) mindkettő „nincs még” választ kapott a tábla-kulcsra, mindkettő újat írt, és a készülék a társainak KÉT társnak
+  látszott (két kötés, két külön csoport — a próba így a hiba nélkül is átment volna). ⭐ Most a létrehozás kizárólagos
+  (`fajlTar.js` `tablaKulcsTarolo` `irHaNincs` — `wx`), és aki később ért oda, a másikét olvassa vissza (`tablaKulcsBiztositasa`).
+  ⚠️ A személyes kulcs (`kulcsparBiztositasa`) ugyanezt a mintát követi; ott az első parancs (`koino` / `csatlakoz`) mindig magában
+  fut, ezért ma nem jön elő — külön feladat.
+- ⏸️ **⑤c a kötések elosztása — Csabánál:** a közös jegyzék (K = 3, legfeljebb 5) a két család társain osztozik. Mérve (a
+  `kotesek.js` tiszta függvényeivel): ha mindkét családban 3-3 rendszeres társ van, körönként egy kiesik és visszakerül, és senki nem
+  jut 1 találkozásnál tovább — így egyikük sem lesz „rendszeres” (a kiszolgálási keret kötés-osztálya is ebből dönt); 2 + 2 társnál a
+  jegyzék elfér, de a „legrendszeresebb három” közül az egyik család csak egyet kap. A kérdés: (A) családonként külön jegyzék
+  (családonként K = 3 / 5, a címek is a családé; a tábla minden kötésnek ír) · (B) közös jegyzék, a korlát a családok számával
+  szorozva, a címek családonként jelölve · (C) marad a közös 3/5, csak a címek kapnak családot (a „nyüzsgő koinó” kimondott ára).
+  ⭐ Javaslat: (A) — a kötés a csere társa, és egy család társa a másik család adatát nem viszi; a terhe a készülék saját
+  családjaival nő, amiket ő választott (9. szabály).
+- **A próbák** (a parancssor, +2): (1) a független család kapuja nem elérés — B két független koinó postaládáját futtatja két
+  porton, A kötése mindkét portot jegyzi (a másik családé a frissebb), a kör előbb a másik család kapuját éri el, aztán a jót, és
+  a gondolat átér (rontás: a kapu a `masutt` nélkül, és a munka a `masutt` nélkül — mindkettő bukik); (2) a tábla-kulcs egy
+  készüléken egy — négy egyszerre induló `tabla` parancs, a verseny ablaka kitágítva (`KOINO_TABLA_KESLELTETES`), mind ugyanazt a
+  rekesznevet mondja (rontás: a felülíró írás → négy különböző név).
+- ⚠️ **A teljes sor lelete (2026-10-30):** a D112 ④ (a felderítés törzse) próbája egyszer bukott, és magában is ~4 futásból
+  egyszer — a csere randevúja a két szöveg-darabot a felderítés törzs-fázisa ELŐTT elhozta, és a fázisnak nem volt mit kérnie (a
+  program helyes volt: a darabok megvoltak és a takarítás után is megmaradtak; a próba a kérést várta). A HEAD-en (a változások
+  nélkül) ugyanez az út — a verseny régi. ⭐ A próba most a randevú fájl-kérését kikapcsolja (`KOINO_RANDEVU_FAJL=0` — csak a
+  kérő oldalon, a kiszolgálás marad), így egy utat mér: 4/4 zöld, és a rontás (a törzs-fázis nem kér) bukik.

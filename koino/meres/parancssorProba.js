@@ -993,6 +993,83 @@ proba('⭐⭐ D119 (④a): a kiszolgálási keret a családban egy — a szülő
     }
   });
 
+// ⛔ D119 (⑤): A TÁBLA-KULCS EGY KÉSZÜLÉKEN EGY — akkor is, ha több folyamat egyszerre hozná létre. A ⑤ próbáján mérve: két
+// független család postaládája egy friss készüléken egyszerre indult, mindkettő „nincs még” választ kapott, és mindkettő
+// saját tábla-kulcsot írt — a társ a készüléket KÉT társnak látta. Négy egyszerre induló `tabla` parancs, a verseny ablaka
+// kitágítva (`KOINO_TABLA_KESLELTETES` — a kulcs elkészülte és a kiírás között); mind ugyanazt a rekesznevet mondja, és az a
+// fájlé. Rontás: a kizárólagos írás helyett a régi felülíró → négy különböző név.
+proba('⛔ D119 (⑤): a tábla-kulcs egy készüléken egy — több egyszerre induló folyamat sem hoz létre kettőt', async () => {
+  const a = await ujKeszulek();
+  try {
+    await fut(a, 'koino', 'Tábla-verseny', 'nyilt');
+    const kimenetek = await Promise.all([0, 1, 2, 3].map(() => fut(a, 'tabla', { KOINO_TABLA_KESLELTETES: '700' })));
+    const nevek = kimenetek.map((k) => /a rekeszem neve: ([A-Za-z0-9_-]{12})/.exec(k)?.[1] ?? null);
+    const fajl = JSON.parse(await readFile(join(a, 'tabla-kulcs.json'), 'utf8')).alairoNyilvanos?.slice(0, 12);
+    const ok = nevek.every((n) => n && n === fajl);
+    if (!ok) process.stderr.write('    (a tábla-kulcs versenye: ' + JSON.stringify({ nevek, fajl }) + ')\n');
+    return ok;
+  } finally {
+    await rm(a, { recursive: true, force: true });
+  }
+});
+
+// ⭐⭐ D119 (⑤): A FÜGGETLEN CSALÁD KAPUJA NEM ELÉRÉS. A és B két FÜGGETLEN koinóban is együtt van (P és Q — nem közös a
+// gyökerük); B mindkettőre külön postaládát futtat, két porton (CS4). A kézzel cserél B-vel mindkettőben — a kötése így B
+// mindkét portját jegyzi, a Q-ét frissebbként —, aztán az induló címek közül leveszi őket (B-t csak a kötés ismeri). A a
+// P-ben új gondolatot ír, és az őrjáratát a P-re indítja. ⭐ A kör B-t előbb a Q-portján éri el („MÁSIK koinóé”) — ez nem
+// elérés, a csoport következő címe (a P-port) jön, és a gondolat B P-beli lemezére ér. Viselkedést mérünk (B lemezét és A
+// naplóját). Rontás: a `masutt` nélkül a kör a Q-porton „elérte” B-t, a P-portot soha nem hívja, a gondolat nem ér át.
+proba('⭐⭐ D119 (⑤): a független család kapuja nem elérés — a kör a társ másik címét is hívja, és a csere a jó koinóban lemegy',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const PA = 7897, BP = 7899, BQ = 7901;
+    const Q = { KOINO_AZONOSITO: 'q' };
+    const futok = [];
+    let naplo = '';
+    try {
+      await fut(a, 'koino', 'Független-P', 'nyilt');
+      const P = await koinoNeve(a);
+      await fut(a, 'koino', 'Független-Q', 'nyilt', Q);
+      const QN = await koinoNeve(a, 'q');
+      await fut(b, 'csatlakoz', P);
+      await fut(b, 'csatlakoz', QN, Q);
+      futok.push(spawn(process.execPath, [KOINO_JS, 'figyel', String(BP)],
+        { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '' }, stdio: 'ignore' }));
+      futok.push(spawn(process.execPath, [KOINO_JS, 'figyel', String(BQ)],
+        { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...Q }, stdio: 'ignore' }));
+      await varj(2500);
+      // a kötés: előbb a P-port, aztán a Q-port (a frissebb)
+      const csP = await fut(a, 'csere', '127.0.0.1', String(BP));
+      const csQ = await fut(a, 'csere', '127.0.0.1', String(BQ), Q);
+      await fut(a, 'tars', 'torol', '127.0.0.1', String(BP));
+      await fut(a, 'tars', 'torol', '127.0.0.1', String(BQ));
+      const kotes = JSON.parse(await readFile(join(a, 'kotesek.json'), 'utf8').catch(() => '{}')).kotesek ?? [];
+      const g = azonosito(await fut(a, 'gondolat', 'P HÍR'), 'Létrejött:');
+      const o = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(PA)],
+        { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: ['ignore', 'pipe', 'pipe'] });
+      o.stdout.on('data', (x) => { naplo += x; });
+      futok.push(o);
+      let atjutott = false;
+      for (let i = 0; i < 60 && !atjutott; i++) {
+        await varj(500);
+        atjutott = !!g && (await readFile(join(b, P, 'esemenyek.jsonl'), 'utf8').catch(() => '')).includes(g);
+      }
+      const tiszta = naplo.replace(/\x1b\[[0-9;]*m/g, '');
+      const cimek = (kotes[0]?.cimek ?? []).map((c) => c.port);
+      const jo = { csereP: /Csere kész/.test(csP), csereQ: /Csere kész/.test(csQ), ketCim: cimek[0] === BQ && cimek.includes(BP),
+        masikKapu: /MÁSIK koinóé/.test(tiszta), atjutott };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) process.stderr.write('    (a független család: ' + JSON.stringify({ ...jo, cimek }) + ')\n'
+        + '    (A napló: ' + tiszta.replace(/\s+/g, ' ').slice(-900) + ')\n');
+      return ok;
+    } finally {
+      for (const f of futok) f.kill();
+      await varj(800);
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ⭐⭐ D118 (②b): A KAPU KOINÓ-SZABÁLYA a parancssoron és a cserén. Az A a szülőben ír egy gondolatot a gyermek születése
 // ELŐTT és egyet UTÁNA; a szülő kivitele a gyermekbe behozva csak az elsőt adja (a második a szülő jelene — „másik koinóé”),
 // és a csere (két „mindent” készülék) ugyanígy viszi tovább a B-nek. Viselkedést mérünk (a két lemezt). ⚠️ A számítás még
@@ -7295,7 +7372,11 @@ proba('⭐⭐ D112 ④: a felderítés törzse — a fejlécek után a szöveg-d
     figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(PA)],
       { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: 'ignore' });
     await varj(1500);
-    const kornyezet = { KOINO_KISZOLGALAS: 'alap' };
+    // ⚠️ A csere randevúja is hozhatná a darabokat (D és A itt társak — a randevú a látott entitások szövegét is kéri, D120), és
+    // a két út versenyezne: ha a randevú ér oda előbb, a törzs-fázisnak nincs mit kérnie (mérve, 2026-10-30: a teljes soron és
+    // magában is ~4 futásból egyszer — a program helyes volt, a próba a kérést várta). ⭐ Ezért D-nél a randevú fájl-kérése ki
+    // van kapcsolva (`KOINO_RANDEVU_FAJL=0`): a darabot csak a felderítés törzs-kérelme hozhatja — a mérés így egy utat mér.
+    const kornyezet = { KOINO_KISZOLGALAS: 'alap', KOINO_RANDEVU_FAJL: '0' };
     await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
     await fut(d, 'tars', '127.0.0.1', String(PA), 'A', kornyezet);
     await fut(d, 'csatlakoz', await koinoNeve(a));   // ⭐ D118/2
@@ -7313,9 +7394,7 @@ proba('⭐⭐ D112 ④: a felderítés törzse — a fejlécek után a szöveg-d
     od.kill();
     od = null;
     await varj(800);
-    // ⚠️ A csere randevúja is hozhatja a darabokat (D és A itt társak — a randevú a két tár entitásainak fájljait is kéri), és
-    // a két út versenyez (mérve: hol a kérelem, hol a randevú ér oda előbb). A felderítés dolga a KÉRÉS — a kérelem-napló
-    // mutatja, hogy a törzs-kérelem létrejött (függ vagy megjött); a darab bármelyik úton jöhet.
+    // A felderítés dolga a KÉRÉS — a kérelem-napló mutatja, hogy a törzs-kérelem létrejött (függ vagy megjött).
     const kerelmek = JSON.parse(await readFile(join(await koinoMappa(d), 'kerelmek.json'), 'utf8').catch(() => '{}'));
     const torzsKeresek = [...(kerelmek.fuggo ?? []), ...(kerelmek.kesz ?? [])].filter((x) => x.fajta === 'torzs');
     const dElott = await blobok(d);

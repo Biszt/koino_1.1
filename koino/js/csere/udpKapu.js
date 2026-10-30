@@ -349,13 +349,18 @@ export async function udpKapuNyitasa(beallitas) {
       a.csoport = g;
     }
 
-    /** A cél munkája — és a végén: tényleg a várt társ volt-e (`jo`)? */
+    /**
+     * A cél munkája — és a végén: tényleg a várt társ volt-e (`jo`)?
+     * ⭐ D119 (⑤): ha a munka kimondja, hogy a társ EZEN a címén nem ott van, ahol keressük (`eredmeny.masutt` — egy
+     * másik, független család kapuja ugyanazon a készüléken), a cél nem számít elértnek, és a csoport következő címe jön.
+     * ⛔ Különben a kör a társat a rossz portján „elérte”, és a jót soha nem hívta (a költözés kézi próbájának 3. lelete).
+     */
     const munkatFigyel = (a, igeret) => {
       a.igeret = igeret;
       a.jo = undefined;
       igeret.then((e) => {
         if (a.igeret !== igeret) return;
-        a.jo = e.ok && !(a.alairo && e.eredmeny?.alairo && e.eredmeny.alairo !== a.alairo);
+        a.jo = e.ok && !e.eredmeny?.masutt && !(a.alairo && e.eredmeny?.alairo && e.eredmeny.alairo !== a.alairo);
       });
     };
 
@@ -399,6 +404,8 @@ export async function udpKapuNyitasa(beallitas) {
         if (c) c.bukott = { tars: t, igeret };
         return;
       }
+      // ⭐ D119 (⑤): a másik portján egy MÁSIK család kapuja felelt — ez nem a várt cím portváltása; a célok szabadok maradnak.
+      if (e.eredmeny?.masutt) return;
       const talalt = j.find((c) => c.alairo && c.alairo === e.eredmeny?.alairo)
         ?? j.find((c) => !c.alairo);
       if (talalt) {

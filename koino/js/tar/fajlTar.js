@@ -2028,6 +2028,23 @@ export function tablaKulcsTarolo(hely = alapHely()) {
     async ir(leiras) {
       await mkdir(hely, { recursive: true });
       await writeFile(fajl, JSON.stringify(leiras, null, 2), 'utf8');
+    },
+
+    /**
+     * ⭐ D119 (⑤): az írás CSAK HA MÉG NINCS — kizárólagos létrehozással (`wx`). ⛔ Két egyszerre induló folyamat (két független
+     * család őrjárata egy friss készüléken — CS4) mindkettő „nincs még” választ kapott, mindkettő új kulcsot írt, és a
+     * készülék a társainak két különböző társnak látszott (mérve, a D119 ⑤ próbáján).
+     * @returns {Promise<boolean>} mi írtuk-e (false: a másik folyamat már létrehozta)
+     */
+    async irHaNincs(leiras) {
+      await mkdir(hely, { recursive: true });
+      try {
+        await writeFile(fajl, JSON.stringify(leiras, null, 2), { encoding: 'utf8', flag: 'wx' });
+        return true;
+      } catch (hiba) {
+        if (hiba.code === 'EEXIST') return false;
+        throw hiba;
+      }
     }
   };
 }

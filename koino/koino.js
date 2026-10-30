@@ -1767,7 +1767,9 @@ async function fajlResz() {
   return {
     // ⚠️ A `valasz` MINDIG megvan (ez a képesség), a `kerelem` lehet üres — a
     // szimmetria a képességen múlik, nem azon, hogy épp van-e mit kérnem.
-    kerelem: kerelem.length ? kerelem : null,
+    // (a próbák a randevú fájl-KÉRÉSÉT kikapcsolhatják — `KOINO_RANDEVU_FAJL=0` —, hogy egy másik út, a felderítés törzse,
+    //  egymagában legyen mérhető; a kiszolgálás marad)
+    kerelem: kerelem.length && process.env.KOINO_RANDEVU_FAJL !== '0' ? kerelem : null,
     valasz: (kertek) => fajlValaszOsszeallitasa(kertek, async (l) => (!kiadhato || kiadhato.has(l)) && megvanE(l)),
     // ⭐ ÉS A BÁJTOK KISZOLGÁLÁSA (5.7 / B): a cserét kezdeményező fél is forrás lehet — D84/1: csak a kiadható.
     olvas: (lenyomat) => (!kiadhato || kiadhato.has(lenyomat) ? blob.olvas(lenyomat) : null),
@@ -2132,8 +2134,20 @@ async function tablaKulcsBiztositasa() {
   if (meglevo?.alairoNyilvanos && meglevo?.titkositoNyilvanos) return meglevo;
 
   const uj = await ujTablaKulcs();
-  await tarolo.ir(uj);
-  return uj;
+  // (a próbák a verseny ablakát kitágíthatják — `KOINO_TABLA_KESLELTETES`, ms)
+  const kesleltetes = Number.parseInt(process.env.KOINO_TABLA_KESLELTETES ?? '', 10);
+  if (kesleltetes > 0) await new Promise((t) => setTimeout(t, kesleltetes));
+  // ⛔ D119 (⑤): kizárólagosan — ha közben egy másik folyamat (a másik család őrjárata) létrehozta, az övé a készülék kulcsa;
+  // a rövid várakozás arra az esetre, ha még íródik.
+  if (await tarolo.irHaNincs(uj)) return uj;
+  for (let i = 0; i < 40; i++) {
+    try {
+      const masik = await tarolo.olvas();
+      if (masik?.alairoNyilvanos && masik?.titkositoNyilvanos) return masik;
+    } catch { /* még íródik */ }
+    await new Promise((t) => setTimeout(t, 50));
+  }
+  throw new Error('A tábla-kulcs fájlja létezik, de nem olvasható: ' + tarolo.fajl);
 }
 
 /**
@@ -5656,7 +5670,9 @@ function csaladMunkaKeszito(allapot) {
     } finally {
       halo.zar();
     }
-    if (!Array.isArray(elso?.tarsCsalad)) return elso;
+    // ⭐ D119 (⑤): ha a társ egy MÁSIK koinón felelt, és közös koinónk sincs vele (egy független család kapuja, vagy a régi
+    // program), ez a címe nem az, ahol keressük — a kör nem veszi elértnek (`masutt`), és a társ többi címét hívja.
+    if (!Array.isArray(elso?.tarsCsalad)) return elso?.masKoino ? { ...elso, masutt: true } : elso;
     const kesz = elso.masKoino ? null : KOINO;
     const kozos = elso.tarsCsalad.filter((k) => k !== kesz && csaladPeldanyok.has(k)).sort();
     const tobbi = [], lement = [];
@@ -5698,7 +5714,8 @@ function csaladMunkaKeszito(allapot) {
       csaladKozosTarssal.set(alairo, [...(elso.masKoino ? [] : [KOINO]), ...lement]);
       while (csaladKozosTarssal.size > 512) csaladKozosTarssal.delete(csaladKozosTarssal.keys().next().value);
     }
-    return { ...csaladEredmenye(elso, tobbi, lement), ...(bukas ? { csaladBukas: bukas } : {}) };
+    return { ...csaladEredmenye(elso, tobbi, lement), ...(bukas ? { csaladBukas: bukas } : {}),
+      ...(elso.masKoino && !lement.length ? { masutt: true } : {}) };
   };
 }
 

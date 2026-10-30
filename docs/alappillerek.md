@@ -1589,3 +1589,13 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     lelet: az első alakban a munka ELŐTT is megkérdeztük a család példányait — a rontása (a választás nélkül) a próbát nem
     buktatta, mert a kérelem a közös koinó munkájában úgyis lement; egy fölösleges út kevesebb kód, és egy kérdés kevesebb
     minden munka előtt · `csaladi_orjarat_atvizsgalas.md` 14. szakasz.
+217. **2026-10-30 · D119 ⑤a — a másik család kapuja nem elérés**
+    → **ha a társ egy másik koinón felelt, és közös koinónk sincs vele, a munka kimondja (`masutt`), a kör nem veszi elértnek, és a
+    társ következő címét hívja** · a lelet (a költözés kézi próbájának 3.): a kötés a társ mindkét családja portját jegyzi, a kör a
+    rossz portján „elérte”, és a jót soha nem hívta · ⛔ elvetve: a kapuba a koinó tudása (`masKoino`) — a kapu semleges jelet kap ·
+    `csaladi_orjarat_atvizsgalas.md` 15. szakasz.
+218. **2026-10-30 · a tábla-kulcs létrehozása kizárólagos (mérve, az ⑤a próbáján)**
+    → **`irHaNincs` (`wx`), és aki később ért oda, a másikét olvassa vissza** · a lelet: két egyszerre induló folyamat (két család
+    postaládája egy friss készüléken) két tábla-kulcsot írt, és a készülék két társnak látszott — a próba így a hiba nélkül is
+    átment volna (két csoport) · ⚠️ a személyes kulcs ugyanezt a mintát követi, ott ma nem jön elő (az első parancs magában fut) —
+    külön feladat · `csaladi_orjarat_atvizsgalas.md` 15. szakasz.
