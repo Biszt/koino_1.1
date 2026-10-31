@@ -71,6 +71,21 @@ proba('⭐⭐ A REKESZ MINDKÉT OLDALON UGYANAZ — különben elbeszélnénk eg
     return Buffer.compare(hova, honnan) === 0;
   });
 
+// ⭐⭐ D119 (⑤c): a rekesz a CSALÁDÉ — két független család (két őrjárat, két port) egy készüléken ugyanannak a társnak külön
+// rekeszbe ír, különben a későbbi felülírná a korábbi címét. A két fél ugyanazt a rekeszt számolja (a család a só része).
+proba('⭐⭐ D119 (⑤c): a rekesz a családé — családonként más hely, és a családon belül mindkét oldalon ugyanaz', async () => {
+  const { anna, bela, annaNy, belaNy } = await ketKeszulek();
+  const cel = async (r) => valtozoCel(r.kulcs, r.so);
+  const irP = await cimBejegyzes(anna, belaNy, { hoszt: '10.0.0.1', port: 7373 }, Date.now(), 'P');
+  const keresP = await cel(await tarsRekesze(bela, annaNy, 'P'));
+  const keresQ = await cel(await tarsRekesze(bela, annaNy, 'Q'));
+  const keresRegi = await cel(await tarsRekesze(bela, annaNy));
+  const hovaP = await valtozoCel(irP.k, irP.salt);
+  return Buffer.compare(hovaP, keresP) === 0
+    && Buffer.compare(keresP, keresQ) !== 0
+    && Buffer.compare(keresP, keresRegi) !== 0;
+});
+
 proba('⛔⛔⛔ EGY HARMADIK MEG SEM TALÁLJA A REKESZT — és ki sem tudja bontani', async () => {
   const { anna, belaNy, annaNy } = await ketKeszulek();
   const idegen = await ujTablaKulcs();

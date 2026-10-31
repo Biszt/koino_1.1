@@ -317,7 +317,7 @@ próba 3. lelete ennek a fele: a gyermek magától nem cserélt.
 - ⏭️ **Az ⑤: a független családok** — a nem közös gyökerű koinók külön őrjáratban (CS4); köztük a „MÁSIK koinó” megállás a
   gyors javítással zárva.
 
-## 15. 🚧 Az ⑤ — a független családok (2026-10-30)
+## 15. ✅ Az ⑤ — a független családok (2026-10-30 → 10-31)
 
 Két FÜGGETLEN család (nem közös a gyökerük) egy készüléken: CS4 (A) szerint két őrjárat, két port. A kötés-jegyzék viszont
 készülék-szintű (`kotesek.json` — a tábla-kulcs szerint, ≤ 3 cím), tehát egy társ kötése mindkét családja portját jegyzi.
@@ -333,21 +333,45 @@ készülék-szintű (`kotesek.json` — a tábla-kulcs szerint, ≤ 3 cím), teh
   (`fajlTar.js` `tablaKulcsTarolo` `irHaNincs` — `wx`), és aki később ért oda, a másikét olvassa vissza (`tablaKulcsBiztositasa`).
   ⚠️ A személyes kulcs (`kulcsparBiztositasa`) ugyanezt a mintát követi; ott az első parancs (`koino` / `csatlakoz`) mindig magában
   fut, ezért ma nem jön elő — külön feladat.
-- ⏸️ **⑤c a kötések elosztása — Csabánál:** a közös jegyzék (K = 3, legfeljebb 5) a két család társain osztozik. Mérve (a
-  `kotesek.js` tiszta függvényeivel): ha mindkét családban 3-3 rendszeres társ van, körönként egy kiesik és visszakerül, és senki nem
-  jut 1 találkozásnál tovább — így egyikük sem lesz „rendszeres” (a kiszolgálási keret kötés-osztálya is ebből dönt); 2 + 2 társnál a
-  jegyzék elfér, de a „legrendszeresebb három” közül az egyik család csak egyet kap. A kérdés: (A) családonként külön jegyzék
-  (családonként K = 3 / 5, a címek is a családé; a tábla minden kötésnek ír) · (B) közös jegyzék, a korlát a családok számával
-  szorozva, a címek családonként jelölve · (C) marad a közös 3/5, csak a címek kapnak családot (a „nyüzsgő koinó” kimondott ára).
-  ⭐ Javaslat: (A) — a kötés a csere társa, és egy család társa a másik család adatát nem viszi; a terhe a készülék saját
-  családjaival nő, amiket ő választott (9. szabály).
-- **A próbák** (a parancssor, +2): (1) a független család kapuja nem elérés — B két független koinó postaládáját futtatja két
-  porton, A kötése mindkét portot jegyzi (a másik családé a frissebb), a kör előbb a másik család kapuját éri el, aztán a jót, és
-  a gondolat átér (rontás: a kapu a `masutt` nélkül, és a munka a `masutt` nélkül — mindkettő bukik); (2) a tábla-kulcs egy
-  készüléken egy — négy egyszerre induló `tabla` parancs, a verseny ablaka kitágítva (`KOINO_TABLA_KESLELTETES`), mind ugyanazt a
-  rekesznevet mondja (rontás: a felülíró írás → négy különböző név).
+- ✅ **⑤c a kötések elosztása — D119/B (Csaba, 2026-10-31: *„elfogadom a javaslatodat, mehetünk tovább.”*) — (A) családonként
+  külön jegyzék.** A kérdés: a közös jegyzék (K = 3, legfeljebb 5) a két család társain osztozott. Mérve (a `kotesek.js` tiszta
+  függvényeivel): ha mindkét családban 3-3 rendszeres társ van, körönként egy kiesik és visszakerül, és senki nem jut 1 találkozásnál
+  tovább — így egyikük sem lesz „rendszeres” (a kiszolgálási keret kötés-osztálya is ebből dönt); 2 + 2 társnál a jegyzék elfér, de
+  a „legrendszeresebb három” közül az egyik család csak egyet kap. A lehetőségek: (A) ⭐ családonként külön jegyzék · (B) közös, a
+  korlát a családok számával szorozva · (C) marad a közös 3/5 (a „nyüzsgő koinó” kimondott ára). Az indok: a kötés a csere társa, és
+  egy család társa a másik család adatát nem viszi; a terhe a készülék saját családjaival nő, amiket ő választott (9. szabály).
+  ⭐ **Az építés:** a jegyzék `kotesek/<a család gyökere>.json` (`fajlTar.js` `kotesTarolo(hely, csalad)`; a gyökér a koinó neve,
+  régi alakú koinónál maga a koinó — `koino.js` `csaladomKulcsa`, végleges, ha a koinó születése a készüléken van; a jegyzék minden
+  műveletnél a család kulcsát kérdezi — `kotesTaram` —, így egy hosszan futó őrjárat a születés megérkezése után a végleges helyre
+  ír). A család példányai (a szülő és a gyermek) ugyanazt a jegyzéket írják; a kiszolgálási keret kötés-osztálya a családé. ⛔
+  **Külön fájl, nem egy fájl jelölt sorokkal:** a két család őrjárata két folyamat, és a körük a fal órájához igazodik — egy közös
+  fájlon egyszerre írnának, és az egyik írása elveszne. ⭐ **És a tábla rekesze is a családé** (`tabla.js` `rekeszSoKulcsokbol` — a
+  család a só része): ha egy társ mindkét családban kötés, a két őrjárat ugyanabba a rekeszbe írta volna a saját portját, a későbbi
+  felülírta volna a korábbit, és a társ a másik család kapujára kopogott volna. ⚠️ **A régi jegyzék** (a készülék-szintű
+  `kotesek.json` — a régi program és a próbák kézi útja): amíg a családé nincs meg, abból indulunk, és az első írás után
+  `kotesek-regi.json` lesz — az átvevő családé a tartalma (a másik család a következő bulikon építi újra a sajátját). ⚠️ **Ami
+  készülék-szintű maradt:** a friss UDP-címek (`udpcimek.json`, névtelenek, percek alatt elévülnek) és az induló címek
+  (`indulocimek.json`) — egy friss cím a másik család portján egy „MÁSIK koinóé” nyitás ára (~1–2 KB), és az ⑤a szerint nem
+  számít elérésnek; a terepen mérendő, kell-e több.
+- **A próbák** (a parancssor, +3; a tábla, +1): (1) a független családok — B két független koinó postaládáját futtatja két
+  porton; A kézi cseréi után a P-beli kötés a P családjának jegyzékében van (csak a P-porttal), a Q-beli a Q-éban (csak a
+  Q-porttal), régi jegyzék nem marad (⑤c); aztán egy régi programtól örökölt közös jegyzék B-t mindkét portjával jegyzi (a Q-é a
+  frissebb), a P-re indított kör előbb a másik család kapuját éri el, aztán a jót, és a gondolat átér (⑤a). Rontás: a
+  készülék-szintű jegyzék → nincs családi jegyzék; a kapu a `masutt` nélkül és a munka a `masutt` nélkül → a gondolat nem ér át —
+  mind bukik. (2) a tábla-kulcs egy készüléken egy — négy egyszerre induló `tabla` parancs, a verseny ablaka kitágítva
+  (`KOINO_TABLA_KESLELTETES`), mind ugyanazt a rekesznevet mondja (rontás: a felülíró írás → négy különböző név). (3) a tábla
+  rekesze a családé (hamis DHT-n) — két készülék két független családban is kötésben, az egyik mindkettőben kiírja a címét (két
+  port), a másik a P-ben a P-portot, a Q-ban a Q-portot olvassa ki (rontás: a család nélküli só → a később írt Q-port a P-ben is ott
+  áll); és a tábla modul-próbája: a rekesz családonként más, a családon belül mindkét oldalon ugyanaz.
 - ⚠️ **A teljes sor lelete (2026-10-30):** a D112 ④ (a felderítés törzse) próbája egyszer bukott, és magában is ~4 futásból
   egyszer — a csere randevúja a két szöveg-darabot a felderítés törzs-fázisa ELŐTT elhozta, és a fázisnak nem volt mit kérnie (a
   program helyes volt: a darabok megvoltak és a takarítás után is megmaradtak; a próba a kérést várta). A HEAD-en (a változások
   nélkül) ugyanez az út — a verseny régi. ⭐ A próba most a randevú fájl-kérését kikapcsolja (`KOINO_RANDEVU_FAJL=0` — csak a
   kérő oldalon, a kiszolgálás marad), így egy utat mér: 4/4 zöld, és a rontás (a törzs-fázis nem kér) bukik.
+- ⚠️ **A teljes sor lelete (2026-10-31, a ⑤c után):** 1349-ből 1348 zöld — a D119 ④ (a kör a családra) próbája a gyermek
+  háztartásának sorát nem látta. Mérve: a sor a címjegyzék-kör VÉGÉN jön (a háttérben — D115; DHT nélkül a munkamenet a saját
+  idejéig próbálkozik), a kérelem után 1,5–2,1 mp-cel; a próba viszont rögzített 1 mp-et várt — a HEAD-en (a ⑤c nélkül) is 6
+  futásból kétszer bukott. A program helyes volt. ⭐ A próba most a sorra vár (legfeljebb 20 mp), és a bukás kimondja, mennyit
+  várt: 9/9 zöld, a rontás (a háztartás csak a fő koinóé) 20 mp után bukik.
+- ⭐ **Az ⑤ kész** (a 3. szakasz terve: *„a kötés a társ címeit CSALÁDONKÉNT jegyzi, és a »MÁSIK család« válasz nem számít
+  elértnek”*). ⏭️ **Az ⑥: a lap** — a téren „Csatlakozás egy koinóhoz…” és „Társ felvétele…” (2. (A)).

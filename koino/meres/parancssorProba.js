@@ -104,6 +104,22 @@ async function koinoMappa(hely, becenev = 'sajat') {
 }
 
 /**
+ * ⭐ D119 (⑤c): a készülék KÖTÉS-JEGYZÉKE a lemezen — a családok jegyzékei (`kotesek/<család>.json`) együtt; ha még egy sincs,
+ * a régi, készülék-szintű `kotesek.json` (a kézi út és a régi program). Egy családos próbának ez a családé.
+ */
+async function kotesekLemezen(hely) {
+  const lista = [];
+  let volt = false;
+  for (const f of await readdir(join(hely, 'kotesek')).catch(() => [])) {
+    if (!f.endsWith('.json')) continue;
+    volt = true;
+    try { lista.push(...(JSON.parse(await readFile(join(hely, 'kotesek', f), 'utf8')).kotesek ?? [])); } catch { /* olvashatatlan */ }
+  }
+  if (volt) return lista;
+  try { return JSON.parse(await readFile(join(hely, 'kotesek.json'), 'utf8')).kotesek ?? []; } catch { return []; }
+}
+
+/**
  * ⭐ D93/1: a vendég készüléket TAGGÁ teszi a parancssorból — belép, a belépése (az azonosság-szelete) a gazdához jut,
  * a gazda meghívja, és a meghívással együtt az azonosság-szelet visszamegy. Csak azt a szeletet viszi (a próbák
  * szándéka, hogy ki mit tart, így nem sérül). ⚠️ A vendégnek már ismernie kell a koinót, ha a gazda nem alapító.
@@ -865,16 +881,23 @@ proba('⭐⭐ D119 (④): a kör a családra — a gyermek függő kérelmének 
         const ny = JSON.parse(await readFile(join(a, C, 'kerelmek.json'), 'utf8').catch(() => '{}'));
         kesz = (ny.kesz ?? []).find((x) => x.fajta === 'fejlecek' && /^megjött/.test(String(x.eredmeny))) ?? null;
       }
-      await varj(1000);
-      const tiszta = naplo.replace(/\x1b\[[0-9;]*m/g, '');
+      // ⚠️ A gyermek háztartásának sora a címjegyzék-kör VÉGÉN jön (a háttérben — D115; DHT nélkül a munkamenet a saját idejéig
+      // próbálkozik) — ezért a sorra várunk (legfeljebb 20 mp), nem egy rögzített ideig. ⛔ Mérve (2026-10-31): a kérelem után
+      // 1,5–2,1 mp-cel jön; a korábbi rögzített 1 mp a HEAD-en is 6 futásból kétszer bukott (a teljes soron egyszer).
       const jel = '[' + C.slice(0, 8);
+      const haztartasSor = () => naplo.replace(/\x1b\[[0-9;]*m/g, '').split('\n').some((s) => s.includes(jel) && /címjegyzék/.test(s));
+      const vartIndul = Date.now();
+      for (let i = 0; i < 40 && !haztartasSor(); i++) await varj(500);
+      const haztartasVart = Date.now() - vartIndul;
+      const tiszta = naplo.replace(/\x1b\[[0-9;]*m/g, '');
       const jo = {
         fuggoVolt: (fuggoElotte.fuggo ?? []).some((x) => x.fajta === 'fejlecek' && (x.celok ?? []).some((c) => c.port === PD)),
         kesz: !!kesz,
-        haztartas: tiszta.split('\n').some((s) => s.includes(jel) && /címjegyzék/.test(s))
+        haztartas: haztartasSor()
       };
       const ok = Object.values(jo).every(Boolean);
-      if (!ok) process.stderr.write('    (a kör a családra: ' + JSON.stringify({ ...jo, felvetel: felvetel.slice(0, 200) }) + ')\n'
+      if (!ok) process.stderr.write('    (a kör a családra: ' + JSON.stringify({ ...jo, haztartasVart, felvetel: felvetel.slice(0, 200) })
+        + ')\n'
         + '    (A napló: ' + tiszta.replace(/\s+/g, ' ').slice(-900) + ')\n');
       return ok;
     } finally {
@@ -1013,13 +1036,16 @@ proba('⛔ D119 (⑤): a tábla-kulcs egy készüléken egy — több egyszerre 
   }
 });
 
-// ⭐⭐ D119 (⑤): A FÜGGETLEN CSALÁD KAPUJA NEM ELÉRÉS. A és B két FÜGGETLEN koinóban is együtt van (P és Q — nem közös a
-// gyökerük); B mindkettőre külön postaládát futtat, két porton (CS4). A kézzel cserél B-vel mindkettőben — a kötése így B
-// mindkét portját jegyzi, a Q-ét frissebbként —, aztán az induló címek közül leveszi őket (B-t csak a kötés ismeri). A a
-// P-ben új gondolatot ír, és az őrjáratát a P-re indítja. ⭐ A kör B-t előbb a Q-portján éri el („MÁSIK koinóé”) — ez nem
-// elérés, a csoport következő címe (a P-port) jön, és a gondolat B P-beli lemezére ér. Viselkedést mérünk (B lemezét és A
-// naplóját). Rontás: a `masutt` nélkül a kör a Q-porton „elérte” B-t, a P-portot soha nem hívja, a gondolat nem ér át.
-proba('⭐⭐ D119 (⑤): a független család kapuja nem elérés — a kör a társ másik címét is hívja, és a csere a jó koinóban lemegy',
+// ⭐⭐ D119 (⑤): A FÜGGETLEN CSALÁDOK — A KÖTÉS A CSALÁDÉ, ÉS A MÁSIK CSALÁD KAPUJA NEM ELÉRÉS. A és B két FÜGGETLEN koinóban
+// is együtt van (P és Q — nem közös a gyökerük); B mindkettőre külön postaládát futtat, két porton (CS4). (1) ⑤c: A kézzel
+// cserél B-vel mindkettőben — a P-beli csere a P családjának jegyzékébe kerül (csak a P-porttal), a Q-beli a Q-éba (csak a
+// Q-porttal); a készülék-szintű jegyzék nem marad. (2) ⑤a: egy RÉGI programtól örökölt, készülék-szintű jegyzék (`kotesek.json`
+// — a két család kötése egy sorban) B-t mindkét portjával jegyzi, a Q-ét frissebbként; A az induló címek közül leveszi B-t
+// (csak a kötés ismeri), a P-ben új gondolatot ír, és az őrjáratát a P-re indítja — a P családjának jegyzéke ebből indul. ⭐ A
+// kör B-t előbb a Q-portján éri el („MÁSIK koinóé”) — ez nem elérés, a csoport következő címe (a P-port) jön, és a gondolat B
+// P-beli lemezére ér. Viselkedést mérünk (A és B lemezét, A naplóját). Rontás: a készülék-szintű jegyzék (⑤c nélkül) → egy
+// közös kötés mindkét porttal; a `masutt` nélkül a kör a Q-porton „elérte” B-t, a P-portot soha nem hívja, a gondolat nem ér át.
+proba('⭐⭐ D119 (⑤): a független családok — a kötés a családé, és a másik család kapuja nem elérés (a csere a jó koinóban lemegy)',
   async () => {
     const a = await ujKeszulek();
     const b = await ujKeszulek();
@@ -1044,7 +1070,19 @@ proba('⭐⭐ D119 (⑤): a független család kapuja nem elérés — a kör a 
       const csQ = await fut(a, 'csere', '127.0.0.1', String(BQ), Q);
       await fut(a, 'tars', 'torol', '127.0.0.1', String(BP));
       await fut(a, 'tars', 'torol', '127.0.0.1', String(BQ));
-      const kotes = JSON.parse(await readFile(join(a, 'kotesek.json'), 'utf8').catch(() => '{}')).kotesek ?? [];
+      // (1) ⑤c: a két család jegyzéke a lemezen
+      const csaladJegyzek = async (cs) => JSON.parse(await readFile(join(a, 'kotesek', cs + '.json'), 'utf8')
+        .catch(() => '{}')).kotesek ?? [];
+      const kP = await csaladJegyzek(P), kQ = await csaladJegyzek(QN);
+      const regiVan = await readFile(join(a, 'kotesek.json'), 'utf8').then(() => true, () => false);
+      const portok = (k) => (k[0]?.cimek ?? []).map((c) => c.port);
+      const kulon = kP.length === 1 && kQ.length === 1 && kP[0].alairo === kQ[0].alairo
+        && portok(kP).join() === String(BP) && portok(kQ).join() === String(BQ) && !regiVan;
+      // (2) ⑤a: a régi program közös jegyzéke — B mindkét portjával, a Q-é a frissebb (a családoké még nincs meg)
+      const kotes = kP[0] && kQ[0] ? [{ ...kQ[0], cimek: [...kQ[0].cimek, ...kP[0].cimek],
+        talalkozasok: kP[0].talalkozasok + kQ[0].talalkozasok, eloszor: kP[0].eloszor }] : [];
+      await rm(join(a, 'kotesek'), { recursive: true, force: true });
+      await writeFile(join(a, 'kotesek.json'), JSON.stringify({ kotesek: kotes }), 'utf8');
       const g = azonosito(await fut(a, 'gondolat', 'P HÍR'), 'Létrejött:');
       const o = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(PA)],
         { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -1057,10 +1095,11 @@ proba('⭐⭐ D119 (⑤): a független család kapuja nem elérés — a kör a 
       }
       const tiszta = naplo.replace(/\x1b\[[0-9;]*m/g, '');
       const cimek = (kotes[0]?.cimek ?? []).map((c) => c.port);
-      const jo = { csereP: /Csere kész/.test(csP), csereQ: /Csere kész/.test(csQ), ketCim: cimek[0] === BQ && cimek.includes(BP),
+      const jo = { csereP: /Csere kész/.test(csP), csereQ: /Csere kész/.test(csQ), kulon, ketCim: cimek[0] === BQ && cimek.includes(BP),
         masikKapu: /MÁSIK koinóé/.test(tiszta), atjutott };
       const ok = Object.values(jo).every(Boolean);
-      if (!ok) process.stderr.write('    (a független család: ' + JSON.stringify({ ...jo, cimek }) + ')\n'
+      if (!ok) process.stderr.write('    (a független család: ' + JSON.stringify({ ...jo, cimek, p: portok(kP), q: portok(kQ), regiVan })
+        + ')\n'
         + '    (A napló: ' + tiszta.replace(/\s+/g, ' ').slice(-900) + ')\n');
       return ok;
     } finally {
@@ -1731,7 +1770,7 @@ proba('⭐⭐ D97/2: az őrjárat a vállalt szeletem TARTÓJÁT is felkeresi (a
       await csereKor(b, a, PB, kornyezet);              // A hívja B-t (B figyel): A megtanulja B-t G tartójaként
       const raj = JSON.parse(await readFile(join(a, 'szeletcimek.json'), 'utf8')).szeletek ?? [];
       const tanulta = raj.some((x) => x.entitas === gT && x.port === PB);
-      for (const f of ['kotesek.json', 'udpcimek.json', 'indulocimek.json']) await rm(join(a, f), { force: true });
+      for (const f of ['kotesek.json', 'kotesek', 'udpcimek.json', 'indulocimek.json']) await rm(join(a, f), { recursive: true, force: true });
       await fut(a, 'pont', g, '9');
       const uj = (await lemezen(a)).find((e) => e.tipus === 'TudatpontRendezes' && e.adat?.pont === 9).azonosito;
       figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(PB)], {
@@ -5464,7 +5503,7 @@ proba('⛔⛔⛔ AZ EGYOLDALÚ RÉS IS CSERÉT HOZ — aki bekopog, azzal a más
 
       const allapot = await fut(masik, 'allapot');
       let kotesek = [];
-      try { kotesek = JSON.parse(await readFile(join(masik, 'kotesek.json'), 'utf8')).kotesek; } catch { /* nincs */ }
+      kotesek = await kotesekLemezen(masik);
 
       return /AZ EGYOLDALU RESEN ATJOTT HIR/.test(allapot)
         // ⭐ …és a napló MEGNEVEZI, hogy ismeretlen kopogott be (terepen ebből látszik, honnan indult)
@@ -5574,7 +5613,7 @@ proba('⛔ A SAJÁT MAGUNKKAL KÖTÖTT RÉGI KÖTÉS INDULÁSKOR KIESIK', async 
     orjarat.kill(); orjarat = null;
     await varj(500);
 
-    const kotesek = JSON.parse(await readFile(join(hely, 'kotesek.json'), 'utf8')).kotesek;
+    const kotesek = await kotesekLemezen(hely);
     return !kotesek.some((k) => k.alairo === sajat.alairoNyilvanos)
       && kotesek.some((k) => k.alairo === tars.alairo);
   } finally {
@@ -5605,7 +5644,7 @@ proba('⛔ A TÁRSLISTÁN ÁLLÓ SAJÁT CÍMÜNKET NEM HÍVJUK — és kötés s
     await varj(500);
 
     let kotesek = [];
-    try { kotesek = JSON.parse(await readFile(join(hely, 'kotesek.json'), 'utf8')).kotesek; } catch { /* nincs */ }
+    kotesek = await kotesekLemezen(hely);
     const sajat = JSON.parse(await readFile(join(hely, 'tabla-kulcs.json'), 'utf8'));
     return /nincs kire kopognom/.test(kimenet)
       && !/ismeretlen kopogott be|csere a résen/.test(kimenet)
@@ -5793,8 +5832,8 @@ proba('⭐⭐ A KÖTÉS MEGSZÜLETIK A BULIN — a társ TÁBLA-KULCSA alatt, ne
       };
       const egyikKulcs = await olvas(egyik, 'tabla-kulcs.json');
       const masikKulcs = await olvas(masik, 'tabla-kulcs.json');
-      const egyikKotes = (await olvas(egyik, 'kotesek.json'))?.kotesek ?? [];
-      const masikKotes = (await olvas(masik, 'kotesek.json'))?.kotesek ?? [];
+      const egyikKotes = await kotesekLemezen(egyik);
+      const masikKotes = await kotesekLemezen(masik);
 
       return !!egyikKulcs && !!masikKulcs
         // ⭐ MINDKETTŐ A MÁSIK TÁBLA-KULCSÁT JEGYEZTE FEL.
@@ -5860,6 +5899,50 @@ proba('⭐⭐⭐ A TÁBLA PARANCSA KIÍR ÉS KIOLVAS — a lánc végigmegy (ham
 
       return /1 rekeszbe kiírva/.test(kiiras)
         && /203\.0\.113\.7:41777/.test(olvasas);
+    } finally {
+      halo.bezar();
+      await rm(egyik, { recursive: true, force: true });
+      await rm(masik, { recursive: true, force: true });
+    }
+  });
+
+// ⭐⭐ D119 (⑤c): A TÁBLA REKESZE A CSALÁDÉ. Két készülék két FÜGGETLEN családban is kötésben (P és Q — a régi alakú koinó
+// családja maga a koinó); az egyik mindkét családjában kiírja a címét (két család, két port — két őrjárat), a Q-ét később. A
+// másik a P-ben a P-portot olvassa ki, a Q-ban a Q-portot. Rontás: a család nélküli só → a két írás egy rekeszbe megy, a később
+// írt Q-port a P-ben is ott áll (a társ a másik család kapujára kopogna).
+proba('⭐⭐ D119 (⑤c): a tábla rekesze a családé — két független család címe nem írja felül egymást (hamis DHT-n)',
+  async () => {
+    const { hamisHalozat } = await import('./dhtProba.js');
+    const { ujTablaKulcs, nyilvanosResz } = await import('../js/csere/tablaKulcs.js');
+    const { kotesTarolo } = await import('../js/tar/fajlTar.js');
+
+    const egyik = await ujKeszulek();
+    const masik = await ujKeszulek();
+    const halo = await hamisHalozat(12);
+    const P = { KOINO_AZONOSITO: 'p' }, Q = { KOINO_AZONOSITO: 'q' };
+    try {
+      const egyikK = await ujTablaKulcs();
+      const masikK = await ujTablaKulcs();
+      await writeFile(join(egyik, 'tabla-kulcs.json'), JSON.stringify(egyikK), 'utf8');
+      await writeFile(join(masik, 'tabla-kulcs.json'), JSON.stringify(masikK), 'utf8');
+      // a kötés mindkét családban (a jegyzék kézi úton — 4. szabály)
+      for (const [hely, ove] of [[egyik, masikK], [masik, egyikK]]) {
+        for (const cs of ['p', 'q']) {
+          await kotesTarolo(hely, cs).ir([{ ...nyilvanosResz(ove), hoszt: '10.0.0.1', port: 7373,
+            utoljara: Date.now(), talalkozasok: 3, eloszor: Date.now() }]);
+        }
+      }
+      const kornyezet = { KOINO_DHT_BELEPOK: halo.belepo(0) };
+      const kiP = await fut(egyik, 'tabla', 'kiir', '203.0.113.7', '41001', { ...kornyezet, ...P });
+      await varj(1100);   // a BEP 44 sorszáma másodperces: a Q írása így biztosan a frissebb
+      const kiQ = await fut(egyik, 'tabla', 'kiir', '203.0.113.7', '41002', { ...kornyezet, ...Q });
+      const olP = await fut(masik, 'tabla', 'olvas', { ...kornyezet, ...P });
+      const olQ = await fut(masik, 'tabla', 'olvas', { ...kornyezet, ...Q });
+      const jo = { kiP: /1 rekeszbe kiírva/.test(kiP), kiQ: /1 rekeszbe kiírva/.test(kiQ),
+        olP: /203\.0\.113\.7:41001/.test(olP) && !/41002/.test(olP), olQ: /203\.0\.113\.7:41002/.test(olQ) };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) process.stderr.write('    (a tábla a családban: ' + JSON.stringify(jo) + ')\n');
+      return ok;
     } finally {
       halo.bezar();
       await rm(egyik, { recursive: true, force: true });

@@ -2054,9 +2054,26 @@ export function tablaKulcsTarolo(hely = alapHely()) {
  *
  * ⚠️ Sosem terjed, és semmit nem dönt el a koinóban — ha elveszik, a következő bulikon
  * újraépül. *Ezért nem is baj, hogy sima JSON: a 4. szabály kézi útja is ez.*
+ *
+ * ⭐⭐ D119 (⑤c, Csaba: „elfogadom a javaslatodat”): A JEGYZÉK A CSALÁDÉ — `kotesek/<a család gyökere>.json`, családonként
+ * K = 3 (legfeljebb 5). A kötés a csere társa, és egy család társa a másik család adatát nem viszi; a közös jegyzékben két
+ * független család 3 + 3 társa egymást szorította ki (mérve: senki nem jutott egy találkozásnál tovább, így senki nem lett
+ * rendszeres). A terhe a készülék saját családjaival nő, amiket ő választott (9. szabály). Külön fájl, nem egy fájl jelölt
+ * sorokkal: a két család őrjárata két folyamat, a körük a fal órájához igazodik — egy közös fájlon egyszerre írnának, és az
+ * egyik írása elveszne. ⚠️ A régi, készülék-szintű `kotesek.json` (csalad nélkül — a régi program és a próbák kézi útja):
+ * amíg a családé nincs meg, abból indulunk, és az első írás után `kotesek-regi.json` lesz (az átvevő családé a tartalma;
+ * kézzel törölhető).
+ * @param {string} [hely]
+ * @param {string|null} [csalad] - a család gyökere (a koinó neve; régi alakú koinónál maga a koinó); null: a régi fájl
  */
-export function kotesTarolo(hely = alapHely()) {
-  const fajl = join(hely, 'kotesek.json');
+export function kotesTarolo(hely = alapHely(), csalad = null) {
+  const regi = join(hely, 'kotesek.json');
+  const fajl = csalad == null ? regi : join(hely, 'kotesek', csalad + '.json');
+  const olvasas = async (f) => {
+    const adat = JSON.parse(await readFile(f, 'utf8'));
+    const lista = Array.isArray(adat) ? adat : adat.kotesek;
+    return Array.isArray(lista) ? lista : [];
+  };
 
   return {
     fajl,
@@ -2064,19 +2081,23 @@ export function kotesTarolo(hely = alapHely()) {
     /** @returns {Promise<Array<Object>>} */
     async olvas() {
       try {
-        const adat = JSON.parse(await readFile(fajl, 'utf8'));
-        const lista = Array.isArray(adat) ? adat : adat.kotesek;
-        return Array.isArray(lista) ? lista : [];
+        return await olvasas(fajl);
       } catch (hiba) {
-        if (hiba.code === 'ENOENT') return [];
+        if (hiba.code === 'ENOENT') {
+          if (fajl === regi) return [];
+          try { return await olvasas(regi); } catch { return []; }
+        }
         console.warn('kotesTarolo - olvashatatlan jegyzék, üresnek vesszük', { fajl });
         return [];
       }
     },
 
     async ir(jegyzek) {
-      await mkdir(hely, { recursive: true });
+      await mkdir(dirname(fajl), { recursive: true });
       await writeFile(fajl, JSON.stringify({ kotesek: jegyzek }, null, 2), 'utf8');
+      if (fajl !== regi) {
+        try { await rename(regi, join(hely, 'kotesek-regi.json')); } catch { /* nincs régi */ }
+      }
     },
 
     /**

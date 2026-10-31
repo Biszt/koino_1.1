@@ -1599,3 +1599,12 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     postaládája egy friss készüléken) két tábla-kulcsot írt, és a készülék két társnak látszott — a próba így a hiba nélkül is
     átment volna (két csoport) · ⚠️ a személyes kulcs ugyanezt a mintát követi, ott ma nem jön elő (az első parancs magában fut) —
     külön feladat · `csaladi_orjarat_atvizsgalas.md` 15. szakasz.
+219. **2026-10-31 · D119/B — az ⑤c: a kötés-jegyzék és a tábla rekesze a családé (Csaba: „elfogadom a javaslatodat”)**
+    → **(A) családonként külön jegyzék (`kotesek/<a család gyökere>.json`, családonként K = 3 / 5), és a tábla rekeszének sója a
+    családot is tartalmazza** · a lelet (mérve): a közös 3/5-ös jegyzékben két független család 3 + 3 társa egymást szorította ki,
+    senki nem jutott 1 találkozásnál tovább (senki nem lett rendszeres — a keret kötés-osztálya is ebből dönt); és a közös
+    rekeszbe a két család őrjárata a saját portját írta volna · ⛔ elvetve: (B) közös jegyzék a családok számával szorzott
+    korláttal, (C) a közös 3/5 marad; és egy fájl családonként jelölt sorokkal (a két őrjárat a fal órájához igazodva egyszerre
+    írna, az egyik írása elveszne) · ⚠️ a régi `kotesek.json` az első író családé lesz (`kotesek-regi.json`); a friss és az induló
+    címek készülék-szintűek maradtak (egy „MÁSIK koinóé” nyitás ára — a terepen mérendő) · `csaladi_orjarat_atvizsgalas.md`
+    15. szakasz.

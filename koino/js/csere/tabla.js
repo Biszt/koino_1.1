@@ -60,15 +60,22 @@ const ALAK = 'koino-cim-1';
  * lenyomata, tehát só nélkül a rekeszt **megkeresni sem lehet**. *A tartalmat a
  * titkosítás védi — két külön őr, két külön kérdésre.*
  *
+ * ⭐⭐ D119 (⑤c): ÉS A CSALÁDÉ — a kötés-jegyzék családonként külön (`fajlTar.js` `kotesTarolo`), és két független
+ * család őrjárata két porton figyel: ha a két család ugyanabba a rekeszbe írna, a későbbi felülírná a korábbi címét, és a
+ * társ a másik család kapujára kopogna („MÁSIK koinóé”). A család (a gyökere — a koinó neve, a két fél ugyanazt számolja) a
+ * só része; `null`: a régi só (a család nélküli hívó).
+ *
  * @param {{titkosito: string}} egyik
  * @param {{titkosito: string}} masik
+ * @param {string|null} [csalad]
  * @returns {Promise<Buffer>}
  */
-export async function rekeszSoKulcsokbol(egyik, masik) {
+export async function rekeszSoKulcsokbol(egyik, masik, csalad = null) {
   // ⭐ A SORREND NEM A HÍVÓTÓL FÜGG, hanem a kulcsok szövegétől: ugyanaz a két szöveg van
   // meg mindkét gépen, csak fordítva. *Ugyanaz a trükk, mint a fájl-randevú szerepénél.*
   const kettő = [String(egyik.titkosito), String(masik.titkosito)].sort();
-  const bajtok = new TextEncoder().encode('koino-tabla-so|' + kettő.join('|'));
+  const bajtok = new TextEncoder().encode('koino-tabla-so|' + kettő.join('|')
+    + (csalad == null ? '' : '|csalad|' + String(csalad)));
   const darat = await crypto.subtle.digest('SHA-256', bajtok);
   return Buffer.from(darat).subarray(0, SO_HOSSZ);
 }
@@ -80,14 +87,15 @@ export async function rekeszSoKulcsokbol(egyik, masik) {
  * @param {{alairo: string, titkosito: string}} tarsNyilvanos
  * @param {{hoszt: string, port: number}} cim - a friss külső UDP-címünk
  * @param {number} [most]
+ * @param {string|null} [csalad] - a család gyökere (D119 ⑤c — a rekesz a családé)
  * @returns {Promise<Object>} a `dht.js` `kozzetesz`-ének átadható bejegyzés
  */
-export async function cimBejegyzes(sajatTablaKulcs, tarsNyilvanos, cim, most = Date.now()) {
+export async function cimBejegyzes(sajatTablaKulcs, tarsNyilvanos, cim, most = Date.now(), csalad = null) {
   console.log('cimBejegyzes - KEZDÉS', { tars: tarsNyilvanos?.alairo?.slice(0, 8) });
 
   const titok = await kozosTitok(sajatTablaKulcs, tarsNyilvanos);
   const so = await rekeszSoKulcsokbol(
-    { titkosito: sajatTablaKulcs.titkositoNyilvanos }, tarsNyilvanos);
+    { titkosito: sajatTablaKulcs.titkositoNyilvanos }, tarsNyilvanos, csalad);
 
   // A titkosított rakomány: alak + cím + a kiírás ideje (a fogadó a saját órájához köti).
   const rejtett = await titkositva(titok,
@@ -117,13 +125,14 @@ async function kulcsparVisszaallitasa(leiras) {
 /**
  * Hol keressük a TÁRS rekeszét? — a kulcsa és a közös só.
  *
+ * @param {string|null} [csalad] - a család gyökere (D119 ⑤c)
  * @returns {Promise<{kulcs: Buffer, so: Buffer}>}
  */
-export async function tarsRekesze(sajatTablaKulcs, tarsNyilvanos) {
+export async function tarsRekesze(sajatTablaKulcs, tarsNyilvanos, csalad = null) {
   return {
     kulcs: bajtokka(tarsNyilvanos.alairo),
     so: await rekeszSoKulcsokbol(
-      { titkosito: sajatTablaKulcs.titkositoNyilvanos }, tarsNyilvanos)
+      { titkosito: sajatTablaKulcs.titkositoNyilvanos }, tarsNyilvanos, csalad)
   };
 }
 

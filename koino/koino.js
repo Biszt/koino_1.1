@@ -2167,6 +2167,32 @@ async function sajatTablaAlairoja() {
   return sajatTablaAlairo;
 }
 
+// ⭐⭐ D119 (⑤c, Csaba: „elfogadom a javaslatodat”): A KÖTÉS-JEGYZÉK A CSALÁDÉ — két független család (két őrjárat, két port)
+// egy készüléken a közös jegyzékben egymás társait szorította ki (K = 3, legfeljebb 5); most családonként külön
+// (`fajlTar.js` `kotesTarolo` — a fájl a család gyökere szerint), és a tábla rekesze is (`tabla.js` — a só része). A család
+// egy példányai (a szülő és a gyermek — ③) ugyanazt a jegyzéket írják. ⚠️ A gyökér csak akkor végleges, ha a koinó születése a
+// készüléken van (a kapu a gyermek születését a szülőével együtt veszi be — a lánca így teljes); előtte a koinó maga.
+let csaladomKulcsaVegleges = null;
+async function csaladomKulcsa() {
+  if (csaladomKulcsaVegleges) return csaladomKulcsaVegleges;
+  const gy = await koinoCsaladGyokere(KOINO);
+  if (!azonositoAlaku(KOINO) || await tar.esemeny(KOINO)) csaladomKulcsaVegleges = gy;
+  return gy;
+}
+
+/**
+ * A családom kötés-jegyzéke — minden művelet a család kulcsát azon nyomban kérdezi (egy hosszan futó őrjárat a koinó
+ * születésének megérkezése után a végleges helyre ír).
+ */
+function kotesTaram() {
+  const t = async () => kotesTarolo(alapHely(), await csaladomKulcsa());
+  return {
+    async olvas() { return (await t()).olvas(); },
+    async ir(jegyzek) { return (await t()).ir(jegyzek); },
+    async modosit(atalakit) { return (await t()).modosit(atalakit); }
+  };
+}
+
 async function kotesFeljegyzese(tarolo, kapottTablaKulcs, cim) {
   if (!ervenyesTablaKulcs(kapottTablaKulcs)) return false;
   // ⛔ SAJÁT MAGUNKKAL NEM KÖTÜNK (42. mérés): ha a társlistán a saját címünk áll, a hívás
@@ -2441,7 +2467,7 @@ async function tablaraKiiras(sajatKulcs, kotesJegyzek, cim, naplo = () => {}) {
     for (const k of celok) {
       try {
         const bejegyzes = await cimBejegyzes(sajatKulcs,
-          { alairo: k.alairo, titkosito: k.titkosito }, cim);
+          { alairo: k.alairo, titkosito: k.titkosito }, cim, Date.now(), await csaladomKulcsa());
         const e = await kliens.kozzetesz(bejegyzes);
         kiirt++;
         tarolta += e.tarolta ?? 0;
@@ -2471,7 +2497,7 @@ async function tablarolOlvasas(sajatKulcs, nemak, naplo = () => {}) {
     for (const k of nemak) {
       if (!k.titkosito || !k.alairo) continue;
       try {
-        const rekesz = await tarsRekesze(sajatKulcs, { alairo: k.alairo, titkosito: k.titkosito });
+        const rekesz = await tarsRekesze(sajatKulcs, { alairo: k.alairo, titkosito: k.titkosito }, await csaladomKulcsa());
         const e = await kliens.keres(rekesz.kulcs, rekesz.so);
         if (!e.legjobb) {
           // ⛔⛔ A „NINCS RAJTA" ÉS A „NEM TUDTAM MEGNÉZNI" KÉT KÜLÖN DOLOG (40. mérés,
@@ -2704,7 +2730,7 @@ async function resAllapotKeszites({ udpElevules = UDP_CIM_ELEVULES } = {}) {
   const sajatTablaKulcsTeljes = await tablaKulcsBiztositasa();
   return {
     udpTarolo, udpElevules,
-    kotesTar: kotesTarolo(),
+    kotesTar: kotesTaram(),
     sajatTablaKulcsTeljes,
     sajatTablaKulcs: nyilvanosResz(sajatTablaKulcsTeljes),
     frissUdp: await frissUdpCimek(udpTarolo, udpElevules),
@@ -3770,7 +3796,7 @@ async function keretOsztalya({ tabla = null, tag = false }) {
     const k = Number.parseInt(process.env.KOINO_KERET_KOTES_KOR ?? '', 10);
     const minKor = Number.isInteger(k) && k >= 0 ? k * 1000 : KOTES_MIN_KOR;
     try {
-      const kotes = kotesLista(await kotesTarolo().olvas()).find((x) => x.alairo === tabla);
+      const kotes = kotesLista(await kotesTaram().olvas()).find((x) => x.alairo === tabla);
       if (keretKotesE(kotes, { minKor })) return 'kotes';
     } catch { /* nincs jegyzék */ }
   }
@@ -5519,7 +5545,7 @@ return {
   sajatOsszesCim, sajatVallalasa, sikidomMegjegyzes, strukturaMegjegyzes, szabalyokSzovege, szovegKepeiKeresre,
   szovegOlvasoKeszites, tablaKliens, tablaKulcsBiztositasa, tablaraKiiras, tablarolOlvasas, tagsagFigyelmeztetes, tagsagKerdes,
   tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, torzsElemKerese, torzsKerhetoi, torzsHatarBeallitasa,
-  korCeljaim, orjaratHazimunkaja,
+  korCeljaim, orjaratHazimunkaja, kotesTaram,
   tovabbitasok,
   tovabbitasokTakaritasa, tukorBeallitas, ujKoinoSzuletese,
   // ⭐ D119 (③): a családi munkának (a parancsok nem használják)
@@ -5553,7 +5579,7 @@ const {
   sajatOsszesCim, sajatVallalasa, sikidomMegjegyzes, strukturaMegjegyzes, szabalyokSzovege, szovegKepeiKeresre,
   szovegOlvasoKeszites, tablaKliens, tablaKulcsBiztositasa, tablaraKiiras, tablarolOlvasas, tagsagFigyelmeztetes, tagsagKerdes,
   tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, torzsElemKerese, torzsKerhetoi, torzsHatarBeallitasa,
-  korCeljaim, orjaratHazimunkaja,
+  korCeljaim, orjaratHazimunkaja, kotesTaram,
   tovabbitasok,
   tovabbitasokTakaritasa, tukorBeallitas, ujKoinoSzuletese
 } = foPeldany;
@@ -6388,7 +6414,7 @@ try {
     case 'tabla': {
       const mit = (ervek[0] ?? 'allapot').toLowerCase();
       const kulcs = await tablaKulcsBiztositasa();
-      const kotesTar = kotesTarolo();
+      const kotesTar = kotesTaram();
       const jegyzek = await kotesTar.olvas();
 
       kiir(SZIN.vastag + 'A HIRDETŐTÁBLA' + SZIN.vege + SZIN.halvany
