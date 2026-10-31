@@ -242,7 +242,7 @@ export async function terKartyai(hely = alapHely(), beallitas = {}) {
     // cseréjével jön); a hívó adja (`kartyaGyermekek`: koinó → [{ azonosito, nev }]).
     for (const g of beallitas.kartyaGyermekek?.get?.(k.azonosito) ?? []) {
       if (!k.gyermekek.some((x) => x.azonosito === g.azonosito)) {
-        k.gyermekek.push({ azonosito: g.azonosito, nev: g.nev ?? null, kartyarol: true });
+        k.gyermekek.push({ azonosito: g.azonosito, nev: g.nev ?? null, kartyarol: true, zart: g.zart ?? null });
       }
     }
   }

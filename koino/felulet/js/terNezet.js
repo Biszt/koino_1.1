@@ -21,6 +21,8 @@
 // itt teljességet ígérne, amit nem tudunk tartani (D19).*
 
 import { apiGet, apiPost } from './utils/apiHelper.js';
+// ⭐ D119 (⑥): az őrjárat állása a kártyán (a parancs a másoló gombjával) és a csatlakozás a kártyáról ismert gyermekhez.
+import { orjaratHtml, masoloGombok, csatlakozasMegnyitasa } from './koinoCsatlakozas.js';
 
 export class TerNezet {
 
@@ -39,6 +41,7 @@ export class TerNezet {
     this.rendezes = 'letrehozva';
     this.irany = 'csokkeno';
     this.aktiv = null;              // melyik koinóban állunk éppen
+    masoloGombok(this.kontener);    // ⭐ D119 (⑥): az indító parancsok másolása
 
     console.log('TerNezet.constructor - VÉGE');
   }
@@ -62,6 +65,14 @@ export class TerNezet {
 
     for (const koino of ter.kartyak) {
       this.kontener.appendChild(this._kartya(koino));
+    }
+    if (!ter.kartyak.length) {
+      // ⭐ D119 (⑥): a friss készülék — a csatlakozás és a társ a tér sávján (eddig csak parancs volt).
+      const ures = document.createElement('p');
+      ures.className = 'koino-megjegyzes';
+      ures.textContent = 'Ez a készülék még egy koinót sem ismer. Ha meghívtak: „🔗 Csatlakozás egy koinóhoz…” (a koinó nevével), '
+        + 'és „🤝 Társak…” (a meghívód címével) — a tér sávján.';
+      this.kontener.appendChild(ures);
     }
 
     // ----- AZ ÁLLAPOT-SOR -----
@@ -142,6 +153,14 @@ export class TerNezet {
     const csalad = this._csalad(koino);
     if (csalad) elem.appendChild(csalad);
 
+    // ----- ⭐⭐ D119 (⑥): AZ ŐRJÁRAT — fut-e (a családjáé is), és ha nem, a parancs (CS5 (A): a lap nem indítja, de kimondja) -----
+    if (koino.orjarat) {
+      const orjarat = document.createElement('div');
+      orjarat.className = 'koino-kartya__orjarat';
+      orjarat.innerHTML = orjaratHtml(koino.orjarat);
+      elem.appendChild(orjarat);
+    }
+
     // ----- A BELÉPÉS -----
     //
     // ⚠️ A „belépés" itt NEM bejelentkezés (D15: nincs ilyen a koinóban) — csak annyi,
@@ -215,6 +234,16 @@ export class TerNezet {
             ? (k.nev ?? k.azonosito.slice(0, 8) + '…') + ' (a koino-verzió kártyájáról — a tára még nincs ezen a készüléken)'
             : 'ezen a készüléken nem ismert (' + k.azonosito.slice(0, 8) + '…)';
           sor.appendChild(nev);
+          if (k.kartyarol) {
+            // ⭐ D119 (⑥): egy kattintás — a születése a kártyából a tárába, és a családod őrjárata felveszi (gépelés nélkül).
+            const gomb = document.createElement('button');
+            gomb.type = 'button';
+            gomb.className = 'koino-kartya__csalad-csatlakozom';
+            gomb.textContent = 'Csatlakozom…';
+            gomb.addEventListener('click', () => csatlakozasMegnyitasa({ koino: k.azonosito, nev: k.nev, zart: k.zart,
+              utana: () => this.betoltes() }));
+            sor.appendChild(gomb);
+          }
         }
       });
       doboz.appendChild(sor);

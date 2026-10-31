@@ -81,6 +81,16 @@ export async function koinoBecenevKijelolese(becenev, azonosito, hely = alapHely
   await rename(ideiglenes, join(hely, BECENEV_FAJL));
 }
 
+/**
+ * ⭐ D119 (⑥): a koinó becenevei ezen a készüléken (a jegyzékből, rendezve) — a lap ebből írja ki a koinó őrjáratának indító
+ * parancsát (egy rövid becenévvel a 43 jeles név helyett).
+ */
+export async function koinoBecenevei(azonosito, hely = alapHely()) {
+  let j = {};
+  try { j = JSON.parse(await readFile(join(hely, BECENEV_FAJL), 'utf8')) ?? {}; } catch { /* még nincs jegyzék */ }
+  return Object.keys(j).filter((b) => j[b] === azonosito).sort();
+}
+
 // ===================================
 // AZ ESEMÉNY-TÁR
 // ===================================

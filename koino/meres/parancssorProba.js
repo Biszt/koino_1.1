@@ -1109,6 +1109,157 @@ proba('⭐⭐ D119 (⑤): a független családok — a kötés a családé, és 
     }
   });
 
+// ⭐⭐ D119 (⑥): A FUTÓ ŐRJÁRAT FELVESZI A CSALÁD ÚJ KOINÓJÁT — a kézi próba (⑦) útja. A a ZÁRT szülő (P) alapítója, B a tagja; A
+// létrehozza a (zárt) gyermeket (C), ír benne egy gondolatot, és a családjára (P + C) postaládát futtat. B a P kivitelével (a kézi
+// úton) a gyermek kártyáját kapja meg, a tárát nem; B őrjárata a P-re indul (az induló címe A postaládája). Az első csere után B
+// BEKÖLTÖZIK a C-be (`koltozes` — a lapon ugyanez a „🧳 Költözés…”). ⭐ B FUTÓ őrjárata a következő körében felveszi a C-t
+// (újraindítás nélkül), és A C-beli gondolata B lemezére ér (a zárt kapu a beköltözéssel tagnak veszi); a C feljegyzésébe is a
+// család köre kerül — a tér ebből mondja, hogy a C-nek fut az őrjárata. Viselkedést mérünk (B lemezét és naplóját). Rontás: az
+// őrjárat csak induláskor nyitja meg a családot → a gondolat nem ér át; a kör csak a fő koinó feljegyzésébe → a C-nél nincs kör.
+proba('⭐⭐ D119 (⑥): a futó őrjárat felveszi a család új koinóját — a zárt gyermekbe költözés után a gyermek magától cserél, újraindítás nélkül',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const PA = 7903, PB = 7905;
+    const helyben = { KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9' };
+    const futok = [];
+    let naplo = '';
+    try {
+      await fut(a, 'koino', 'Hat-szülő');
+      await taggaTesziKeszulek(a, b);
+      await fut(a, 'kivisz', join(a, 'p1.jsonl'));
+      await fut(b, 'behoz', join(a, 'p1.jsonl'));
+      await fut(a, 'koinoverzio', 'Hat-gyermek', 'pont=10', 'becenev=gy');
+      const C = await koinoNeve(a, 'gy');
+      const g = azonosito(await fut(a, 'gondolat', 'A GYERMEKBEN', { KOINO_AZONOSITO: 'gy' }), 'Létrejött:');
+      await fut(a, 'kivisz', join(a, 'p2.jsonl'));
+      await fut(b, 'behoz', join(a, 'p2.jsonl'));
+      const taraNemVolt = !!C && !(await readFile(join(b, C, 'esemenyek.jsonl'), 'utf8').then(() => true, () => false));
+      futok.push(spawn(process.execPath, [KOINO_JS, 'figyel', String(PA)],
+        { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...helyben }, stdio: 'ignore' }));
+      await fut(b, 'tars', '127.0.0.1', String(PA), 'A');
+      await varj(1500);
+      const o = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(PB)],
+        { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
+      o.stdout.on('data', (x) => { naplo += x; });
+      futok.push(o);
+      // az első csere (a P) — a C ekkor még nincs a készüléken
+      const P = await koinoNeve(b);
+      let elsoCsere = false;
+      for (let i = 0; i < 60 && !elsoCsere; i++) {
+        await varj(500);
+        elsoCsere = !!JSON.parse(await readFile(join(b, P, 'csere.json'), 'utf8').catch(() => '{}')).csere;
+      }
+      const koltozes = await fut(b, 'koltozes', C);
+      let atjutott = false;
+      for (let i = 0; i < 60 && !atjutott; i++) {
+        await varj(500);
+        atjutott = !!g && (await readFile(join(b, C, 'esemenyek.jsonl'), 'utf8').catch(() => '')).includes(g);
+      }
+      await varj(1500);
+      const cKor = JSON.parse(await readFile(join(b, C, 'csere.json'), 'utf8').catch(() => '{}')).kor ?? null;
+      const ter = (await fut(b, 'ter')).replace(/\x1b\[[0-9;]*m/g, '');
+      const cResz = ter.slice(ter.indexOf(C ?? '#')).split('\n').slice(0, 6).join('\n');
+      const tiszta = naplo.replace(/\x1b\[[0-9;]*m/g, '');
+      const jo = { taraNemVolt, elsoCsere, koltozott: /Kiköltöztél/.test(koltozes), felvette: /a családból új koinó/.test(tiszta),
+        atjutott, kor: cKor?.port === PB, terFut: /az őrjárata fut \(7905-es port/.test(cResz) };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) process.stderr.write('    (a család új koinója: ' + JSON.stringify({ ...jo, cKor }) + ')\n'
+        + '    (B napló: ' + tiszta.replace(/\s+/g, ' ').slice(-900) + ')\n'
+        + '    (B tér: ' + cResz.replace(/\s+/g, ' ').slice(0, 400) + ')\n');
+      return ok;
+    } finally {
+      for (const f of futok) f.kill();
+      await varj(800);
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
+// ⭐⭐ D119 (⑥): A LAP — CSATLAKOZÁS ÉS TÁRS, egy FRISS készüléken. A a nyílt P alapítója, P-nek egy nyílt gyermeke (C) van; A a P-ben
+// és a C-ben is ír egy gondolatot, és a családjára postaládát futtat. B felülete VÉGIG FUT (a valóságban egy nyitott lap mögött). (1)
+// B tere üres, és a lap a felület becenevét („sajat”) szabadnak mondja. (2) B a LAPON csatlakozik a P-hez (`POST /api/csatlakozas`, a
+// „sajat” becenévvel): a válasz újraindítást kér, a tér a P-t „a születése még nem jött meg”-ként mutatja, és kimondja, hogy nem fut
+// őrjárata — a parancs a „sajat” becenévvel (KOINO_AZONOSITO nélkül). (3) B a LAPON felveszi A címét (`POST /api/tarsak`). (4) B a
+// sima `orjarat`-tal (a saját próba-portján) őrjáratot indít: A P-beli gondolata B lemezére ér, és a FUTÓ felület tere a P-nél most
+// „fut”-at mond (a porttal). (5) A lap kérésére B újraindítja a felületet: a tér a C-t a kártyáról mutatja, és B a LAPON csatlakozik
+// hozzá — a válasz szerint a családja őrjárata fut (az felveszi); a futó őrjárat a C-t felveszi, és A C-beli gondolata B lemezére ér.
+// (6) a levétel a lapon. Rontás: a lap nem veszi fel a társat → a gondolat nem ér át; a lap nem jegyzi a becenevet → a sima őrjárat a
+// régi (üres) koinót futtatja; a csatlakozás nem nyitja meg a kártyáról a gyermeket → a C gondolata nem ér át.
+proba('⭐⭐ D119 (⑥): a lap — csatlakozás egy koinóhoz és társ felvétele egy friss készüléken, aztán a gyermekhez a kártyáról; a tér kimondja, fut-e az őrjárat',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const PA = 7909, PB = 7911, FB = 7913, FB2 = 7915;
+    const helyben = { KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9' };
+    const futok = [];
+    let fb = null;
+    try {
+      await fut(a, 'koino', 'Lap-szülő', 'nyilt');
+      const P = await koinoNeve(a);
+      const g = azonosito(await fut(a, 'gondolat', 'A LAP HOZZA'), 'Létrejött:');
+      await fut(a, 'koinoverzio', 'Lap-gyermek', 'nyilt', 'pont=10', 'becenev=gy');
+      const C = await koinoNeve(a, 'gy');
+      const gc = azonosito(await fut(a, 'gondolat', 'A GYERMEKBEN IS', { KOINO_AZONOSITO: 'gy' }), 'Létrejött:');
+      futok.push(spawn(process.execPath, [KOINO_JS, 'figyel', String(PA)],
+        { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...helyben }, stdio: 'ignore' }));
+      fb = await feluletet(b, FB, helyben);
+      // (1) a friss készülék
+      const ter0 = await fb.hiv('/api/ter');
+      const elo = await fb.hiv('/api/csatlakozas');
+      // (2) a csatlakozás a lapon
+      const rossz = await fb.hiv('/api/csatlakozas', { method: 'POST', body: JSON.stringify({ koino: 'nem-egy-nev' }) });
+      const cs = await fb.hiv('/api/csatlakozas', { method: 'POST', body: JSON.stringify({ koino: P, becenev: 'sajat' }) });
+      const ter1 = await fb.hiv('/api/ter');
+      const kP1 = (ter1.adat.kartyak ?? []).find((k) => k.azonosito === P) ?? null;
+      // (3) a társ a lapon
+      const tf = await fb.hiv('/api/tarsak', { method: 'POST', body: JSON.stringify({ hoszt: '127.0.0.1', port: PA, nev: 'A' }) });
+      const tl = await fb.hiv('/api/tarsak');
+      // (4) az őrjárat — a lap parancsa a sima `orjarat` (a próba a saját portján indítja)
+      const parancs = kP1?.orjarat?.parancs ?? '';
+      futok.push(spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(PB)],
+        { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...helyben }, stdio: 'ignore' }));
+      const megvan = async (k, az) => !!az && (await readFile(join(b, k, 'esemenyek.jsonl'), 'utf8').catch(() => '')).includes(az);
+      let atjutott = false;
+      for (let i = 0; i < 60 && !atjutott; i++) { await varj(500); atjutott = await megvan(P, g); }
+      await varj(1000);
+      const ter2 = await fb.hiv('/api/ter');
+      const kP2 = (ter2.adat.kartyak ?? []).find((k) => k.azonosito === P) ?? null;
+      // (5) a felület újraindítása (a lap kérte) — a tér a gyermeket a kártyáról mutatja, és a lapon csatlakozunk hozzá
+      fb.folyamat.kill();
+      await varj(800);
+      fb = await feluletet(b, FB2, helyben);
+      const ter3 = await fb.hiv('/api/ter');
+      const kP3 = (ter3.adat.kartyak ?? []).find((k) => k.azonosito === P) ?? null;
+      const gyK = (kP3?.gyermekek ?? []).find((x) => x.azonosito === C) ?? null;
+      const csC = await fb.hiv('/api/csatlakozas', { method: 'POST', body: JSON.stringify({ koino: C }) });
+      let atjutottC = false;
+      for (let i = 0; i < 60 && !atjutottC; i++) { await varj(500); atjutottC = await megvan(C, gc); }
+      // (6) a levétel
+      const tt = await fb.hiv('/api/tarsak/torol', { method: 'POST', body: JSON.stringify({ hoszt: '127.0.0.1', port: PA }) });
+      const tl2 = await fb.hiv('/api/tarsak');
+      const jo = {
+        ures: ter0.adat.koinok === 0, szabad: elo.adat.szabad === true && elo.adat.sajatBecenev === 'sajat',
+        rossz: rossz.allapot === 400, csatlakozott: cs.allapot === 200 && cs.adat.koino === P && cs.adat.ujraindit === true,
+        nemJottMeg: !!kP1 && kP1.nev == null, nemFut: kP1?.orjarat?.fut === false,
+        parancs: /orjarat/.test(parancs) && !/KOINO_AZONOSITO/.test(parancs),
+        tarsFelveve: tf.allapot === 200 && (tl.adat.tarsak ?? []).some((t) => t.port === PA && t.nev === 'A'),
+        atjutott, fut: kP2?.orjarat?.fut === true && kP2?.orjarat?.port === PB,
+        kartyarol: gyK?.kartyarol === true, csatlakozottC: csC.allapot === 200 && csC.adat.kartyarol === true
+          && csC.adat.orjarat?.fut === true && csC.adat.orjarat?.csaladbol === true,
+        atjutottC, levett: tt.adat.torolt === 1 && !(tl2.adat.tarsak ?? []).some((t) => t.port === PA)
+      };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) process.stderr.write('    (a lap: ' + JSON.stringify({ ...jo, parancs, cs: cs.adat, csC: csC.adat, kP1: kP1?.orjarat,
+        kP2: kP2?.orjarat, gyermekek: kP3?.gyermekek }) + ')\n');
+      return ok;
+    } finally {
+      if (fb) fb.folyamat.kill();
+      for (const f of futok) f.kill();
+      await varj(800);
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ⭐⭐ D118 (②b): A KAPU KOINÓ-SZABÁLYA a parancssoron és a cserén. Az A a szülőben ír egy gondolatot a gyermek születése
 // ELŐTT és egyet UTÁNA; a szülő kivitele a gyermekbe behozva csak az elsőt adja (a második a szülő jelene — „másik koinóé”),
 // és a csere (két „mindent” készülék) ugyanígy viszi tovább a B-nek. Viselkedést mérünk (a két lemezt). ⚠️ A számítás még

@@ -1,0 +1,95 @@
+/* koino/felulet/css/components/koinoCsatlakozas.css */
+
+/* Felelősség: ⭐ D119 ⑥ — a tér két ablaka (koinós többlet): a csatlakozás egy koinóhoz és a társak; és az őrjárat állása a tér
+   kártyáján (a parancs a másoló gombjával). A színek a lap meglévő változóiból (`base/variables.css`), a költözés ablakának
+   mintájára. */
+
+.koino-csatlakozas { display: flex; flex-direction: column; gap: 10px; }
+.koino-csatlakozas__leiras { font-size: 0.85em; opacity: 0.85; margin: 0; line-height: 1.4; }
+.koino-csatlakozas__siker { margin: 0; font-size: 1em; overflow-wrap: anywhere; }
+.koino-csatlakozas__uzenet { margin: 0; font-size: 0.85em; line-height: 1.4; padding: 6px 8px; border-radius: 6px;
+  background: var(--color-surface-offset, #f3efe8); }
+.koino-csatlakozas__lepesek { margin: 0; padding-left: 18px; font-size: 0.85em; line-height: 1.45; display: flex;
+  flex-direction: column; gap: 4px; }
+.koino-csatlakozas__mezo { display: flex; flex-direction: column; gap: 3px; font-size: 0.85em; min-width: 0; }
+.koino-csatlakozas__mezo input {
+  font: inherit;
+  font-size: 1em;
+  padding: 5px 8px;
+  border: 1px solid var(--color-border, #bbb);
+  border-radius: 6px;
+  min-width: 0;
+}
+.koino-csatlakozas__mezo input[name="koino"] { font-family: monospace; }
+.koino-csatlakozas__sor { display: flex; gap: 8px; flex-wrap: wrap; }
+.koino-csatlakozas__sor > .koino-csatlakozas__mezo { flex: 1 1 140px; }
+.koino-csatlakozas__sor > .koino-csatlakozas__mezo--szeles { flex: 2 1 180px; }
+.koino-csatlakozas__sor > .koino-csatlakozas__mezo--port { flex: 0 1 90px; }
+.koino-csatlakozas__gombok { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.koino-csatlakozas__gomb {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #bbb);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9em;
+}
+.koino-csatlakozas__gomb--fo { background: var(--color-primary); color: var(--color-text-inverse); border-color: var(--color-primary); }
+.koino-csatlakozas__gomb:disabled { opacity: 0.55; cursor: default; }
+.koino-csatlakozas__link { border: none; background: none; padding: 0; font: inherit; color: var(--color-primary); cursor: pointer;
+  text-decoration: underline; }
+
+/* ----- A TÁRSAK LISTÁJA ----- */
+.koino-tarsak { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.koino-tars {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.koino-tars__cim { font-weight: 600; overflow-wrap: anywhere; }
+.koino-tars__allas { font-size: 0.8em; color: var(--color-text-faint); flex: 1 1 auto; }
+
+/* ----- AZ ŐRJÁRAT ÁLLÁSA (az ablakban és a tér kártyáján) ----- */
+.koino-orjarat { margin: 0; font-size: 0.85em; line-height: 1.4; }
+.koino-orjarat--fut { color: var(--color-text-faint); }
+.koino-orjarat--nem { color: var(--color-error, #a33); }
+.koino-parancs { display: flex; gap: 6px; align-items: stretch; min-width: 0; }
+.koino-parancs__szoveg {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.8em;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--color-surface-offset, #f3efe8);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.koino-parancs__masol {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #bbb);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8em;
+}
+
+/* ----- A TÉR KÁRTYÁJÁN ----- */
+.koino-kartya__orjarat { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.koino-kartya__csalad-csatlakozom {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-primary);
+  background: transparent;
+  color: var(--color-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85em;
+}

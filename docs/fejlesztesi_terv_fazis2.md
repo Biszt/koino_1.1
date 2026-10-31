@@ -6131,8 +6131,12 @@ feljegyzés a fő koinóé — mért hiba: eleinte a kérdező családtag beáll
 (a készülék két társnak látszott) — a létrehozás kizárólagos. ✅ **D119/B** (Csaba, 2026-10-31: *„elfogadom a javaslatodat,
 mehetünk tovább.”*) — az ⑤c (A): **a kötés-jegyzék családonként külön** (a közös 3/5-ös jegyzékben két független család 3 + 3
 társa egymást szorította ki — senki nem lett rendszeres), és **a tábla rekesze is a családé** (a két család őrjárata különben
-egymás címét írta volna felül); a régi közös jegyzék az első író családé lesz. ⏭️ **Az ⑥ a lap** (csatlakozás egy koinóhoz, társ
-felvétele).
+egymás címét írta volna felül); a régi közös jegyzék az első író családé lesz. ✅ **Az ⑥ a lap** (2026-10-31, elágazás 220): a
+téren „🔗 Csatlakozás egy koinóhoz…” és „🤝 Társak…”, a kártyáról ismert gyermeknél „Csatlakozom…” (a parancs és a lap ugyanazt
+hívja); ⛔ mérve és javítva: a futó őrjárat a családját csak induláskor nyitotta meg — most körönként, és a tér koinónként kimondja,
+fut-e az őrjárata (ha nem, a család egy indító parancsát — CS5 (A)). ⚠️ A D118/3 kimondva: a csatlakozott nem költöző a gyermekben
+nem tag. ⏸️ **Csabánál az FL1** (a felület kötése: csak a saját koinójában dolgozik teljesen — (A) marad · (B) ⭐ minden koinóban a
+példányával). Utána a ⑦ (terepi próba).
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal

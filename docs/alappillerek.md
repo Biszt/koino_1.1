@@ -1608,3 +1608,14 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     írna, az egyik írása elveszne) · ⚠️ a régi `kotesek.json` az első író családé lesz (`kotesek-regi.json`); a friss és az induló
     címek készülék-szintűek maradtak (egy „MÁSIK koinóé” nyitás ára — a terepen mérendő) · `csaladi_orjarat_atvizsgalas.md`
     15. szakasz.
+220. **2026-10-31 · D119 ⑥ — a lap: csatlakozás, társ, és a futó őrjárat a család új koinóira**
+    → **a csatlakozás (`koinoCsatlakozas`) és a társ (`tarsFelvetele`/`tarsLevetele`) egy-egy függvény, a parancs és a lap
+    ugyanazt hívja; a futó őrjárat körönként újranyitja a családot (`csaladUjKoinoi`), és a köre a család minden koinójának
+    feljegyzésébe kerül — a tér koinónként kimondja, fut-e az őrjárata, és ha nem, a család EGY indító parancsát** · a lelet
+    (mérve): a futó őrjárat a családját csak induláskor nyitotta meg — a lapról született gyermek, a lapon végzett költözés vagy
+    egy csatlakozás után a gyermek újraindításig nem cserélt (a ⑦ útja) · ⭐ a csatlakozás a kártyáról ismert gyermek születését a
+    kártyából a tárába teszi (a család őrjárata felveszi); egy friss készüléken a lap a felület saját becenevét kínálja (az
+    újraindított felület és a sima `orjarat` így az új koinót nyitja) · ⚠️ a D118/3 (4.6) kimondva: a csatlakozott nem költöző a
+    gyermekben nem tag — a zárt gyermek tartalmát nem kapja (mérve), a lap a költözésre mutat · ⛔ elvetve: koinónként külön
+    parancs a család tagjainak (két őrjárat egy családnak — CS4 (A)); a felület indítja az őrjáratot (CS5 (A): két külön indítás)
+    · `csaladi_orjarat_atvizsgalas.md` 16. szakasz.

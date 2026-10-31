@@ -465,7 +465,7 @@ export class AlsoSav {
     const u = a.utolsoCsere;
     const utolso = u ? '🔄 ' + mennyiIdeje(most - u.ido) + (u.uj ? ' +' + u.uj : '') : '🔄 még nem volt csere';
     let kovetkezo;
-    if (!o.fut) kovetkezo = 'az őrjárat nem fut';
+    if (!o.fut) kovetkezo = o.csaladbol ? 'az őrjárat a következő körben felveszi' : 'az őrjárat nem fut';
     else if (o.korFut) kovetkezo = '⏳ csere most';
     else if (o.kovetkezo) kovetkezo = o.kovetkezo > most ? '⏭ ' + visszaszamlalo(o.kovetkezo - most) : '⏳ csere most';
     else kovetkezo = '⏭ –';
@@ -482,8 +482,13 @@ export class AlsoSav {
         sorok.push('Az utolsó kör: ' + oraPerc(o.utolsoKor.ido) + ' — ' + o.utolsoKor.sikeres + ' társ felelt'
           + (o.utolsoKor.celok ? ' ' + o.utolsoKor.celok + ' címből' : '') + ', ' + o.utolsoKor.uj + ' új esemény.');
       }
+    } else if (o.csaladbol) {
+      // ⭐ D119 (⑥): a koinó a családjáé — a család őrjárata fut, és a következő körében felveszi (újraindítás nélkül).
+      sorok.push('Ennek a koinónak a családjához fut őrjárat — a következő körében felveszi, és onnan magától cserél.');
     } else {
-      sorok.push('Az őrjárat nem fut — a készülék most magától nem cserél (indítás: node koino/koino.js orjarat).');
+      // ⭐ D119 (⑥): a parancs ennek a koinónak szól (a becenevével, egy szabad porttal — a tér kártyáján másolható).
+      sorok.push('Az őrjárat nem fut — a készülék most magától nem cserél (indítás egy külön ablakban: '
+        + (o.inditas ?? 'node koino/koino.js orjarat') + ').');
     }
     sorok.push('Ha egy csere újat hoz, a lap magától frissül. Kattints: frissítés most.');
     elem.title = sorok.join('\n');

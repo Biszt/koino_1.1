@@ -58,6 +58,9 @@
   </select>
 
   <button type="button" id="ter-frissites">Frissítés</button>
+  <!-- ⭐⭐ D119 (⑥): a csatlakozás egy koinóhoz és a társak — eddig csak parancs (`csatlakoz`, `tars`). -->
+  <button type="button" id="ter-csatlakozas">🔗 Csatlakozás egy koinóhoz…</button>
+  <button type="button" id="ter-tarsak">🤝 Társak…</button>
 </div>
 
 <p class="allapot" id="allapot">Betöltés…</p>
@@ -153,6 +156,8 @@
 import './js/components/kartya/kartyaGyar.js';
 import { KoinoPakli } from './js/koinoPakli.js';
 import { TerNezet } from './js/terNezet.js';
+// ⭐⭐ D119 (⑥): a tér két ablaka — a csatlakozás egy koinóhoz és a társak.
+import { csatlakozasMegnyitasa, tarsakMegnyitasa } from './js/koinoCsatlakozas.js';
 // ⭐ D101: a maradék modálok koinós többlete (a tudás határa a modálok alján) — a betöltéskor csomagol.
 import './js/koinoModalok.js';
 // ⭐ D112 ⑤: a felderítés — a kártya menüjének „📷 Felderítés…” pontja (a kártya bővítési pontján) a betöltéskor.
@@ -229,6 +234,8 @@ document.getElementById('ter-valto').addEventListener('click', async () => {
   await mutat('pakli');
 });
 document.getElementById('ter-frissites').addEventListener('click', () => terNezet.betoltes());
+document.getElementById('ter-csatlakozas').addEventListener('click', () => csatlakozasMegnyitasa({ utana: () => terNezet.betoltes() }));
+document.getElementById('ter-tarsak').addEventListener('click', () => tarsakMegnyitasa({ utana: () => terNezet.betoltes() }));
 document.getElementById('ter-rendezes').addEventListener('change', (e) => {
   terNezet.rendezes = e.target.value;
   terNezet.betoltes();
