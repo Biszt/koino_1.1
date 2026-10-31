@@ -462,6 +462,18 @@ function koinoTaraEgyszer(koino) {
 // ⭐⭐ D119 (③): A CSALÁD PÉLDÁNYAI ebben a folyamatban — koinó → példány (a fő, és amit a hálózati parancs megnyitott a családból).
 const csaladPeldanyok = new Map();
 
+// ⭐⭐ FL1 (Csaba, 2026-10-31: (B)): EGY KOINÓ PÉLDÁNYA folyamatonként EGYSZER — a fő, a család (`csaladMegnyitasa`) és a felület
+// belépett koinója ugyanazt kapja (két példány ugyanarra a koinóra két átmeneti tárat és két gyorsítótárat jelentene).
+const nyitottPeldanyok = new Map();
+function koinoPeldanyEgyszer(koino) {
+  if (!nyitottPeldanyok.has(koino)) {
+    const p = koinoPeldany(koino);
+    nyitottPeldanyok.set(koino, p);
+    p.catch(() => nyitottPeldanyok.delete(koino));   // a hibás nyitás nem ragad meg — a következő hívás újrapróbálja
+  }
+  return nyitottPeldanyok.get(koino);
+}
+
 // ⭐⭐ D119 (④a): A KÉSZÜLÉK KÖZÖS ÁLLAPOTA a családban — ami a készülék munkája, az egy: a kiszolgálási keret (a készülék
 // munkája MÁSOKNAK — koinónként külön a koinók száma szorozná; D109) és a „később”-t mondó társak (a társ kerete a készülékre
 // szól). Koinónként marad a fájl-munkák jegyzéke (a fájl-tár koinónként külön mappa) és az utolsó csere ideje.
@@ -5591,7 +5603,7 @@ return {
 
 // ⭐⭐ D119 (②): a FŐ PÉLDÁNY — a becenév koinója; a parancsok ennek a nevein futnak (mint a gyár előtt a modul-szintű nevein).
 // ⭐ D119 (③): és a család első példánya (a hálózati parancsok a család többi koinóját is megnyitják — `csaladMegnyitasa`).
-const foPeldany = await koinoPeldany(KOINO);
+const foPeldany = await koinoPeldanyEgyszer(KOINO);
 csaladPeldanyok.set(KOINO, foPeldany);
 csaladFo = foPeldany;
 const {
@@ -5653,7 +5665,7 @@ async function csaladMegnyitasa({ iro = false } = {}) {
     try {
       if (!(await (await koinoTaraEgyszer(k)).esemeny(k))) continue;   // a születése még nincs a készüléken
       if ((await koinoCsaladGyokere(k)) !== gyoker) continue;           // független család (CS4 — másik őrjárat)
-      const p = await koinoPeldany(k);
+      const p = await koinoPeldanyEgyszer(k);   // ⭐ FL1: ha a felület már megnyitotta, ugyanaz
       if (iro) await p.tar.iroLeszek?.();
       csaladPeldanyok.set(k, p);
     } catch (hiba) {
@@ -9030,9 +9042,10 @@ try {
       // eldől. A **belépő tér** viszont a koinók FÖLÖTT áll — a lap onnan lép be az
       // egyikbe, majd vissza, majd egy másikba, **újraindítás nélkül**.
       //
-      // ⭐ Ezért tart a felület koinónként egy **nyitott állapotot**: saját tár, saját
-      // környezet (az íráshoz) és saját pakli-nézet. ⚠️ A **kulcs közös** — a D15 szerint a
-      // személyazonosság a készüléké, nem a koinóé; a *tagság* az, ami koino-helyi.
+      // ⭐ Ezért tart a felület koinónként egy **nyitott állapotot**: a koinó PÉLDÁNYA (FL1 — a tár, az
+      // átmeneti tár, a környezet az íráshoz, a kérelmek, a felderítés, a postafiók, a költözés) és saját
+      // pakli-nézet. ⚠️ A **kulcs közös** — a D15 szerint a személyazonosság a készüléké, nem a koinóé; a
+      // *tagság* az, ami koino-helyi.
       //
       // ⚠️ A pakli-nézet KOINÓNKÉNT külön: a horgony „az első N esemény" képe, és az
       // eseményhalmaz koinónként más. Egy közös nézet a váltás után **másik koino képét**
@@ -9042,41 +9055,61 @@ try {
       const nyitottKoinok = new Map();
       let aktivKoino = KOINO;
 
-      async function aktivAllapot() {
-        if (!nyitottKoinok.has(aktivKoino)) {
-          // Az indításkori koino tárát nem nyitjuk meg másodszor.
-          // ⭐ D70: a másik koinó tára is az író mögött — a felület ott is csak átad.
-          const t = await koinoTaraEgyszer(aktivKoino);   // ⭐ D118 (⑥): a költözés gyermeke ugyanezt a tárat kapja
-          // ⭐ A felület is a futása végéig tartja az író-szerepet (ha most senki nem író).
-          await t.iroLeszek();
-          nyitottKoinok.set(aktivKoino, {
-            koino: aktivKoino,
-            tar: t,
-            kornyezet: { koino: aktivKoino, kulcspar, szerzo, tar: t, darabTar: fajlBlobTarolo(aktivKoino), lancTarolo: lancTarolo(aktivKoino) },
-            // ⭐ D95/1: a lap is az ellenőrzött lezárási összegzésekből dönt (az indításkori koinóé — azé van tárolója).
-            // ⭐ A ház (D100): a szigorú (b) alatt a lap is csak a tartott szeletre alkalmazza a D14-et (72. mérés).
-            pakliNezet: ujPakliNezet(aktivKoino === KOINO ? { osszegzesek: ellenorzottOsszegzesek, tartott: tartottSzeleteim } : {})
-          });
+      // ===================================
+      // ⭐⭐ FL1 (Csaba, 2026-10-31: (B)): A BELÉPETT KOINÓ A SAJÁT PÉLDÁNYÁVAL
+      // ===================================
+      //
+      // Ugyanaz a gyár, amivel a család őrjárata dolgozik (`koinoPeldanyEgyszer`): a koinó átmeneti tára, a bemondásai, a függő
+      // kérelmei, a felderítése, a postafiókja, a költözése. ⛔ Eddig csak az indításkori koinó dolgozott teljesen, a többiben a
+      // lap nézett és írt — mérve: a gyermekben semmit nem kért el (a nézet tartott szeletek nélkül mindent tartottnak vett), így
+      // a beköltözött e-ember a gyermekben újraindításig csak a helyi tudást látta. A lap kéréseit a koinó CSALÁDJÁNAK őrjárata
+      // viszi (D119 ④ — a család minden példányának kérelmeit és háztartását); ha nem fut, a lap kimondja (CS5 (A)).
+      function aktivAllapot() {
+        const k = aktivKoino;
+        if (!nyitottKoinok.has(k)) {
+          const a = (async () => {
+            const p = await koinoPeldanyEgyszer(k);
+            // ⭐ D70: a felület a futása végéig tartja az író-szerepet (ha most senki nem író) — minden belépett koinóban.
+            await p.tar.iroLeszek();
+            // ⭐ D95/1: a lap is az ellenőrzött lezárási összegzésekből dönt; ⭐ a ház (D100): a szigorú (b) alatt csak a tartott
+            // szeletre alkalmazza a D14-et (72. mérés) — FL1 óta minden koinóban a sajátjaival.
+            return { koino: k, peldany: p, pakliNezet: ujPakliNezet({ osszegzesek: p.ellenorzottOsszegzesek, tartott: p.tartottSzeleteim }) };
+          })();
+          nyitottKoinok.set(k, a);
+          a.catch(() => nyitottKoinok.delete(k));
         }
-        return nyitottKoinok.get(aktivKoino);
+        return nyitottKoinok.get(k);
       }
 
-      // ⭐ B/2: az átmeneti tár az INDÍTÁSKORI koinóé — a kezelő árnyékolja a `tar` nevet, ezért itt jegyezzük meg.
-      const sajatKoinoTara = tar;
+      /** ⭐ FL1: a felület megnyitott koinóinak példányai (a fő mindig köztük) — a tér ezek kártyáiról ismert gyermekeit mutatja. */
+      async function feluletPeldanyai() {
+        const ki = [foPeldany];
+        for (const a of nyitottKoinok.values()) {
+          const x = await a.catch(() => null);
+          if (x && !ki.includes(x.peldany)) ki.push(x.peldany);
+        }
+        return ki;
+      }
+
       const kezelo = async ({ modszer, utvonal, kereses, test }) => {
 
         // ⚠️⚠️ SZÁNDÉKOS ÁRNYÉKOLÁS, és ez a kulcsa az egésznek. A kezelő MINDEN sora az
         // **aktív** koinóra vonatkozik, nem az indításkorira — a nevek viszont ugyanazok
         // maradnak, ezért egyetlen végpont kódját sem kellett átírni a váltás miatt.
-        // *(A `kepetKeszit` a kivétel: annak paraméterként adjuk át, mert modul szintű.)*
+        // ⭐ FL1: a koinó-szintű nevek a belépett koinó PÉLDÁNYÁÉI (a gyár nevei — ugyanazok, mint a parancsoké).
         const aktiv = await aktivAllapot();
-        const tar = aktiv.tar;
         const KOINO = aktiv.koino;
-        const kornyezet = aktiv.kornyezet;
         const pakliNezet = aktiv.pakliNezet;
-        // ⭐ B/2: az olvasók (a pakli) a két tár nézetét kapják — a saját koinónknál az átmeneti tár is látszik.
-        const sajatKoino = tar === sajatKoinoTara;
-        const olvasoTar = sajatKoino ? ketTarNezet(tar, atmeneti) : tar;
+        const {
+          tar, kornyezet, atmeneti, bemondasok, csereAllapota, dontesAzonositoja, fejlecTudas, felderitesJegyzekIrasa,
+          felderitesJegyzekOlvasasa, felderitesKor, fuggoKerelmekAllasa, halozatiKereses, hozzarendelesMegjegyzes, kepetKeszit,
+          keresesFuggoAllasa, keresesMegjegyzes, kiszolgalasBeallitas, koinoVerzioElonezete, koinoVerzioKeszitese,
+          koltozesElonezete, koltozesVegrehajtasa, lapHianyzoinakElkerese, laposMegjegyzes, postafiokFrissitese,
+          postafiokMegjegyzes, postafiokModositasa, programVerzioja, sikidomMegjegyzes, strukturaMegjegyzes, torzsElemKerese,
+          torzsKerhetoi
+        } = aktiv.peldany;
+        // ⭐ B/2: az olvasók (a pakli) a két tár nézetét kapják — FL1 óta minden koinóban (a koinó átmeneti tára is látszik).
+        const olvasoTar = ketTarNezet(tar, atmeneti);
 
         // ===================================
         // ⭐⭐ ÍRÁS (5.5) — itt születik esemény a lapról
@@ -9095,7 +9128,6 @@ try {
         // nincs szerver, ami írna: a postafiókot a készülék számolja (`postafiokFrissitese`), a beállítás helyi fájl.
         if (utvonal === '/api/ertesitesek' || utvonal.startsWith('/api/ertesitesek/')
           || utvonal === '/api/ertesitesi-beallitasok' || utvonal.startsWith('/api/ertesitesi-beallitasok/')) {
-          if (!sajatKoino) return { adat: { success: true, adatok: { ertesitesek: [], osszes: 0, olvasatlan: 0, lapokSzama: 0 } } };
           const kozos = { tar: olvasoTar, koino: KOINO, nezet: pakliNezet, bemondasok: await bemondasok(), szerzo };
           const tarolo = ertesitesTarolo(KOINO);
           const reszek = utvonal.split('/').slice(2);           // ['ertesitesek', …] | ['ertesitesi-beallitasok', …]
@@ -9185,7 +9217,8 @@ try {
           // ===================================
           //
           // A lap csak kéri (7. szabály): a beállítás határait a program szabja (`felderites.js`), a felderítést az őrjárat
-          // végzi; itt az első lépés fut (a kérések felvétele). Csak a saját (az indításkori) koinóban.
+          // végzi; itt az első lépés fut (a kérések felvétele). FL1 óta bármelyik belépett koinóban (a koinó családjának őrjárata
+          // viszi tovább).
           // ===================================
           // ⭐⭐ D119 (①b): AZ ÚJ KOINO-VERZIÓ A LAPRÓL — ugyanaz a függvény, mint a `koinoverzio` parancsé (a kód-csomag a kártyára, a
           // gyermek születése a kód nevével, a kártya és a pont). ⚠️ Visszavonhatatlan: a lap előbb megerősítést kér.
@@ -9193,7 +9226,6 @@ try {
           // ⭐⭐ D120: A KÉRÉS (a „kattintás”) — egy határ fölötti elem (`elem`: a fájl lenyomata vagy `kod` — a kártya kódja) vagy
           // egy entitás minden kérhető eleme; a következő csere hozza el. A parancs (`torzs`) és a lap ugyanazt hívja.
           if (utvonal === '/api/torzs') {
-            if (!sajatKoino) return { allapot: 400, adat: { hiba: 'A törzs-elemeket a saját (indításkori) koinódban lehet kérni.' } };
             try {
               let entitas = typeof test?.entitas === 'string' && test.entitas ? test.entitas : null;
               const elem = typeof test?.elem === 'string' && test.elem ? test.elem : null;
@@ -9207,7 +9239,6 @@ try {
           }
 
           if (utvonal === '/api/koinoverzio') {
-            if (!sajatKoino) return { allapot: 400, adat: { hiba: 'Koino-verziót a saját (indításkori) koinódban lehet létrehozni.' } };
             try {
               const nev = typeof test?.nev === 'string' ? test.nev.trim() : '';
               if (!nev) return { allapot: 400, adat: { hiba: 'Mi legyen a gyermek (a koino-verzió) neve?' } };
@@ -9231,7 +9262,6 @@ try {
           // a beköltözés a gyermekben). ⚠️ Visszavonhatatlan: a lap előbb megerősítést kér.
           // ===================================
           if (utvonal === '/api/koltozes') {
-            if (!sajatKoino) return { allapot: 400, adat: { hiba: 'Költözni a saját (indításkori) koinódból lehet.' } };
             try {
               const elhagy = Array.isArray(test?.elhagy) ? test.elhagy.filter((x) => typeof x === 'string') : [];
               const k = await koltozesVegrehajtasa(test?.gyermek, elhagy);
@@ -9243,7 +9273,6 @@ try {
           }
 
           if (utvonal === '/api/felderites' || utvonal === '/api/felderites/torol') {
-            if (!sajatKoino) return { allapot: 400, adat: { hiba: 'Felderíteni csak a saját koinódban lehet.' } };
             try {
               if (utvonal === '/api/felderites/torol') {
                 const j = await felderitesJegyzekOlvasasa();
@@ -9351,7 +9380,14 @@ try {
               // ⭐ A felület becenevét (a friss készüléken — `GET /api/csatlakozas`) az újraindítás után a felület és az
               // őrjárat is ezzel nyitja: az indító parancs ilyenkor a régi őrjárat portját kapja (azt kell újraindítani).
               const regi = await koinoBecenevFeloldasa(KOINO_BECENEV);
-              const cs = await koinoCsatlakozas(k, { becenev });
+              // ⭐ FL1: a kártyáról ismert gyermeket az a példány nyitja meg, amelyik koinójának a kártyáján van (a tér a felület
+              // minden megnyitott koinójának kártyáit mutatja); különben a fő.
+              let ismero = foPeldany;
+              for (const p of await feluletPeldanyai()) {
+                const gy = await p.terKartyaGyermekei().catch(() => new Map());
+                if ([...gy.values()].some((l) => l.some((x) => x.azonosito === k))) { ismero = p; break; }
+              }
+              const cs = await ismero.koinoCsatlakozas(k, { becenev });
               const o = (await koinokOrjaratai(await ismertKoinok(alapHely()))).get(k) ?? null;
               const ujraindit = becenev === KOINO_BECENEV && regi !== k;
               if (ujraindit && o && !o.fut) {
@@ -9720,7 +9756,6 @@ try {
         // ⭐⭐ D119 (①b): AZ ÚJ KOINO-VERZIÓ ŰRLAPJA — a kiindulás (`koinoVerzioElonezete`: a szülő szabályai, a szabad pont, a futó
         // program, és hogy létrehozhatok-e). Semmit nem ír.
         if (utvonal === '/api/koinoverzio') {
-          if (!sajatKoino) return { adat: { lehet: false, ok: 'Koino-verziót a saját (indításkori) koinódban lehet létrehozni.' } };
           try {
             return { adat: await koinoVerzioElonezete() };
           } catch (hiba) {
@@ -9731,7 +9766,6 @@ try {
         // ⭐⭐ D119 (①b): A KÁRTYA „KÓD” FÜLE — a koino-verzió jegyzéke (ha megvan a készüléken), hány fájlja van meg, és a futó
         // program neve (egyezik-e a kártyáéval). Egy fájl tartalma a meglévő `/api/fajl/<lenyomat>` úton jön.
         if (utvonal === '/api/kod') {
-          if (!sajatKoino) return { allapot: 400, adat: { hiba: 'A kódot a saját (indításkori) koinódban lehet megnézni.' } };
           const { allapot } = await kepetKeszit();
           const e = allapot.entitasok.get(kereses.get('kartya') ?? '');
           const kod = e?.koinoVerzio?.kod;
@@ -9748,7 +9782,6 @@ try {
         // ⭐⭐ D120: A KÉRHETŐ TÖRZS-ELEMEK — ami a határ miatt nem jön magától (a méretével), egy entitásra (`entitas`) vagy egy
         // fájlra (`lenyomat`) szűkítve; és a határ, a kért elemek. A lap ebből rajzolja a „kattints” helyét.
         if (utvonal === '/api/torzs') {
-          if (!sajatKoino) return { adat: { hatar: null, mindent: false, kerhetok: [], kertek: [] } };
           const t = await torzsKerhetoi(kereses.get('entitas') || null);
           const l = kereses.get('lenyomat');
           return { adat: { hatar: t.hatar, mindent: t.mindent, kertek: t.kertek,
@@ -9757,7 +9790,6 @@ try {
 
         // ⭐⭐ D119 (①b): A PROGRAM VERZIÓJA — a koinó születésének programja és a futó programé (a lap kimondja, ha más).
         if (utvonal === '/api/program') {
-          if (!sajatKoino) return { adat: { koinoe: null, sajat: null, egyezik: null } };
           return { adat: await programVerzioja() };
         }
 
@@ -9765,9 +9797,6 @@ try {
         // ⭐⭐ D118 (⑥): A KÖLTÖZÉS ELŐNÉZETE — a saját koinóm ismert gyermekei, és mindegyiknél: költözhetek-e (ha nem, miért), a
         // kerete, a hozott pontjaim. Semmit nem ír (`koltozesElonezete` — a parancs előkészítése, KZ3 nélkül).
         if (utvonal === '/api/koltozes') {
-          if (!sajatKoino) {
-            return { adat: { koino: aktivKoino, gyermekek: [], megjegyzes: 'Költözni a saját (indításkori) koinódból lehet.' } };
-          }
           try {
             return { adat: await koltozesElonezete() };
           } catch (hiba) {
@@ -9776,7 +9805,6 @@ try {
         }
 
         if (utvonal === '/api/felderitesek') {
-          if (!sajatKoino) return { adat: { felderitesek: [], alap: FELDERITES_ALAP, hatar: FELDERITES_HATAR } };
           await atmeneti.frissit();
           const j = await felderitesJegyzekOlvasasa();
           const { allapot } = await kepetKeszit();
@@ -9822,7 +9850,9 @@ try {
               szerzo,
               rendezes: kereses.get('rendezes') ?? undefined,
               irany: kereses.get('irany') ?? undefined,
-              kartyaGyermekek: await terKartyaGyermekei()   // ⭐ D119 (①b): a kártyákról ismert gyermekek is
+              // ⭐ D119 (①b): a kártyákról ismert gyermekek is — FL1 óta a felület minden megnyitott koinójának kártyáiról
+              kartyaGyermekek: new Map((await Promise.all((await feluletPeldanyai()).map((p) => p.terKartyaGyermekei()
+                .catch(() => new Map())))).flatMap((m) => [...m]))
             });
             // ⭐⭐ D119 (⑥): koinónként, fut-e az őrjárata (CS5 (A)) — ha nem, az indító parancs.
             const orjaratok = await koinokOrjaratai(ter.kartyak.map((k) => k.azonosito));
@@ -9878,8 +9908,8 @@ try {
         // kimondjuk, mire épül a nézet (D101/M2); a `betoltes` jel mondja meg a lapnak, hogy érdemes újrakérdezni.
         if (utvonal === '/api/sikidom/gyerekek' || utvonal === '/api/sikidom/oslanc') {
           const kozos = { szerzo, nezet: pakliNezet,
-            bemondasok: sajatKoino ? await bemondasok() : new Map(),
-            fejlecTudas: sajatKoino ? await fejlecTudas() : new Map() };
+            bemondasok: await bemondasok(),
+            fejlecTudas: await fejlecTudas() };
           const szam = (x) => { const n = parseFloat(x); return Number.isFinite(n) ? n : null; };
           let r;
           if (utvonal === '/api/sikidom/gyerekek') {
@@ -9894,19 +9924,19 @@ try {
             if (!kereses.get('entitas')) return { allapot: 400, adat: { success: false, message: 'Hiányzó entitás azonosító' } };
             r = await sikidomOslanc(olvasoTar, KOINO, { ...kozos, entitas: kereses.get('entitas') });
           }
-          const keres = sajatKoino && r.hianyzik.length ? await lapHianyzoinakElkerese(r.hianyzik)
+          const keres = r.hianyzik.length ? await lapHianyzoinakElkerese(r.hianyzik)
             : { kert: 0, fuggo: 0, celos: 0 };
           return { adat: { success: true, ...r, betoltes: keres.fuggo > 0, kitolKerni: keres.celos,
-            koinoMegjegyzes: sikidomMegjegyzes(r, sajatKoino ? await fuggoKerelmekAllasa() : { fuggo: 0, celos: 0 }) } };
+            koinoMegjegyzes: sikidomMegjegyzes(r, await fuggoKerelmekAllasa()) } };
         }
 
         if (utvonal === '/api/struktura/darabszam') {
           const d = await strukturaDarabszam(olvasoTar, KOINO, {
             szerzo, nezet: pakliNezet, agazat: kereses.get('agEntitasId') || null,
-            bemondasok: sajatKoino ? await bemondasok() : new Map(),
-            fejlecTudas: sajatKoino ? await fejlecTudas() : new Map()
+            bemondasok: await bemondasok(),
+            fejlecTudas: await fejlecTudas()
           });
-          const keres = sajatKoino && d.hianyzik.length ? await lapHianyzoinakElkerese(d.hianyzik)
+          const keres = d.hianyzik.length ? await lapHianyzoinakElkerese(d.hianyzik)
             : { kert: 0, fuggo: 0, celos: 0 };
           return { adat: { ...d, betoltes: keres.fuggo > 0, kitolKerni: keres.celos,
             koinoMegjegyzes: strukturaMegjegyzes(d, keres) } };
@@ -9918,8 +9948,8 @@ try {
               szerzo, nezet: pakliNezet, agazat: kereses.get('agEntitasId') || null,
               kurzor: kereses.get('kurzor') || undefined,
               lapMeret: Number.isInteger(lapMeret) ? lapMeret : undefined,
-              bemondasok: sajatKoino ? await bemondasok() : new Map(),
-              fejlecTudas: sajatKoino ? await fejlecTudas() : new Map()
+              bemondasok: await bemondasok(),
+              fejlecTudas: await fejlecTudas()
             }) };
           } catch (hiba) {
             return { allapot: 400, adat: { hiba: hiba.message } };
@@ -9939,22 +9969,22 @@ try {
         }
 
         if (utvonal === '/api/pakli/hierarchikus') {
-          const h = await pakliHierarchia(olvasoTar, aktivKoino, {
+          const h = await pakliHierarchia(olvasoTar, KOINO, {
             entitas: kereses.get('entitas') || null,
             szerzo,
             nezet: pakliNezet,
-            bemondasok: aktivKoino === KOINO ? await bemondasok() : new Map(),
+            bemondasok: await bemondasok(),
             // ⭐ D116: a bemondott gyerekszámok — a kártyák „még nem ismert” jeléhez
-            fejlecTudas: aktivKoino === KOINO ? await fejlecTudas() : new Map(),
-            darabOlvas: (lenyomat) => fajlBlobTarolo(aktivKoino).olvas(lenyomat)
+            fejlecTudas: await fejlecTudas(),
+            darabOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat)
           });
-          const keres = aktivKoino === KOINO && h.hianyzik.length ? await lapHianyzoinakElkerese(h.hianyzik)
+          const keres = h.hianyzik.length ? await lapHianyzoinakElkerese(h.hianyzik)
             : { kert: 0, fuggo: 0, celos: 0 };
           // ⭐ D101 ⑥: a kártyák számlálója — az ága alatti olvasatlan értesítések (a postafiók ős-láncaiból)
-          const olvasatlan = sajatKoino ? await kartyaSzamlalo() : new Map();
+          const olvasatlan = await kartyaSzamlalo();
           // ⭐ D112 ⑤: és ha egy felderítés pillanatképe (rögzítve) — mikor (a kártya „📷” jele)
           const szamlal = (lista) => (lista ?? []).map((k) => ({ ...k, olvasatlanErtesitesek: olvasatlan.get(k.azonosito) ?? 0,
-            ...(sajatKoino && atmeneti.rogzitesIdeje?.(k.azonosito) ? { rogzitve: atmeneti.rogzitesIdeje(k.azonosito) } : {}) }));
+            ...(atmeneti.rogzitesIdeje?.(k.azonosito) ? { rogzitve: atmeneti.rogzitesIdeje(k.azonosito) } : {}) }));
           return { adat: { ...h, pakli: szamlal(h.pakli), testverek: szamlal(h.testverek),
             betoltes: keres.fuggo > 0, kitolKerni: keres.celos, kertKerelmek: keres.kert } };
         }
@@ -9976,14 +10006,14 @@ try {
               // ⭐ D101: a kártya menüjének Rendezése — csak az ág
               agazat: kereses.get('agazat') || undefined,
               // ⭐ D102: a bejáróhoz — mit tudok a csomópontok gyerekeiről (a gyerekszám és a levágás)
-              fejlecTudas: sajatKoino ? await fejlecTudas() : new Map()
+              fejlecTudas: await fejlecTudas()
             });
             // ⭐ D101: az ág-szűréshez hiányzó felmenőket a ház útján elkérjük; és kimondjuk a lista határát (M2).
-            const keres = sajatKoino && oldal.hianyzik.length ? await lapHianyzoinakElkerese(oldal.hianyzik)
+            const keres = oldal.hianyzik.length ? await lapHianyzoinakElkerese(oldal.hianyzik)
               : { kert: 0, fuggo: 0, celos: 0 };
             let szigoru = false;
-            try { szigoru = sajatKoino && !(await kiszolgalasBeallitas()).mindent; } catch { szigoru = false; }
-            const olvasatlan = sajatKoino ? await kartyaSzamlalo() : new Map();
+            try { szigoru = !(await kiszolgalasBeallitas()).mindent; } catch { szigoru = false; }
+            const olvasatlan = await kartyaSzamlalo();
             return { adat: { ...oldal,
               kartyak: (oldal.kartyak ?? []).map((k) => ({ ...k, olvasatlanErtesitesek: olvasatlan.get(k.azonosito) ?? 0 })),
               betoltes: keres.fuggo > 0, kitolKerni: keres.celos,
@@ -10080,7 +10110,7 @@ try {
           const limit = parseInt(kereses.get('limit'), 10);
           // ⭐ A kereső-réteg ⑦: a hálózati keresés a háttérben (kérdésenként egyszerre egy); a találatai az átmeneti tárba
           // kerülnek, így a lap újrakérdezésére (a `betoltes` jel) a helyi listában is ott vannak.
-          const halozat = sajatKoino ? await halozatiKereses(kereses.get('q')) : null;
+          const halozat = await halozatiKereses(kereses.get('q'));
           // ⭐ ⑦b: a kérdés függő kérelmei (a NAT mögötti tartókhoz — az őrjárat viszi): amíg függnek, a lap figyel.
           const fa = halozat && !halozat.fut ? await keresesFuggoAllasa(halozat.kulcs, halozat.kezdet) : null;
           const orjaratFut = fa?.fuggo ? csereAllapotKepe(await csereAllapota(KOINO).olvas(), Date.now()).orjarat.fut : true;
@@ -10090,9 +10120,9 @@ try {
             limit: Number.isInteger(limit) ? limit : undefined,
             agazat: kereses.get('agEntitasId') || null,
             nezet: pakliNezet,
-            bemondasok: sajatKoino ? await bemondasok() : new Map()
+            bemondasok: await bemondasok()
           });
-          const keres = sajatKoino && r.hianyzik.length ? await lapHianyzoinakElkerese(r.hianyzik)
+          const keres = r.hianyzik.length ? await lapHianyzoinakElkerese(r.hianyzik)
             : { kert: 0, fuggo: 0, celos: 0 };
           return { adat: { talalatok: r.talalatok, ismert: r.ismert, nemEldontheto: r.nemEldontheto,
             betoltes: keres.fuggo > 0 || !!halozat?.fut || (fa?.fuggo > 0 && orjaratFut),
@@ -10175,7 +10205,7 @@ try {
             // ⭐ (Csaba, 2026-10-23): a következő oldal (a „További” gomb)
             kurzor: kereses.get('kurzor') || undefined
           });
-          const keres = sajatKoino && lista.hianyzik.length ? await lapHianyzoinakElkerese(lista.hianyzik)
+          const keres = lista.hianyzik.length ? await lapHianyzoinakElkerese(lista.hianyzik)
             : { kert: 0, fuggo: 0, celos: 0 };
           return { adat: { success: true, ...lista, betoltes: keres.fuggo > 0, kitolKerni: keres.celos,
             koinoMegjegyzes: hozzarendelesMegjegyzes(lista, keres) } };
@@ -10201,7 +10231,7 @@ try {
         if (utvonal === '/api/platform/statisztika') {
           // ⭐ (2026-10-23) a bemondások és a fejléc-tudás a nem ismert entitások számához
           const st = await helyiStatisztika(olvasoTar, KOINO, { ...lapHorgonya, nezet: pakliNezet,
-            bemondasok: sajatKoino ? await bemondasok() : new Map(), fejlecTudas: sajatKoino ? await fejlecTudas() : new Map() });
+            bemondasok: await bemondasok(), fejlecTudas: await fejlecTudas() });
           return { adat: { success: true, ...st,
             koinoMegjegyzes: 'A készüléken ismert rész: a koinó egészét senki nem számolja meg — az e-emberek száma azoké, '
               + 'akiknek eseménye nálam van.' } };
@@ -10219,13 +10249,10 @@ try {
           // ⭐ (Csaba, 2026-10-23: „csere után az alsó sáv számai nem frissülnek”): a készülék TUDÁSÁNAK változata — a tartós
           // tár állása és az átmeneti tár változása. Ami kérelemmel jön (böngészés, felderítés), az nem csere: az `utolsoUj`
           // nem lép tőle — a lap ebből tudja, hogy frissítsen.
-          let tudas = null;
-          if (sajatKoino) {
-            await tar.frissit?.();
-            await atmeneti.frissit();
-            const a = tar.allas?.();
-            tudas = (a ? a.n + ':' + a.g : '') + ':' + atmeneti.valtozas();
-          }
+          await tar.frissit?.();
+          await atmeneti.frissit();
+          const a = tar.allas?.();
+          const tudas = (a ? a.n + ':' + a.g : '') + ':' + atmeneti.valtozas();
           return { adat: { success: true, adatok: { ...kep, tudas, most: Date.now() } } };
         }
 
@@ -10240,7 +10267,7 @@ try {
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás?' } };
 
           // ⭐ B/2: a megnyitott kártya „megnézett” — ha az átmeneti tárban van, ettől marad tovább.
-          if (sajatKoino) await atmeneti.megnezve(decodeURIComponent(azonosito));
+          await atmeneti.megnezve(decodeURIComponent(azonosito));
           const talalat = await entitasReszletei(olvasoTar, KOINO, decodeURIComponent(azonosito),
             { ...lapHorgonya, szerzo, nezet: pakliNezet,
               darabOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat), bemondasok: await bemondasok() });

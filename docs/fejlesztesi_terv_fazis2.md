@@ -6135,8 +6135,10 @@ egymás címét írta volna felül); a régi közös jegyzék az első író csa
 téren „🔗 Csatlakozás egy koinóhoz…” és „🤝 Társak…”, a kártyáról ismert gyermeknél „Csatlakozom…” (a parancs és a lap ugyanazt
 hívja); ⛔ mérve és javítva: a futó őrjárat a családját csak induláskor nyitotta meg — most körönként, és a tér koinónként kimondja,
 fut-e az őrjárata (ha nem, a család egy indító parancsát — CS5 (A)). ⚠️ A D118/3 kimondva: a csatlakozott nem költöző a gyermekben
-nem tag. ⏸️ **Csabánál az FL1** (a felület kötése: csak a saját koinójában dolgozik teljesen — (A) marad · (B) ⭐ minden koinóban a
-példányával). Utána a ⑦ (terepi próba).
+nem tag. ✅ **D119/C — a felület kötése** (az FL1; Csaba, 2026-10-31: *„rendben, elfogadom a javaslatodat, mehetünk tovább”* —
+a (B), elágazás 221): a felület kezelője a belépett koinó PÉLDÁNYÁVAL fut (a fő, a család és a felület ugyanazt kapja), így minden
+koinóban teljesen dolgozik — elkéri a hiányzót (a koinó családjának őrjárata hozza), felderít, költöztet; ⛔ mérve: eddig egy
+másik koinóban a lap semmit nem kért el, és a nem látott pontú gondolatot el is felejtette. Utána a ⑦ (terepi próba).
 
 ⛔ **A lelet (2026-10-24, mérve):** a koinó neve ma szabad szöveg, és a születést három hely háromféleképp választja (az
 állapot az utolsót, a tagság az elsőt, a kapu a saját láncból) — egy kívülálló egyetlen, azonos nevű `KoinoLetrehozas`-szal

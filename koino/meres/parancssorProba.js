@@ -1260,6 +1260,91 @@ proba('⭐⭐ D119 (⑥): a lap — csatlakozás egy koinóhoz és társ felvét
     }
   });
 
+// ⭐⭐ FL1 (Csaba, 2026-10-31: (B)): A FELÜLET A BELÉPETT KOINÓBAN IS TELJESEN DOLGOZIK — a D100 háza a gyermekben. A a nyílt P-ben
+// létrehozza a nyílt gyermeket (C), és a C-ben a LAPJÁRÓL ír egy gondolatot és alá egy gyereket. B a P-hez csatlakozik, a kézi úton
+// megkapja (a kártyát is), a kártyáról a C-hez is csatlakozik, és egy cserén („alap” mód — a szigorú (b)) a C-ből csak a gondolat
+// születését kapja. ⭐ B felülete a P-vel indul (az a fő koinója), és a téren BELÉP a C-be: a lap a gondolatot nem tartottként,
+// ismeretlen össz-ponttal mutatja, a hiányzót a C mappájába függő kérelemként beírja, és „betöltés”-t jelez; B családi őrjárata (a
+// P-re indul, a C a családja) elhozza, és UGYANAZ a futó felület a gyereket és az ismert össz-pontot mutatja, betöltés nélkül; a
+// csere-állapot a C tudását is mondja, és a C-ben felderítés indítható (a jegyzék a C mappájában). Viselkedést mérünk (B lemezét és
+// a futó felület válaszait). Rontás: a nézet a nem fő koinóban tartott szeletek nélkül (a régi) → nem kér; a lap a fő koinó
+// példányával kér (a régi) → a kérelem nem a C-é; az olvasó az átmeneti tár nélkül → a megjött gyerek nem látszik; a felderítés
+// csak a fő koinóban (a régi őr) → 400.
+proba('⭐⭐ FL1: a felület a belépett koinóban is teljesen dolgozik — a gyermekben elkéri, ami hiányzik, a család őrjárata elhozza, és a futó lap mutatja',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const PA = 7917, PB = 7919, FA = 7921, FB = 7923;
+    const alap = { KOINO_KISZOLGALAS: 'alap', KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9' };
+    const futok = [];
+    let fa = null;
+    let fb = null;
+    try {
+      await fut(a, 'koino', 'Fl1-szülő', 'nyilt');
+      const P = await koinoNeve(a);
+      await fut(a, 'koinoverzio', 'Fl1-gyermek', 'nyilt', 'pont=10', 'becenev=gy');
+      const C = await koinoNeve(a, 'gy');
+      // A gondolat és a gyereke A lapjáról, a C-ben (a parancssor nem ad szülőt)
+      fa = await feluletet(a, FA, { KOINO_AZONOSITO: 'gy' });
+      const g = (await fa.hiv('/api/gondolat', { method: 'POST', body: JSON.stringify({ cim: 'A HÁZTETŐ' }) })).adat?.data?._id ?? null;
+      await fa.hiv('/api/gondolat', { method: 'POST', body: JSON.stringify({ cim: 'A GERENDA', szuloId: g, kezdoTudatpont: 10 }) });
+      fa.folyamat.kill();
+      fa = null;
+      await varj(500);
+      await fut(b, 'csatlakoz', P);
+      await fut(a, 'kivisz', join(a, 'p.jsonl'));
+      await fut(b, 'behoz', join(a, 'p.jsonl'));
+      await fut(b, 'csatlakoz', C, 'becenev=gy');   // a kártyáról (a „sajat” a P-é)
+      await fut(b, 'tars', '127.0.0.1', String(PA), 'A');
+      await csereKor(a, b, PA, alap);
+      // B felülete a P-vel indul, és a téren belép a C-be
+      fb = await feluletet(b, FB, alap);
+      const valt = await fb.hiv('/api/ter/valt', { method: 'POST', body: JSON.stringify({ koino: C }) });
+      const elotte = (await fb.hiv('/api/pakli/hierarchikus')).adat ?? {};
+      const kerelmek = JSON.parse(await readFile(join(b, C, 'kerelmek.json'), 'utf8').catch(() => '{}'));
+      futok.push(spawn(process.execPath, [KOINO_JS, 'figyel', String(PA)],
+        { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' }));
+      await varj(1500);
+      futok.push(spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(PB)],
+        { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...alap }, stdio: 'ignore' }));
+      // ⭐ UGYANAZ a felület-folyamat kérdez (a lap csendes újrakérdezése), amíg a gyerek meg nem jön
+      let utana = null;
+      for (let i = 0; i < 90; i++) {
+        await varj(500);
+        utana = (await fb.hiv('/api/pakli/hierarchikus')).adat ?? null;
+        if ((utana?.pakli ?? []).some((k) => k.cim === 'A GERENDA') && utana?.betoltes === false) break;
+      }
+      const tudas = (await fb.hiv('/api/csere-allapot')).adat?.adatok?.tudas ?? null;
+      const fd = await fb.hiv('/api/felderites', { method: 'POST', body: JSON.stringify({ ag: 'gyoker', k: 10 }) });
+      const fJegyzek = await readFile(join(b, C, 'felderitesek.json'), 'utf8').catch(() => '');
+      const kartya = (x) => (x?.pakli ?? []).find((k) => k.azonosito === g) ?? null;
+      const jo = {
+        valtott: !!C && valt.adat?.data?.aktiv === C,
+        latja: kartya(elotte)?.tartom === false && kartya(elotte)?.osszPontForras === 'ismeretlen',
+        kerte: elotte.betoltes === true && (kerelmek.fuggo ?? []).some((x) => x.fajta === 'fejlecek'),
+        elhozta: ['szamolt', 'ellenorzott'].includes(kartya(utana)?.osszPontForras) && kartya(utana)?.agazatiPont === 100 + 10,
+        gyerek: !(elotte.pakli ?? []).some((k) => k.cim === 'A GERENDA') && (utana?.pakli ?? []).some((k) => k.cim === 'A GERENDA'),
+        kesz: utana?.betoltes === false,
+        tudas: typeof tudas === 'string',
+        felderites: fd.allapot === 200 && /"ag":"gyoker"/.test(fJegyzek)
+      };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) {
+        const k = (x) => (kartya(x) ? { f: kartya(x).osszPontForras, t: kartya(x).tartom, p: kartya(x).agazatiPont } : null);
+        process.stderr.write('    (FL1: ' + JSON.stringify({ ...jo, elotte: { betoltes: elotte.betoltes, hianyzik: elotte.hianyzik, k: k(elotte) },
+          utana: { betoltes: utana?.betoltes, hianyzik: utana?.hianyzik, k: k(utana), cimek: (utana?.pakli ?? []).map((x) => x.cim) },
+          kerelmek: (kerelmek.fuggo ?? []).map((x) => x.fajta), fd: fd.adat }) + ')\n');
+      }
+      return ok;
+    } finally {
+      if (fa) fa.folyamat.kill();
+      if (fb) fb.folyamat.kill();
+      for (const f of futok) f.kill();
+      await varj(1000);
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ⭐⭐ D118 (②b): A KAPU KOINÓ-SZABÁLYA a parancssoron és a cserén. Az A a szülőben ír egy gondolatot a gyermek születése
 // ELŐTT és egyet UTÁNA; a szülő kivitele a gyermekbe behozva csak az elsőt adja (a második a szülő jelene — „másik koinóé”),
 // és a csere (két „mindent” készülék) ugyanígy viszi tovább a B-nek. Viselkedést mérünk (a két lemezt). ⚠️ A számítás még

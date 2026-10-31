@@ -1619,3 +1619,11 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     gyermekben nem tag — a zárt gyermek tartalmát nem kapja (mérve), a lap a költözésre mutat · ⛔ elvetve: koinónként külön
     parancs a család tagjainak (két őrjárat egy családnak — CS4 (A)); a felület indítja az őrjáratot (CS5 (A): két külön indítás)
     · `csaladi_orjarat_atvizsgalas.md` 16. szakasz.
+221. **2026-10-31 · D119/C — a felület kötése (az FL1; Csaba: „elfogadom a javaslatodat”)**
+    → **(B) a felület kezelője a belépett koinó PÉLDÁNYÁVAL fut (`koinoPeldanyEgyszer` — a fő, a család és a felület ugyanazt a
+    példányt kapja), a felületnek nincs „saját” koinója** · a lelet (mérve): egy másik koinóban a lap csak nézett és írt — a nézete
+    tartott szeletek nélkül készült (mindent tartottnak vett, a nem látott pontú gondolatot a D14 szerint elfelejtette), semmit nem
+    kért el, nem derített fel, nem költöztetett; a beköltözött e-ember a gyermekben újraindításig csak a helyi tudást látta (a ⑦
+    útja) · ⭐ a lap kéréseit a koinó családjának őrjárata viszi (a ④ óta a család minden példányáét) · ⛔ elvetve: (A) marad, a
+    lap kimondja, ha újraindítás kell (a családdal ez lett a lap fő útja); a kezelő kódjának koinónkénti átírása (ugyanazok a
+    nevek a példányból — 11 őr és 27 ág esett ki, a végpontok kódja változatlan) · `csaladi_orjarat_atvizsgalas.md` 17. szakasz.

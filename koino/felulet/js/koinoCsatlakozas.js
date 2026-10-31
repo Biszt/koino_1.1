@@ -93,8 +93,10 @@ export async function csatlakozasMegnyitasa({ koino = '', nev = null, zart = nul
     if (siker) {
       const kovetkezo = [];
       if (siker.ujraindit) {
-        kovetkezo.push('A felület és az őrjárat a „' + html(siker.becenev) + '” becenévvel indul: <strong>indítsd újra mindkettőt</strong>, '
-          + 'és ezután ez lesz a saját koinód ezen a készüléken (a böngészés, a felderítés és a költözés csak a sajátban dolgozik).');
+        // ⭐ FL1: a felület minden belépett koinóban teljesen dolgozik — újraindítani csak az őrjáratot kell (ha fut egy régi)
+        kovetkezo.push('A „' + html(siker.becenev) + '” becenév mostantól ezé a koinóé: a sima <code>node koino/koino.js orjarat</code> '
+          + '(és a felület következő indítása) ezt nyitja — <strong>ha fut egy régi őrjárat, indítsd újra</strong>. A felületet nem kell: '
+          + 'lépj be a téren a koinóba.');
       }
       if (!siker.ismert) {
         kovetkezo.push('A születése még nincs a készüléken: egy társ hozza, akinél megvan — vedd fel a meghívód címét a '
@@ -126,8 +128,8 @@ export async function csatlakozasMegnyitasa({ koino = '', nev = null, zart = nul
       + '<input type="text" name="becenev" spellcheck="false" autocomplete="off" maxlength="32" value="'
       + html(!kartyarol && elonezet.szabad ? elonezet.sajatBecenev : '') + '" placeholder="pl. kert"></label>'
       + '<p class="koino-csatlakozas__leiras">A becenévvel indítható a koinó őrjárata (a 43 jeles név helyett).'
-      + (elonezet.szabad ? ' A „' + html(elonezet.sajatBecenev) + '” a felület saját beceneve, és még szabad: ha ezt adod, az '
-        + 'újraindított felület és a sima <code>node koino/koino.js orjarat</code> is ezt a koinót nyitja.' : '') + '</p>'
+      + (elonezet.szabad ? ' A „' + html(elonezet.sajatBecenev) + '” a felület saját beceneve, és még szabad: ha ezt adod, a sima '
+        + '<code>node koino/koino.js orjarat</code> (és a felület következő indítása) is ezt a koinót nyitja.' : '') + '</p>'
       + '<div class="koino-csatlakozas__gombok"><button type="button" class="koino-csatlakozas__gomb koino-csatlakozas__gomb--fo" '
       + 'data-muvelet="csatlakozom"' + (folyamatban ? ' disabled' : '') + '>' + (folyamatban ? 'Csatlakozom…' : 'Csatlakozom') + '</button></div>';
   };

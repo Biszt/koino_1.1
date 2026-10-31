@@ -422,7 +422,7 @@ gyermek az őrjárat újraindításáig nem cserélt (a ③–④ próbái mind 
   (mindkettő bukik), a kör csak a fő koinó feljegyzésébe (az 1.), a lap nem veszi fel a társat, nem jegyzi a becenevet, nem
   nyitja meg a kártyáról a gyermeket (a 2.) — mind bukik. Böngészőben végigjárva (a tér a kártyáról ismert gyermekkel, a két
   ablak, telefon-szélességen is).
-- ⚠️ **A felület a koinót induláskor rögzíti (mérve, 2026-10-31) — ⏸️ Csabánál (FL1).** A felület a SAJÁT (indításkori) koinójában
+- ⚠️ **A felület a koinót induláskor rögzíti (mérve, 2026-10-31) — ✅ D119/C: a (B) (a 17. szakasz).** A felület a SAJÁT (indításkori) koinójában
   dolgozik teljesen: a böngészés hiányzó részeit elkéri (függő kérelem — az őrjárat hozza), a bemondott össz-pontokkal és
   gyerekszámokkal számol, felderít, költöztet, és a kártyáról ismert gyermekeit mutatja. Egy MÁSIK koinóban (a téren „Belépek”)
   csak néz és ír: a nézete a tartott szeletek nélkül készül, ezért mindent tartottnak vesz, és semmit nem kér el (mérve: a
@@ -436,4 +436,36 @@ gyermek az őrjárat újraindításáig nem cserélt (a ③–④ próbái mind 
   őrjárata viszi (a ④ óta a család minden példányáét). Nagyobb átalakítás (a kezelő ~1100 sora), de a ⑦ (a terepi próba: költözés
   a lapról, aztán a gyermek a lapon) erre épül.
 - ⏭️ **Az ⑥ kész** (a 3. szakasz terve: *„a téren »Csatlakozás egy koinóhoz…« és »Társ felvétele…«; a gyermek ③ után magától
-  jelenik meg”*). ⏸️ Az FL1 Csabánál; utána a ⑦ (terepi próba).
+  jelenik meg”*). ✅ Az FL1 eldőlt (D119/C — a 17. szakasz); utána a ⑦ (terepi próba).
+
+## 17. ✅ D119/C — a felület kötése: a belépett koinó a saját példányával (2026-10-31)
+
+Csaba (az FL1-re): *„rendben, elfogadom a javaslatodat, mehetünk tovább”* — a **(B)**: a felület minden koinóban teljesen
+dolgozik, nincs „saját” koinója.
+
+- ✅ **A példány folyamatonként egyszer** (`koino.js` `koinoPeldanyEgyszer`): a fő, a család (`csaladMegnyitasa`) és a felület
+  belépett koinója ugyanazt a példányt kapja — két példány ugyanarra a koinóra két átmeneti tárat és két gyorsítótárat jelentene
+  (mint a tárnál a `koinoTaraEgyszer`). A hibás nyitás nem ragad a jegyzékben.
+- ✅ **A kezelő a belépett koinó példányával** (`felulet` — `aktivAllapot`): a koinó-szintű nevek (a tár, az átmeneti tár, a
+  környezet, a bemondások, a fejléc-tudás, a függő kérelmek, a felderítés, a postafiók, a költözés, a koino-verzió, a törzs, a
+  csere-állapot, a kép) a példányéi — ugyanazok a nevek, mint a parancsoké, ezért egyetlen végpont kódja sem változott, csak a
+  „csak a saját (indításkori) koinódban” őrök (11 hely) és a `sajatKoino` / `aktivKoino === KOINO` ágak (27 hely) estek ki. A nézet minden koinóban a
+  sajátjai szerint készül: a tartott szeletek (a szigorú (b) — D100) és az ellenőrzött lezárási összegzések (D95/1) a példányból.
+  ⭐ A lap kéréseit (függő kérelem, felderítés) a koinó CSALÁDJÁNAK őrjárata viszi — a ④ óta a család minden példányának
+  kérelmeit és háztartását; ha egy koinónak nem fut őrjárata, a tér kimondja (⑥b).
+- ✅ **A tér** a felület minden megnyitott koinójának kártyáiról ismert gyermekeit mutatja (eddig csak az indításkoriét), és a
+  kártyáról csatlakozást az a példány végzi, amelyik koinójának a kártyáján a gyermek van.
+- ✅ **A csatlakozás után** a lap már nem kér újraindítást a felületnek: elég a téren belépni; újraindítani csak egy régi
+  őrjáratot kell, ha fut (a felület becenevét a sima `orjarat` is használja).
+- **A próba** (a parancssor, +1): a D100 háza a gyermekben — A a nyílt gyermekben a lapjáról ír egy gondolatot és alá egy
+  gyereket; B a P-hez csatlakozik, a kártyáról a C-hez is, egy cserén („alap”) csak a gondolat születését kapja; B felülete a
+  P-vel indul, és a téren BELÉP a C-be: a lap a gondolatot nem tartottként, ismeretlen össz-ponttal mutatja, a hiányzót a C
+  mappájába függő kérelemként írja, és „betöltés”-t jelez; B családi őrjárata elhozza, és UGYANAZ a futó felület a gyereket és az
+  ellenőrzött össz-pontot (110) mutatja; a csere-állapot a C tudását is mondja, és a C-ben felderítés indítható (a jegyzék a C
+  mappájában). Rontás: a régi `koino.js` (a lap a C-ben semmit nem lát — a nézet tartott szeletek nélkül a nem látott pontú
+  gondolatot elfelejti, D14 — és nem kér) · a nézet a nem fő koinóban tartott szeletek nélkül · a lap a fő koinó példányával kér (a
+  kérelem nem a C-é) · az olvasó az átmeneti tár nélkül (a megjött gyerek nem látszik) · a felderítés csak a fő koinóban — mind
+  bukik, a saját ágán. Böngészőben végigjárva: a tér → „Belépek” a gyermekbe → „⏳ betöltés: a hiányzó részeket az őrjárat hozza
+  el” → az őrjárat indítása után a gyermek gondolata a futó lapon, „100 ✓”-val, az alsó sávon a gyermek cseréje; a gyermekben a
+  költözés, a felderítések, a program, a koino-verzió, az értesítések és a törzs végpontja teljes választ ad.
+- ⏭️ **Utána a ⑦** (a terepi próba: laptop + telefon, költözés a lapról, aztán a gyermek a lapon).
