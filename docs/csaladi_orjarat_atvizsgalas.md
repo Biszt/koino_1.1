@@ -470,7 +470,7 @@ dolgozik, nincs „saját” koinója.
   költözés, a felderítések, a program, a koino-verzió, az értesítések és a törzs végpontja teljes választ ad.
 - ⏭️ **Utána a ⑦** (a terepi próba: laptop + telefon, költözés a lapról, aztán a gyermek a lapon).
 
-## 18. 🚧 A ⑦ — a terepi próba (2026-11-01, laptop + telefon, egy wifin)
+## 18. ✅ A ⑦ — a terepi próba (2026-11-01, laptop + telefon, egy wifin)
 
 **A menet** (a laptop a `42bfa68`-on, „mindent” a szülőben; a telefon friss mappával, `~/koino-terep2`, ugyanazon a kódon):
 a laptop új koinót hozott létre („Terepi próba”); a telefon **a lapján csatlakozott** (⑥ — „🔗 Csatlakozás egy koinóhoz…”,
@@ -528,6 +528,24 @@ a kártyát a telefonra vitte. 14:06-kor a telefon **a lapján beköltözött** 
    útja, Termux nélkül (a ⑦ után átbeszéljük).
 8. Apró: a „mindent” laptop parancssora a szülőben „nem tartod”-ot ír; a gyermek a „mindent” beállítást nem örökli (koinónként
    külön).
+9. ⭐ **A lap a megjegyzett entitást a ROSSZ koinóban kéri** (a frissítés utáni újraindításkor mérve — és ez a 4. lelet oka is):
+   a felület a saját (indításkori) koinójával nyit, a böngésző viszont az utoljára nézett entitást jegyezte meg — egy gyermekbelit.
+   Mindkét lap a szülőben vette fel rá a függő kérelmet (a laptopé: `szelet lWvHasTk` a szülő `kerelmek.json`-jában), ami ott
+   soha nem teljesülhet: a telefon átvette továbbadásra, a laptop a telefontól kérte — kétpercenként „nem szolgálta ki”. A reggeli
+   örökös `XBnE`-kérés ugyanígy keletkezett. Javítás iránya: a lap a megjegyzett entitást koinónként tárolja, és a program nem
+   vesz fel kérelmet a család egy MÁSIK koinójának ismert entitására.
+10. **„⚠ más programverzió” minden frissítés után** — a gyermek a születése programjával (`42bfa68`) jött létre, a két gép a
+   javítás után a `dfda545`-öt futtatja: a lap (mindkét gépen) igazat mond, de a KZ besorolását (az eredményt nem érintő javítás
+   egyszerű programfrissítés, nem költözés) nem tudja megkülönböztetni. Javaslat: a jelzés marad, de ne hibának hangozzék („ez a
+   készülék újabb programot futtat, mint amivel a koinó született”), a kártyán magyarázattal; hogy egy változás a számítást
+   érinti-e, azt a program nem tudja megbízhatóan eldönteni — a forráskód-kormányzás kérdése. ⏸️ Csabánál.
 
-⏭️ **A ⑦ folytatása:** a két gép frissítése után a laptop lapja a gyermekben elkéri a telefon gondolatának pontjait (a javított
-úton), a telefon a laptopét — és ha ez megy, a meghívás felhasználóbarát útjának átbeszélése.
+**A frissítés után (21:16–21:31, mindkét gép a `dfda545`-ön) — a ⑦ célja teljesült:**
+- ✅ A telefon 21:18-kor megint a .144-et kapta: a laptop gyermekbeli, elakadt függő kérelmei a KÖTÉSEN át rátaláltak, és 21:22-kor
+  lementek („megjött: 3 fejléc”, 3 új esemény) — a laptop lapja a gyermekben a telefon új gondolatát 1 ponttal mutatja (a pont az
+  átmeneti tárból).
+- ✅ A visszafelé irány: a laptop a lapján a gyermekben gondolatot írt („második gondolat, a laptoptól”), a születése a következő
+  cserével a telefonra ért, és a telefon lapja 21:31-kor a fejlécét (a pontjával) a laptoptól elkérte.
+- Ütközés ezúttal nem jött elő (a két gép nem egyszerre kért) — a javítását a próbák mérik.
+
+⏭️ **Utána:** a meghívás felhasználóbarát útjának átbeszélése (Csaba kérése — Termux nélkül), és a 2–10. lelet.

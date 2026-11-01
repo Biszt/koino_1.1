@@ -292,13 +292,13 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    a javaslatodat, mehetünk tovább”* — a (B); az átvizsgálás 17. szakasza, elágazás 221): a felület kezelője a belépett koinó
    PÉLDÁNYÁVAL fut (`koinoPeldanyEgyszer` — a fő, a család és a felület ugyanazt kapja), így minden koinóban teljesen dolgozik
    (elkéri a hiányzót — a koinó családjának őrjárata hozza —, felderít, költöztet); ⛔ mérve: eddig egy másik koinóban a lap semmit
-   nem kért el, és a nem látott pontú gondolatot el is felejtette (a nézet tartott szeletek nélkül). 🚧 **A ⑦ a terepi próba** (2026-11-01, laptop + telefon egy wifin — az átvizsgálás 18.
-   szakasza): ✅ a telefon a LAPJÁN csatlakozott, a laptop a lapjáról hozta létre a gyermeket (a futó családi őrjárat
+   nem kért el, és a nem látott pontú gondolatot el is felejtette (a nézet tartott szeletek nélkül). ✅ **A ⑦ a terepi próba** (2026-11-01, laptop + telefon egy wifin — az átvizsgálás 18.
+   szakasza; a frissítés után mindkét irány: a gondolat és a pontja a gyermekben átér): ✅ a telefon a LAPJÁN csatlakozott, a laptop a lapjáról hozta létre a gyermeket (a futó családi őrjárat
    újraindítás nélkül felvette), a telefon a lapján költözött, és a laptop gyermek-képe a telefon súlyával számol; a telefon
    címváltását (.124 → .144) a kötés követte; a 10-25-i 1. lelet (két úton két csere) nem jött elő. ⛔ Két lelet, javítva
    (elágazás 222–223): **az ÜTKÖZÉS** (egy munkában mindkét fél a másiktól kért, és mindkettő a tétlenségi óráig várt — fél órán
    át; most a kisebbik kérelem megy elöl, a másik kérő kiszolgálja — `vonal.js` `kerelemUtkozes`) és **a kérelem célja nem
-   követte a címváltást** (most a kötés szerint is illik — `fuggoKerelmek.js` `kotesIlleszto`; a kötések a célok közt). ⏸️ Nyolc
+   követte a címváltást** (most a kötés szerint is illik — `fuggoKerelmek.js` `kotesIlleszto`; a kötések a célok közt). ⏸️ Tíz
    további lelet Csabával átbeszélendő (a 18. szakasz végén — köztük ⭐ Csaba kérése: **a meghívás felhasználóbarát útja, Termux
    nélkül**). A laptop próba-adata: ennek a sessionnek a scratchpadja, `terep` (a szülő 9Faee…, a gyermek v_NOAEUb…;
    `$env:KOINO_ADAT = '<scratchpad>	erep'; node koino/koino.js orjarat 1 7373` és `… felulet 7499`); a telefonon
