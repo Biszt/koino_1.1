@@ -1644,3 +1644,13 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     követte, a függő kérelmei viszont az induló címre (a régire) szóltak — és a lap két órával később is arra vette fel őket ·
     ⛔ elvetve: az induló címek átírása a kötésből (az induló cím a felhasználó kézi bejegyzése — a „kurbli”; a kötés a tény) ·
     `csaladi_orjarat_atvizsgalas.md` 18. szakasz.
+224. **2026-11-01 · a telefon egy bemásolt sorral (Csaba: „a d30-as szabályt ne rugjuk fel. maradjon a termux.”)**
+    → **a Termux marad; egy sor telepít és indít (`koino/termux/telepit.sh`: az Ed25519 vizsgája, a `koino` parancs a Termux
+    PATH-ján), utána a `koino` (`indit.sh`) a két folyamatot indítja, a lapot megnyitja, és Ctrl+C-re mindkettőt leállítja; a
+    program parancsai `koino <parancs>`-ként** · ⭐ az őrjárat csak akkor indul, ha a becenév már egy koinóra mutat (különben egy
+    üres, régi alakú koinót nyitna — a ⑦ 2. lelete); a csatlakozást a lapon várja · ⭐ a CS5 (A) áll: két külön folyamat, a felület
+    nem indít őrjáratot — ez csak a telefonos indítás kényelme · ⛔ elvetve: saját Android-alkalmazás (a fejlesztő-ellenőrzés miatt
+    egy néven regisztrált fejlesztőn és egy aláíró kulcson múlna, a koinó név szerinti célpont lenne — D30, 2. szabály; a
+    futtatókörnyezet beágyazása a 6. szabály szellemét érinti); önfrissítés (melyik kódot futtatja egy koinó, a közösség dolga —
+    D119) · ⚠️ nem önpróba (Termux-héjszkript): itt a gépen kipróbálva (koinó nélkül csak a felület; a koinó után az őrjárat magától;
+    `koino ter`; a leállítás után nem marad folyamat), a telefonon Csaba próbálja · `telepites_telefon.md` „A legegyszerűbb út”.

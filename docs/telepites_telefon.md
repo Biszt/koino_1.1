@@ -28,6 +28,39 @@ fogjuk, hogy a hálózat miatt — nem a program miatt.
 
 ---
 
+## ⭐ A LEGEGYSZERŰBB ÚT (2026-11-01) — egy bemásolt sor
+
+*Csaba: „a d30-as szabályt ne rugjuk fel. maradjon a termux. megtudjuk oldani, hogy 1 parancs csomag bemásolássával a termuxban
+elég legyen?” — igen. A Termux marad (a D30 szerint saját koino-alkalmazás nem lesz: azt egy névvel regisztrált fejlesztőn
+keresztül egyetlen ponton le lehetne tiltani), de a parancssorból csak ez az egy sor kell.*
+
+1. **F-Droid és Termux** — ahogy lent, az 1–2. lépésben (a Termuxot NE a Play Áruházból).
+2. **Nyisd meg a Termuxot, és illeszd be ezt az egy sort** (hosszan nyomd a képernyőt → Paste), majd Enter:
+
+```
+yes | pkg upgrade && pkg install -y nodejs git && { [ -d ~/koino_1.1 ] || git clone --depth 1 https://github.com/Biszt/koino_1.1.git ~/koino_1.1; } && sh ~/koino_1.1/koino/termux/telepit.sh
+```
+
+   Ez frissíti a Termuxot, telepíti a Node-ot és a gitet, letölti a koinót, megvizsgálja, hogy a telefon tud-e aláírni
+   (Ed25519), felveszi a `koino` parancsot, és **elindítja**: a böngészőben megnyílik a lap. ⏱ Az első alkalommal
+   néhány perc, sok szöveg gördül — ez normális.
+3. **A lapon** csatlakozz a koinóhoz („🔗 Csatlakozás egy koinóhoz…” — a nevét a meghívódtól kapod), és vedd fel a
+   meghívód készülékét társnak („🤝 Társak…”). Az őrjárat (ami a cserét végzi) a csatlakozás után **magától elindul**.
+
+**Ezután minden indításhoz elég ennyi a Termuxban:** `koino` — leállítás: **Ctrl+C**. A program parancsai ugyanazzal az
+adattal: `koino belep`, `koino meghiv <horgony>`, `koino ter` …
+
+⚠️ **Hogy az Android ne állítsa le a háttérben:** Beállítások → Alkalmazások → Termux → Akkumulátor → **Nem korlátozott**.
+A koino futás közben ébren tartja a telefont (`termux-wake-lock`), és a Termux értesítést mutat — amíg ez látszik, fut.
+
+⚠️ **A belépés és a meghívás ma még parancs** (`koino belep`, a kiírt horgonyt elküldöd a meghívódnak, ő: `koino meghiv
+<horgony>`) — a következő lépés a lapra viszi.
+
+*Az adat a `~/koino-adat` mappában él (más: `KOINO_ADAT=<mappa> koino`); a naplók ugyanott: `orjarat.log`, `felulet.log`.
+A program magától nem frissül — hogy egy koinó melyik kódot futtatja, az a közösség dolga (a koino-verzió kártya).*
+
+---
+
 ## 🔄 HA MÁR FENT VAN A KOINO: frissítés
 
 *Erre akkor van szükség, ha a laptopon fejlesztettünk valamit, és a telefonnak is meg kell
