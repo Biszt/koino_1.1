@@ -187,6 +187,8 @@ import { megujitasKeszitese, csomagTulajdonosai } from './js/tar/keresoMegujitas
 import {
   kerdesTerve, kerdesHelye, helyTalalatai, talalatokEllenorzese, osztottMinta, KERESES_TALALAT_KORLAT
 } from './js/csere/kereses.js';
+// ⭐⭐ D121: a meghívó szövege és az ellenőrző kód (a meghívás a lapon)
+import { meghivoKeszitese, meghivoOlvasasa, meghivoE, ellenorzoKod } from './js/csere/meghivo.js';
 // ⭐⭐ D107 L4 (④c): a felajánlás tiszta számításai.
 import {
   regioCsoportok, felajanlandok, felajanlottakFeljegyzese, osztodasokFeljegyzese, megujitasUjrahasznalhato, megujitasFeljegyzese,
@@ -1612,6 +1614,116 @@ async function meghivottProfilja(adatok) {
       + '\n  node koino/koino.js profil ' + mezok.map((m) => m + '=...').join(' ') + '\n  és cseréljetek (vagy kivisz/behoz).');
   }
   return profilok[0].adat.lenyomat;
+}
+
+// ===================================
+// ⭐⭐ D121: A MEGHÍVÁS A LAPON — a meghívó szövege, a belépés, a belépők, a meghívás (a parancs és a lap közös útja)
+// ===================================
+
+/** ⭐ D121 (②): a belépés, ha még nincs — a `belep` parancs és a meghívó elfogadása közös útja. */
+async function belepesHaNincs() {
+  const meglevo = await sajatHorgonyom();
+  if (meglevo) return { horgony: meglevo, uj: false };
+  const e = await belepes(kornyezet);
+  return { horgony: e.azonosito, uj: true };
+}
+
+/** A készülék helyi hálózati IPv4-címei (a hurok-cím csak akkor, ha más nincs — egy hálózat nélküli gépen). */
+async function helyiCimeim() {
+  const halozat = (await import('node:os')).networkInterfaces();
+  const kulso = [], hurok = [];
+  for (const lista of Object.values(halozat)) {
+    for (const c of lista ?? []) {
+      if (c.family !== 'IPv4' && c.family !== 4) continue;
+      (c.internal ? hurok : kulso).push(c.address);
+    }
+  }
+  return kulso.length ? kulso : hurok;
+}
+
+/**
+ * ⭐ D121 (④): A MEGHÍVÓ SZÖVEGE ehhez a koinóhoz — a készülékem tábla-aláírójával, a helyi címeimmel (a futó őrjárat kapujának
+ * portján — a kör feljegyzéséből, `csere.json`) és a nyilvános címemmel, ha az őrjárat mérte. Semmit nem ír (a tábla-kulcs
+ * létrehozásán kívül, ha még nincs). A figyelmeztetések: nem vagyok tag (a meghívásom nem ad tagságot), nem fut az őrjárat.
+ */
+async function meghivoSzovege({ nev = null } = {}) {
+  const kor = (await csereAllapota().olvas()).kor ?? null;
+  const port = Number.isInteger(kor?.port) ? kor.port : await kapuPortja();
+  const kulso = kor?.kulso && typeof kor.kulso.cim === 'string' && Number.isInteger(kor.kulso.port)
+    ? [{ hoszt: kor.kulso.cim, port: kor.kulso.port }] : [];
+  const cimek = [...(await helyiCimeim()).map((hoszt) => ({ hoszt, port })), ...kulso];
+  const alairo = (await tablaKulcsBiztositasa()).alairoNyilvanos;
+  const h = await sajatHorgonyom();
+  const tag = h ? (await tagE(tar, KOINO, h).catch(() => ({ igen: false }))).igen : false;
+  const fut = csereAllapotKepe(await csereAllapota().olvas(), Date.now()).orjarat.fut;
+  return { szoveg: meghivoKeszitese({ koino: KOINO, alairo, cimek, nev }), cimek, tag, orjarat: { fut, port } };
+}
+
+/**
+ * ⭐ D121 (④): A BELÉPŐK — akik a cserében a személyükkel jelentkeztek (a zárt kapu jegyzi: `azonossagok.json`, korlátos), a
+ * belépésük nálam van, és még nem (ellenőrzött) tagok; mindegyiknél az ellenőrző kód és a profil (ha a koinó vár). ⭐ A terhe a
+ * jegyzék mérete (≤ 256), nem a koinóé (9. szabály). A legutóbb látott elöl.
+ */
+async function belepokJegyzeke() {
+  // ⚠️ A felület hosszan fut: amit közben az őrjárat írt a tárba (a belépő belépése a cseréből), azt előbb beolvassuk (D100).
+  await tar.frissit?.();
+  const sajat = await sajatHorgonyom();
+  const szuletes = await koinoSzuletese();
+  const varja = Array.isArray(szuletes?.adat?.profil) ? szuletes.adat.profil : [];
+  const blob = fajlBlobTarolo(KOINO);
+  const ki = [];
+  for (const x of Object.values(await azonossagokOlvasasa())) {
+    if (!azonositoAlaku(x?.h) || x.h === sajat || typeof x.sz !== 'string') continue;
+    const e = await tar.esemeny(x.h);
+    if (!e || e.tipus !== 'Belepes' || e.szerzo !== x.sz) continue;
+    if ((await tagE(tar, KOINO, x.h).catch(() => ({ igen: false }))).igen) continue;
+    let profil = null;
+    if (varja.length) {
+      const p = (await entitasEsemenyei(tar, KOINO, x.h)).filter((y) => y.tipus === 'Profil' && y.szerzo === x.sz)
+        .sort((a, b) => b.sorszam - a.sorszam)[0];
+      profil = { kell: varja, van: !!p, mezok: null };
+      if (p) {
+        try { profil.mezok = JSON.parse(new TextDecoder().decode(await blob.olvas(p.adat.lenyomat)))?.mezok ?? null; }
+        catch { /* a darabja még nem jött meg */ }
+      }
+    }
+    ki.push({ horgony: x.h, szemely: x.sz, kod: ellenorzoKod(x.h), belepett: e.ido, lattam: x.ido ?? null, profil });
+  }
+  return ki.sort((a, b) => (b.lattam ?? 0) - (a.lattam ?? 0));
+}
+
+/**
+ * ⭐ D121 (④): A MEGHÍVÁS — a `meghiv` parancs és a lap közös útja: a horgony (vagy rövid alakja), vagy egy belépő ellenőrző
+ * kódja a kötőjeles alakban („4F7-KQ2” — a belépők jegyzékéből). ⭐ D93/5: ha a koinó profilt vár, a meghívás a meghívott profiljának lenyomatát tanúsítja.
+ * @returns {Promise<{horgony: string, kod: string}>}
+ */
+async function meghivasVegrehajtasa(azonosito) {
+  await tar.frissit?.();
+  let h = azonosito;
+  // ⚠️ Csak a kötőjeles alak kód (a teljes sor mérte: egy hat betűs horgony-töredék — „akarmi” — kódnak látszott).
+  if (typeof h === 'string' && /^[0-9A-HJKMNP-TV-Z]{3}-[0-9A-HJKMNP-TV-Z]{3}$/i.test(h.trim())) {
+    const kod = h.trim().toUpperCase();
+    const talalt = (await belepokJegyzeke()).filter((b) => b.kod === kod);
+    if (talalt.length !== 1) {
+      throw new Error(talalt.length ? 'Több belépő is ezzel a kóddal vár — a horgonyával hívd meg (belepok).'
+        : 'Nincs ilyen kódú belépő (' + kod + ') — a belépők: node koino/koino.js belepok');
+    }
+    h = talalt[0].horgony;
+  }
+  const adatok = await allitasAdatai(h);
+  const profil = await meghivottProfilja(adatok);
+  if (profil) adatok.profil = profil;
+  await meghivas(kornyezet, adatok);
+  return { horgony: adatok.horgonya, kod: ellenorzoKod(adatok.horgonya) };
+}
+
+/** ⭐ D121 (②): a tagságom ebben a koinóban — a belépő lapjának (a horgonyom, az ellenőrző kódom, tag vagyok-e). */
+async function tagsagAllapotom() {
+  await tar.frissit?.();   // a meghívást az őrjárat hozza — a hosszan futó felület így látja (D100)
+  const h = await sajatHorgonyom();
+  if (!h) return { horgony: null, kod: null, tag: false, ok: 'még nincs belépésed' };
+  const r = await tagE(tar, KOINO, h).catch((hiba) => ({ igen: false, ok: hiba.message }));
+  return { horgony: h, kod: ellenorzoKod(h), tag: !!r.igen, ok: r.ok ?? null };
 }
 
 /** ⭐ D93/1: figyelmeztetés, ha a saját eseményem a tagságom miatt nem számít (D19: nem vád, hiány). */
@@ -5649,6 +5761,8 @@ return {
   szovegOlvasoKeszites, tablaKliens, tablaKulcsBiztositasa, tablaraKiiras, tablarolOlvasas, tagsagFigyelmeztetes, tagsagKerdes,
   tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, torzsElemKerese, torzsKerhetoi, torzsHatarBeallitasa,
   korCeljaim, orjaratHazimunkaja, kotesTaram, koinoCsatlakozas,
+  // ⭐⭐ D121: a meghívás a lapon
+  belepesHaNincs, meghivoSzovege, belepokJegyzeke, meghivasVegrehajtasa, tagsagAllapotom,
   tovabbitasok,
   tovabbitasokTakaritasa, tukorBeallitas, ujKoinoSzuletese,
   // ⭐ D119 (③): a családi munkának (a parancsok nem használják)
@@ -5683,6 +5797,8 @@ const {
   szovegOlvasoKeszites, tablaKliens, tablaKulcsBiztositasa, tablaraKiiras, tablarolOlvasas, tagsagFigyelmeztetes, tagsagKerdes,
   tar, tartottSzeleteim, terKartyaGyermekei, tomoritesEsedekesE, tomoritesFuttatasa, torzsElvartja, torzsElemKerese, torzsKerhetoi, torzsHatarBeallitasa,
   korCeljaim, orjaratHazimunkaja, kotesTaram, koinoCsatlakozas,
+  // ⭐⭐ D121: a meghívás a lapon
+  belepesHaNincs, meghivoSzovege, belepokJegyzeke, meghivasVegrehajtasa, tagsagAllapotom,
   tovabbitasok,
   tovabbitasokTakaritasa, tukorBeallitas, ujKoinoSzuletese
 } = foPeldany;
@@ -5839,6 +5955,29 @@ async function tarsLevetele(hoszt, port) {
     return eredmeny.lista;
   });
   return torolt;
+}
+
+/**
+ * ⭐⭐ D121 (②): A MEGHÍVÓ ELFOGADÁSA — a belépő oldala (MH4 (A): a beillesztés után minden magától): a csatlakozás (a megadott
+ * becenévvel — a lapon a felületé, ha szabad), a meghívó készülékének címei társnak (a megnevezésével), és a belépés a koinóba.
+ * A `csatlakoz <meghívó>` parancs és a lap („🔗 Csatlakozás”) ugyanezt hívja. Az ellenőrző kódot adja vissza (MH3): ezt mondja
+ * be a belépő a meghívójának.
+ * @param {string} szoveg - a beillesztett meghívó (a körülötte lévő szöveggel együtt is)
+ * @param {{becenev?: string|null, felulir?: boolean, peldany?: Object}} [b]
+ */
+async function meghivoElfogadasa(szoveg, { becenev = null, felulir = false, peldany = foPeldany } = {}) {
+  const r = meghivoOlvasasa(szoveg);
+  if (!r.meghivo) throw new Error('A meghívó nem olvasható: ' + r.hiba + '.');
+  const m = r.meghivo;
+  const cs = await peldany.koinoCsatlakozas(m.koino, { becenev, felulir });
+  const tarsak = [];
+  for (const c of m.cimek) {
+    const t = await tarsFelvetele({ hoszt: c.hoszt, port: c.port, nev: m.nev ?? 'meghívó' });
+    tarsak.push({ ...c, ...(t.sajat ? { sajat: true } : {}) });
+  }
+  const b = await (await koinoPeldanyEgyszer(m.koino)).belepesHaNincs();
+  return { koino: m.koino, meghivoNeve: m.nev, alairo: m.alairo, tarsak, horgony: b.horgony, ujBelepes: b.uj,
+    kod: ellenorzoKod(b.horgony), csatlakozas: cs };
 }
 
 /** ⭐⭐ D119 (③): a családom másik koinójának szóló kérés átadása annak a példányának (null, ha nincs ilyen példány). */
@@ -6592,6 +6731,20 @@ try {
 
     case 'csatlakoz': {
       const cel = ervek[0];
+      // ⭐⭐ D121 (②): MEGHÍVÓVAL — a csatlakozás, a meghívó társnak, a belépés; és az ellenőrző kód (ezt mondd be a meghívódnak).
+      if (meghivoE(cel)) {
+        const becenevM = ervek.find((x) => typeof x === 'string' && x.startsWith('becenev='))?.slice(8) || KOINO_BECENEV;
+        const e = await meghivoElfogadasa(cel, { becenev: becenevM, felulir: ervek.includes('felulir') });
+        kiir('Csatlakoztál' + (e.meghivoNeve ? ' — a meghívód: „' + e.meghivoNeve + '”' : '') + ' (a koinó: '
+          + rovidAzonosito(e.koino) + ', a becenév: „' + becenevM + '”)');
+        kiir(SZIN.halvany + (e.tarsak.length ? 'A meghívód készülékét társnak vettem (' + e.tarsak.map((c) => c.hoszt + ':' + c.port
+          + (c.sajat ? ' — ez a gép saját címe' : '')).join(', ') + ').' : 'A meghívóban nem volt elérhető cím.') + ' ' + (e.ujBelepes ? 'Beléptél' : 'A belépésed már megvolt')
+          + ' — a horgonyod: ' + rovidAzonosito(e.horgony) + SZIN.vege);
+        kiir(SZIN.vastag + 'Az ellenőrző kódod: ' + e.kod + SZIN.vege + ' — mondd be a meghívódnak: ő ezt látja a belépők között, és'
+          + ' ha egyezik, meghív (a következő csere hozza el).');
+        kiir(SZIN.halvany + 'Az őrjárat (orjarat) cseréli a meghívóddal; a telefonon a „koino” parancs indítja.' + SZIN.vege);
+        break;
+      }
       // ⭐ D119 (⑥): `becenev=<b>` — a lap alakja: a mostani becenév marad a mostani koinóé, az új koinó a megadott becenevet
       // kapja (a mostani koinó kártyáiról ismert gyermek így a kártyából nyílik meg, és a család őrjárata felveszi).
       const becenevErv = ervek.find((x) => typeof x === 'string' && x.startsWith('becenev='))?.slice(8) || null;
@@ -6615,6 +6768,36 @@ try {
       } else {
         kiir(SZIN.halvany + 'A koinó születését és a többit a következő csere hozza (tars <cím> [port] · csere), vagy egy'
           + ' fájl (behoz <fájl>). Utána: belep — és add meg a horgonyodat annak, aki meghív.' + SZIN.vege);
+      }
+      break;
+    }
+
+    // ===== ⭐⭐ D121: A MEGHÍVÓ SZÖVEGE és A BELÉPŐK (a lap „➕ Meghívás…” és „👋 Belépők” ablaka ugyanezt hívja) =====
+    case 'meghivo': {
+      const m = await meghivoSzovege({ nev: ervek.join(' ').trim() || null });
+      kiir('A meghívód ehhez a koinóhoz (' + rovidAzonosito(KOINO) + ') — küldd el annak, akit meghívsz (üzenetben, papíron):');
+      kiir();
+      kiir(m.szoveg);
+      kiir();
+      kiir(SZIN.halvany + 'A címeid benne: ' + (m.cimek.map((c) => c.hoszt + ':' + c.port).join(', ') || '(nincs)')
+        + '. Ő a „csatlakoz <meghívó>” paranccsal vagy a lapon csatlakozik; a belépése után itt látod: belepok.' + SZIN.vege);
+      if (!m.tag) kiir(SZIN.nem + '⚠️ Te még nem vagy (ellenőrzött) tag — a meghívásod addig nem ad tagságot.' + SZIN.vege);
+      if (!m.orjarat.fut) kiir(SZIN.nem + '⚠️ Nem fut az őrjáratod — a belépő csak akkor ér el, ha fut (orjarat).' + SZIN.vege);
+      break;
+    }
+
+    case 'belepok': {
+      const lista = await belepokJegyzeke();
+      if (!lista.length) {
+        kiir('Nincs várakozó belépő. (Aki a meghívódat elfogadta, a belépése az első cserével ér ide — zárt koinóban a kapu jegyzi.)');
+        break;
+      }
+      kiir(SZIN.vastag + 'VÁRAKOZÓ BELÉPŐK' + SZIN.vege + ' — hívd meg azt, akinek a kódját élőben hallottad: meghiv <kód>');
+      for (const b of lista) {
+        const p = b.profil ? (b.profil.mezok ? ' · ' + Object.entries(b.profil.mezok).map(([k, v]) => k + ': ' + v).join(', ')
+          : b.profil.van ? ' · a profil darabja még nem jött meg' : ' · ⚠️ nincs profilja (a koinó ezt várja: ' + b.profil.kell.join(', ') + ')') : '';
+        kiir('  ' + SZIN.vastag + b.kod + SZIN.vege + '  ' + rovidAzonosito(b.horgony) + ' · belépett: '
+          + new Date(b.belepett).toLocaleString('hu-HU') + p);
       }
       break;
     }
@@ -7070,12 +7253,14 @@ try {
     case 'tanusit':
     case 'bemutatkoz':
     case 'visszavon': {
-      const adatok = await allitasAdatai(ervek[0]);
-      // ⭐ D93/5: a meghívás a meghívott profiljának lenyomatát is tanúsítja (ha a koinó profilt vár).
+      // ⭐⭐ D121 (④): a meghívás a lap közös útján (a horgony, vagy egy belépő ellenőrző kódja — `belepok`); ⭐ D93/5: ha a
+      // koinó profilt vár, a meghívás a meghívott profiljának lenyomatát is tanúsítja (`meghivasVegrehajtasa`).
       if (parancs === 'meghiv') {
-        const profil = await meghivottProfilja(adatok);
-        if (profil) adatok.profil = profil;
+        const r = await meghivasVegrehajtasa(ervek[0]);
+        kiir('Meghívtad — ezzel az 1. lépcsőn (tagság) segítetted át. (' + r.horgony.slice(0, 8) + ', kód: ' + r.kod + ')');
+        break;
       }
+      const adatok = await allitasAdatai(ervek[0]);
 
       const muvelet = {
         meghiv: meghivas,
@@ -8313,7 +8498,7 @@ try {
         {
           const korUtan = Date.now() + (Number.parseInt(process.env.KOINO_ORAELTOLAS ?? '0', 10) || 0);
           const kovetkezo = Math.ceil((korUtan + 1) / kozMs) * kozMs - (korUtan - Date.now());
-          await csaladKorFeljegyzese((a) => korVege(a, { perc, port: kapu.port, kovetkezo,
+          await csaladKorFeljegyzese((a) => korVege(a, { perc, port: kapu.port, kulso: res.sajatKulsoUdp ?? null, kovetkezo,
             sikeres: sikeresEbbenAKorben, celok: korCelok, uj: korUj, most: Date.now() }));
         }
 
@@ -8477,7 +8662,7 @@ try {
           : keses <= Math.min(ABLAK_KESES_TURES, kozMs / 2) ? most
           : Math.ceil((most + 1) / kozMs) * kozMs;
         // ⭐ Az alsó sáv (2026-10-15): a kör vége és a következő ablak (a saját óránkon — a lap ugyanezen a gépen fut).
-        await csaladKorFeljegyzese((a) => korVege(a, { perc, port: kapu.port, kovetkezo: kovetkezoAblak - oraEltolas,
+        await csaladKorFeljegyzese((a) => korVege(a, { perc, port: kapu.port, kulso: res.sajatKulsoUdp ?? null, kovetkezo: kovetkezoAblak - oraEltolas,
           sikeres: sikeresEbbenAKorben, celok: korCelok, uj: korUj, most: Date.now() }));
         await new Promise((teljesites) => setTimeout(teljesites, Math.max(0, kovetkezoAblak - (Date.now() + oraEltolas))));
       }
@@ -9161,7 +9346,7 @@ try {
           keresesFuggoAllasa, keresesMegjegyzes, kiszolgalasBeallitas, koinoVerzioElonezete, koinoVerzioKeszitese,
           koltozesElonezete, koltozesVegrehajtasa, lapHianyzoinakElkerese, laposMegjegyzes, postafiokFrissitese,
           postafiokMegjegyzes, postafiokModositasa, programVerzioja, sikidomMegjegyzes, strukturaMegjegyzes, torzsElemKerese,
-          torzsKerhetoi
+          torzsKerhetoi, meghivoSzovege, belepokJegyzeke, meghivasVegrehajtasa, tagsagAllapotom
         } = aktiv.peldany;
         // ⭐ B/2: az olvasók (a pakli) a két tár nézetét kapják — FL1 óta minden koinóban (a koinó átmeneti tára is látszik).
         const olvasoTar = ketTarNezet(tar, atmeneti);
@@ -9313,6 +9498,21 @@ try {
           }
 
           // ===================================
+          // ⭐⭐ D121 (④): A MEGHÍVÁS A LAPRÓL — a belépők jegyzékéből (a horgonnyal vagy az ellenőrző kóddal), ugyanaz a függvény,
+          // mint a `meghiv` parancsé. A lap csak akkor küldi, ha a meghívó az összevetett kód után megerősítette (MH3).
+          // ===================================
+          if (utvonal === '/api/meghivas') {
+            const h = typeof test?.horgony === 'string' ? test.horgony.trim() : '';
+            if (!h || h.length > 64) return { allapot: 400, adat: { hiba: 'Kit hívsz meg? (a belépő horgonya vagy ellenőrző kódja)' } };
+            try {
+              const r = await meghivasVegrehajtasa(h);
+              return { adat: { ...r, meghivva: true } };
+            } catch (hiba) {
+              return { allapot: 400, adat: { hiba: hiba.message } };
+            }
+          }
+
+          // ===================================
           // ⭐⭐ D118 (⑥): A KÖLTÖZÉS A LAPRÓL — ugyanaz a függvény, mint a `koltozes` parancsé (a kiköltözés itt, az első kitöltés,
           // a beköltözés a gyermekben). ⚠️ Visszavonhatatlan: a lap előbb megerősítést kér.
           // ===================================
@@ -9425,6 +9625,30 @@ try {
           if (utvonal === '/api/csatlakozas') {
             const k = typeof test?.koino === 'string' ? test.koino.trim() : '';
             const becenev = typeof test?.becenev === 'string' && test.becenev.trim() ? test.becenev.trim() : null;
+            // ⭐⭐ D121 (②): MEGHÍVÓVAL — a csatlakozás, a meghívó készüléke társnak, a belépés (MH4 (A): minden magától), és az
+            // ellenőrző kód, amit a belépő a meghívójának bemond (MH3). Ugyanaz a függvény, mint a `csatlakoz <meghívó>` parancsé.
+            const meghivoSz = typeof test?.meghivo === 'string' ? test.meghivo : (meghivoE(k) ? k : null);
+            if (meghivoSz != null) {
+              if (becenev != null && !/^[\p{L}\p{N}_-]{1,32}$/u.test(becenev)) {
+                return { allapot: 400, adat: { hiba: 'A becenév legfeljebb 32 betű, szám, aláhúzás vagy kötőjel lehet (szóköz nélkül).' } };
+              }
+              try {
+                const regi = await koinoBecenevFeloldasa(KOINO_BECENEV);
+                const e = await meghivoElfogadasa(meghivoSz, { becenev: becenev ?? KOINO_BECENEV, peldany: foPeldany });
+                // ⭐ MH4 (A): a lap magától az új koinóba lép (a belépő ott várja a meghívást — a kódjával).
+                aktivKoino = e.koino;
+                const o = (await koinokOrjaratai(await ismertKoinok(alapHely()))).get(e.koino) ?? null;
+                const ujraindit = (becenev ?? KOINO_BECENEV) === KOINO_BECENEV && regi !== e.koino;
+                if (ujraindit && o && !o.fut) {
+                  const r = (await csereAllapota(regi).olvas()).kor;
+                  o.parancs = await orjaratInditoParancsa(e.koino, r?.port ?? ALAP_PORT, r?.perc ?? 5);
+                }
+                return { adat: { ...e.csatlakozas, meghivo: { nev: e.meghivoNeve, tarsak: e.tarsak }, horgony: e.horgony,
+                  kod: e.kod, ujBelepes: e.ujBelepes, orjarat: o, ujraindit, aktiv: aktivKoino } };
+              } catch (hiba) {
+                return { allapot: 400, adat: { hiba: hiba.message } };
+              }
+            }
             if (!azonositoAlaku(k)) {
               return { allapot: 400, adat: { hiba: 'A koinó neve egy 43 jeles lenyomat — másold be annak a lapjáról, aki meghív.' } };
             }
@@ -9846,6 +10070,24 @@ try {
         // ⭐⭐ D119 (①b): A PROGRAM VERZIÓJA — a koinó születésének programja és a futó programé (a lap kimondja, ha más).
         if (utvonal === '/api/program') {
           return { adat: await programVerzioja() };
+        }
+
+        // ⭐⭐ D121 (④): A MEGHÍVÓ SZÖVEGE ehhez a koinóhoz (a megnevezés a lapról), a figyelmeztetésekkel (tag vagyok-e, fut-e az
+        // őrjárat). Semmit nem ír (a tábla-kulcs létrehozásán kívül, ha még nincs).
+        if (utvonal === '/api/meghivo') {
+          try {
+            return { adat: await meghivoSzovege({ nev: kereses.get('nev') || null }) };
+          } catch (hiba) {
+            return { allapot: 400, adat: { hiba: hiba.message } };
+          }
+        }
+        // ⭐⭐ D121 (④): A BELÉPŐK — akik a cserében jelentkeztek, és még nem tagok (az ellenőrző kódjukkal, a profiljukkal).
+        if (utvonal === '/api/belepok') {
+          return { adat: { belepok: await belepokJegyzeke() } };
+        }
+        // ⭐⭐ D121 (②): A TAGSÁGOM — a belépő lapja ebből mondja: „várakozás a meghívásra — a kódod: …”, vagy „✅ tag vagy”.
+        if (utvonal === '/api/tagsagom') {
+          return { adat: await tagsagAllapotom() };
         }
 
         // ⭐ D112 ⑤: a felderítések és az állásuk (a rögzített rész mérete az átmeneti tárból), és a beállítás határai.

@@ -1662,3 +1662,11 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     elválasztott alak (az IPv6-cím kettőspontjai és a megnevezés ékezetei miatt a base64url-be csomagolt JSON a biztos); a hibás
     cím csendes kihagyása a BEOLVASÁSKOR (a sérült vagy átírt meghívó az egészében gyanús — csak a készítés szűr) · 30 bit: 2000
     belépőnél ~0,2% az ütközés esélye — a kód kimondásra való, nem azonosításra · `meghivas_atvizsgalas.md`.
+226. **2026-11-01 · D121 ②, ④ — a belépő útja és a meghívó oldala (a program és a lap végpontjai)**
+    → **a meghívó elfogadása egy függvény (csatlakozás, a meghívó készüléke társnak, belépés — a kód vissza), a belépők jegyzéke a
+    ZÁRT KAPU feljegyzéséből (`azonossagok.json`, ≤ 256 — akik a személyükkel jelentkeztek, a belépésük nálam van, és még nem
+    tagok), a meghívás a horgonnyal vagy a KÓDDAL; a parancs és a lap ugyanazt hívja** · ⭐ a meghívó a nyilvános címet is viszi —
+    az őrjárat a kör feljegyzésébe írja (`csere.json` `kor.kulso`) · ⭐ a lap a meghívó elfogadása után magától az új koinóba lép
+    (MH4) · ⛔ mérve: a hosszan futó felület a belépőt nem látta, amíg a tárat nem olvasta újra (D100) · ⛔ elvetve: a belépők a tár
+    végigolvasásával (a koinóval nőne — 9. szabály); egyszer használható jel (MH2 (A)) · ⛔ LELET: nyílt koinóban az „alap”
+    meghívóhoz a belépés nem ér át (a szigorú (b) közös halmazában nincs) — ⏸️ MH7 Csabánál · `meghivas_atvizsgalas.md` 7.

@@ -45,7 +45,8 @@ export function csereAllapotAlakja(nyers) {
       frissitve: idopont(k.frissitve),
       sikeres: darab(k.sikeres),
       celok: darab(k.celok),
-      uj: darab(k.uj)
+      uj: darab(k.uj),
+      kulso: kulsoCim(k.kulso)
     };
   }
   const c = nyers?.csere;
@@ -73,10 +74,20 @@ export function korKezdete(a, { perc, port, most }) {
 /**
  * Az őrjárat kört zárt (az alvás előtt): a kör eredménye és a következő ablak.
  * @param {Object} a
- * @param {{perc: number, port: number, kovetkezo: number, sikeres: number, celok: number, uj: number, most: number}} b
+ * @param {{perc: number, port: number, kovetkezo: number, sikeres: number, celok: number, uj: number, kulso?: Object, most: number}} b
  */
-export function korVege(a, { perc, port, kovetkezo, sikeres = 0, celok = 0, uj = 0, most }) {
-  return { ...a, kor: { ...(a.kor ?? {}), perc, port, fut: false, vege: most, kovetkezo, frissitve: most, sikeres, celok, uj } };
+export function korVege(a, { perc, port, kovetkezo, sikeres = 0, celok = 0, uj = 0, kulso = null, most }) {
+  return { ...a, kor: { ...(a.kor ?? {}), perc, port, fut: false, vege: most, kovetkezo, frissitve: most, sikeres, celok, uj,
+    kulso: kulsoCim(kulso) ?? a.kor?.kulso ?? null } };
+}
+
+/**
+ * ⭐ D121: a készülék nyilvános (a tükör szerint mért) címe — a meghívó szövegébe kerül (MH6: a belépő ezen kopog vissza a
+ * meghívóra). Helyi feljegyzés; null, ha nem ép.
+ */
+function kulsoCim(k) {
+  return k && typeof k === 'object' && typeof k.cim === 'string' && /^[A-Za-z0-9.:%_-]{1,64}$/.test(k.cim)
+    && Number.isInteger(k.port) && k.port > 0 && k.port < 65536 ? { cim: k.cim, port: k.port } : null;
 }
 
 /**

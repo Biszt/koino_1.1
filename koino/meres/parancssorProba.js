@@ -1438,6 +1438,79 @@ proba('⭐ a ⑦ lelete: a függő kérelem célja a KÖTÉS mostani címe — a
     }
   });
 
+// ⭐⭐ D121 (②, ④): A MEGHÍVÁS A LAPON — két ember, két gomb, egy összevetett kód. A egy ZÁRT koinó alapítója, felülete és
+// őrjárata fut; B egy friss készülék (kulcs és koinó nélkül), csak a felülete. A a LAPJÁN elkéri a meghívó szövegét
+// (`GET /api/meghivo`); B a LAPJÁN beilleszti (`POST /api/csatlakozas` — csatlakozás, a meghívó készüléke társnak, belépés: MH4),
+// és megkapja az ellenőrző kódját; B elindítja az őrjáratát (a sima `orjarat` — a felület becenevével). ⭐ Viselkedést mérünk:
+// A lapján a belépők között (`GET /api/belepok`) megjelenik B — UGYANAZZAL a kóddal (MH3); A a lapján meghívja (`POST
+// /api/meghivas` — a KÓDDAL); és B lapja (`GET /api/tagsagom`) tagnak mondja (a meghívás B lemezére ért); A belépői közül B
+// eltűnik. Rontás: az elfogadás belépés nélkül → B nem jelenik meg A belépői között; a belépők jegyzéke a tagság szűrése nélkül → B
+// a meghívás után is ott marad; a meghívó cím nélkül → B nem éri el A-t.
+proba('⭐⭐ D121: a meghívás a lapon — A a meghívót a lapjáról adja, B a lapján beilleszti, A a belépők között B kódját látja, és a lapjáról meghívja; B tag lesz',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const PA = 7933, PB = 7935, FA = 7937, FB = 7939;
+    const helyben = { KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9', KOINO_KISZOLGALAS: 'alap' };
+    const futok = [];
+    let fa = null, fb = null;
+    const naplo = { a: '', b: '' };
+    try {
+      await fut(a, 'koino', 'Meghívó-próba', helyben);
+      const oa = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(PA)],
+        { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
+      oa.stdout.on('data', (x) => { naplo.a += x; });
+      futok.push(oa);
+      fa = await feluletet(a, FA, helyben);
+      fb = await feluletet(b, FB, helyben);
+      // A meghívója — megvárjuk, hogy az őrjárat első köre feljegyezze a kapu portját
+      let m = null;
+      for (let i = 0; i < 30; i++) {
+        m = await fa.hiv('/api/meghivo?nev=' + encodeURIComponent('Anna gépe'));
+        if (m.adat?.orjarat?.fut) break;
+        await varj(500);
+      }
+      const csat = await fb.hiv('/api/csatlakozas', { method: 'POST', body: JSON.stringify({ meghivo: 'Itt a meghívóm: ' + m.adat.szoveg }) });
+      const kod = csat.adat?.kod ?? null;
+      const ob = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(PB)],
+        { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
+      ob.stdout.on('data', (x) => { naplo.b += x; });
+      futok.push(ob);
+      let belepo = null;
+      for (let i = 0; i < 60 && !belepo; i++) {
+        await varj(500);
+        belepo = ((await fa.hiv('/api/belepok')).adat?.belepok ?? []).find((x) => x.kod === kod) ?? null;
+      }
+      const meghivas = belepo ? await fa.hiv('/api/meghivas', { method: 'POST', body: JSON.stringify({ horgony: kod }) }) : null;
+      let tag = null;
+      for (let i = 0; i < 60 && !tag?.tag; i++) {
+        await varj(500);
+        tag = (await fb.hiv('/api/tagsagom')).adat;
+      }
+      const utana = (await fa.hiv('/api/belepok')).adat?.belepok ?? [];
+      const jo = {
+        meghivo: typeof m?.adat?.szoveg === 'string' && m.adat.tag === true && m.adat.orjarat?.fut === true,
+        csatlakozas: csat.allapot === 200 && /^[0-9A-Z]{3}-[0-9A-Z]{3}$/.test(kod ?? '') && csat.adat.ujBelepes === true
+          && csat.adat.meghivo?.nev === 'Anna gépe' && (csat.adat.meghivo?.tarsak ?? []).some((c) => c.port === PA),
+        belepoKoddal: !!belepo && belepo.horgony === csat.adat.horgony,
+        meghivva: meghivas?.allapot === 200 && meghivas.adat?.meghivva === true,
+        tag: tag?.tag === true && tag.kod === kod,
+        eltunt: !utana.some((x) => x.kod === kod)
+      };
+      const ok = Object.values(jo).every(Boolean);
+      const tiszta = (s) => s.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ');
+      if (!ok) process.stderr.write('    (D121: ' + JSON.stringify({ ...jo, m: m?.adat, csat: csat.adat, tag }) .slice(0, 1200) + ')\n'
+        + '    (A napló: ' + tiszta(naplo.a).slice(-600) + ')\n    (B napló: ' + tiszta(naplo.b).slice(-600) + ')\n');
+      return ok;
+    } finally {
+      if (fa) fa.folyamat.kill();
+      if (fb) fb.folyamat.kill();
+      for (const f of futok) f.kill();
+      await varj(1000);
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ⭐⭐ D118 (②b): A KAPU KOINÓ-SZABÁLYA a parancssoron és a cserén. Az A a szülőben ír egy gondolatot a gyermek születése
 // ELŐTT és egyet UTÁNA; a szülő kivitele a gyermekbe behozva csak az elsőt adja (a második a szülő jelene — „másik koinóé”),
 // és a csere (két „mindent” készülék) ugyanígy viszi tovább a B-nek. Viselkedést mérünk (a két lemezt). ⚠️ A számítás még

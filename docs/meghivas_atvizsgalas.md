@@ -99,3 +99,31 @@ tud rá hangolni. ⭐ A védelem itt is az ember, nem a kapu — a D56 szerint a
 szerint — a kopogtatás) · ④ a meghívó oldala (a belépők jegyzéke, a meghívás a lapról, az értesítés) · ⑤ a lap (a „Meghívás…”,
 a „Belépők”, a csatlakozás ablaka) · ⑥ parancssor-próba két készülékkel (viselkedés: a belépő lemezén a meghívás), böngészőben
 végigjárva, és terepen: egy friss e-ember a telefonon, egy bemásolt sorral és egy meghívóval.
+
+## 7. ✅ D121 — és az építés (2026-11-01)
+
+Csaba: *„minden javaslatodat, elfogadom, mehetünk tovább.”* — MH1–MH6 mind (A) (a fázis-2 terv D121).
+
+- ✅ **① a meghívó szövege és az ellenőrző kód** (`js/csere/meghivo.js`, elágazás 225): `koino-meghivo:1:<base64url(JSON)>`;
+  a beolvasás a kapu módján; a kód 6 jel a horgonyból (Crockford-ábécé). +5 próba, 7 rontás.
+- ✅ **② a belépő útja és ④ a meghívó oldala — a program és a lap végpontjai** (elágazás 226): `meghivoElfogadasa` (a
+  csatlakozás, a meghívó készüléke társnak, a belépés — `belepesHaNincs`; a kód), `meghivoSzovege` (a helyi IPv4-címek a futó
+  őrjárat portján, és a nyilvános cím, amit az őrjárat a kör feljegyzésébe ír — `csere.json` `kor.kulso`), `belepokJegyzeke`
+  (⭐ a zárt kapu feljegyzéséből — `azonossagok.json`, ≤ 256 —, nem a tár végigolvasásával: a terhe nem nő a koinóval), a
+  `meghivasVegrehajtasa` (a horgony VAGY a kód — a `meghiv` parancs és a lap közös útja), `tagsagAllapotom`; a parancsok
+  (`csatlakoz <meghívó>`, `meghivo [megnevezés]`, `belepok`, `meghiv <kód>`) és a lap végpontjai (`GET /api/meghivo`,
+  `GET /api/belepok`, `GET /api/tagsagom`, `POST /api/meghivas`, `POST /api/csatlakozas` a `meghivo` mezővel — a lap ilyenkor
+  magától az új koinóba lép). ⛔ Mérve (a parancssor-próba): a hosszan futó felület a belépőt nem látta, amíg a tárat nem olvasta
+  újra (az őrjárat írta bele — a D100 tanulsága); most a három lekérdezés előbb frissít.
+- ⛔ **A LELET (mérve, 2026-11-01): NYÍLT koinóban az „alap” meghívóhoz a belépés nem ér át.** Zárt koinóban a kapu korlátozott
+  útja a társ azonosság-szeletét a vállalástól függetlenül egyezteti — a belépés átér („küldtem 1”), a `meghiv` működik. Nyílt
+  koinóban nincs kapu, és a szigorú (b) szerint a belépő azonosság-szeletét a meghívó nem vállalja, a belépő a meghívóét nem —
+  a közös halmazban nincs („küldtem 0” — „Nincs ilyen azonosító”). A mai parancssoros meghívásnak is hiánya (a próbák „mindent”
+  módban futnak, ezért nem látszott). ⏸️ **MH7 Csabánál:** (A) ⭐ a nyílt koinó kapuja is elkéri a még ismeretlen társ személyét
+  (a zárt kapu TAGSAG köre — a 64. mérés szerint első találkozáskor +0,5 KB, utána 0), és az azonosság-szeletét a vállalástól
+  függetlenül egyezteti (nem zár — csak a kért szelet kerül a közösbe); így a belépők jegyzéke is mindkét fajtában telik · (B) a
+  még nem tag belépő a saját azonosság-szeletét a csak küldő úton is felajánlja, és a fogadó az átmeneti tárába veszi (új fogadó-
+  szabály) · (C) a lapos meghívás csak zárt koinóban; nyílt koinóban a meghívó „mindent” módban vagy a kézi úton.
+- ⏭️ **Hátra:** ③ a jelentkezés két hálózat között (MH6 — a meghívó készülékének kopogtató témája) · ④ az értesítés az új
+  belépőről (MH5) · ⑤ a lap (a „➕ Meghívás…”, a „👋 Belépők”, a csatlakozás ablaka a meghívóval, a várakozó belépő kódja) · ⑥
+  a terep (egy friss e-ember a telefonon: egy bemásolt sor és egy meghívó).
