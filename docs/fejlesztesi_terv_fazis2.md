@@ -6171,6 +6171,22 @@ letöltőben (az első szeletnél megáll), a kártya kód-csomagja egy elem, a 
 törzs-kérelem), a lap (a méret a kártyán, a nagy kép és a kód helyén a kérés gombja). A nem vállaló a kódból csak a jegyzéket
 hozza (29,5 KB a 6,5 MB helyett).
 
+### D121. A MEGHÍVÁS A LAPON: KÉT EMBER, KÉT GOMB, EGY ÖSSZEVETETT KÓD (2026-11-01)
+
+*Az átvizsgálás: [`meghivas_atvizsgalas.md`](meghivas_atvizsgalas.md). Csaba kérése a ⑦ terepi próba közben: „hogyan lehetne
+felhasználó barátabb, a meghívási folyamat, pl. hogy ne keljen hozzá termuxot használni.” — előtte: „a d30-as szabályt ne
+rugjuk fel. maradjon a termux.” (a telefonra a program egy bemásolt sorral kerül — elágazás 224).*
+
+**A döntés** (Csaba, 2026-11-01: *„minden javaslatodat, elfogadom, mehetünk tovább.”*) — MH1–MH6 mind (A):
+1. **MH1:** a meghívó egy bemásolható SZÖVEG (bármilyen csatornán, papíron is); a QR-kód később, külön lépésben.
+2. **MH2:** nincs benne egyszer használható jel — a meghívó szöveg nem titok (a koinó neve, a meghívó készülékének címei és
+   tábla-aláírója, egy megnevezés); a védelem az ellenőrző kód.
+3. **MH3:** az ELLENŐRZŐ KÓD — 6 jel a belépés horgonyának lenyomatából, mindkét lapon; a meghívó az összevetés után nyom gombot.
+4. **MH4:** a belépő oldalán a beillesztés után minden magától (csatlakozás, társ, belépés; a profil-űrlap, ha a koinó vár).
+5. **MH5:** a meghívó oldalán „👋 Belépők” ablak a fő menüben, és a készülék értesítése az új belépőről (D103).
+6. **MH6:** két külön hálózat között a belépő a meghívó készülékének kopogtató témáján jelentkezik (a D92/1 útja); ugyanazon
+   a wifin a helyi cím.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

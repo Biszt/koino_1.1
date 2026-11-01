@@ -1654,3 +1654,11 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     futtatókörnyezet beágyazása a 6. szabály szellemét érinti); önfrissítés (melyik kódot futtatja egy koinó, a közösség dolga —
     D119) · ⚠️ nem önpróba (Termux-héjszkript): itt a gépen kipróbálva (koinó nélkül csak a felület; a koinó után az őrjárat magától;
     `koino ter`; a leállítás után nem marad folyamat), a telefonon Csaba próbálja · `telepites_telefon.md` „A legegyszerűbb út”.
+225. **2026-11-01 · D121 ① — a meghívó szövege és az ellenőrző kód (Csaba: „minden javaslatodat, elfogadom”)**
+    → **egy sor: `koino-meghivo:1:<base64url(JSON)>` (a koinó, a meghívó készülékének tábla-aláírója, ≤ 8 cím, egy megnevezés), a
+    beolvasás a kapu módján (a hibásból semmi, kimondott okkal), és az ellenőrző kód: 6 jel a horgony lenyomatából a Crockford-féle
+    ábécéből** (`js/csere/meghivo.js`) · ⭐ a beillesztett üzenet körülötte lévő szövege nem zavar, a tördelt sor is olvasható (az
+    előtagtól olvasunk; ha a megszakítás nélküli rész nem ép, a szóközök kihagyásával) · ⛔ elvetve: olvasható, mezőnként
+    elválasztott alak (az IPv6-cím kettőspontjai és a megnevezés ékezetei miatt a base64url-be csomagolt JSON a biztos); a hibás
+    cím csendes kihagyása a BEOLVASÁSKOR (a sérült vagy átírt meghívó az egészében gyanús — csak a készítés szűr) · 30 bit: 2000
+    belépőnél ~0,2% az ütközés esélye — a kód kimondásra való, nem azonosításra · `meghivas_atvizsgalas.md`.
