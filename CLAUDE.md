@@ -299,7 +299,10 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    (elágazás 222–223): **az ÜTKÖZÉS** (egy munkában mindkét fél a másiktól kért, és mindkettő a tétlenségi óráig várt — fél órán
    át; most a kisebbik kérelem megy elöl, a másik kérő kiszolgálja — `vonal.js` `kerelemUtkozes`) és **a kérelem célja nem
    követte a címváltást** (most a kötés szerint is illik — `fuggoKerelmek.js` `kotesIlleszto`; a kötések a célok közt). ⭐ Csaba a ⑦ után: a D30 marad, a Termux marad —
-   **egy bemásolt sor** elég (`koino/termux/`, elágazás 224). ⏸️ Tíz
+   **egy bemásolt sor** elég (`koino/termux/`, elágazás 224). 🔍 **A meghívás a lapon ÁTVIZSGÁLVA**
+   ([`meghivas_atvizsgalas.md`](docs/meghivas_atvizsgalas.md)): két ember, két gomb, egy összevetett kód — a meghívó szöveg
+   (a koinó neve, a meghívó címei és tábla-aláírója), a belépő beilleszti (csatlakozás, társ, belépés magától), a meghívó lapján
+   „👋 Belépők” egy 6 jeles ellenőrző kóddal; ⏸️ **Csabánál MH1–MH6**. ⏸️ Tíz
    további lelet Csabával átbeszélendő (a 18. szakasz végén — köztük ⭐ Csaba kérése: **a meghívás felhasználóbarát útja, Termux
    nélkül**). A laptop próba-adata: ennek a sessionnek a scratchpadja, `terep` (a szülő 9Faee…, a gyermek v_NOAEUb…;
    `$env:KOINO_ADAT = '<scratchpad>	erep'; node koino/koino.js orjarat 1 7373` és `… felulet 7499`); a telefonon
