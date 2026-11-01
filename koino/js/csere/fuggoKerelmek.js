@@ -144,10 +144,11 @@ export function lejartakKivetele(ny, most, elevules = FUGGO_ELEVULES) {
 /**
  * Melyik függő kérelem szól ehhez a társhoz? — a legrégebbi, amelyiknek a célja ez a cím; ha pontos cím nincs, az
  * azonos IP (a NAT portot válthat — 32. mérés). ⚠️ A cím csak feltevés (D71): ha a munka mást talál, legfeljebb nem
- * kapunk választ.
+ * kapunk választ. ⭐ A ⑦ óta a pontos cím után a társ KÖTÉSE (`kotes` — ha a cím egy kötésem címe: a kérelem célja a kötés
+ * másik címe vagy a tábla-aláírója), és csak aztán az azonos IP.
  * @returns {null|Object}
  */
-export function tarshozIllo(ny, cim, port, kiveve = () => false) {
+export function tarshozIllo(ny, cim, port, kiveve = () => false, kotes = null) {
   const alap = nyilvantartasAlakja(ny);
   // ⭐ D102 (J4): a kérelmek céljai RANG szerint állnak (elöl az, aki az ágból a legtöbbet tartja) — egy társ azt viszi,
   // amelyiknek a listáján ő áll a legelöl; holtversenyben a legrégebbit.
@@ -162,7 +163,25 @@ export function tarshozIllo(ny, cim, port, kiveve = () => false) {
     }
     return ki;
   };
-  return legjobb((c) => c.hoszt === cim && c.port === Number(port)) ?? legjobb((c) => c.hoszt === cim);
+  const kotesbe = kotesIlleszto(kotes);
+  return legjobb((c) => c.hoszt === cim && c.port === Number(port)) ?? (kotesbe ? legjobb(kotesbe) : null)
+    ?? legjobb((c) => c.hoszt === cim);
+}
+
+/**
+ * ⭐ A ⑦ terepi próba lelete (2026-11-01): a társ a KÖTÉSE szerint — a kérelem célja egy korábbi címén (vagy a tábla-aláírójával)
+ * áll, a kör viszont a mostanin éri el. Mérve: a telefon a wifin új címet kapott (.124 → .144), a kötés követte, a laptop
+ * függő kérelmeinek célja (az induló cím) viszont a régi maradt — két órán át egy halott címre kopogtak, és a telefonnal
+ * folytatott munkában egyik sem ment.
+ * @param {{alairo?: string, cimek?: Array<{hoszt: string, port: number}>}|null} kotes
+ * @returns {((c: Object) => boolean)|null}
+ */
+function kotesIlleszto(kotes) {
+  if (!kotes) return null;
+  const cimek = new Set((Array.isArray(kotes.cimek) ? kotes.cimek : []).map((c) => c.hoszt + ':' + Number(c.port)));
+  const alairo = typeof kotes.alairo === 'string' ? kotes.alairo : null;
+  if (!cimek.size && !alairo) return null;
+  return (c) => (alairo !== null && c.alairo === alairo) || cimek.has(c.hoszt + ':' + c.port);
 }
 
 /**
@@ -170,7 +189,7 @@ export function tarshozIllo(ny, cim, port, kiveve = () => false) {
  * régebbi előbb; legfeljebb `korlat` (a pontos cím előbb, és ha azon nincs, az azonos IP).
  * @returns {Array<Object>}
  */
-export function tarshozIllok(ny, cim, port, kiveve = () => false, korlat = 16) {
+export function tarshozIllok(ny, cim, port, kiveve = () => false, korlat = 16, kotes = null) {
   const alap = nyilvantartasAlakja(ny);
   const rangos = (illik) => alap.fuggo
     .filter((x) => !kiveve(x))
@@ -180,7 +199,11 @@ export function tarshozIllok(ny, cim, port, kiveve = () => false, korlat = 16) {
     .sort((a, b) => a.rang - b.rang || a.sorrend - b.sorrend)
     .map((y) => y.x);
   const pontos = rangos((c) => c.hoszt === cim && c.port === Number(port));
-  return (pontos.length ? pontos : rangos((c) => c.hoszt === cim)).slice(0, korlat);
+  if (pontos.length) return pontos.slice(0, korlat);
+  // ⭐ A ⑦: a társ a kötése szerint (`kotesIlleszto`), csak aztán az azonos IP
+  const kotesbe = kotesIlleszto(kotes);
+  const kotesben = kotesbe ? rangos(kotesbe) : [];
+  return (kotesben.length ? kotesben : rangos((c) => c.hoszt === cim)).slice(0, korlat);
 }
 
 /** Egy függő kérelem lezárása (megjött, vagy feladtuk) — a kész naplóba, rövid összegzéssel. */

@@ -417,6 +417,111 @@ proba('⭐⭐ D102 (J3): a KÉRELEM-SOROZAT a védett résen — három fejléc-
   }
 });
 
+// ===================================
+// ⭐⭐ AZ ÜTKÖZÉS (a ⑦ terepi próba lelete, 2026-11-01): egy munkában MINDKÉT fél kér a másiktól
+// ===================================
+//
+// A terepen (laptop + telefon, a gyermek koinóban — két „alap” készülék, mindkettő a másiknál lévőt kérte) a két kérő egymás
+// kérelmét átlépte, és mindkettő a tétlenségi óráig várt: fél órán át kétpercenként „a másik fél nem válaszol”. ⭐ Mérve: a
+// két fél ugyanúgy dönt (`vonal.js` `kerelemUtkozes`) — az egyik kérelme lemegy, a másik kérő kiszolgálja (a hívótól kapott
+// `utkozesben`-nel), és a sajátja `utkozes` jellel tér vissza. A tétlenségi órát itt rövidre vesszük (4 mp): a javítás
+// nélkül mindkét oldal ott bukik. Rontás: a `kerelemKapcsolaton` / `szeletKapcsolaton` KERELEM-ága nélkül mind a három bukik.
+
+const UTKOZES_ORA = 4000;
+
+/** Egy kérő oldal kiszolgálója az ütközésre — a tárából és a világából, a hívó által kapott kézfogással (mint a `koino.js`). */
+function utkozesKiszolgalo(tar, v) {
+  return (u, x) => parbeszed(x.kapcsolat, tar, 'proba', { kerelemKiszolgalo: kiszolgaloVilagbol(v), sor: x.sor, elsoUzenet: u,
+    ...(typeof x.kezfogas === 'function' ? { kezfogas: x.kezfogas('proba', {}) } : {}) });
+}
+
+async function utkozesKornyezet() {
+  const v = await vilag();
+  const p = await udpPar();
+  const helyek = [await mkdtemp(join(tmpdir(), 'koino-utkozes-a-')), await mkdtemp(join(tmpdir(), 'koino-utkozes-b-'))];
+  const tarak = [];
+  for (const h of helyek) {
+    const t = await esemenyTarNyitasa('proba', h);
+    for (const e of v.terkep.values()) await esemenyMentese(t, e);
+    tarak.push(t);
+  }
+  return { v, p, tarak, bezar: async () => { p.bezar(); for (const h of helyek) await rm(h, { recursive: true, force: true }); } };
+}
+
+proba('⭐⭐ a ⑦ lelete — az ÜTKÖZÉS: két fejléc-kérő egymástól, egy munkában — az egyik kérelme lemegy (ellenőrizve), a másik átenged, és egyik sem vár a tétlenségi óráig',
+  async () => {
+    const k = await utkozesKornyezet();
+    try {
+      const indul = Date.now();
+      const kozos = (tar) => ({ varakozasiIdo: UTKOZES_ORA, mintaValaszto: (valasz) => mintaKeres(valasz),
+        utkozesben: utkozesKiszolgalo(tar, k.v) });
+      const [e, m] = await Promise.all([
+        kerelemUdpResen(k.p.egyik, '127.0.0.1', k.p.masikPort, 'proba', { fajta: 'fejlecek', kulcs: GYOKER_KULCS, n: 10 }, kozos(k.tarak[0])),
+        kerelemUdpResen(k.p.masik, '127.0.0.1', k.p.egyikPort, 'proba', { fajta: 'fejlecek', kulcs: k.v.nagy, n: 10, m: true }, kozos(k.tarak[1]))
+      ]);
+      const ido = Date.now() - indul;
+      const nyertes = e.kiszolgalta ? e : m;
+      const vesztes = e.kiszolgalta ? m : e;
+      const ell = nyertes.kiszolgalta ? await fejlecekEllenorzese({ valasz: nyertes.valasz, kert: nyertes.kert,
+        mintak: nyertes.mintak, esemenyek: nyertes.esemenyek }) : null;
+      const ok = [e, m].filter((r) => r.kiszolgalta).length === 1 && vesztes.utkozes === true && vesztes.kiszolgalta === false
+        && ell?.hibas === 0 && ell.ellenorzott >= 1 && nyertes.valasz.lista.length >= 1 && ido < UTKOZES_ORA;
+      if (!ok) process.stderr.write('    (ütközés: ' + JSON.stringify({ e: { k: e.kiszolgalta, u: e.utkozes }, m: { k: m.kiszolgalta, u: m.utkozes },
+        ido, hibas: ell?.hibas }) + ')\n');
+      return ok;
+    } finally {
+      await k.bezar();
+    }
+  });
+
+proba('⭐⭐ a ⑦ lelete — az ÜTKÖZÉS a szelet-kérővel: a fejléc-kérelem megy elöl, a SZELET kérője kiszolgálja, és a szelet-kérés „ütközés” jellel tér vissza (nem a tétlenségi órával)',
+  async () => {
+    const k = await utkozesKornyezet();
+    try {
+      const indul = Date.now();
+      // ⭐ A döntés a két üzenetből: a „fejlecek” fajta kisebb, mint a „szelet” — itt mindig a fejléc-kérő megy elöl.
+      const [e, m] = await Promise.all([
+        kerelemUdpResen(k.p.egyik, '127.0.0.1', k.p.masikPort, 'proba', { fajta: 'fejlecek', kulcs: k.v.nagy, n: 10, m: true },
+          { varakozasiIdo: UTKOZES_ORA, mintaValaszto: (valasz) => mintaKeres(valasz), utkozesben: utkozesKiszolgalo(k.tarak[0], k.v) }),
+        szeletUdpResen(k.p.masik, '127.0.0.1', k.p.egyikPort, null, 'proba', k.v.g1,
+          { varakozasiIdo: UTKOZES_ORA, utkozesben: utkozesKiszolgalo(k.tarak[1], k.v) })
+      ]);
+      const ido = Date.now() - indul;
+      const ell = e.kiszolgalta ? await fejlecekEllenorzese({ valasz: e.valasz, kert: e.kert, mintak: e.mintak, esemenyek: e.esemenyek }) : null;
+      const ok = e.kiszolgalta === true && e.valasz.lista[0]?.az === k.v.g1 && ell?.hibas === 0
+        && m.utkozes === true && m.kapott === 0 && Array.isArray(m.esemenyek) && ido < UTKOZES_ORA;
+      if (!ok) process.stderr.write('    (ütközés, szelet: ' + JSON.stringify({ e: { k: e.kiszolgalta, u: e.utkozes }, m: { u: m.utkozes, kapott: m.kapott }, ido })
+        + ')\n');
+      return ok;
+    } finally {
+      await k.bezar();
+    }
+  });
+
+proba('⭐⭐ a ⑦ lelete — az ÜTKÖZÉS a kérelem-SOROZATTAL: a vesztes sorozat a társét kiszolgálja, a saját sorozata megáll (VEGE nélkül), és a társ kérelme lemegy',
+  async () => {
+    const k = await utkozesKornyezet();
+    try {
+      const indul = Date.now();
+      // ⭐ A sorozat első kérelme törzs-kérés („torzs” > „fejlecek”) — itt mindig a sorozat enged.
+      const [e, m] = await Promise.all([
+        kerelemSorozatUdpResen(k.p.egyik, '127.0.0.1', k.p.masikPort, 'proba',
+          [{ fajta: 'torzs', kulcs: k.v.nagy }, { fajta: 'fejlecek', kulcs: k.v.g1, n: 10 }],
+          { varakozasiIdo: UTKOZES_ORA, mintaValaszto: (valasz) => mintaKeres(valasz), utkozesben: utkozesKiszolgalo(k.tarak[0], k.v) }),
+        kerelemUdpResen(k.p.masik, '127.0.0.1', k.p.egyikPort, 'proba', { fajta: 'fejlecek', kulcs: GYOKER_KULCS, n: 10 },
+          { varakozasiIdo: UTKOZES_ORA, mintaValaszto: (valasz) => mintaKeres(valasz), utkozesben: utkozesKiszolgalo(k.tarak[1], k.v) })
+      ]);
+      const ido = Date.now() - indul;
+      const ok = Array.isArray(e) && e.length === 1 && e[0].utkozes === true && m.kiszolgalta === true
+        && m.valasz.lista.map((t) => t.az).join() === [k.v.nagy, k.v.kicsi].join() && ido < UTKOZES_ORA;
+      if (!ok) process.stderr.write('    (ütközés, sorozat: ' + JSON.stringify({ e: e?.map?.((r) => ({ k: r.kiszolgalta, u: r.utkozes })),
+        m: { k: m.kiszolgalta }, ido }) + ')\n');
+      return ok;
+    } finally {
+      await k.bezar();
+    }
+  });
+
 /** Egy gondolat szöveg-darabbal: a darab a tartó fájl-tárában. */
 async function szovegesVilag(hely) {
   const anna = await ujEember('proba');
@@ -650,6 +755,29 @@ proba('melyik függő szól a társhoz: a pontos cím előbb, aztán az azonos I
   ny = kerelemFelvetele(ny, { fajta: 'torzs', kulcs: K2, celok: [{ hoszt: '10.0.0.1', port: 2222 }] }, 2, 'b').nyilvantartas;
   return tarshozIllo(ny, '10.0.0.1', 2222)?.az === 'b' && tarshozIllo(ny, '10.0.0.1', 9999)?.az === 'a'
     && tarshozIllo(ny, '10.0.0.9', 1111) === null;
+});
+
+// ⭐ A ⑦ terepi próba lelete (2026-11-01): a telefon a wifin új címet kapott (.124 → .144); a laptop kötése követte, a függő
+// kérelmeinek célja (az induló cím) nem — két órán át egy halott címre szóltak. A társ a KÖTÉSE szerint is illik: a kérelem célja
+// a kötés egy régebbi címe vagy a tábla-aláírója — a pontos cím után, az azonos IP (a NAT portváltása) ELŐTT. Rontás: a kötés
+// nélkül (a régi illesztés) a régi címre szóló kérelem nem illik, és az azonos IP-jű idegen nyer → bukik.
+proba('⭐ a ⑦ lelete: a társ a KÖTÉSE szerint — a kérelem célja a régi címe vagy a tábla-aláírója; az azonos IP csak utána', () => {
+  const AL = 'T'.repeat(43);
+  let ny = kerelemFelvetele(ujNyilvantartas(), { fajta: 'fejlecek', kulcs: K1, celok: [{ hoszt: '192.168.1.144', port: 9999 }] }, 1, 'ip')
+    .nyilvantartas;
+  ny = kerelemFelvetele(ny, { fajta: 'fejlecek', kulcs: K2, celok: [{ hoszt: '192.168.1.124', port: 7373 }] }, 2, 'regi').nyilvantartas;
+  ny = kerelemFelvetele(ny, { fajta: 'torzs', kulcs: K1, celok: [{ hoszt: '10.9.9.9', port: 1, alairo: AL }] }, 3, 'alairos').nyilvantartas;
+  const kotes = { alairo: AL, cimek: [{ hoszt: '192.168.1.144', port: 7373 }, { hoszt: '192.168.1.124', port: 7373 }] };
+  const idegen = { alairo: 'U'.repeat(43), cimek: [{ hoszt: '192.168.1.144', port: 7373 }] };
+  const sor = tarshozIllok(ny, '192.168.1.144', 7373, () => false, 16, kotes).map((x) => x.az).sort().join();
+  return tarshozIllo(ny, '192.168.1.144', 7373)?.az === 'ip'
+    && ['regi', 'alairos'].includes(tarshozIllo(ny, '192.168.1.144', 7373, () => false, kotes)?.az)
+    && tarshozIllo(ny, '192.168.1.144', 7373, (x) => x.az === 'regi', kotes)?.az === 'alairos'
+    && sor === 'alairos,regi'
+    // a pontos cím előbb, mint a kötés: a 9999-es portról jövő társnál az „ip” a pontos
+    && tarshozIllo(ny, '192.168.1.144', 9999, () => false, kotes)?.az === 'ip'
+    // a kötés nélküli (vagy másik kötésű) társnál a régi illesztés
+    && tarshozIllo(ny, '192.168.1.144', 7373, () => false, idegen)?.az === 'ip';
 });
 
 proba('a lezárás a kész naplóba teszi, a próbálkozás számol; a hibás bejegyzés és a hibás cél kiesik', () => {

@@ -1627,3 +1627,20 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     útja) · ⭐ a lap kéréseit a koinó családjának őrjárata viszi (a ④ óta a család minden példányáét) · ⛔ elvetve: (A) marad, a
     lap kimondja, ha újraindítás kell (a családdal ez lett a lap fő útja); a kezelő kódjának koinónkénti átírása (ugyanazok a
     nevek a példányból — 11 őr és 27 ág esett ki, a végpontok kódja változatlan) · `csaladi_orjarat_atvizsgalas.md` 17. szakasz.
+222. **2026-11-01 · a ⑦ terepi próba lelete — az ÜTKÖZÉS: egy munkában mindkét fél kér a másiktól**
+    → **a két fél ugyanazt a két `KERELEM`-et látja, ezért ugyanúgy dönt: a kisebbik (a JSON-alak szerint) megy elöl, a nagyobbik
+    kérő ugyanazon a kapcsolaton kiszolgálja (a kérelem koinójának példányával — a családi átadás útja), a sajátja a következő
+    munkában** (`vonal.js` `kerelemUtkozes`, `koino.js` `utkozesKiszolgaloja`) · a lelet (a terepen, laptop + telefon a
+    gyermekben): két „alap” készülék mindegyike a másiknál lévőt kérte, a kérő a társ kérelmét átlépte, mint a nyitást — fél órán
+    át kétpercenként mindkettő a tétlenségi óráig várt, és a kétperces jel együtt járt le (megint ütközött) · ⛔ elvetve: a kérő
+    `KESZ`-szel elutasítja a társét (mindkettő gyorsan bukna, és a következő munkában újra ütköznének); a kérelem előtti egyeztetés
+    (új protokoll-lépés minden kérelemnek — az ütközés ritka, a döntés a két meglévő üzenetből ingyen van) · ⚠️ a továbbadott
+    kérelem VÁLASZA (`VALASZ`) és egy egyidejű kérelem ütközése nincs kezelve (ritka; a tétlenségi óra zárja) ·
+    `csaladi_orjarat_atvizsgalas.md` 18. szakasz.
+223. **2026-11-01 · a ⑦ terepi próba lelete — a függő kérelem célja a KÖTÉSSEL követi a társ címváltását**
+    → **a felvételkor a kötéseim is célok (a mostani címükkel és a tábla-aláírójukkal), a választáskor a társ a kötése szerint is
+    illik (a kérelem célja a kötés egy régebbi címe vagy a tábla-aláírója — a pontos cím után, az azonos IP előtt)**
+    (`fuggoKerelmek.js` `kotesIlleszto`, `koino.js` `tarsKotese`) · a lelet: a telefon a wifin új címet kapott, a laptop kötése
+    követte, a függő kérelmei viszont az induló címre (a régire) szóltak — és a lap két órával később is arra vette fel őket ·
+    ⛔ elvetve: az induló címek átírása a kötésből (az induló cím a felhasználó kézi bejegyzése — a „kurbli”; a kötés a tény) ·
+    `csaladi_orjarat_atvizsgalas.md` 18. szakasz.

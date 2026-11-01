@@ -2925,8 +2925,18 @@ async function fuggoKerelemFelvetele(k, { cimek = null, dht = false } = {}) {
       }
     }
   }
+  // ⭐ A ⑦ terepi próba lelete: a KÖTÉSEIM (a rendszeres társaim, a MOSTANI címükkel és a tábla-aláírójukkal) a raj tartói után
+  // — az induló cím a felvétel pillanatában áll, és nem követi a társ címváltását; a kötés igen (és a továbbadás is rajta megy).
+  try {
+    for (const kk of kotesLista(await kotesTaram().olvas())) {
+      const c = kotesCimei(kk)[0];
+      if (c && !celok.some((x) => x.hoszt === c.hoszt && Number(x.port) === Number(c.port))) {
+        celok.push({ hoszt: c.hoszt, port: Number(c.port), alairo: kk.alairo });
+      }
+    }
+  } catch { /* a kötés-jegyzék segédeszköz */ }
   // Az induló címek a raj tartói UTÁN (a raj tartója biztosan tartja X-et; az induló cím nem feltétlenül).
-  celok.push(...induloCelok);
+  celok.push(...induloCelok.filter((c) => !celok.some((x) => x.hoszt === c.hoszt && Number(x.port) === Number(c.port))));
   // ⛔ ÖNMAGUNKAT NEM KÉRDEZZÜK: a saját gyökér-darabunkat mi is hirdetjük, a DHT a mi címünket is visszaadja
   // (a gép címe + a futó kapu portja — a 42. mérés tanulsága: a készülék önmagát hívogatta).
   const sajatGep = await sajatOsszesCim();
@@ -3568,19 +3578,21 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
       return vege;
     }
   }
+  // ⭐ A ⑦ lelete: ha a társ is kérelemmel nyit, és az övé megy elöl, kiszolgáljuk (`utkozesKiszolgaloja`).
+  const utkozesben = utkozesKiszolgaloja();
   try {
     r = fk.fajta === 'szelet'
-      ? await szeletUdpResen(halo, tars.cim, tars.port, atmenetiCel, KOINO, fk.kulcs, { tovabb, ...await azonossagBeallitasa() })
+      ? await szeletUdpResen(halo, tars.cim, tars.port, atmenetiCel, KOINO, fk.kulcs, { tovabb, ...await azonossagBeallitasa(), utkozesben })
       : fk.fajta === 'felajanlas'
       ? await kerelemUdpResen(halo, tars.cim, tars.port, KOINO,
         { fajta: 'felajanlas', kulcs: fk.kulcs, bejegyzesek: felajanlott, kiserok: await bejegyzesekKiseroi(felajanlott) },
-        { ...await azonossagBeallitasa() })
+        { ...await azonossagBeallitasa(), utkozesben })
       // ⭐ A kereső-réteg ⑦b: a kérdés a NAT mögötti tartóhoz (a hely és a kérdés a függő kérelemből).
       : fk.fajta === 'kereses'
       ? await kerelemUdpResen(halo, tars.cim, tars.port, KOINO,
-        { fajta: 'kereses', kulcs: fk.kulcs, ...fk.ker, n: KERESES_TALALAT_KORLAT }, { ...await azonossagBeallitasa() })
+        { fajta: 'kereses', kulcs: fk.kulcs, ...fk.ker, n: KERESES_TALALAT_KORLAT }, { ...await azonossagBeallitasa(), utkozesben })
       : await kerelemUdpResen(halo, tars.cim, tars.port, KOINO, k, {
-        ...await azonossagBeallitasa(),
+        ...await azonossagBeallitasa(), utkozesben,
         mintaValaszto: (valasz) => mintaKeres(valasz),
         megvan: (await kepetKeszit()).esemenyek.map((e) => e.azonosito).slice(-5000),
         blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT, torzsElvart: torzsElvartja, torzsSzabaly: torzsSzabalya,
@@ -3591,6 +3603,13 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
     kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' — a függő kérelem nem ment át: ' + hiba.message + SZIN.vege);
     await kerelmekIrasa(probalkozas(await kerelmekOlvasasa(), fk.az));
     return vege;
+  }
+  if (r.utkozes) {
+    // ⭐ A ⑦: nem bukott próbálkozás — a társ kérelme ment elöl; a miénk a következő munkában (a kétperces jel nélkül).
+    allapot.kerelemProbaltak.delete(fk.az + '|' + tars.cim + ':' + tars.port);
+    kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' — a társ is kért (' + fk.fajta + ' '
+      + fk.kulcs.slice(0, 8) + '…): az övé ment elöl, a miénk a következő munkában' + SZIN.vege);
+    return { ...vege, bajt: (r.bajtKuldott ?? 0) + (r.bajtKapott ?? 0) };
   }
   if (felajanlott) r.felajanlott = felajanlott;
   vege.uj = await fuggoEredmenyFeldolgozasa(fk, r, tars);
@@ -3672,7 +3691,7 @@ async function fuggoKerelemSorozatMunkaja(allapot, halo, tars, fks) {
   let eredmenyek;
   try {
     eredmenyek = await kerelemSorozatUdpResen(halo, tars.cim, tars.port, KOINO, kerelmek, {
-      ...await azonossagBeallitasa(),
+      ...await azonossagBeallitasa(), utkozesben: utkozesKiszolgaloja(),
       mintaValaszto: (valasz) => mintaKeres(valasz),
       megvan: (await kepetKeszit()).esemenyek.map((e) => e.azonosito).slice(-5000),
       blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT, torzsElvart: torzsElvartja, torzsSzabaly: torzsSzabalya,
@@ -3684,6 +3703,13 @@ async function fuggoKerelemSorozatMunkaja(allapot, halo, tars, fks) {
     let ny = await kerelmekOlvasasa();
     for (const fk of fks) ny = probalkozas(ny, fk.az);
     await kerelmekIrasa(ny);
+    return vege;
+  }
+  // ⭐ A ⑦: az ütközésben a társ kérelme ment elöl — a sorozatunk nem bukott, a következő munkában jön (a kétperces jel nélkül).
+  if (eredmenyek?.[0]?.utkozes) {
+    for (const fk of fks) allapot.kerelemProbaltak.delete(fk.az + '|' + tars.cim + ':' + tars.port);
+    kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' — a társ is kért: az övé ment elöl, a kérelem-sorozatunk ('
+      + fks.length + ') a következő munkában' + SZIN.vege);
     return vege;
   }
   for (let i = 0; i < fks.length; i++) {
@@ -4599,12 +4625,14 @@ async function fuggoKerelemValasztasa(allapot, tars) {
   const ny = await kerelmekOlvasasa();
   const nemProbalt = (x) => ujraProbalhato(allapot.kerelemProbaltak, x.az + '|' + tars.cim + ':' + tars.port, Date.now(),
     KERELEM_UJRAPROBA);
+  // ⭐ A ⑦ terepi próba lelete: a társ a KÖTÉSE szerint is (ha ez a cím egy kötésem címe) — a kérelem célja lehet a régi címe.
+  const kotes = await tarsKotese(tars);
   // ⭐ D102 (J4): a társ azt viszi, amelyiknek a céllistáján ő áll a legelöl (a már próbáltakat kihagyva).
-  let fk = tarshozIllo(ny, tars.cim, tars.port, (x) => !nemProbalt(x));
+  let fk = tarshozIllo(ny, tars.cim, tars.port, (x) => !nemProbalt(x), kotes);
   // ⭐ D102 (J3): ha több fejléc- vagy törzs-kérelem is hozzá szól, egy SOROZATBAN megy (egy kapcsolaton).
   const sorozatba = (x) => x.fajta === 'fejlecek' || x.fajta === 'torzs';
   if (fk && sorozatba(fk)) {
-    const sorozat = tarshozIllok(ny, tars.cim, tars.port, (x) => !nemProbalt(x) || !sorozatba(x), SOROZAT_KORLAT);
+    const sorozat = tarshozIllok(ny, tars.cim, tars.port, (x) => !nemProbalt(x) || !sorozatba(x), SOROZAT_KORLAT, kotes);
     if (sorozat.length > 1) return { sorozat };
   }
   // ⭐ A ház (D100): a „miközben kopogtatunk” pontosan — a kérelem egy kopogtató témáján TÉNYLEG jelentkeztünk (az
@@ -4613,6 +4641,20 @@ async function fuggoKerelemValasztasa(allapot, tars) {
   const kopogtattunk = (x) => x.kopogtatok.some((k) => allapot.bejelentettKopogtatok?.has(k.fajta + ':' + k.kulcs));
   if (!fk && tars.bekopogo) fk = ny.fuggo.find((x) => kopogtattunk(x) && nemProbalt(x)) ?? null;
   return fk ? { fk } : null;
+}
+
+/**
+ * ⭐ A ⑦ terepi próba lelete (2026-11-01): a társ KÖTÉSE, ha ez a cím egy kötésem (legfeljebb `KOTES_CIM_KORLAT`) címe — a
+ * tábla-aláírója és az ismert címei —, különben null. A függő kérelem célja így a régi címén is illik rá (a kötés követi a
+ * címváltást, a kérelem célja nem).
+ * @returns {Promise<{alairo: string, cimek: Array<{hoszt: string, port: number}>}|null>}
+ */
+async function tarsKotese(tars) {
+  let jegyzek;
+  try { jegyzek = await kotesTaram().olvas(); } catch { return null; }
+  const k = (jegyzek ?? []).find((x) => typeof x?.alairo === 'string'
+    && kotesCimei(x).some((c) => c.hoszt === tars.cim && Number(c.port) === Number(tars.port)));
+  return k ? { alairo: k.alairo, cimek: kotesCimei(k).map((c) => ({ hoszt: c.hoszt, port: Number(c.port) })) } : null;
 }
 
 /**
@@ -4827,6 +4869,15 @@ async function kerelemAtvetele(u, x) {
     ...(typeof x.kezfogas === 'function' ? { kezfogas: x.kezfogas(KOINO, b) } : {}) });
 }
 
+/**
+ * ⭐ A ⑦ terepi próba lelete (2026-11-01 — `vonal.js` `kerelemUtkozes`): ha egy munkában a társ is KÉRELEMMEL nyit, és az övé
+ * megy elöl, ugyanazon a kapcsolaton kiszolgáljuk — a kérelem koinójának példányával (ez a koinó, vagy a családom másik koinója:
+ * a családi átadás útja). Ismeretlen koinónál null (a kérő `KESZ`-t mond, a társ nem vár).
+ */
+function utkozesKiszolgaloja() {
+  return (u, x) => (u?.koino === KOINO ? kerelemAtvetele(u, x) : kerelemAtadasa()(u, x));
+}
+
 /** A munka a VÉDETT résen (`csaladMunkaKeszito` — koinónként): csere, kötés, tanulás, randevú. */
 function resMunka(allapot, halo, tars) {
   return (async () => {
@@ -4856,11 +4907,13 @@ function resMunka(allapot, halo, tars) {
       const tovabb = { az, htl: t.htl };
       const memoria = t.fajta === 'torzs' ? memoriaBlobTarolo() : null;
       try {
+        const utkozesben = utkozesKiszolgaloja();   // ⭐ A ⑦: a társ is kérhet tőlünk ugyanebben a munkában
         const r = t.fajta === 'szelet'
-          ? await szeletUdpResen(halo, tars.cim, tars.port, null, KOINO, t.kulcs, { tovabb, ...await azonossagBeallitasa() })
+          ? await szeletUdpResen(halo, tars.cim, tars.port, null, KOINO, t.kulcs, { tovabb, ...await azonossagBeallitasa(), utkozesben })
           : await kerelemUdpResen(halo, tars.cim, tars.port, KOINO, { fajta: t.fajta, kulcs: t.kulcs, n: t.n, m: t.m === true,
             ...(t.utan ? { utan: t.utan } : {}), ...tovabb },
-            { ...await azonossagBeallitasa(), mintaValaszto: (valasz) => mintaKeres(valasz), blob: memoria, korlat: FAJL_KORLAT });
+            { ...await azonossagBeallitasa(), mintaValaszto: (valasz) => mintaKeres(valasz), blob: memoria, korlat: FAJL_KORLAT,
+              utkozesben });
         const kiszolgalta = t.fajta === 'szelet' ? (r.kapott ?? 0) > 0
           : r.kiszolgalta && (t.fajta !== 'torzs' || (memoria?.mind().length ?? 0) > 0)
             && (t.fajta !== 'fejlecek' || (r.valasz?.lista?.length ?? 0) > 0);
@@ -4869,6 +4922,8 @@ function resMunka(allapot, halo, tars) {
           kiir(SZIN.halvany + '  ↪ ' + ora() + ' ' + kulcs + ' kiszolgálta a továbbadott kérelmet — visszaviszem' + SZIN.vege);
         } else if (r.atvette) {
           kiir(SZIN.halvany + '  ↪ ' + ora() + ' ' + kulcs + ' tovább adja a kérelmet' + SZIN.vege);
+        } else if (r.utkozes) {
+          t.kuldtuk.delete(kulcs);   // ⭐ A ⑦: a társ kérelme ment elöl — a továbbadás a következő munkában
         }
       } catch (hiba) {
         kiir(SZIN.halvany + '  · ' + ora() + ' a továbbadás nem sikerült: ' + hiba.message + SZIN.vege);

@@ -1345,6 +1345,99 @@ proba('⭐⭐ FL1: a felület a belépett koinóban is teljesen dolgozik — a g
     }
   });
 
+// ⭐⭐ A ⑦ TEREPI PRÓBA LELETE (2026-11-01) — AZ ÜTKÖZÉS két őrjárat között. A terepen (laptop + telefon, a gyermek koinóban) a két
+// „alap” készülék mindegyike a másiknál lévőt kérte, és egy munkában mindkettő a kérelmét választotta: fél órán át kétpercenként
+// „a másik fél nem válaszol” (a tétlenségi óra), egyik kérelem sem ment le. Itt A és B ugyanannak a koinónak a tagja, MINDKETTŐ
+// függő fejléc-kérelmet vesz fel (a célja a másik őrjárata), és a két őrjárat egymásra kopog. ⭐ Viselkedést mérünk (a két lemez
+// `kerelmek.json`-ja): mindkét kérelem lemegy, és a naplók egyike kimondja az ütközést („a társ is kért”). Rontás (a `vonal.js`
+// KERELEM-ága nélkül a kérőnél): mindkét fél a tétlenségi óráig vár, és a kétperces jel miatt a próba ideje alatt egyik sem megy le.
+proba('⭐⭐ a ⑦ lelete: az ÜTKÖZÉS két őrjárat között — mindkettő a másiktól kér ugyanabban a munkában, és mindkét kérelem lemegy',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const PA = 7925, PB = 7927;
+    const helyben = { KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9' };
+    const futok = [];
+    const naplo = { a: '', b: '' };
+    const tiszta = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
+    try {
+      await fut(a, 'koino', 'Ütközés', 'nyilt');
+      await taggaTesziKeszulek(a, b);
+      await fut(a, 'kivisz', join(a, 'p.jsonl'));
+      await fut(b, 'behoz', join(a, 'p.jsonl'));
+      await fut(a, 'tars', '127.0.0.1', String(PB), 'B');
+      await fut(b, 'tars', '127.0.0.1', String(PA), 'A');
+      await fut(a, 'kerelem', 'fejlecek', 'gyoker', helyben);
+      await fut(b, 'kerelem', 'fejlecek', 'gyoker', helyben);
+      const kerelmek = async (hely) => JSON.parse(await readFile(join(await koinoMappa(hely), 'kerelmek.json'), 'utf8').catch(() => '{}'));
+      const elotte = { a: (await kerelmek(a)).fuggo?.length ?? 0, b: (await kerelmek(b)).fuggo?.length ?? 0 };
+      for (const [hely, port, k] of [[a, PA, 'a'], [b, PB, 'b']]) {
+        const o = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(port)],
+          { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
+        o.stdout.on('data', (x) => { naplo[k] += x; });
+        futok.push(o);
+      }
+      const megjott = async (hely) => ((await kerelmek(hely)).kesz ?? [])
+        .some((x) => x.fajta === 'fejlecek' && /^megjött/.test(String(x.eredmeny)));
+      let kesz = { a: false, b: false };
+      const indul = Date.now();
+      for (let i = 0; i < 80 && !(kesz.a && kesz.b); i++) {
+        await varj(500);
+        kesz = { a: await megjott(a), b: await megjott(b) };
+      }
+      const jo = { fuggoVolt: elotte.a === 1 && elotte.b === 1, a: kesz.a, b: kesz.b,
+        utkozes: /a társ is kért/.test(tiszta(naplo.a) + tiszta(naplo.b)) };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) process.stderr.write('    (ütközés: ' + JSON.stringify({ ...jo, ido: Date.now() - indul }) + ')\n'
+        + '    (A napló: ' + tiszta(naplo.a).replace(/\s+/g, ' ').slice(-700) + ')\n'
+        + '    (B napló: ' + tiszta(naplo.b).replace(/\s+/g, ' ').slice(-700) + ')\n');
+      return ok;
+    } finally {
+      for (const f of futok) f.kill();
+      await varj(800);
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
+// ⭐ A ⑦ TEREPI PRÓBA LELETE (2026-11-01) — a függő kérelem célja a KÖTÉS mostani címe is. A terepen a telefon a wifin új címet
+// kapott; a laptop kötése követte, a függő kérelmeinek célja (az induló cím) nem. Itt A egy kézi cserével kötést szerez B-vel (B
+// postaládát futtat), aztán B-t leveszi az induló címek közül; az ezután felvett függő kérelem célja B MOSTANI címe a
+// tábla-aláírójával (a választáskor ebből illik rá a társ a régi címén is — a modul-próba méri). Viselkedést mérünk (A lemezét).
+// Rontás (a kötések nélkül a felvételben): a kérelemnek nincs célja → bukik.
+proba('⭐ a ⑦ lelete: a függő kérelem célja a KÖTÉS mostani címe — a tábla-aláírójával, akkor is, ha az induló címek közt nincs',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const PB = 7929;
+    const helyben = { KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9' };
+    let f = null;
+    try {
+      await fut(a, 'koino', 'Kötés-cél', 'nyilt');
+      await taggaTesziKeszulek(a, b);
+      await fut(a, 'kivisz', join(a, 'p.jsonl'));
+      await fut(b, 'behoz', join(a, 'p.jsonl'));
+      f = spawn(process.execPath, [KOINO_JS, 'figyel', String(PB)],
+        { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...helyben }, stdio: 'ignore' });
+      await varj(1500);
+      await fut(a, 'tars', '127.0.0.1', String(PB), 'B');
+      const csere = await fut(a, 'csere', helyben);
+      await fut(a, 'tars', 'torol', '127.0.0.1', String(PB));
+      const kotes = (await kotesekLemezen(a)).find((k) => (k.cimek ?? []).some((c) => c.port === PB)) ?? null;
+      const felvetel = await fut(a, 'kerelem', 'fejlecek', 'gyoker', helyben);
+      const ny = JSON.parse(await readFile(join(await koinoMappa(a), 'kerelmek.json'), 'utf8').catch(() => '{}'));
+      const fk = (ny.fuggo ?? []).find((x) => x.fajta === 'fejlecek') ?? null;
+      const jo = { kotes: !!kotes, cel: !!fk && fk.celok.some((c) => c.port === PB && c.alairo === kotes?.alairo) };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) process.stderr.write('    (kötés-cél: ' + JSON.stringify({ ...jo, celok: fk?.celok ?? null, csere: csere.slice(-200),
+        felvetel: felvetel.slice(0, 200) }) + ')\n');
+      return ok;
+    } finally {
+      if (f) f.kill();
+      await varj(800);
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ⭐⭐ D118 (②b): A KAPU KOINÓ-SZABÁLYA a parancssoron és a cserén. Az A a szülőben ír egy gondolatot a gyermek születése
 // ELŐTT és egyet UTÁNA; a szülő kivitele a gyermekbe behozva csak az elsőt adja (a második a szülő jelene — „másik koinóé”),
 // és a csere (két „mindent” készülék) ugyanígy viszi tovább a B-nek. Viselkedést mérünk (a két lemezt). ⚠️ A számítás még

@@ -469,3 +469,65 @@ dolgozik, nincs „saját” koinója.
   el” → az őrjárat indítása után a gyermek gondolata a futó lapon, „100 ✓”-val, az alsó sávon a gyermek cseréje; a gyermekben a
   költözés, a felderítések, a program, a koino-verzió, az értesítések és a törzs végpontja teljes választ ad.
 - ⏭️ **Utána a ⑦** (a terepi próba: laptop + telefon, költözés a lapról, aztán a gyermek a lapon).
+
+## 18. 🚧 A ⑦ — a terepi próba (2026-11-01, laptop + telefon, egy wifin)
+
+**A menet** (a laptop a `42bfa68`-on, „mindent” a szülőben; a telefon friss mappával, `~/koino-terep2`, ugyanazon a kódon):
+a laptop új koinót hozott létre („Terepi próba”); a telefon **a lapján csatlakozott** (⑥ — „🔗 Csatlakozás egy koinóhoz…”,
+becenévvel), a lapján vette fel a laptopot társnak, belépett (`belep`, parancssor), a laptop meghívta (`meghiv`, parancssor), és a
+telefon a lapján gondolatot írt, pontot tett. 13:49-kor a laptop **a lapjáról** létrehozta a gyermeket (koino-verzió kártya,
+„terepi gyermek koino”, zárt, a szülő szabályaival) — a futó családi őrjárat a következő körében, újraindítás nélkül felvette, és
+a kártyát a telefonra vitte. 14:06-kor a telefon **a lapján beköltözött** („🧳 Költözés…”), és a téren belépett a gyermekbe.
+
+**Ami működött (mérve, a laptop lemezén és naplójában):**
+- ✅ A **gyermek a telefon súlyával számol**: a laptop gyermek-képében „A telefon gondolata” 100, „Az első gondolat” 41 (a laptop 1
+  + a telefon 40) — a beköltözés (`Bekoltozes`, a vágáskori tagsági bizonyítékkal) a cserén átért, a két réteg (③) számol vele.
+- ✅ A **családi őrjárat** (④–⑥) mindkét gépen: percenként a szülő cseréje, utána ugyanazon a résen a gyermeké („a család közös
+  koinói is”); a telefon a gyermeket a futó őrjáratában vette fel (a 10-25-i 3. lelet a terepen zárva).
+- ✅ A **címváltás**: a telefon ~15:53-kor a wifin új címet kapott (.124 → .144) — a laptop kötése két percen belül követte
+  (a telefon kopogott be a laptop ismert címére), a tábla a telefon nyilvános címét is megtalálta (31.46.x).
+- ✅ **A 10-25-i 1. lelet** (két úton két csere, összeakadt üzenetek) nem jött elő: a kötés három címe közül a kör a rangban
+  elöl álló helyit hívja (D71 (ii)); percenként irányonként egy csere (a két irány a 45. mérés ismert tényezője — a D71 (iii)).
+- ✅ 18:10-kor a telefon a gyermekben gondolatot írt — a születése egy percen belül a laptopon (a gyökérhez bejelentve); a
+  pontjait a laptop („alap” a gyermekben) nem tartja, és kimondja (`a pontjai ismeretlenek`) — ezt a lap kérelme hozná.
+
+**⛔ Két lelet, amit a próba hozott — javítva (2026-11-01, elágazás 222–223):**
+- ⛔⛔ **AZ ÜTKÖZÉS** — a naplóban 15:24 és 15:50 között kétpercenként „a függő kérelem nem ment át: A másik fél nem válaszol (10000
+  ms)”, miközben a cserék ugyanazon a résen percenként lementek. Az ok (a kódból, és két próbával megismételve): egy munkában
+  MINDKÉT fél a függő kérelmét választotta (két „alap” készülék a gyermekben — mindkét lap a másiknál lévőt kérte), és a kérő a
+  társ `KERELEM`-ét átlépte, mint a `NYITAS`-t — mindkettő a tétlenségi óráig várt, és mert a kétperces jel mindkettőnél
+  egyszerre járt le, a következő próbálkozás megint ütközött. ✅ **A javítás** (`vonal.js` `kerelemUtkozes`): a két fél ugyanazt a
+  két üzenetet látja, tehát ugyanúgy dönt — a kisebbik (a JSON-alak szerint; a függő kérelem véletlen azonosítója miatt
+  gyakorlatilag pénzfeldobás) megy elöl, a nagyobbik kérő ugyanazon a kapcsolaton kiszolgálja (a kérelem koinójának példányával —
+  `koino.js` `utkozesKiszolgaloja`, a családi átadás útja: `kerelemAtvetele`), és a sajátja a kétperces jel nélkül a következő
+  munkában megy; ha nem tud kiszolgálni, `KESZ`-t mond. A kérelem, a sorozat, a szelet-kérés és a továbbadás egyaránt.
+  Visszafelé kompatibilis: a régi program nyertesként ugyanígy vár, vesztesként a régi módon akad el.
+- ⛔ **A KÉRELEM CÉLJA NEM KÖVETTE A CÍMVÁLTÁST** — a laptop gyermekbeli függő kérelmeinek egyetlen célja a telefon RÉGI címe
+  (.124) volt, és 17:54-kor (a régi lejárta után) a lap UGYANÍGY vette fel újra, két órával a címváltás után: a célok a raj tartói
+  és az INDULÓ címek (a `tars` paranccsal felvett .124), a kötés (ami a mostani címet tudja) nem. A választás a pontos címet, aztán
+  az azonos IP-t nézte — a .144 egyiknek sem illett. ✅ **A javítás:** a felvételkor a kötéseim is célok (a mostani címükkel és a
+  tábla-aláírójukkal, a raj tartói után, az induló címek előtt); a választáskor a társ a KÖTÉSE szerint is illik (ha a címe egy
+  kötésem címe: a kérelem célja a kötés egy régebbi címe vagy a tábla-aláírója — `fuggoKerelmek.js` `kotesIlleszto`; a pontos cím
+  után, az azonos IP előtt).
+- **A próbák** (+6): a kérelem-próbában három ütközés (két fejléc-kérő; fejléc és szelet; sorozat és fejléc — a vesztes sorozat VEGE
+  nélkül áll meg; mindhárom a tétlenségi órán belül, 4 mp-es órával) és a kötés szerinti illesztés; a parancssorban két valódi
+  őrjárat, mindkettő függő kérelemmel a másik felé (mindkét kérelem lemegy, a napló kimondja az ütközést), és a függő kérelem
+  célja a kötés mostani címe. Rontás: a `vonal.js` KERELEM-ágai nélkül a három ütközés és az őrjáratos próba bukik (41 mp alatt
+  egyik kérelem sem megy le); a kötés-illesztés nélkül az illesztés; a kötések nélkül a felvételben a kötés-cél.
+
+**⏸️ Még nyitott leletek (döntésre vagy mérésre — Csabával átbeszélendő):**
+1. A DHT-n a vakított témáinkon IDEGEN címek is jelentkeznek (egy kopogtató téma más hirdetője), és a kör percenként kopog rájuk
+   (~0,9 MB/nap) — javaslat: a rést soha nem nyitó cím negatív jegyzéke.
+2. A jegyzetlen becenévvel (`KOINO_AZONOSITO`) a program csendben egy üres, régi alakú (szabad nevű) koinót indít — ki kell mondania.
+3. Egy ismeretlen koinónak szóló kérelmet a nyitott koinó szolgál ki (vagy vesz át) — a `vonal.js` „régi út”-ja.
+4. A lap egy elavult entitásra (a böngésző tárolójából) örökös függő kérelmet írt, ami minden ismeretlen bekopogót kérelemre
+   fordított a csere helyett (a kétperces jel vs. a telefon 5 perces köre — az első találkozás csak kézi társfelvétellel ment).
+5. A lap által javasolt őrjárat-parancs 5 perces kört és a 7373-as portot adja (a telefon próbasora ugyanezt használja).
+6. A csatlakozás ablaka „Belépek”-et kínálhatna — különben a lap a régi koinóban marad.
+7. A belépés és a meghívás csak parancssor, és a 43 jeles név nehezen vihető át — ⭐ Csaba kérése: a meghívás felhasználóbarát
+   útja, Termux nélkül (a ⑦ után átbeszéljük).
+8. Apró: a „mindent” laptop parancssora a szülőben „nem tartod”-ot ír; a gyermek a „mindent” beállítást nem örökli (koinónként
+   külön).
+
+⏭️ **A ⑦ folytatása:** a két gép frissítése után a laptop lapja a gyermekben elkéri a telefon gondolatának pontjait (a javított
+úton), a telefon a laptopét — és ha ez megy, a meghívás felhasználóbarát útjának átbeszélése.

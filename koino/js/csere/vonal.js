@@ -1802,11 +1802,13 @@ export async function fajlHozatala(blob, koino, lenyomat, kapcsolatNyitas, beall
  */
 export async function szeletKapcsolaton(tar, koino, kapcsolat, entitas, tovabb = {}, azonossag = {}) {
   const sor = uzenetSor(kapcsolat);
+  const kuld = (u) => kapcsolat.write(JSON.stringify(u) + '\n');
   // ⭐ D93/3: a személyünk (`azonossag.ki` — a rés-réteg írja alá a kézfogás átiratára) — a zárt koinó kapujának.
-  kapcsolat.write(JSON.stringify({ uzenet: 'KERELEM', koino, fajta: 'szelet', kulcs: entitas,
+  const sajatKerelem = { uzenet: 'KERELEM', koino, fajta: 'szelet', kulcs: entitas,
     ...(tovabb.az ? { az: tovabb.az, htl: tovabb.htl } : {}),
     ...(azonossag.ki ? { ki: azonossag.ki } : {}),
-    ...(azonossag.tabla ? { tabla: azonossag.tabla.kulcs, aa: azonossag.tabla.aa } : {}) }) + '\n');
+    ...(azonossag.tabla ? { tabla: azonossag.tabla.kulcs, aa: azonossag.tabla.aa } : {}) };
+  kuld(sajatKerelem);
 
   const erkezett = [];
   let atvette = false;
@@ -1814,6 +1816,14 @@ export async function szeletKapcsolaton(tar, koino, kapcsolat, entitas, tovabb =
   let kesobb = null;
   for (;;) {
     const uzenet = await sor.kovetkezo();
+    // ⭐ A ⑦ lelete: a társ is kérelemmel nyitott (`kerelemUtkozes`) — vagy mi megyünk elöl, vagy kiszolgáljuk, és a miénk vár.
+    if (uzenet.uzenet === 'KERELEM') {
+      if (await kerelemUtkozes(sajatKerelem, uzenet, { kapcsolat, sor, kuld, utkozesben: azonossag.utkozesben }) === 'elol') continue;
+      const r = { entitas, atvette: false, utkozes: true, kapott: 0, uj: 0, ...(tar ? {} : { esemenyek: [] }),
+        bajtKuldott: kapcsolat.bytesWritten, bajtKapott: kapcsolat.bytesRead };
+      console.log('szeletKapcsolaton - VÉGE (ütközés: a társ kérelme ment elöl)', r);
+      return r;
+    }
     if (uzenet.uzenet === 'KESZ') {
       tiltva = uzenet.tiltva === 'zart';
       kesobb = Number.isInteger(uzenet.kesobb) && uzenet.kesobb > 0 ? uzenet.kesobb : null;
@@ -1864,7 +1874,7 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
   const sor = beallitas.sor ?? uzenetSor(kapcsolat);
   const kuld = (u) => kapcsolat.write(JSON.stringify(u) + '\n');
   // ⭐ D102: a mélység (`m` — a válaszoló maga jár be) és a folytatás (`utan`) a `d` (a legjobb ág) helyett.
-  kuld({ uzenet: 'KERELEM', koino, fajta: kerelem.fajta, kulcs: kerelem.kulcs, n: kerelem.n, m: kerelem.m === true,
+  const sajatKerelem = { uzenet: 'KERELEM', koino, fajta: kerelem.fajta, kulcs: kerelem.kulcs, n: kerelem.n, m: kerelem.m === true,
     ...(kerelem.utan ? { utan: kerelem.utan } : {}), ...(beallitas.sorozat ? { sorozat: true } : {}),
     ...(kerelem.az ? { az: kerelem.az, htl: kerelem.htl } : {}),
     // ⭐ D107 L4 (④c): a felajánlás terhe — a bejegyzések és a szerzőik tagsági kísérői.
@@ -1872,15 +1882,21 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
     // ⭐ A kereső-réteg ⑤: a kérdés helye és szövege.
     ...(kerelem.fajta === 'kereses' ? { k: kerelem.k, s: kerelem.s ?? 0, darab: kerelem.darab ?? '0', kerdes: kerelem.kerdes } : {}),
     ...(beallitas.ki ? { ki: beallitas.ki } : {}),
-    ...(beallitas.tabla ? { tabla: beallitas.tabla.kulcs, aa: beallitas.tabla.aa } : {}) });
+    ...(beallitas.tabla ? { tabla: beallitas.tabla.kulcs, aa: beallitas.tabla.aa } : {}) };
+  kuld(sajatKerelem);
+  const bajt = () => ({ bajtKuldott: kapcsolat.bytesWritten, bajtKapott: kapcsolat.bytesRead });
   // A NYITAS-t (és bármi mást) átlépjük, amíg a válasz meg nem jön. ⭐ D93/3: a KELL-re a tagsági csomagunk megy.
   let u;
   for (;;) {
     u = await sor.kovetkezo();
     if (u.uzenet === 'KELL') { kuld(await tagsagValasz(beallitas)); continue; }
+    // ⭐ A ⑦ lelete: a társ is kérelemmel nyitott (`kerelemUtkozes`) — vagy mi megyünk elöl, vagy kiszolgáljuk, és a miénk vár.
+    if (u.uzenet === 'KERELEM') {
+      if (await kerelemUtkozes(sajatKerelem, u, { kapcsolat, sor, kuld, utkozesben: beallitas.utkozesben }) === 'elol') continue;
+      return { kiszolgalta: false, utkozes: true, ...bajt() };
+    }
     if (['FEJLECEK', 'TORZS', 'KESZ', 'ATVESZEM', 'FELAJANLASVALASZ', 'KERESESVALASZ'].includes(u.uzenet)) break;
   }
-  const bajt = () => ({ bajtKuldott: kapcsolat.bytesWritten, bajtKapott: kapcsolat.bytesRead });
   // ⭐ D92/1 (c): a társ nem tartja, de továbbadja — a válasz később, `VALASZ`-ként jön (lépésenként).
   if (u.uzenet === 'ATVESZEM') {
     for (;;) { const v = await sor.kovetkezo(); if (v.uzenet === 'KESZ') break; }
@@ -1973,12 +1989,43 @@ export async function kerelemSorozatKapcsolaton(kapcsolat, koino, kerelmek, beal
     const r = await kerelemKapcsolaton(kapcsolat, koino, k, { ...beallitas, sor, sorozat: lista.length > 1 });
     eredmenyek.push(r);
     // (a „később” után a sorozat megy tovább: a tartó a többire is röviden „később”-t mond, a kérő mindet megjegyzi)
-    if (r.tiltva) break;
+    // ⭐ A ⑦: az ütközésben átengedtük a társ kérelmét — a sorozatunk a következő munkában jön (a társ már nem vár tőlünk többet).
+    if (r.tiltva || r.utkozes) break;
   }
-  if (lista.length > 1 && !eredmenyek.at(-1)?.tiltva) {
+  if (lista.length > 1 && !eredmenyek.at(-1)?.tiltva && !eredmenyek.at(-1)?.utkozes) {
     try { kapcsolat.write(JSON.stringify({ uzenet: 'VEGE' }) + '\n'); } catch { /* zárt */ }
   }
   return eredmenyek;
+}
+
+/**
+ * ⭐⭐ AZ ÜTKÖZÉS (a ⑦ terepi próba lelete, 2026-11-01): a társ is KÉRELEMMEL nyitott — egy munkában mindketten egymástól
+ * kérünk (két „alap” készülék, mindkettő a másiknál lévőt kéri; a családi munkában a közös koinó helyén a két fél egyszerre
+ * lép). A kérő a társ kérelmét eddig átlépte, mint a NYITAS-t, és mindkét fél a tétlenségi óráig várt — mérve a terepen: fél
+ * órán át kétpercenként „a másik fél nem válaszol”, a két kérelem egyike sem ment le.
+ *
+ * ⭐ A két fél UGYANAZT a két üzenetet látja (a sajátját és a társét — a JSON-alakjuk a vonalon oda-vissza ugyanaz), tehát
+ * ugyanúgy dönt: a KISEBBIK (a függő kérelem véletlen azonosítója miatt gyakorlatilag pénzfeldobás) megy elöl — annak a kérője
+ * tovább vár —, a nagyobbik kérő a társ kérelmét kiszolgálja ugyanazon a kapcsolaton (`utkozesben` — a hívó adja: a kérelem
+ * koinójának példányával, ugyanaz az út, mint a családi átadásé), és a sajátja függőben marad (a következő munkában megy). Ha
+ * nem tud kiszolgálni (nincs kiszolgálója, ismeretlen koinó, vagy a két kérelem bájtra egyforma), `KESZ`-t mond, hogy a társ ne
+ * várjon a tétlenségi óráig.
+ * @returns {Promise<'elol'|'atengedtem'>}
+ */
+async function kerelemUtkozes(sajat, masik, { kapcsolat, sor, kuld, utkozesben }) {
+  const a = JSON.stringify(sajat), b = JSON.stringify(masik);
+  if (a < b) {
+    console.log('kerelemUtkozes - a mi kérelmünk megy elöl', { fajta: sajat.fajta, tarse: masik.fajta });
+    return 'elol';
+  }
+  let kiszolgalt = null;
+  if (a > b && typeof utkozesben === 'function') {
+    try { kiszolgalt = await utkozesben(masik, { kapcsolat, sor }); }
+    catch (hiba) { console.warn('kerelemUtkozes - a társ kérelmét nem sikerült kiszolgálni', { ok: hiba.message }); }
+  }
+  if (!kiszolgalt) { try { kuld({ uzenet: 'KESZ' }); } catch { /* zárt */ } }
+  console.log('kerelemUtkozes - a társ kérelme ment elöl', { tarse: masik.fajta, kiszolgaltuk: !!kiszolgalt });
+  return 'atengedtem';
 }
 
 /** ⭐ D93/3: a `KELL`-re adott válasz — a tagsági csomagunk (ha van; ha nincs, üresen — a társ így is dönt). */
