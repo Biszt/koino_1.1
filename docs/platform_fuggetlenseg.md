@@ -263,6 +263,38 @@ hogy **a meglévő, idegen kézben lévő eszközökön is működjön.**
 
 ---
 
+## 11. A szabály, ahogy életbe lépett — a „haladó út” (2026-11-01)
+
+*Csaba kérdése: „ha jól tudom, a google, 2027-től kialkudott rendeletét, ki lehet kapcsólni, haladó beállításokkal a
+telefonokon” — utánanéztem (a Google fejlesztői oldala, 2026-10-23-i állapot, és az Ars Technica 2026-03-19-i cikke).*
+
+- **Az ütemezés:** 2026 augusztusában indult a „haladó út” (advanced flow), 2026. szeptember 30-tól négy országban (Brazília,
+  Indonézia, Szingapúr, Thaiföld) a tanúsított, Android 7+ készülékeken a részt vevő boltokból telepítésre él a szabály, és
+  **2027-ben terjesztik ki világszerte, minden alkalmazásra** — Magyarországon tehát 2027-től.
+- **Alapállásban** a tanúsított telefon csak azonosított fejlesztő (személyi okmány, az aláíró kulcs bejelentése, 25 dollár)
+  alkalmazását telepíti.
+- **A haladó út** (egyszeri, telefononként): a fejlesztői beállítások bekapcsolása (a build-szám hétszeri megérintése) →
+  „Allow Unverified Packages” → megerősítés, hogy senki nem kényszerít → PIN → újraindítás → **24 óra várakozás** → „ideiglenesen
+  (7 nap)” vagy „véglegesen” → a kockázat elfogadása. Utána az azonosítatlan csomag „Install anyway”-jel telepíthető, és a
+  fejlesztői beállítások ki is kapcsolhatók. A beállítás el van rejtve (a rendszer nem kínálja fel); a 24 óra a csalók sürgető
+  trükkjei ellen van.
+- **Mellette:** a nyílt forrású tárolókban (F-Droid) a fejlesztő regisztrálhat (akkor a telepítés a régi), vagy nem (akkor a
+  felhasználónak a haladó út kell); „korlátozott terjesztési” fiók (legfeljebb 20 készülék, okmány és díj nélkül); és másodlagos
+  források szerint az ADB-s telepítés is megmarad.
+
+**Mit jelent a koinónak:**
+1. ✅ **A Termux-út (D30 után) biztosabb, mint gondoltuk:** ha a Termux fejlesztői regisztrálnak, semmi nem változik; ha nem,
+   a felhasználó EGYSZER végigmegy a haladó úton (egy nap várakozással), és utána a Termux és vele a koinó fut. *(A Termux
+   regisztrációjáról 2026-11-01-én nem találtam hírt — 2027-ben, a magyarországi indulásnál megnézendő.)*
+2. ⛔ **A D30 következtetése áll:** a kapcsoló a Google-é — ma a felháborodás miatt létezik, a fejlesztői beállítások mélyén, és
+  a felületét és a működését a Google adja minden gyártó telefonjára; egy rendszerfrissítéssel szigorítható vagy elvehető. A
+  koinó tehát nem épülhet rá, de **egy újabb sáv a létrán** (4. szakasz) a Termux és a kézi út között: a koinó akkor is
+  telepíthető, ha a Termux (vagy egy későbbi saját alkalmazás) nincs regisztrálva.
+3. ⚠️ **A súrlódás valódi:** egy átlagos családtagnak a rejtett menü és a 24 óra akadály — ezért marad a fő út a Termux egy
+  bemásolt sorral (elágazás 224), és a haladó út a tartalék.
+
+---
+
 ## Napló
 
 - **2026-08-28** — A híd elkészült, és **Csaba feloldotta a fagyasztást**.
@@ -279,6 +311,10 @@ hogy **a meglévő, idegen kézben lévő eszközökön is működjön.**
 
   *Ez a negyedik és ötödik alkalom, hogy Csaba percekkel korábban leírt szabályban talált
   hibát. A minta változatlan: a friss levezetést nem szabad véglegesnek tekinteni.*
+
+- **2026-11-01** — **11. szakasz:** a szabály, ahogy életbe lépett — a Google „haladó útja” (egyszeri, 24 órás várakozással) a
+  nem regisztrált alkalmazásokra; a D30 következtetése áll (a kapcsoló a Google-é), de a Termux-út tartaléka lett. Csaba
+  kérdése nyomán; Csaba döntése előtte: *„a d30-as szabályt ne rugjuk fel. maradjon a termux.”*
 
 - **2026-09-02** — Csaba pihenőidő alatt írt jegyzetei
   ([`pihenosIdoAlattiGondolatok.md`](pihenosIdoAlattiGondolatok.md)) **három állítást
