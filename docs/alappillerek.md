@@ -1670,3 +1670,10 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     (MH4) · ⛔ mérve: a hosszan futó felület a belépőt nem látta, amíg a tárat nem olvasta újra (D100) · ⛔ elvetve: a belépők a tár
     végigolvasásával (a koinóval nőne — 9. szabály); egyszer használható jel (MH2 (A)) · ⛔ LELET: nyílt koinóban az „alap”
     meghívóhoz a belépés nem ér át (a szigorú (b) közös halmazában nincs) — ⏸️ MH7 Csabánál · `meghivas_atvizsgalas.md` 7.
+227. **2026-11-02 · D121 MH7 (A) — a meghívás nyílt koinóban is (Csaba: „elfogadom az (A)-t”)**
+    → **a nyílt koinó kapuja is elkéri a még ismeretlen társ személyét (a zárt kapu köre — első találkozáskor +0,5 KB, utána
+    semmi; nem zár), és a tag készülék a nem tag társ hiányzó belépésére függő szelet-kérelmet vesz fel (a válasz az átmeneti
+    tárba)** · ⭐ a közös halmaz (D97/1) érintetlen — a társ azonosság-szeletét a részvételi halmazba tenni a változat-naplót
+    társanként forgatta volna (minden rendes cserén a változást küldeni); a kérelem a meglévő út (a ma javított ütközéssel) ·
+    ⛔ elvetve: (B) a csak küldő út új fogadó-szabállyal (a fogadó csak egészében tartott szeletből kér — új kivétel a csere
+    közös rétegében); (C) csak zárt koinóban · `meghivas_atvizsgalas.md` 7.

@@ -1511,6 +1511,55 @@ proba('⭐⭐ D121: a meghívás a lapon — A a meghívót a lapjáról adja, B
     }
   });
 
+// ⭐⭐ D121 MH7 (A): A MEGHÍVÁS NYÍLT KOINÓBAN, „ALAP” KÉSZÜLÉKEKKEL (a szigorú (b)). ⛔ Mérve (2026-11-01): enélkül a belépő
+// belépése az „alap” meghívóhoz nem ért át (a közös halmazban nincs — „Nincs ilyen azonosító”). A egy NYÍLT koinó alapítója,
+// őrjárata fut; B a parancssorban a meghívóval csatlakozik és belép, az őrjárata fut. ⭐ Viselkedést mérünk: A belépői között
+// (`belepok`) megjelenik B — a kódjával —, A a kóddal meghívja, és B tag lesz (`tagsag`). Rontás: a nyílt kapu nem kéri el az
+// ismeretlen társ személyét → B nem jelenik meg; a belépő szeletének kérése nélkül → B belépése nincs meg; a belépők jegyzéke
+// csak a tartós tárból → B nem jelenik meg; a meghívás adatai csak a tartós tárból → a meghívás elbukik.
+proba('⭐⭐ D121 MH7: a meghívás NYÍLT koinóban, „alap” készülékekkel — a belépő a meghívó jegyzékében a kódjával, a meghívás után tag',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const PA = 7943, PB = 7945;
+    const helyben = { KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9', KOINO_KISZOLGALAS: 'alap' };
+    const futok = [];
+    const inditas = (hely, port) => {
+      const o = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(port)],
+        { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...helyben }, stdio: 'ignore' });
+      futok.push(o);
+    };
+    try {
+      await fut(a, 'koino', 'Nyílt meghívó-próba', 'nyilt', helyben);
+      inditas(a, PA);
+      await varj(3000);
+      const sz = ((await fut(a, 'meghivo', helyben)).match(/koino-meghivo:1:[A-Za-z0-9_-]+/) ?? [])[0] ?? '';
+      const csat = await fut(b, 'csatlakoz', sz, helyben);
+      const kod = (csat.match(/kódod: ([0-9A-Z]{3}-[0-9A-Z]{3})/) ?? [])[1] ?? null;
+      inditas(b, PB);
+      let belepok = '';
+      for (let i = 0; i < 40 && !(kod && belepok.includes(kod)); i++) {
+        await varj(1000);
+        belepok = await fut(a, 'belepok', helyben);
+      }
+      const meghiv = kod && belepok.includes(kod) ? await fut(a, 'meghiv', kod, helyben) : '';
+      let tagsag = '';
+      for (let i = 0; i < 40 && !/✔ tag/.test(tagsag); i++) {
+        await varj(1000);
+        tagsag = await fut(b, 'tagsag', helyben);
+      }
+      const jo = { kod: !!kod, belepo: !!kod && belepok.includes(kod), meghivva: /Meghívtad/.test(meghiv), tag: /✔ tag/.test(tagsag) };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) process.stderr.write('    (MH7: ' + JSON.stringify({ ...jo, csat: csat.slice(-300), belepok: belepok.slice(0, 300),
+        meghiv: meghiv.slice(-200), tagsag: tagsag.slice(0, 200) }) + ')\n');
+      return ok;
+    } finally {
+      for (const f of futok) f.kill();
+      await varj(1000);
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ⭐⭐ D118 (②b): A KAPU KOINÓ-SZABÁLYA a parancssoron és a cserén. Az A a szülőben ír egy gondolatot a gyermek születése
 // ELŐTT és egyet UTÁNA; a szülő kivitele a gyermekbe behozva csak az elsőt adja (a második a szülő jelene — „másik koinóé”),
 // és a csere (két „mindent” készülék) ugyanígy viszi tovább a B-nek. Viselkedést mérünk (a két lemezt). ⚠️ A számítás még

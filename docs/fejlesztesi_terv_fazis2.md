@@ -6186,6 +6186,10 @@ rugjuk fel. maradjon a termux.” (a telefonra a program egy bemásolt sorral ke
 5. **MH5:** a meghívó oldalán „👋 Belépők” ablak a fő menüben, és a készülék értesítése az új belépőről (D103).
 6. **MH6:** két külön hálózat között a belépő a meghívó készülékének kopogtató témáján jelentkezik (a D92/1 útja); ugyanazon
    a wifin a helyi cím.
+7. **MH7** (Csaba, 2026-11-02: *„elfogadom az (A)-t, mehetünk tovább”*) — a mért lelet (nyílt koinóban az „alap” meghívóhoz a
+   belépés nem ért át) javítása: a nyílt koinó kapuja is elkéri a még ismeretlen társ személyét (a zárt kapu köre, nem zár), és
+   ha a társ nem tag, a belépése pedig még nincs a tag készüléknél, az azonosság-szeletét függő kérelemmel elhozza (az átmeneti
+   tárba); a belépők jegyzéke és a meghívás a két tárból olvas.
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 

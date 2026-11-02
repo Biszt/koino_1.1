@@ -124,6 +124,13 @@ Csaba: *„minden javaslatodat, elfogadom, mehetünk tovább.”* — MH1–MH6 
   függetlenül egyezteti (nem zár — csak a kért szelet kerül a közösbe); így a belépők jegyzéke is mindkét fajtában telik · (B) a
   még nem tag belépő a saját azonosság-szeletét a csak küldő úton is felajánlja, és a fogadó az átmeneti tárába veszi (új fogadó-
   szabály) · (C) a lapos meghívás csak zárt koinóban; nyílt koinóban a meghívó „mindent” módban vagy a kézi úton.
+- ✅ **MH7 (A)** (Csaba, 2026-11-02: *„elfogadom az (A)-t, mehetünk tovább”*; elágazás 227): a nyílt koinó kapuja is elkéri a
+  még ismeretlen társ személyét (`tarsKapuja` — `kell`, nem zár; a feljegyzés `azonossagok.json`), és ha a társ nem tag, a
+  belépése pedig nincs a két tár egyikében sem, a tag készülék függő szelet-kérelmet vesz fel a horgonyára a társ címével
+  (`belepoSzeleteKerese` — a következő munka hozza, az átmeneti tárba); a belépők jegyzéke és a meghívás adatai a két tárból
+  (`ketTarNezet`; a teljes horgony közvetlenül). ⭐ A közös halmaz (D97/1) gépezetéhez nem kellett nyúlni — két meglévő út: a
+  kapu köre és a kérelem. Mérve (parancssor, nyílt koinó, két „alap” őrjárat): a belépő 4 mp után a jegyzékben, a meghívás után 2
+  mp-cel tag; 4 rontás mind bukik.
 - ⏭️ **Hátra:** ③ a jelentkezés két hálózat között (MH6 — a meghívó készülékének kopogtató témája) · ④ az értesítés az új
   belépőről (MH5) · ⑤ a lap (a „➕ Meghívás…”, a „👋 Belépők”, a csatlakozás ablaka a meghívóval, a várakozó belépő kódja) · ⑥
   a terep (egy friss e-ember a telefonon: egy bemásolt sor és egy meghívó).

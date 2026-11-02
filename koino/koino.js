@@ -1586,9 +1586,11 @@ async function horgonyok() {
  */
 async function allitasAdatai(horgonyToredek) {
   if (!horgonyToredek) throw new Error('Melyik horgonyra? (a másik ember `belep`-jének azonosítója)');
-  const horgonya = feloldas(horgonyToredek, await horgonyok());
+  // ⭐ D121 MH7 (A): a teljes horgony közvetlenül (a belépő belépése az átmeneti tárban is lehet — a rövid alakot a tartós
+  // tár horgonyaiból oldjuk fel), és az esemény a két tárból.
+  const horgonya = azonositoAlaku(horgonyToredek) ? horgonyToredek : feloldas(horgonyToredek, await horgonyok());
 
-  const horgonyEsemeny = await esemenyLekerese(tar, horgonya);
+  const horgonyEsemeny = await esemenyLekerese(tar, horgonya) ?? await atmeneti.esemeny?.(horgonya);
   if (!horgonyEsemeny) throw new Error('Nem ismerem ezt a horgonyt: ' + horgonyToredek);
 
   const sajatBelepes = await sajatHorgonyom();
@@ -1660,6 +1662,23 @@ async function meghivoSzovege({ nev = null } = {}) {
 }
 
 /**
+ * ⭐⭐ D121 MH7 (A): A BELÉPŐ AZONOSSÁG-SZELETE — ha a társ (a bizonyított személyével) nem tag, a belépése még nincs nálam (a
+ * két tár egyikében sem), és én tag vagyok (meghívni csak tag tud), függő szelet-kérelem a horgonyára, a társ címével (a
+ * kérelem a következő munkában megy, a válasz az átmeneti tárba). Zárt koinóban a kapu korlátozott útja úgyis elhozza — ott a
+ * belépés már megvan, és ez nem kér semmit.
+ */
+async function belepoSzeleteKerese(szemely, tars) {
+  if (!azonositoAlaku(szemely?.h)) return false;
+  if (await tar.esemeny(szemely.h) || await atmeneti.esemeny?.(szemely.h)) return false;
+  const h = await sajatHorgonyom();
+  if (!h || !(await tagE(tar, KOINO, h).catch(() => ({ igen: false }))).igen) return false;
+  if ((await tagE(tar, KOINO, szemely.h).catch(() => ({ igen: false }))).igen) return false;
+  await fuggoKerelemFelvetele({ fajta: 'szelet', kulcs: szemely.h },
+    { cimek: tars?.cim ? [{ hoszt: tars.cim, port: Number(tars.port) }] : [] });
+  return true;
+}
+
+/**
  * ⭐ D121 (④): A BELÉPŐK — akik a cserében a személyükkel jelentkeztek (a zárt kapu jegyzi: `azonossagok.json`, korlátos), a
  * belépésük nálam van, és még nem (ellenőrzött) tagok; mindegyiknél az ellenőrző kód és a profil (ha a koinó vár). ⭐ A terhe a
  * jegyzék mérete (≤ 256), nem a koinóé (9. szabály). A legutóbb látott elöl.
@@ -1671,15 +1690,18 @@ async function belepokJegyzeke() {
   const szuletes = await koinoSzuletese();
   const varja = Array.isArray(szuletes?.adat?.profil) ? szuletes.adat.profil : [];
   const blob = fajlBlobTarolo(KOINO);
+  // ⭐ MH7 (A): a belépő azonosság-szelete nyílt koinóban a kérelemmel jön — az átmeneti tárba (`belepoSzeleteKerese`)
+  const olv = ketTarNezet(tar, atmeneti);
+  await atmeneti.frissit?.();
   const ki = [];
   for (const x of Object.values(await azonossagokOlvasasa())) {
     if (!azonositoAlaku(x?.h) || x.h === sajat || typeof x.sz !== 'string') continue;
-    const e = await tar.esemeny(x.h);
+    const e = await olv.esemeny(x.h);
     if (!e || e.tipus !== 'Belepes' || e.szerzo !== x.sz) continue;
     if ((await tagE(tar, KOINO, x.h).catch(() => ({ igen: false }))).igen) continue;
     let profil = null;
     if (varja.length) {
-      const p = (await entitasEsemenyei(tar, KOINO, x.h)).filter((y) => y.tipus === 'Profil' && y.szerzo === x.sz)
+      const p = (await entitasEsemenyei(olv, KOINO, x.h)).filter((y) => y.tipus === 'Profil' && y.szerzo === x.sz)
         .sort((a, b) => b.sorszam - a.sorszam)[0];
       profil = { kell: varja, van: !!p, mezok: null };
       if (p) {
@@ -4589,6 +4611,13 @@ async function tarsKapuja({ tabla = null, ki = null, csomag = null } = {}) {
     // (csomagot itt nem kérünk — a kapu nem zár; a cserében személy nincs, ott a tábla-kulcs számít).
     // ⛔ A tag-kérdés hibája itt nem zárhat be egy nyílt koinót — csak a „tag” jel marad el.
     const tag = ki ? await tagsagItelete(ki).then((r) => r.igen, () => false) : false;
+    // ⭐⭐ D121 MH7 (A): a nyílt koinó kapuja is elkéri a még ISMERETLEN társ személyét (a zárt kapu köre — első találkozáskor
+    // +0,5 KB, utána semmi: 64. mérés), és megjegyzi — a belépők jegyzéke ebből telik (a meghívó ebből tudja, ki jelentkezett).
+    // ⛔ Nem zár: a csere a személy nélkül is megy (`szabad`). ⛔ Mérve (2026-11-01): enélkül nyílt koinóban az „alap” meghívó
+    // a belépőről semmit nem tudott meg.
+    if (ki && typeof tabla?.alairo === 'string') await azonossagKotese(tabla.alairo, ki.sz, ki.h ?? null);
+    const ismert = ki || (typeof tabla?.alairo === 'string' && (await azonossagokOlvasasa())[tabla.alairo]);
+    if (!ismert && typeof tabla?.alairo === 'string') return { szabad: true, kell: true, ok: 'nyílt koinó — ismeretlen társ', tag };
     return { szabad: true, ok: 'nyílt koinó', tag };
   }
   // A társ személye: a most bizonyított, vagy a tábla-kulcsához kötött.
@@ -5168,6 +5197,12 @@ function resMunka(allapot, halo, tars) {
 
     // ⭐ D99: a sikeres csere ideje a társ tábla-aláírója alatt (a kör ebből tudja, hogy ebben a fél körben már beszéltünk).
     if (alairo) utolsoCsereTarssal.set(alairo, Date.now());
+    // ⭐⭐ D121 MH7 (A): a társ a cserében bizonyította a személyét — ha nem tag, és a belépése még nincs nálam, elkérem az
+    // azonosság-szeletét (a következő munka hozza, az átmeneti tárba): a meghívó így látja a belépőt nyílt koinóban is.
+    if (csere.tarsAzonossaga?.h) {
+      try { await belepoSzeleteKerese(csere.tarsAzonossaga, tars); }
+      catch (hiba) { console.warn('a belépő szeletének kérése nem sikerült', { ok: hiba.message }); }
+    }
     // ⭐ Az alsó sáv (2026-10-15): a lap ebből mondja ki a csere idejét, és ha újat hozott, frissül (a bekopogó cseréje is).
     await csereAllapota().modosit((a) => csereFeljegyzese(a, { uj: alap.uj, kuldott: alap.kuldott, most: Date.now() }));
     // ⭐ D109 (KK4): a csere is kiszolgálás — a kiküldött bájtok a társ osztálya szerint könyvelődnek (a kötés csak könyvelődik).
