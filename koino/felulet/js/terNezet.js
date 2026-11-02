@@ -70,8 +70,9 @@ export class TerNezet {
       // ⭐ D119 (⑥): a friss készülék — a csatlakozás és a társ a tér sávján (eddig csak parancs volt).
       const ures = document.createElement('p');
       ures.className = 'koino-megjegyzes';
-      ures.textContent = 'Ez a készülék még egy koinót sem ismer. Ha meghívtak: „🔗 Csatlakozás egy koinóhoz…” (a koinó nevével), '
-        + 'és „🤝 Társak…” (a meghívód címével) — a tér sávján.';
+      // ⭐⭐ D121 (⑤): a meghívó — egy beillesztés, a többi magától
+      ures.textContent = 'Ez a készülék még egy koinót sem ismer. Ha meghívtak: a meghívót (egy „koino-meghivo:1:…” szöveget) illeszd '
+        + 'be a „🔗 Csatlakozás egy koinóhoz…” ablakban — a tér sávján; a többi magától megy.';
       this.kontener.appendChild(ures);
     }
 

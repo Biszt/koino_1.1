@@ -1677,3 +1677,10 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     társanként forgatta volna (minden rendes cserén a változást küldeni); a kérelem a meglévő út (a ma javított ütközéssel) ·
     ⛔ elvetve: (B) a csak küldő út új fogadó-szabállyal (a fogadó csak egészében tartott szeletből kér — új kivétel a csere
     közös rétegében); (C) csak zárt koinóban · `meghivas_atvizsgalas.md` 7.
+228. **2026-11-02 · D121 ③–⑤ — a jelentkezés, az értesítés, a lap**
+    → **③ (MH6) a meghívó elfogadása cél nélküli függő kérelmet vesz fel a koinó születésére, a meghívó készülékének
+    kopogtatójával — két hálózat között ezen jelentkezik a belépő; ④ (MH5) az őrjárat az új belépőről a készülék értesítésével
+    szól (a kódjával, belépőnként egyszer); ⑤ a lap: „✉️ Meghívás…”, „👋 Belépők”, a csatlakozás ablaka a meghívóval és a
+    várakozással** · ⭐ a cél nélküli kérelem ugyanazon a wifin nem lassít (a munka csak ismeretlen bekopogónál választja) · ⛔
+    elvetve: a jelentkezés a meghívó címére szóló céllal (az a csere helyett kérelmet futtatott volna a közvetlen úton is — egy
+    körrel lassabb); a QR-kód (MH1 (A): később) · `meghivas_atvizsgalas.md` 7.

@@ -67,6 +67,7 @@
 @import './components/koinoVerzio.css';
 @import './components/koinoTorzs.css';
 @import './components/koinoCsatlakozas.css';
+@import './components/koinoMeghivas.css';
 
 /* ===== A LAP VÁZA — ami a prototípus főoldalán nem volt =====
    ⭐ 2026-10-15 óta a fő menü és az infók a prototípus alsó sávjában ülnek (`foOldal.css`); a felső fejléc megszűnt.

@@ -3016,10 +3016,11 @@ async function tartottSzeleteim() {
  * szeleté vagy a gyökér darabjaié). ⛔ Önmagunkat nem kérdezzük. ⭐ A felület `dht: false`-szal hívja: a DHT-n keresni és
  * jelentkezni az őrjárat címjegyzék-köre úgyis megteszi (új függőnél azonnal) — egy lapletöltés ne kerüljön KB-okba.
  * @param {{fajta: string, kulcs: string, n?: number, m?: boolean, utan?: {p: number, az: string}}} k
- * @param {{cimek?: Array<Object>, dht?: boolean}} [b]
+ * ⭐ D121 MH6 (A): `kopogtatok` — további kopogtató témák (a meghívó készüléke: `{ fajta: 'keszulek', kulcs: <tábla-aláíró> }`).
+ * @param {{cimek?: Array<Object>, dht?: boolean, kopogtatok?: Array<Object>}} [b]
  * @returns {Promise<{r: Object, kopogtatok: Array<Object>, kp: number}>}
  */
-async function fuggoKerelemFelvetele(k, { cimek = null, dht = false } = {}) {
+async function fuggoKerelemFelvetele(k, { cimek = null, dht = false, kopogtatok: tovabbiKopogtatok = [] } = {}) {
   const induloCelok = [...(cimek ?? tarsakSorrendje(await tarsakTarolo().olvas()).map((c) => ({ hoszt: c.hoszt, port: Number(c.port) })))];
   const celok = [];
   const kopogtatok = [];
@@ -3071,6 +3072,10 @@ async function fuggoKerelemFelvetele(k, { cimek = null, dht = false } = {}) {
   } catch { /* a kötés-jegyzék segédeszköz */ }
   // Az induló címek a raj tartói UTÁN (a raj tartója biztosan tartja X-et; az induló cím nem feltétlenül).
   celok.push(...induloCelok.filter((c) => !celok.some((x) => x.hoszt === c.hoszt && Number(x.port) === Number(c.port))));
+  for (const t of tovabbiKopogtatok) {
+    if (t && typeof t.fajta === 'string' && typeof t.kulcs === 'string'
+      && !kopogtatok.some((x) => x.fajta === t.fajta && x.kulcs === t.kulcs)) kopogtatok.unshift({ fajta: t.fajta, kulcs: t.kulcs });
+  }
   // ⛔ ÖNMAGUNKAT NEM KÉRDEZZÜK: a saját gyökér-darabunkat mi is hirdetjük, a DHT a mi címünket is visszaadja
   // (a gép címe + a futó kapu portja — a 42. mérés tanulsága: a készülék önmagát hívogatta).
   const sajatGep = await sajatOsszesCim();
@@ -3347,8 +3352,43 @@ async function felderitesKor() {
 }
 async function orjaratErtesitesei() {
   orjaratNezete ??= ujPakliNezet({ osszegzesek: ellenorzottOsszegzesek, tartott: tartottSzeleteim });
-  return postafiokFrissitese({ tar: ketTarNezet(tar, atmeneti), koino: KOINO, nezet: orjaratNezete,
+  const ki = await postafiokFrissitese({ tar: ketTarNezet(tar, atmeneti), koino: KOINO, nezet: orjaratNezete,
     bemondasok: await bemondasok(), szerzo, szunet: POSTAFIOK_ORJARAT_SZUNET });
+  // ⭐⭐ D121 MH5 (A): az új belépő — a készülék értesítése (belépőnként egyszer)
+  try {
+    const n = await ujBelepokJelzese();
+    if (n) ki.kuldve = (ki.kuldve ?? 0) + n;
+  } catch (hiba) {
+    console.warn('orjaratErtesitesei - az új belépők jelzése nem sikerült', { ok: hiba.message });
+  }
+  return ki;
+}
+
+/**
+ * ⭐⭐ D121 MH5 (A): AZ ÚJ BELÉPŐ JELZÉSE — ha tag vagyok (meghívni csak tag tud), és a belépők jegyzékében új horgony van, a
+ * készülék saját értesítése (D103 — ha a beállítás engedi), belépőnként egyszer (`<koino>/belepok-jelzett.json`, korlátos). Az
+ * értesítés a kódot is mondja: meghívni a lapon lehet, csak ha a belépő ugyanezt a kódot mondta be (MH3).
+ * @returns {Promise<number>} hány értesítés ment ki
+ */
+const BELEPO_JELZES_KORLAT = 256;
+async function ujBelepokJelzese() {
+  const h = await sajatHorgonyom();
+  if (!h || !(await tagE(tar, KOINO, h).catch(() => ({ igen: false }))).igen) return 0;
+  const lista = await belepokJegyzeke();
+  if (!lista.length) return 0;
+  const fajl = join(alapHely(), KOINO, 'belepok-jelzett.json');
+  let jelzett = [];
+  try { jelzett = JSON.parse(await readFile(fajl, 'utf8')); } catch { jelzett = []; }
+  if (!Array.isArray(jelzett)) jelzett = [];
+  const ujak = lista.filter((b) => !jelzett.includes(b.horgony));
+  if (!ujak.length) return 0;
+  await writeFile(fajl, JSON.stringify([...jelzett, ...ujak.map((b) => b.horgony)].slice(-BELEPO_JELZES_KORLAT)), 'utf8');
+  const beallitasok = beallitasokAlakja(await ertesitesTarolo(KOINO).beallitasOlvas());
+  if (!beallitasok.globalis?.emailErtesites) return 0;
+  const r = await keszulekErtesitese([{ cim: 'koino — új belépő',
+    szoveg: (ujak.length === 1 ? 'Egy új belépő vár, a kódja: ' + ujak[0].kod : ujak.length + ' új belépő vár, a kódjuk: '
+      + ujak.slice(0, 5).map((b) => b.kod).join(', ')) + '. Meghívni a lap „👋 Belépők” ablakában lehet — csak ha a kódot tőle hallottad.' }]);
+  return r.kuldve;
 }
 
 /**
@@ -6010,9 +6050,22 @@ async function meghivoElfogadasa(szoveg, { becenev = null, felulir = false, peld
     const t = await tarsFelvetele({ hoszt: c.hoszt, port: c.port, nev: m.nev ?? 'meghívó' });
     tarsak.push({ ...c, ...(t.sajat ? { sajat: true } : {}) });
   }
-  const b = await (await koinoPeldanyEgyszer(m.koino)).belepesHaNincs();
+  const p = await koinoPeldanyEgyszer(m.koino);
+  const b = await p.belepesHaNincs();
+  // ⭐⭐ D121 MH6 (A): A JELENTKEZÉS KÉT HÁLÓZAT KÖZÖTT — függő kérelem a koinó születésére, CÉL NÉLKÜL, csak a meghívó
+  // készülékének kopogtatójával: az őrjáratom a DHT-n jelentkezik a meghívó készülék-témáján (D92/1), a meghívó őrjárata
+  // visszakopog, és a rés megnyílik. Ugyanazon a wifin nem zavar: ott a csere a felvett címen megy (a cél nélküli kérelmet a
+  // munka csak egy ismeretlen bekopogónál választja — amikor épp kopogtatunk).
+  let jelentkezes = false;
+  try {
+    await p.fuggoKerelemFelvetele({ fajta: 'szelet', kulcs: m.koino }, { cimek: [], dht: false,
+      kopogtatok: [{ fajta: 'keszulek', kulcs: m.alairo }] });
+    jelentkezes = true;
+  } catch (hiba) {
+    console.warn('meghivoElfogadasa - a jelentkezés (a kopogtató) nem vehető fel', { ok: hiba.message });
+  }
   return { koino: m.koino, meghivoNeve: m.nev, alairo: m.alairo, tarsak, horgony: b.horgony, ujBelepes: b.uj,
-    kod: ellenorzoKod(b.horgony), csatlakozas: cs };
+    kod: ellenorzoKod(b.horgony), csatlakozas: cs, jelentkezes };
 }
 
 /** ⭐⭐ D119 (③): a családom másik koinójának szóló kérés átadása annak a példányának (null, ha nincs ilyen példány). */
@@ -10122,7 +10175,8 @@ try {
         }
         // ⭐⭐ D121 (②): A TAGSÁGOM — a belépő lapja ebből mondja: „várakozás a meghívásra — a kódod: …”, vagy „✅ tag vagy”.
         if (utvonal === '/api/tagsagom') {
-          return { adat: await tagsagAllapotom() };
+          const o = (await koinokOrjaratai(await ismertKoinok(alapHely()))).get(KOINO) ?? null;
+          return { adat: { ...(await tagsagAllapotom()), orjarat: o } };
         }
 
         // ⭐ D112 ⑤: a felderítések és az állásuk (a rögzített rész mérete az átmeneti tárból), és a beállítás határai.

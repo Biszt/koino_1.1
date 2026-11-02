@@ -131,6 +131,20 @@ Csaba: *„minden javaslatodat, elfogadom, mehetünk tovább.”* — MH1–MH6 
   (`ketTarNezet`; a teljes horgony közvetlenül). ⭐ A közös halmaz (D97/1) gépezetéhez nem kellett nyúlni — két meglévő út: a
   kapu köre és a kérelem. Mérve (parancssor, nyílt koinó, két „alap” őrjárat): a belépő 4 mp után a jegyzékben, a meghívás után 2
   mp-cel tag; 4 rontás mind bukik.
-- ⏭️ **Hátra:** ③ a jelentkezés két hálózat között (MH6 — a meghívó készülékének kopogtató témája) · ④ az értesítés az új
-  belépőről (MH5) · ⑤ a lap (a „➕ Meghívás…”, a „👋 Belépők”, a csatlakozás ablaka a meghívóval, a várakozó belépő kódja) · ⑥
-  a terep (egy friss e-ember a telefonon: egy bemásolt sor és egy meghívó).
+- ✅ **③ a jelentkezés két hálózat között (MH6)** (elágazás 228): a meghívó elfogadása egy függő kérelmet is felvesz a koinó
+  születésére — CÉL NÉLKÜL, csak a meghívó készülékének kopogtatójával (`fuggoKerelemFelvetele` `kopogtatok`): a belépő őrjárata
+  a DHT-n a meghívó készülék-témáján jelentkezik, a meghívó őrjárata (ami a saját készülék-témáját figyeli) visszakopog. Ugyanazon
+  a wifin nem lassít: a cél nélküli kérelmet a munka csak egy ismeretlen bekopogónál választja (mérve: a lapos próba ugyanúgy
+  lement). ⚠️ A DHT-s út maga csak terepen mérhető (két hálózat — a 🅱️).
+- ✅ **④ az értesítés az új belépőről (MH5)**: az őrjárat a postafiókkal együtt a belépők jegyzékét is nézi — ha tag vagyok, és új
+  belépő jött, a készülék saját értesítése (ha a beállítás engedi), a kódjával; belépőnként egyszer (`belepok-jelzett.json`).
+- ✅ **⑤ a lap** (`felulet/js/koinoMeghivas.js`, `css/components/koinoMeghivas.css`): a fő menüben a prototípus „Meghívóim” helyén
+  „✉️ Meghívás…” (a meghívó szövege a másoló gombbal és egy megnevezéssel; ha még nem vagyok tag, a várakozás a kódommal) és
+  „👋 Belépők” (a várakozók a kódjukkal, a profiljukkal; „Meghívom…” → „A belépő ezt a kódot mondta: …? Igen, meghívom”); a
+  csatlakozás ablaka a meghívót is elfogadja (a körülötte lévő szöveggel), utána a kódot mutatja, és magától frissül, amíg tag
+  nem lesz (a friss őrjárat-állással); a tér és a pakli üres állapota a meghívó útját mondja. Böngészőben végigjárva (két
+  készülék egy gépen): a meghívó a lapról „Anna laptopja” megnevezéssel → a friss készülék a lapján beillesztette (egy üzenet
+  szövegével együtt) → „JB3-E8T” → az őrjárat indítása után A „👋 Belépők” ablakában ugyanez a kód → „Igen, meghívom” → B lapja
+  magától: „✅ Tag vagy”. Közben élesben is lefutott az ütközés (a két lap egyszerre kért egymástól — „a társ is kért … az övé
+  ment elöl”).
+- ⏭️ **Hátra:** ⑥ a terep — egy friss e-ember a telefonon: egy bemásolt sor (224.) és egy meghívó.

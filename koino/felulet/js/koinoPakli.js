@@ -546,7 +546,9 @@ export class KoinoPakli extends Pakli {
     // kopogtat — ezt mondjuk ki, nem egy soha meg nem érkező „betöltést”.
     if (v.feljegyzes?.betoltes) {
       szoveg += v.feljegyzes.kitolKerni > 0 ? ' · ⏳ betöltés: a hiányzó részeket az őrjárat hozza el'
-        : ' · 🔎 a hiányzó részek tartóit még keresem (nincs ismert társ, aki tartaná őket)';
+        : ' · 🔎 a hiányzó részek tartóit még keresem (nincs ismert társ, aki tartaná őket)'
+          // ⭐⭐ D121 (⑤): egy friss készüléken (se gondolat, se társ) a meghívó útja
+          + (this.megjelenitettKulcs ? '' : ' — meghívót kaptál? Fő menü → „🌐 A tér” → „🔗 Csatlakozás egy koinóhoz…”');
     }
     this._allapot(szoveg, v.feljegyzes?.betoltes ? 'betoltes' : '');
   }

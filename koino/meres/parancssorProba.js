@@ -1445,7 +1445,8 @@ proba('⭐ a ⑦ lelete: a függő kérelem célja a KÖTÉS mostani címe — a
 // A lapján a belépők között (`GET /api/belepok`) megjelenik B — UGYANAZZAL a kóddal (MH3); A a lapján meghívja (`POST
 // /api/meghivas` — a KÓDDAL); és B lapja (`GET /api/tagsagom`) tagnak mondja (a meghívás B lemezére ért); A belépői közül B
 // eltűnik. Rontás: az elfogadás belépés nélkül → B nem jelenik meg A belépői között; a belépők jegyzéke a tagság szűrése nélkül → B
-// a meghívás után is ott marad; a meghívó cím nélkül → B nem éri el A-t.
+// a meghívás után is ott marad; a meghívó cím nélkül → B nem éri el A-t; ⭐ MH6: a jelentkezés (a cél nélküli kérelem A
+// készülék-témájának kopogtatójával) nélkül → bukik — és mivel itt a csere a címen megy, a jelentkezés a menetet nem lassíthatja.
 proba('⭐⭐ D121: a meghívás a lapon — A a meghívót a lapjáról adja, B a lapján beilleszti, A a belépők között B kódját látja, és a lapjáról meghívja; B tag lesz',
   async () => {
     const a = await ujKeszulek();
@@ -1456,13 +1457,20 @@ proba('⭐⭐ D121: a meghívás a lapon — A a meghívót a lapjáról adja, B
     let fa = null, fb = null;
     const naplo = { a: '', b: '' };
     try {
+      // ⭐ MH5 (A): A őrjárata egy próba-értesítővel (`KOINO_ERTESITO` — fájlba írja a címet és a szöveget)
+      const ertNaplo = join(a, 'ertesitesek-naplo.txt');
+      const ertSzkript = join(a, 'ertesito.mjs');
+      await writeFile(ertSzkript, "import { appendFileSync } from 'node:fs';\nappendFileSync(" + JSON.stringify(ertNaplo)
+        + ", process.argv[2] + '|' + process.argv[3] + '\\n');\n", 'utf8');
       await fut(a, 'koino', 'Meghívó-próba', helyben);
       const oa = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(PA)],
-        { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
+        { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', KOINO_ERTESITO: ertSzkript, ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
       oa.stdout.on('data', (x) => { naplo.a += x; });
       futok.push(oa);
       fa = await feluletet(a, FA, helyben);
       fb = await feluletet(b, FB, helyben);
+      await fa.hiv('/api/ertesitesi-beallitasok/globalis', { method: 'PUT',
+        body: JSON.stringify({ ertesitesTipusok: [], emailErtesites: true, emailMod: 'azonnal' }) });
       // A meghívója — megvárjuk, hogy az őrjárat első köre feljegyezze a kapu portját
       let m = null;
       for (let i = 0; i < 30; i++) {
@@ -1472,6 +1480,11 @@ proba('⭐⭐ D121: a meghívás a lapon — A a meghívót a lapjáról adja, B
       }
       const csat = await fb.hiv('/api/csatlakozas', { method: 'POST', body: JSON.stringify({ meghivo: 'Itt a meghívóm: ' + m.adat.szoveg }) });
       const kod = csat.adat?.kod ?? null;
+      // ⭐ MH6 (A): a jelentkezés — B lemezén a függő kérelem a koinó születésére, cél nélkül, A készülék-témájának kopogtatójával
+      const aAlairo = JSON.parse(await readFile(join(a, 'tabla-kulcs.json'), 'utf8').catch(() => '{}')).alairoNyilvanos ?? null;
+      const bKerelmek = JSON.parse(await readFile(join(b, String(csat.adat?.koino), 'kerelmek.json'), 'utf8').catch(() => '{}'));
+      const jelentkezes = (bKerelmek.fuggo ?? []).some((x) => x.fajta === 'szelet' && x.kulcs === csat.adat?.koino
+        && (x.celok ?? []).length === 0 && (x.kopogtatok ?? []).some((k) => k.fajta === 'keszulek' && k.kulcs === aAlairo));
       const ob = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(PB)],
         { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
       ob.stdout.on('data', (x) => { naplo.b += x; });
@@ -1480,6 +1493,12 @@ proba('⭐⭐ D121: a meghívás a lapon — A a meghívót a lapjáról adja, B
       for (let i = 0; i < 60 && !belepo; i++) {
         await varj(500);
         belepo = ((await fa.hiv('/api/belepok')).adat?.belepok ?? []).find((x) => x.kod === kod) ?? null;
+      }
+      // ⭐ MH5 (A): az új belépőről a készülék értesítése szólt — a kódjával
+      let ertesites = '';
+      for (let i = 0; i < 40 && !(kod && ertesites.includes(kod)); i++) {
+        ertesites = await readFile(ertNaplo, 'utf8').catch(() => '');
+        if (!(kod && ertesites.includes(kod))) await varj(500);
       }
       const meghivas = belepo ? await fa.hiv('/api/meghivas', { method: 'POST', body: JSON.stringify({ horgony: kod }) }) : null;
       let tag = null;
@@ -1492,7 +1511,9 @@ proba('⭐⭐ D121: a meghívás a lapon — A a meghívót a lapjáról adja, B
         meghivo: typeof m?.adat?.szoveg === 'string' && m.adat.tag === true && m.adat.orjarat?.fut === true,
         csatlakozas: csat.allapot === 200 && /^[0-9A-Z]{3}-[0-9A-Z]{3}$/.test(kod ?? '') && csat.adat.ujBelepes === true
           && csat.adat.meghivo?.nev === 'Anna gépe' && (csat.adat.meghivo?.tarsak ?? []).some((c) => c.port === PA),
+        jelentkezes: !!aAlairo && jelentkezes,
         belepoKoddal: !!belepo && belepo.horgony === csat.adat.horgony,
+        ertesites: /új belépő/.test(ertesites) && !!kod && ertesites.includes(kod),
         meghivva: meghivas?.allapot === 200 && meghivas.adat?.meghivva === true,
         tag: tag?.tag === true && tag.kod === kod,
         eltunt: !utana.some((x) => x.kod === kod)
