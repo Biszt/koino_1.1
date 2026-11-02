@@ -147,4 +147,15 @@ Csaba: *„minden javaslatodat, elfogadom, mehetünk tovább.”* — MH1–MH6 
   szövegével együtt) → „JB3-E8T” → az őrjárat indítása után A „👋 Belépők” ablakában ugyanez a kód → „Igen, meghívom” → B lapja
   magától: „✅ Tag vagy”. Közben élesben is lefutott az ütközés (a két lap egyszerre kért egymástól — „a társ is kért … az övé
   ment elöl”).
-- ⏭️ **Hátra:** ⑥ a terep — egy friss e-ember a telefonon: egy bemásolt sor (224.) és egy meghívó.
+- ✅ **⑥ a terep (2026-11-02):** Csaba a telefonon MINDENT törölt (a programot, az összes koino-adatot, a `koino` parancsot, a
+  Node-ot és a gitet — „hogy rekonstruáljunk egy új telefont”), és a telepítési útmutató egy sorával telepített: a Node, a git, a
+  letöltés, az Ed25519 vizsgája, a `koino` parancs, az indítás — a lap magától megnyílt. A laptop új koinót kapott („Meghívás
+  próba”, zárt — parancssorból: gyökér-koinó a lapról ma nem hozható létre); a laptop a lapján elkészítette a meghívót, Csaba
+  üzenetben átküldte, a telefon a lapján beillesztette, a laptop a „👋 Belépők” között ugyanazt a kódot látta és meghívta — a
+  telefon tag lett (a laptop szerint: 2 tag). ⛔ **Két lap-lelet, javítva (elágazás 229):** a tér a csatlakozás pillanatának képét
+  mutatta (az indító az őrjáratot pár másodperccel később indítja, a születés az első cserével jön — „nem fut őrjárata”, „nem
+  ismerem a születését”, „0 tag” maradt) → a tér 15 mp-enként magától frissül, amíg látszik (böngészőben mérve: az őrjárat indítása
+  után „↻ Az őrjárata fut”, a koinó neve, „1 tag”); a javasolt indító parancs a telefonon `node koino/koino.js orjarat …` volt (a
+  Termux mappájából el sem indul) → az indító jelével (`KOINO_INDITO=koino`) `koino orjarat …`.
+- ⏸️ **Ami még hiányzik a laptól:** gyökér-koinó létrehozása (ma csak `koino "<név>"`); a QR-kód (MH1 (A): később); a két
+  hálózat közötti jelentkezés terepi mérése (a 🅱️).

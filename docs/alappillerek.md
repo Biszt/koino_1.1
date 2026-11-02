@@ -1684,3 +1684,9 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     várakozással** · ⭐ a cél nélküli kérelem ugyanazon a wifin nem lassít (a munka csak ismeretlen bekopogónál választja) · ⛔
     elvetve: a jelentkezés a meghívó címére szóló céllal (az a csere helyett kérelmet futtatott volna a közvetlen úton is — egy
     körrel lassabb); a QR-kód (MH1 (A): később) · `meghivas_atvizsgalas.md` 7.
+229. **2026-11-02 · D121 ⑥ — a terepi próba (friss telefon, egy sor, a lapos meghívás) és két lap-lelet**
+    → **a tér magától frissül (15 mp, amíg látszik), és az indító mellett a javasolt parancs `koino orjarat …`** (`indit.sh`
+    `KOINO_INDITO=koino`, `orjaratInditoParancsa`) · a lelet: a csatlakozás után a tér a csatlakozás pillanatának képét mutatta
+    (az indító az őrjáratot és a csere a születést pár másodperccel később hozza) · ⛔ elvetve: a tér frissítése az alsó sáv
+    csere-jelére (a születés és a tagság a kérelemmel is jön — egyszerűbb és biztos az időzített frissítés) · ⏸️ hiány: gyökér-koinó a
+    lapról · `meghivas_atvizsgalas.md` 7.

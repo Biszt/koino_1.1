@@ -234,6 +234,11 @@ document.getElementById('ter-valto').addEventListener('click', async () => {
   await mutat('pakli');
 });
 document.getElementById('ter-frissites').addEventListener('click', () => terNezet.betoltes());
+// ⭐ A tér magától frissül, amíg látszik (a 2026-11-02-i terepi próba: a csatlakozás pillanatának képe maradt ott — „nem fut
+// őrjárata”, „nem ismerem a születését” —, pedig az indító közben elindította az őrjáratot, és a csere a születést is hozta).
+setInterval(() => {
+  if (!document.getElementById('ter').hidden && document.visibilityState === 'visible') terNezet.betoltes();
+}, 15000);
 document.getElementById('ter-csatlakozas').addEventListener('click', () => csatlakozasMegnyitasa({ utana: () => terNezet.betoltes() }));
 document.getElementById('ter-tarsak').addEventListener('click', () => tarsakMegnyitasa({ utana: () => terNezet.betoltes() }));
 document.getElementById('ter-rendezes').addEventListener('change', (e) => {

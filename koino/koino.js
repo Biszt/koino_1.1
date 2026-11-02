@@ -86,7 +86,7 @@
 // A két mappának saját kulcsa van, tehát valóban két e-ember — nem ugyanaz kétszer.
 
 import { writeFile, readFile, mkdir, rename, mkdtemp, rm, stat } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { tmpdir, homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { randomUUID, randomInt } from 'node:crypto';
 import { dirname, join } from 'node:path';
@@ -5957,9 +5957,13 @@ async function orjaratInditoParancsa(k, port, perc) {
   const becenev = becenevek.includes('sajat') ? 'sajat'
     : (becenevek.sort((a, b) => a.length - b.length || (a < b ? -1 : 1))[0] ?? k);
   const valtozok = [];
-  if (process.env.KOINO_ADAT) valtozok.push(['KOINO_ADAT', process.env.KOINO_ADAT]);
+  // ⭐ A telefonos indító (`koino/termux/indit.sh` — `KOINO_INDITO=koino`) mellett a `koino` parancs a program parancsait is
+  // futtatja, ugyanazzal az adattal (a 2026-11-02-i terepi próba: a `node koino/koino.js …` a Termux mappájából el sem indult).
+  const indito = process.env.KOINO_INDITO === 'koino';
+  const alapAdat = indito && process.env.KOINO_ADAT === join(homedir(), 'koino-adat');
+  if (process.env.KOINO_ADAT && !alapAdat) valtozok.push(['KOINO_ADAT', process.env.KOINO_ADAT]);
   if (becenev !== 'sajat') valtozok.push(['KOINO_AZONOSITO', becenev]);
-  const parancs = 'node koino/koino.js orjarat ' + perc + ' ' + port;
+  const parancs = (indito ? 'koino' : 'node koino/koino.js') + ' orjarat ' + perc + ' ' + port;
   if (process.platform === 'win32') {
     return valtozok.map(([n, v]) => '$env:' + n + " = '" + String(v).replace(/'/g, "''") + "'; ").join('') + parancs;
   }

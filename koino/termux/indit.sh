@@ -22,6 +22,9 @@ KONYVTAR=$(cd "$(dirname "$0")/.." && pwd)
 PROGRAM="$KONYVTAR/koino.js"
 KOINO_ADAT="${KOINO_ADAT:-$HOME/koino-adat}"
 export KOINO_ADAT
+# ⭐ A program ebből tudja, hogy a `koino` parancs indította — a lap a `koino …` alakú parancsot javasolja.
+KOINO_INDITO=koino
+export KOINO_INDITO
 BECENEV="${KOINO_AZONOSITO:-sajat}"
 ORJARAT_PORT="${KOINO_ORJARAT_PORT:-7373}"
 FELULET_PORT="${KOINO_FELULET_PORT:-7499}"
