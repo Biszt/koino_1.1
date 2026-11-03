@@ -44,8 +44,12 @@ yes | pkg upgrade && pkg install -y nodejs git && { [ -d ~/koino_1.1 ] || git cl
    Ez frissíti a Termuxot, telepíti a Node-ot és a gitet, letölti a koinót, megvizsgálja, hogy a telefon tud-e aláírni
    (Ed25519), felveszi a `koino` parancsot, és **elindítja**: a böngészőben megnyílik a lap. ⏱ Az első alkalommal
    néhány perc, sok szöveg gördül — ez normális.
-3. **A lapon** csatlakozz a koinóhoz („🔗 Csatlakozás egy koinóhoz…” — a nevét a meghívódtól kapod), és vedd fel a
-   meghívód készülékét társnak („🤝 Társak…”). Az őrjárat (ami a cserét végzi) a csatlakozás után **magától elindul**.
+3. ⭐ **Ha MEGHÍVÓT kaptál (D122, 2026-11-03):** a meghívód a lapján („✉️ Meghívóim”) egy sort ad — ugyanez a telepítő sor, a
+   végén a meghívóval (`… telepit.sh koino-meghivo:2:…`). Akkor EZT illeszd be a 2. pont helyett: telepít, csatlakozik, belép, és a
+   következő csere után a meghívód gépe magától tagnak hív meg — semmit nem kell kérned. A lap az első megnyitáskor az adataidat
+   kéri (nem kötelező).
+   Meghívó nélkül a lap a „Meghívtak? illeszd be” ablakkal nyílik: ide később is beillesztheted. Az őrjárat (ami a cserét végzi)
+   a csatlakozás után **magától elindul**.
 
 **Ezután minden indításhoz elég ennyi a Termuxban:** `koino` — leállítás: **Ctrl+C**. A program parancsai ugyanazzal az
 adattal: `koino belep`, `koino meghiv <horgony>`, `koino ter` …
@@ -53,8 +57,8 @@ adattal: `koino belep`, `koino meghiv <horgony>`, `koino ter` …
 ⚠️ **Hogy az Android ne állítsa le a háttérben:** Beállítások → Alkalmazások → Termux → Akkumulátor → **Nem korlátozott**.
 A koino futás közben ébren tartja a telefont (`termux-wake-lock`), és a Termux értesítést mutat — amíg ez látszik, fut.
 
-⚠️ **A belépés és a meghívás ma még parancs** (`koino belep`, a kiírt horgonyt elküldöd a meghívódnak, ő: `koino meghiv
-<horgony>`) — a következő lépés a lapra viszi.
+⭐ **Te is meghívhatsz** (ha tag vagy): a lap fő menüjében „✉️ Meghívóim” — a meghívott teljes neve és a nyilatkozat után a 📋
+egy sort másol, ezt küldd el neki. Egy hónapig érvényes, egyszer használható, és felhasználás előtt visszavonható.
 
 *Az adat a `~/koino-adat` mappában él (más: `KOINO_ADAT=<mappa> koino`); a naplók ugyanott: `orjarat.log`, `felulet.log`.
 A program magától nem frissül — hogy egy koinó melyik kódot futtatja, az a közösség dolga (a koino-verzió kártya).*

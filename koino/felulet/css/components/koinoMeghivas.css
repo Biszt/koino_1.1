@@ -1,66 +1,15 @@
 /* koino/felulet/css/components/koinoMeghivas.css */
 
-/* Felelősség: ⭐⭐ D121 (⑤) — a meghívás a lapon (koinós többlet): a „✉️ Meghívás…” ablak (a meghívó szövege a másoló gombbal, a
-   várakozás az ellenőrző kóddal) és a „👋 Belépők” ablak (a várakozók a kódjukkal, a megerősítés). A színek a lap meglévő
-   változóiból (`base/variables.css`), a csatlakozás ablakának mintájára. */
+/* Felelősség: ⭐⭐ D121, D122 — a meghívás a lapon (koinós többlet): a prototípus „Meghívóim” ablaka köré (a meghívó szövege
+   egy sor — a listában a rövid kód látszik, a 📋 az egészet másolja; a magyarázó sor), a belépő várakozása, és a profil-űrlap szövegei. A
+   színek a lap meglévő változóiból (`base/variables.css`). */
 
-.koino-meghivas { display: flex; flex-direction: column; gap: 10px; }
+.koino-meghivo-magyarazat { margin: 0; font-size: var(--text-sm, 0.85em); color: var(--color-text-muted); line-height: 1.4; }
+
+/* a belépő várakozása (a csatlakozás ablakában) */
 .koino-meghivas__leiras { font-size: 0.85em; opacity: 0.85; margin: 0; line-height: 1.4; }
-.koino-meghivas__hiba,
-.koino-meghivas__figyel { margin: 0; font-size: 0.85em; line-height: 1.4; color: var(--color-error, #b3261e); }
-.koino-meghivas__uzenet { margin: 0; font-size: 0.85em; line-height: 1.4; padding: 6px 8px; border-radius: 6px;
-  background: var(--color-surface-offset, #f3efe8); }
 .koino-meghivas__tag { margin: 0; font-size: 1em; }
-.koino-meghivas__kod {
-  margin: 0;
-  font-family: monospace;
-  font-size: 2em;
-  letter-spacing: 0.12em;
-  text-align: center;
-  font-weight: 700;
-}
-.koino-meghivas__mezo { display: flex; flex-direction: column; gap: 3px; font-size: 0.85em; min-width: 0; }
-.koino-meghivas__mezo input {
-  font: inherit;
-  font-size: 1em;
-  padding: 5px 8px;
-  border: 1px solid var(--color-border, #bbb);
-  border-radius: 6px;
-  min-width: 0;
-}
-.koino-meghivas__szoveg {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: var(--color-surface-offset, #f3efe8);
-}
-.koino-meghivas__szoveg code { flex: 1 1 auto; min-width: 0; font-size: 0.8em; overflow-wrap: anywhere; word-break: break-all; }
-.koino-meghivas__gomb {
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border, #bbb);
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.85em;
-  white-space: nowrap;
-}
-.koino-meghivas__gomb--fo { background: var(--color-primary); color: var(--color-text-inverse); border-color: var(--color-primary); }
-.koino-meghivas__gomb:disabled { opacity: 0.55; cursor: default; }
 
-.koino-belepok { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.koino-belepo {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-  padding: 6px 8px;
-  border: 1px solid var(--color-border, #ddd);
-  border-radius: 6px;
-}
-.koino-belepo__kod { font-family: monospace; font-size: 1.3em; font-weight: 700; letter-spacing: 0.08em; }
-.koino-belepo__adat { flex: 1 1 160px; font-size: 0.8em; opacity: 0.85; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.koino-belepo__profil { overflow-wrap: anywhere; }
-.koino-belepo__megerosites { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.85em; }
+/* a profil-űrlap (a regisztrációs űrlap stílusával — `regisztracioForm.css`) */
+.koino-profil__leiras { margin: 0 0 8px; font-size: 0.85em; opacity: 0.85; line-height: 1.4; }
+.koino-profil { margin-top: 4px; }

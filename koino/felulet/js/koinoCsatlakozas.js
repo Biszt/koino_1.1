@@ -5,9 +5,9 @@
 // becenév) és „🤝 Társak…” (az induló címek: a felvétel és a levétel). Eddig mindkettő csak parancs volt (`csatlakoz`, `tars`) —
 // a kézi próba 2. lelete (Csaba, 2. (A)).
 //
-// ⭐⭐ D121 (⑤): a csatlakozás ablaka a MEGHÍVÓT is elfogadja (`koino-meghivo:1:…` — a körülötte lévő szöveggel is): akkor a program a
-// csatlakozáson túl a meghívó készülékét társnak veszi és belép (MH4), a lap pedig az ellenőrző kódot mutatja, és vár a meghívásra
-// (`koinoMeghivas.js` `varakozasHtml` — magától frissül).
+// ⭐⭐ D121 (⑤), D122: a csatlakozás ablaka a MEGHÍVÓT is elfogadja (`koino-meghivo:2:…` — a körülötte lévő szöveggel, a telepítő
+// sorral is): akkor a program a csatlakozáson túl a meghívó készülékét társnak veszi és belép, a meghívó gépe pedig a következő
+// cserénél magától meghív; a lap vár (`koinoMeghivas.js` `varakozasHtml` — magától frissül), és felkínálja az adatok megadását.
 //
 // ⭐ A lap csak rajzol (7. szabály): a csatlakozást és a társakat a program végzi (`koino.js` `koinoCsatlakozas`, `tarsFelvetele`,
 // `tarsLevetele` — ugyanaz, mint a parancsoké), a lap a kapu útvonalain kérdez (`/api/csatlakozas`, `/api/tarsak`). ⚠️ Ami a
@@ -18,11 +18,11 @@
 
 import Modal from './components/modals/Modal.js';
 import { apiGet, apiPost } from './utils/apiHelper.js';
-import { varakozasHtml } from './koinoMeghivas.js';
+import { varakozasHtml, profilUrlapMegnyitasa } from './koinoMeghivas.js';
 
 const MODAL_KONTENER = 'modal-kontener';
 const LENYOMAT = /^[A-Za-z0-9_-]{43}$/;
-const MEGHIVO_ELOTAG = 'koino-meghivo:1:';
+const MEGHIVO_ELOTAG = 'koino-meghivo:';
 const VARAKOZAS_MS = 5000;
 // ⚠️ D118/3 (4.6): a gyermekben az a tag, aki a szülőben tag volt ÉS beköltözött, vagy akit a gyermekben meghívtak — a csatlakozás
 // egyik sem: egy ZÁRT gyermek a tartalmát csak tagnak adja ki.
@@ -100,12 +100,14 @@ export async function csatlakozasMegnyitasa({ koino = '', nev = null, zart = nul
   let ora = null;
 
   const rajzol = () => {
-    if (siker?.kod) {
-      // ⭐⭐ D121 (MH3, MH4): a meghívóval — a társ és a belépés megvan; a kód és a várakozás
+    if (siker?.meghivo) {
+      // ⭐⭐ D122: a meghívóval — a társ és a belépés megvan; a várakozás (a meghívó gépe magától meghív), és az adataim
       tartalom.innerHTML = '<p class="koino-csatlakozas__siker">✅ Csatlakoztál és beléptél' + (siker.nev ? ': <strong>'
         + html(siker.nev) + '</strong>' : '') + '.</p>'
-        + varakozasHtml(tagsag ?? { horgony: siker.horgony, kod: siker.kod, tag: false }, siker.meghivo?.nev ?? null)
-        + orjaratHtml(tagsag?.orjarat ?? siker.orjarat);
+        + varakozasHtml(tagsag ?? { horgony: siker.horgony, tag: false })
+        + orjaratHtml(tagsag?.orjarat ?? siker.orjarat)
+        + '<div class="koino-csatlakozas__gombok"><button type="button" class="koino-csatlakozas__gomb" data-muvelet="adatok">'
+        + '📝 Az adataim (név, település…)</button></div>';
       return;
     }
     if (siker) {
@@ -133,13 +135,13 @@ export async function csatlakozasMegnyitasa({ koino = '', nev = null, zart = nul
         + '<ul class="koino-csatlakozas__lepesek">' + kovetkezo.map((s) => '<li>' + s + '</li>').join('') + '</ul>';
       return;
     }
-    tartalom.innerHTML = '<p class="koino-csatlakozas__leiras">⭐ Ha <strong>meghívót</strong> kaptál (egy <code>koino-meghivo:1:…</code> '
-      + 'kezdetű szöveget), illeszd be ide egészben — a többi magától megy: a csatlakozás, a meghívód készüléke társnak, a belépés, '
-      + 'és megkapod az ellenőrző kódodat. Egy koinó puszta neve (43 jel) is beilleszthető: akkor a belépést és a társat külön kell '
-      + 'megadni.</p>'
+    tartalom.innerHTML = '<p class="koino-csatlakozas__leiras">⭐ <strong>Meghívtak?</strong> Illeszd be ide a meghívót, amit kaptál '
+      + '(egészben — ha a telepítő sorral együtt jött, az is jó): a többi magától megy — a csatlakozás, a belépés, és a következő '
+      + 'csere után a meghívód gépe tagnak hív meg. Egy koinó puszta neve (43 jel) is beilleszthető: akkor a belépést és a társat '
+      + 'külön kell megadni.</p>'
       + '<label class="koino-csatlakozas__mezo">A meghívó — vagy a koinó neve'
       + '<input type="text" name="koino" spellcheck="false" autocomplete="off" maxlength="4000" value="' + html(koino) + '"'
-      + (kartyarol ? ' readonly' : '') + ' placeholder="koino-meghivo:1:… — vagy 43 jel"></label>'
+      + (kartyarol ? ' readonly' : '') + ' placeholder="koino-meghivo:2:… — vagy 43 jel"></label>'
       + (kartyarol && nev ? '<p class="koino-csatlakozas__leiras">A koino-verzió kártyájáról: <strong>' + html(nev) + '</strong> — a '
         + 'családod őrjárata felveszi (nem költözöl vele: a súlyod a szülőben marad; költözni a fő menü „🧳 Költözés…” pontjával).'
         + (zart ? ' ' + ZART_GYERMEK : '') + '</p>' : '')
@@ -157,6 +159,12 @@ export async function csatlakozasMegnyitasa({ koino = '', nev = null, zart = nul
   tartalom.addEventListener('click', async (e) => {
     const gomb = e.target.closest('button[data-muvelet]');
     if (!gomb || gomb.disabled) return;
+    if (gomb.dataset.muvelet === 'adatok') {
+      clearInterval(ora);
+      modal.bezaras();
+      await profilUrlapMegnyitasa({ elso: false });
+      return;
+    }
     if (gomb.dataset.muvelet === 'tarsak') {
       modal.bezaras();
       await tarsakMegnyitasa({ utana });
@@ -165,7 +173,7 @@ export async function csatlakozasMegnyitasa({ koino = '', nev = null, zart = nul
     if (gomb.dataset.muvelet !== 'csatlakozom') return;
     const k = tartalom.querySelector('input[name="koino"]')?.value.trim() ?? '';
     const becenev = tartalom.querySelector('input[name="becenev"]')?.value.trim() || null;
-    // ⭐⭐ D121 (MH4): a meghívó — a program csatlakozik, társat vesz fel, belép; a lap utána a kódot mutatja és vár
+    // ⭐⭐ D121 (MH4), D122: a meghívó — a program csatlakozik, társat vesz fel, belép; a lap utána vár (a meghívó gépe magától meghív)
     if (k.includes(MEGHIVO_ELOTAG)) {
       folyamatban = true;
       rajzol();
@@ -190,7 +198,7 @@ export async function csatlakozasMegnyitasa({ koino = '', nev = null, zart = nul
       return;
     }
     if (!LENYOMAT.test(k)) {
-      modal.hibaBeallitasa('Ez se meghívó (koino-meghivo:1:…), se egy koinó neve (pontosan 43 jel) — ellenőrizd a beillesztést.');
+      modal.hibaBeallitasa('Ez se meghívó (koino-meghivo:2:…), se egy koinó neve (pontosan 43 jel) — ellenőrizd a beillesztést.');
       return;
     }
     folyamatban = true;

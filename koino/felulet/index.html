@@ -158,6 +158,8 @@ import { KoinoPakli } from './js/koinoPakli.js';
 import { TerNezet } from './js/terNezet.js';
 // ⭐⭐ D119 (⑥): a tér két ablaka — a csatlakozás egy koinóhoz és a társak.
 import { csatlakozasMegnyitasa, tarsakMegnyitasa } from './js/koinoCsatlakozas.js';
+// ⭐⭐ D122: az első megnyitás — a csatlakozás ablaka (ha még egy koinót sem ismer a készülék), vagy a profil-űrlap
+import { elsoMegnyitas } from './js/koinoMeghivas.js';
 // ⭐ D101: a maradék modálok koinós többlete (a tudás határa a modálok alján) — a betöltéskor csomagol.
 import './js/koinoModalok.js';
 // ⭐ D112 ⑤: a felderítés — a kártya menüjének „📷 Felderítés…” pontja (a kártya bővítési pontján) a betöltéskor.
@@ -256,6 +258,8 @@ await pakli.indulas();
 alsoSav = new AlsoSav(pakli, foMenu, { pakliLathato: () => !document.getElementById('pakli').hidden });
 alsoSav.init();
 alsoSav.kezdoAllapotRogzitese();
+// ⭐⭐ D122: „Meghívtak? illeszd be ide” — vagy, ha már beléptél, az adataid (egyszer, kihagyható)
+elsoMegnyitas({ csatlakozas: () => csatlakozasMegnyitasa({ utana: async () => { await terNezet.betoltes(); } }) });
 </script>
 
 </body>

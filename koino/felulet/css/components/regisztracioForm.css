@@ -1,0 +1,219 @@
+/* frontend/css/components/regisztracioForm.css */
+
+/* ── OLDAL WRAPPER ──
+   Teljes magasság, középre igazított kártya */
+.regisztracio-oldal {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6) var(--space-4);
+  background-color: var(--color-bg);
+}
+
+/* ── KÁRTYA ──
+   A form doboza — belép animációval */
+.regisztracio-kartya {
+  width: 100%;
+  max-width: var(--content-narrow);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8) var(--space-6);
+  box-shadow: var(--shadow-md);
+  animation: kartya-belepes 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Belépési animáció — lentről felfelé, fade-in */
+@keyframes kartya-belepes {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-3));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── KÁRTYA CÍM ── */
+.regisztracio-kartya__cim {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--space-6);
+  text-align: center;
+}
+
+/* ── FORM ── */
+.regisztracio-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* ── ÁLTALÁNOS HIBAZENET ──
+   Csak akkor látszik, ha van benne szöveg (:not(:empty)) */
+.regisztracio-form__altalanos-hiba {
+  display: none;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--color-error-highlight);
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.regisztracio-form__altalanos-hiba:not(:empty) {
+  display: block;
+}
+
+/* ── MEZŐK ── (megosztott stílusok — bejelentkezesForm.css-sel azonos) */
+.form-mezo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.form-mezo__cimke {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.form-mezo__bemenet {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+}
+
+.form-mezo__bemenet::placeholder {
+  color: var(--color-text-faint);
+}
+
+.form-mezo__bemenet:hover {
+  border-color: var(--color-text-muted);
+}
+
+.form-mezo__bemenet:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-highlight);
+}
+
+/* ── HIBÁS MEZŐ ÁLLAPOT ── (JS adja hozzá a .form-mezo--hiba osztályt) */
+.form-mezo--hiba .form-mezo__bemenet {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 3px var(--color-error-highlight);
+}
+
+.form-mezo__hiba-uzenet {
+  font-size: var(--text-xs);
+  color: var(--color-error);
+  display: none;
+}
+
+.form-mezo--hiba .form-mezo__hiba-uzenet {
+  display: block;
+}
+
+/* ── KÜLDÉS GOMB ── */
+.btn-regisztracio {
+  width: 100%;
+  min-height: 44px;                        /* mobil touch target minimum */
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-inverse);
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin-top: var(--space-2);
+}
+
+.btn-regisztracio:hover {
+  background-color: var(--color-primary-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-regisztracio:active {
+  background-color: var(--color-primary-active);
+  transform: translateY(1px);             /* tapintható visszajelzés */
+}
+
+/* Töltési állapot */
+.btn-regisztracio.btn--toltes {
+  opacity: 0.7;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── LÁBLÉC LINK ── */
+.regisztracio-lab {
+  margin-top: var(--space-6);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.regisztracio-lab a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.regisztracio-lab a:hover {
+  text-decoration: underline;
+  color: var(--color-primary-hover);
+}
+
+/* ── TABLET+ ── */
+@media (min-width: 480px) {
+  .regisztracio-kartya {
+    padding: var(--space-10) var(--space-8);
+  }
+}
+
+/* ── LOKÁCIÓ JAVASLAT LISTA ── */
+.lokacio-javaslat-lista {
+  position: absolute;                        /* az input alá pozicionálva */
+  top: 100%;                                 /* közvetlenül az input alatt */
+  left: 0;
+  right: 0;
+  z-index: 100;                              /* minden más elem felett */
+  list-style: none;
+  margin: var(--space-1) 0 0 0;
+  padding: var(--space-1) 0;
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.lokacio-javaslat-elem {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.lokacio-javaslat-elem:hover {
+  background-color: var(--color-primary-highlight);
+  color: var(--color-primary);
+}
+
+/* A .form-mezo-nak position: relative kell, hogy a lista jól pozicionálódjon */
+.form-mezo {
+  position: relative;
+}

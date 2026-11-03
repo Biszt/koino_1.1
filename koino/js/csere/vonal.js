@@ -420,12 +420,16 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   /** A társ bemondott személye — csak ha a személyes aláírása EBBEN a kézfogásban érvényes. */
   const bizonyitottSzemely = (ki) => (ki && typeof ki === 'object' && typeof kezfogas?.kiEllenoriz === 'function'
     && kezfogas.kiEllenoriz(ki) ? { sz: ki.sz, h: typeof ki.h === 'string' ? ki.h : null } : null);
-  /** Amit a bizonyításunkhoz küldünk: a személyes aláírás és a tagsági csomag (ha van). */
+  /** Amit a bizonyításunkhoz küldünk: a személyes aláírás és a tagsági csomag (ha van) — ⭐ D122: és a meghívóm bizonyítéka. */
   const sajatBizonyitek = async () => {
     let csomag = null;
     try { csomag = typeof beallitas.tagsagiCsomag === 'function' ? await beallitas.tagsagiCsomag() : null; }
     catch (hiba) { console.warn('parbeszed - a tagsági csomag nem elérhető', { ok: hiba.message }); }
-    return { ...(kezfogas?.ki ? { ki: kezfogas.ki } : {}), ...(csomag ? { csomag } : {}) };
+    let meghivo = null;
+    try { meghivo = typeof beallitas.meghivoBizonyitek === 'function' ? await beallitas.meghivoBizonyitek() : null; }
+    catch (hiba) { console.warn('parbeszed - a meghívó bizonyítéka nem elérhető', { ok: hiba.message }); }
+    const m = meghivoBizonyitekAlakja(meghivo);
+    return { ...(kezfogas?.ki ? { ki: kezfogas.ki } : {}), ...(csomag ? { csomag } : {}), ...(m ? { meghivo: m } : {}) };
   };
 
   // ===== 0. A NYITÁS =====
@@ -563,7 +567,10 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
         kuld({ uzenet: 'KELL' });
         const be = await sor.kovetkezo();
         const csomag = be.uzenet === 'TAGSAG' && be.csomag && typeof be.csomag === 'object' ? be.csomag : null;
-        kapuV = await kapuItelete({ ki, csomag });
+        // ⭐⭐ D122: a meghívó bizonyítéka a kérelem útján is (két hálózat között a belépő első munkája a jelentkezés — MH6 —, egy
+        // kérelem: ha a bizonyíték csak a cserében utazna, ez a rés kárba menne, és a meghívás a következő kopogtatásra várna)
+        const meghivo = be.uzenet === 'TAGSAG' ? meghivoBizonyitekAlakja(be.meghivo) : null;
+        kapuV = await kapuItelete({ ki, csomag, ...(meghivo ? { meghivo } : {}) });
       }
       if (ki) tarsAzonossaga = ki;
     }
@@ -956,7 +963,9 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     if (kapu.kell) {
       const ki = bizonyitottSzemely(be.ki);
       const csomag = be.csomag && typeof be.csomag === 'object' ? be.csomag : null;
-      kapu = await kapuItelete({ tabla: kapottTablaKulcs, ki, csomag });
+      // ⭐ D122: a meghívó bizonyítéka (csak az alakja — a hívó ellenőrzi; a vonal semmit nem tud a meghívókról)
+      const meghivo = meghivoBizonyitekAlakja(be.meghivo);
+      kapu = await kapuItelete({ tabla: kapottTablaKulcs, ki, csomag, ...(meghivo ? { meghivo } : {}) });
       if (ki) tarsAzonossaga = ki;
       // ⭐ A címek pótlása: ha az ítélet beengedte, most megy a többi címünk (ha nem, üres — a társ vár rá); és D95/1,
       // D95/3: az összegző és a küldő szeleteim is (az első CIMEK-ben a kapu még nem döntött).
@@ -2028,12 +2037,24 @@ async function kerelemUtkozes(sajat, masik, { kapcsolat, sor, kuld, utkozesben }
   return 'atengedtem';
 }
 
-/** ⭐ D93/3: a `KELL`-re adott válasz — a tagsági csomagunk (ha van; ha nincs, üresen — a társ így is dönt). */
+/**
+ * ⭐ D93/3: a `KELL`-re adott válasz — a tagsági csomagunk (ha van; ha nincs, üresen — a társ így is dönt). ⭐⭐ D122: és ha egy
+ * meghívóval léptünk be, és még nem vagyunk tagok, a meghívó bizonyítéka (a kérelem útján is — lásd a kiszolgáló kérelem-ágát).
+ */
 async function tagsagValasz(azonossag) {
   let csomag = null;
   try { csomag = typeof azonossag?.tagsagiCsomag === 'function' ? await azonossag.tagsagiCsomag() : null; }
   catch (hiba) { console.warn('tagsagValasz - a tagsági csomag nem elérhető', { ok: hiba.message }); }
-  return { uzenet: 'TAGSAG', ...(csomag ? { csomag } : {}) };
+  let meghivo = null;
+  try { meghivo = typeof azonossag?.meghivoBizonyitek === 'function' ? meghivoBizonyitekAlakja(await azonossag.meghivoBizonyitek()) : null; }
+  catch (hiba) { console.warn('tagsagValasz - a meghívó bizonyítéka nem elérhető', { ok: hiba.message }); }
+  return { uzenet: 'TAGSAG', ...(csomag ? { csomag } : {}), ...(meghivo ? { meghivo } : {}) };
+}
+
+/** ⭐⭐ D122: a meghívó bizonyítékának ALAKJA (`{ i, b }`, egyenként ≤ 64 jel) — a tartalmát a hívó ellenőrzi; különben null. */
+function meghivoBizonyitekAlakja(m) {
+  return m && typeof m === 'object' && typeof m.i === 'string' && m.i.length <= 64 && typeof m.b === 'string' && m.b.length <= 64
+    ? { i: m.i, b: m.b } : null;
 }
 
 /**

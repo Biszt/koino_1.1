@@ -6191,6 +6191,33 @@ rugjuk fel. maradjon a termux.” (a telefonra a program egy bemásolt sorral ke
    ha a társ nem tag, a belépése pedig még nincs a tag készüléknél, az azonosság-szeletét függő kérelemmel elhozza (az átmeneti
    tárba); a belépők jegyzéke és a meghívás a két tárból olvas.
 
+### D122. A MEGHÍVÓ KULCS: „EGY BEMÁSOLÁS, ÉS A KÖVETKEZŐ CSERE UTÁN BENT VAGY” (2026-11-03)
+
+*Csaba (a D121 terepi próbája után): „a meghívó a belépők menüpontban látja a meghívási kérelmet (ez nekem nem tetszik, hogy a
+meghívott kéri a meghívót, hogy hívja meg)” — és a javaslata: a meghívó két üzenetet küld (a telepítő sort és a meghívót), a
+meghívott a lapon beilleszti, és a csere után bent van. Az átbeszélés: [`meghivas_atvizsgalas.md`](meghivas_atvizsgalas.md) 8.*
+
+**A döntés** (Csaba, 2026-11-03: *„minden javaslatodat elfogadom, kezdhetsz kódot írni. ha lehet, nézzen ki úgy mint a
+prototipusban van.”*) — a D121 MH2-t és MH3-at váltja:
+1. **A meghívó egy TITKOT hordoz** — a belépő az első cserében (a kapu személy-körében) bizonyítja, hogy nála van (HMAC a titokkal,
+   a koinóra, a személyes kulcsára és a horgonyára kötve), és a meghívó készüléke MAGÁTÓL aláírja a meghívást. A kódos összevetés és
+   a „👋 Belépők” menüpont megszűnik (tartalék sincs belőle).
+2. **Egy üzenet**: a telepítő sor, a végén a meghívóval — a már telepített gépen a lapon is beilleszthető.
+3. **Egy hónapig él**, egyszer használható, felhasználás előtt visszavonható. A kiállításhoz kötelező a meghívott TELJES NEVE és a
+   nyilatkozat (*„Kijelentem, hogy a meghívott valódi személy, és tudomásom szerint még nem csatlakozott ehhez a koinóhoz.”* — a
+   „tanúsítom” a koinóban a 2. lépcső szava), és a nyilatkozat az ALÁÍRT meghívásba is bekerül (állítás — a visszacsatolásnak
+   bizonyíték, D56).
+4. **A meghívás a meghívott SAJÁT profilját tanúsítja** (a meghívó által beírt név csak előtöltés és felirat); ha a koinó profilt
+   vár, az automatikus meghívás megvárja.
+5. **A meghívott lapja az első megnyitáskor egy űrlapot kínál** (nem kötelező): teljes név (a meghívóból előtöltve, átírható),
+   becenév, ország, régió, település; ha a készülék még egy koinót sem ismer, a csatlakozás ablakát („Meghívtak? illeszd be”).
+6. **A lap a prototípus „Meghívóim” ablakát** használja (bájtra változatlanul; a koinós többlet köré írva), a profil-űrlap a
+   regisztrációs űrlap kinézetét.
+
+*Az építés közben (a böngészős végigjárás lelete, 2026-11-03 — elágazás 231): a bizonyíték a kapu személy-körében a KÉRELEM útján
+(`KELL` → `TAGSAG`) is utazik és számít — két hálózat között a belépő első munkája a jelentkezés (MH6), egy kérelem, és a belépő
+lapjának függő kérelmei is kérelem-munkákat hoznak; ha a bizonyíték csak a cserében utazna, ezek a rések kárba mennének.*
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

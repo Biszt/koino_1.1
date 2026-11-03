@@ -470,7 +470,7 @@ export async function koinoVerzioLetrehozasa(kornyezet, { szuletes, leiras, kodB
  * ⚠️ A `kit` mező sem díszlet: enélkül egy idegen szeletébe tett esemény is beszámítana.
  * Az ellenőrzés összeveti a horgony szerzőjével.
  */
-function allitokRola(kornyezet, tipus, { kit, horgonya, sajatBelepes, profil, felhatalmazasok }, beallitas = {}) {
+function allitokRola(kornyezet, tipus, { kit, horgonya, sajatBelepes, profil, felhatalmazasok, nyilatkozat }, beallitas = {}) {
   if (typeof kit !== 'string' || typeof horgonya !== 'string') {
     throw new Error('Kell a másik fél kulcsa és a horgonya.');
   }
@@ -480,6 +480,9 @@ function allitokRola(kornyezet, tipus, { kit, horgonya, sajatBelepes, profil, fe
   }
   // ⭐ D93/5: a meghívás megnevezheti a meghívott profiljának lenyomatát (a meghívó ezzel tanúsítja a nevet — D28/2).
   const adat = { kit, sajatBelepes, ...(tipus === 'Meghivas' && typeof profil === 'string' ? { profil } : {}),
+    // ⭐ D122: a meghívó nyilatkozata (a meghívó kiállításakor: a meghívott valódi személy, és tudomása szerint még nem csatlakozott
+    // ehhez a koinóhoz) — állítás, a számítás nem ellenőrzi; a visszacsatolásnak bizonyíték (D56).
+    ...(tipus === 'Meghivas' && nyilatkozat === true ? { nyilatkozat: true } : {}),
     // ⛔ A TANÚSÍTÁS BEMONDÁSA (D47) — 2026-10-04-ig ITT ELVESZETT (a 9/c 4.5 óta csak `{ kit, sajatBelepes }` ment ki), így
     // egy nem alapító tanúsító kézi tanúsítása soha nem számított („nem mondta be, mire támaszkodott”). A D94 próbája találta.
     ...(tipus === 'Tanusitas' && Array.isArray(felhatalmazasok) ? { felhatalmazasok } : {}) };

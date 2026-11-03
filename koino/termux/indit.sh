@@ -13,6 +13,8 @@
 # becenévvel az őrjárat egy üres, régi alakú koinót nyitna (a ⑦ terepi próba 2. lelete).
 #
 # ⭐ ARGUMENTUMMAL a program parancsa fut, ugyanazzal az adat-mappával: `koino belep`, `koino meghiv <horgony>`, `koino ter`.
+# ⭐⭐ D122: ha az első argumentum egy MEGHÍVÓ (`koino-meghivo:2:…` — a meghívó telepítő sorának vége), előbb elfogadja (csatlakozás,
+# a meghívó készüléke társnak, belépés), aztán indul: a lap már a koinóban nyílik, és a következő csere után tag vagy.
 #
 # Beállítható (környezet): KOINO_ADAT (alapból ~/koino-adat), KOINO_AZONOSITO (a becenév, alapból sajat), KOINO_ORJARAT_PORT
 # (7373), KOINO_FELULET_PORT (7499), KOINO_KOR (az őrjárat köre percben, 1).
@@ -30,12 +32,22 @@ ORJARAT_PORT="${KOINO_ORJARAT_PORT:-7373}"
 FELULET_PORT="${KOINO_FELULET_PORT:-7499}"
 KOR="${KOINO_KOR:-1}"
 
+# ===== ⭐ D122: A MEGHÍVÓ (az első argumentum) =====
+MEGHIVO=""
+case "$1" in
+  *koino-meghivo:*) MEGHIVO="$1"; shift ;;
+esac
+
 # ===== ARGUMENTUMMAL: a program parancsa =====
 if [ $# -gt 0 ]; then
   exec node "$PROGRAM" "$@"
 fi
 
 mkdir -p "$KOINO_ADAT"
+if [ -n "$MEGHIVO" ]; then
+  echo "· A meghívó: csatlakozás és belépés…"
+  node "$PROGRAM" csatlakoz "$MEGHIVO"     || echo "⚠ A meghívót most nem sikerült elfogadni — a lapon is beillesztheted („🔗 Csatlakozás egy koinóhoz…”)."
+fi
 NAPLO_ORJARAT="$KOINO_ADAT/orjarat.log"
 NAPLO_FELULET="$KOINO_ADAT/felulet.log"
 ORJARAT=""

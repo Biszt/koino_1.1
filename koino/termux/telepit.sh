@@ -5,7 +5,7 @@
 # Ed25519-et (a koino minden műveletet aláír — ha ez nincs meg, semmi más nem számít), a Termux PATH-jára teszi a `koino`
 # parancsot (a további indításhoz és a program parancsaihoz), és elindítja (`indit.sh`).
 #
-# A bemásolandó sor (docs/telepites_telefon.md, „A legegyszerűbb út”):
+# A bemásolandó sor (docs/telepites_telefon.md, „A legegyszerűbb út”; ⭐ D122: a meghívó a végén — a lap „Meghívóim” ablaka adja):
 #   yes | pkg upgrade && pkg install -y nodejs git && { [ -d ~/koino_1.1 ] || git clone --depth 1
 #   https://github.com/Biszt/koino_1.1.git ~/koino_1.1; } && sh ~/koino_1.1/koino/termux/telepit.sh
 #
@@ -34,4 +34,5 @@ chmod 700 "$PREFIX/bin/koino"
 echo "✓ Telepítve. A következő indításhoz elég ennyi: koino"
 echo
 
-exec sh "$KONYVTAR/termux/indit.sh"
+# ⭐ D122: a meghívó (ha a telepítő sor végén ott van) az indítóhoz megy — az fogadja el
+exec sh "$KONYVTAR/termux/indit.sh" "$@"

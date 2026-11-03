@@ -54,6 +54,10 @@
 @import './components/modals/keresesModal.css';
 @import './components/modals/ertesitesiBeallitasModal.css';
 @import './components/modals/ertesitesekModal.css';
+/* ⭐⭐ D122 — a „Meghívóim” ablak, a prototípusból, változatlanul (a koinós többlet a `koinoMeghivas.css`-ben). */
+@import './components/modals/meghivoModal.css';
+/* ⭐⭐ D122 — a profil-űrlap a regisztrációs űrlap stílusával, a prototípusból, változatlanul. */
+@import './components/regisztracioForm.css';
 
 /* ⭐ AZ ALSÓ SÁV (2026-10-15) — a prototípus főoldalának stílusa, bájtra változatlanul (a sáv, a vissza/előre gombok,
    az infók). */

@@ -1575,11 +1575,12 @@ export async function szeletUdpResen(halo, tarsCim, tarsPort, tar, koino, entita
     kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
   });
   try {
-    // ⭐ D93/3: a személyünk (a kézfogás átiratára aláírva) és a tagsági csomagunk — a zárt koinó kapujának.
+    // ⭐ D93/3: a személyünk (a kézfogás átiratára aláírva) és a tagsági csomagunk — a zárt koinó kapujának. ⭐⭐ D122: és a
+    // meghívóm bizonyítéka (a jelentkezés — MH6 — egy szelet-kérelem: két hálózat között ez a belépő első munkája).
     const h = kezfogasHitelesitese(res, beallitas, koino);
     const eredmeny = await szeletKapcsolaton(tar, koino, kapcsolat, entitas, beallitas.tovabb ?? {},
       { ki: h.ki, tabla: kerelemTablaja(beallitas, h), tagsagiCsomag: beallitas.tagsagiCsomag,
-        utkozesben: utkozesKiszolgalo(res, beallitas) });
+        meghivoBizonyitek: beallitas.meghivoBizonyitek, utkozesben: utkozesKiszolgalo(res, beallitas) });
     // ⚠️ Előbb kiürítés — a kérésünk nyugtája még úton lehet (ugyanaz az ok, mint a cserénél).
     await kapcsolat.kiurites();
     console.log('szeletUdpResen - VÉGE', eredmeny);

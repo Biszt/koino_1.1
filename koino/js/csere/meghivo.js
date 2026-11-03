@@ -1,38 +1,49 @@
 // koino/js/csere/meghivo.js
 
-// Felelősség: ⭐⭐ D121 — A MEGHÍVÓ SZÖVEGE ÉS AZ ELLENŐRZŐ KÓD (a meghívás a lapon: „két ember, két gomb, egy összevetett
-// kód” — docs/meghivas_atvizsgalas.md). Tiszta számítás, hálózat nélkül (1. szabály).
+// Felelősség: ⭐⭐ D121, D122 — A MEGHÍVÓ SZÖVEGE ÉS A BIZONYÍTÉK (a meghívás a lapon: „egy bemásolás, és a következő csere után
+// bent vagy” — docs/meghivas_atvizsgalas.md). Tiszta számítás, hálózat nélkül (1. szabály).
 //
-// ⭐ A MEGHÍVÓ (MH1, MH2 (A)): egy sor — `koino-meghivo:1:<base64url(JSON)>` —, benne a koinó neve (`k`), a meghívó
-// készülékének tábla-aláírója (`t` — a kopogtatáshoz, MH6, és hogy a belépő tudja, KIT keres: D71), a címei (`c`: [[hoszt,
-// port], …] — a helyi hálózaton, és a nyilvános, ha a készülék tudja) és egy megnevezés (`n` — kényelem, nem ellenőrzött).
-// Titok nincs benne: a koinó neve nem jogosít semmire (a zárt koinó tartalmát a tagság védi), a címek a cserében úgyis
-// utaznak. Bármilyen csatornán — üzenetben, papíron is — átvihető (4. szabály: a kézi út maga a szöveg).
+// ⭐ A MEGHÍVÓ (D122): egy sor — `koino-meghivo:2:<base64url(JSON)>` —, benne a koinó neve (`k`), a meghívó készülékének
+// tábla-aláírója (`t` — a kopogtatáshoz, MH6, és hogy a belépő tudja, KIT keres: D71), a címei (`c`: [[hoszt, port], …]), a meghívó
+// AZONOSÍTÓJA (`i`) és TITKA (`s`), a meghívott neve (`m` — amit a meghívó beírt: a belépő profil-űrlapjának előtöltése), a lejárat
+// (`l`) és a koinó kötelező profil-mezői (`p`, ha vannak). ⚠️ A titok miatt a meghívó KULCS: aki elsőként használja, az jut be —
+// ezért egyszer használható, egy hónapig él, és a meghívó felhasználás előtt visszavonhatja (D122). A szöveg base64url-be
+// csomagolt, nem titkosított: a meghívott neve olvasható benne.
+//
+// ⭐ A BIZONYÍTÉK (D122): a belépő az első cserében (a kapu személy-körében) megmutatja, hogy nála a titok: a meghívó azonosítója
+// és egy HMAC a titokkal — a koinóra, a SZEMÉLYES kulcsára és a horgonyára kötve (másra nem másolható át; és a titok maga nem
+// utazik). A meghívó készüléke (aki a titkot kiadta) ellenőrzi, és magától aláírja a meghívást. Eseménybe nem kerül.
 //
 // ⛔ A BEOLVASÁS a kívülről jött szöveget úgy kezeli, mint a kapu az eseményt: alak, hossz, a nevek alakja, a címek határai —
-// a hibás meghívóból semmi nem lesz (null és az ok). A beillesztett üzenet körülötte lévő szövege nem zavar (az előtagtól
-// olvasunk), és ha egy csatorna a sort tördelte, a szóközök kihagyásával is megpróbáljuk.
-//
-// ⭐ AZ ELLENŐRZŐ KÓD (MH3 (A)): a belépés horgonyának lenyomatából 6 jel a Crockford-féle 32 jeles ábécéből (nincs benne I,
-// L, O, U — kimondva nem téveszthető), két hármas csoportban („4F7-KQ2”). Mindkét lap ugyanazt számolja; a meghívó csak azt
-// hívja meg, akinek a kódját a belépő élőben bemondta — a meghívó szöveg idegenhez jutva sem ad tagságot (az idegen kódja más,
-// és a valódiét előre nem tudhatja). A védelem itt is az ember, nem a kapu (D56: az 1. lépcső olcsó).
+// a hibás meghívóból semmi nem lesz (null és az ok). A beillesztett üzenet körülötte lévő szövege (a telepítő sor is) nem zavar,
+// és ha egy csatorna a sort tördelte, a szóközök kihagyásával is megpróbáljuk.
 //
 // Használják: koino.js (a lap és a parancsok), a próbák.
 
-import { createHash } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { azonositoAlaku } from '../esemeny/esemeny.js';
 
-export const MEGHIVO_ELOTAG = 'koino-meghivo:1:';
+export const MEGHIVO_ELOTAG = 'koino-meghivo:2:';
 /** A meghívó szöveg felső határa (jelben) — egy üzenetben, papíron is átvihető. */
-export const MEGHIVO_KORLAT = 2048;
+export const MEGHIVO_KORLAT = 3072;
 /** Legfeljebb ennyi cím egy meghívóban (a helyi címek és a nyilvános). */
 export const MEGHIVO_CIM_KORLAT = 8;
+/** ⭐ D122: egy meghívó egy hónapig él. */
+export const MEGHIVO_ELETTARTAM = 30 * 24 * 3600 * 1000;
+/**
+ * ⭐ D122: a telepítő sor (a telepítési útmutató „legegyszerűbb útja” — 224.) — a meghívó a végére kerül: egy bemásolás telepít,
+ * csatlakozik és belép. ⚠️ A program letöltési helye egy cím (a terjesztés útja — D30: a koino.hu, a GitHub, az F-Droid és az
+ * e-emberek egymásnak); a sor a már telepített gépen is jó (a letöltést kihagyja).
+ */
+export const TELEPITO_SOR = 'yes | pkg upgrade && pkg install -y nodejs git && { [ -d ~/koino_1.1 ] || git clone --depth 1 '
+  + 'https://github.com/Biszt/koino_1.1.git ~/koino_1.1; } && sh ~/koino_1.1/koino/termux/telepit.sh';
 const NEV_KORLAT = 64;
+const MEZO_MINTA = /^[a-z]{1,32}$/;
 const HOSZT_MINTA = /^[A-Za-z0-9.:%_-]{1,64}$/;
-const KOD_ABECE = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+const JEL_MINTA = /^[A-Za-z0-9_-]{22,64}$/;
+const AZ_MINTA = /^[A-Za-z0-9_-]{16,64}$/;
 
-// ===== A CÍMEK ÉS A MEGNEVEZÉS ALAKJA =====
+// ===== A CÍMEK ÉS A NEVEK ALAKJA =====
 
 function cimAlakja(c) {
   const hoszt = Array.isArray(c) ? c[0] : c?.hoszt;
@@ -48,25 +59,45 @@ function nevAlakja(n) {
   return tiszta || null;
 }
 
+// ===== AZ AZONOSÍTÓ ÉS A TITOK =====
+
+/** Egy új meghívó azonosítója és titka (kriptográfiai véletlen). */
+export function ujMeghivoJelei() {
+  return { azonosito: randomBytes(12).toString('base64url'), titok: randomBytes(32).toString('base64url') };
+}
+
 // ===== A MEGHÍVÓ KÉSZÍTÉSE =====
 
 /**
  * A meghívó szöveg — a koinó nevével, a meghívó készülékének tábla-aláírójával, a címeivel (a rossz alakú és az ismételt
- * kimarad, legfeljebb `MEGHIVO_CIM_KORLAT`) és egy megnevezéssel.
- * @param {{koino: string, alairo: string, cimek?: Array<{hoszt: string, port: number}|[string, number]>, nev?: string}} m
+ * kimarad, legfeljebb `MEGHIVO_CIM_KORLAT`), az azonosítóval és a titokkal, a meghívott nevével, a lejárattal és a kötelező
+ * profil-mezőkkel.
+ * @param {{koino: string, alairo: string, cimek?: Array, azonosito: string, titok: string, meghivottNev: string, lejarat: number,
+ *   profilMezok?: Array<string>}} m
  * @returns {string}
  */
-export function meghivoKeszitese({ koino, alairo, cimek = [], nev = null }) {
+export function meghivoKeszitese({ koino, alairo, cimek = [], azonosito, titok, meghivottNev, lejarat, profilMezok = [] }) {
   if (!azonositoAlaku(koino)) throw new Error('A meghívó koinója egy 43 jeles név.');
   if (!azonositoAlaku(alairo)) throw new Error('A meghívó készülékének tábla-aláírója egy 43 jeles kulcs.');
+  if (typeof azonosito !== 'string' || !AZ_MINTA.test(azonosito)) throw new Error('A meghívó azonosítója nem ép.');
+  if (typeof titok !== 'string' || !JEL_MINTA.test(titok)) throw new Error('A meghívó titka nem ép.');
+  const m = nevAlakja(meghivottNev);
+  if (!m) throw new Error('A meghívott teljes neve kötelező.');
+  if (!Number.isSafeInteger(lejarat) || lejarat <= 0) throw new Error('A meghívó lejárata nem ép.');
   const c = [];
   for (const x of cimek) {
     const a = cimAlakja(x);
     if (a && !c.some((y) => y[0] === a[0] && y[1] === a[1])) c.push(a);
     if (c.length >= MEGHIVO_CIM_KORLAT) break;
   }
-  const n = nevAlakja(nev);
-  return MEGHIVO_ELOTAG + Buffer.from(JSON.stringify({ k: koino, t: alairo, c, ...(n ? { n } : {}) }), 'utf8').toString('base64url');
+  const p = [...new Set((profilMezok ?? []).filter((x) => typeof x === 'string' && MEZO_MINTA.test(x)))].slice(0, 16);
+  return MEGHIVO_ELOTAG + Buffer.from(JSON.stringify({ k: koino, t: alairo, c, i: azonosito, s: titok, m, l: lejarat,
+    ...(p.length ? { p } : {}) }), 'utf8').toString('base64url');
+}
+
+/** ⭐ D122: a meghívottnak küldendő EGY szöveg — a telepítő sor, a végén a meghívóval. */
+export function telepitoSorMeghivoval(meghivo) {
+  return TELEPITO_SOR + ' ' + meghivo;
 }
 
 // ===== A MEGHÍVÓ BEOLVASÁSA =====
@@ -90,18 +121,29 @@ function torzsOlvasasa(torzs) {
     if (!a) return { hiba: 'a meghívó egyik címe nem ép' };
     cimek.push({ hoszt: a[0], port: a[1] });
   }
-  if (j.n !== undefined && typeof j.n !== 'string') return { hiba: 'a meghívó megnevezése nem ép' };
-  return { meghivo: { koino: j.k, alairo: j.t, cimek, nev: nevAlakja(j.n) } };
+  if (typeof j.i !== 'string' || !AZ_MINTA.test(j.i)) return { hiba: 'a meghívó azonosítója nem ép' };
+  if (typeof j.s !== 'string' || !JEL_MINTA.test(j.s)) return { hiba: 'a meghívó titka nem ép' };
+  const m = nevAlakja(j.m);
+  if (!m) return { hiba: 'a meghívóból hiányzik a meghívott neve' };
+  if (!Number.isSafeInteger(j.l) || j.l <= 0) return { hiba: 'a meghívó lejárata nem ép' };
+  if (j.p !== undefined && (!Array.isArray(j.p) || j.p.length > 16 || !j.p.every((x) => typeof x === 'string' && MEZO_MINTA.test(x)))) {
+    return { hiba: 'a meghívó profil-mezői nem épek' };
+  }
+  return { meghivo: { koino: j.k, alairo: j.t, cimek, azonosito: j.i, titok: j.s, meghivottNev: m, lejarat: j.l,
+    profilMezok: j.p ?? [] } };
 }
 
 /**
- * A meghívó beolvasása egy beillesztett szövegből (a körülötte lévő szöveg nem zavar).
- * @returns {{meghivo: {koino: string, alairo: string, cimek: Array<{hoszt: string, port: number}>, nev: string|null}}|{hiba: string}}
+ * A meghívó beolvasása egy beillesztett szövegből (a körülötte lévő szöveg — a telepítő sor is — nem zavar).
+ * @returns {{meghivo: Object}|{hiba: string}}
  */
 export function meghivoOlvasasa(szoveg) {
   if (typeof szoveg !== 'string') return { hiba: 'nincs meghívó' };
   const i = szoveg.indexOf(MEGHIVO_ELOTAG);
-  if (i < 0) return { hiba: 'ez nem koino-meghívó (a „' + MEGHIVO_ELOTAG + '” előtag hiányzik)' };
+  if (i < 0) {
+    return { hiba: szoveg.includes('koino-meghivo:') ? 'ez egy régi alakú meghívó — kérj újat a meghívódtól'
+      : 'ez nem koino-meghívó (a „' + MEGHIVO_ELOTAG + '” előtag hiányzik)' };
+  }
   const maradek = szoveg.slice(i + MEGHIVO_ELOTAG.length, i + MEGHIVO_ELOTAG.length + MEGHIVO_KORLAT + 256);
   // Előbb a megszakítás nélküli rész; ha az nem ép, a szóközök (egy tördelő csatorna sortörései) kihagyásával.
   const egyben = maradek.match(/^[A-Za-z0-9_-]*/)[0];
@@ -116,21 +158,29 @@ export function meghivoOlvasasa(szoveg) {
   return elso;
 }
 
-// ===== AZ ELLENŐRZŐ KÓD =====
+// ===== A BIZONYÍTÉK =====
+
+function bizonyitekBajtjai(titok, { koino, szemely, horgony }) {
+  return createHmac('sha256', Buffer.from(String(titok), 'base64url'))
+    .update('koino-meghivo-bizonyitek-1|' + koino + '|' + szemely + '|' + horgony).digest();
+}
 
 /**
- * A belépés horgonyának ellenőrző kódja — 6 jel, két hármas csoportban (pl. „4F7-KQ2”); null, ha a horgony nem azonosító alakú.
- * @param {string} horgony - a belépés (`Belepes`) azonosítója
- * @returns {string|null}
+ * ⭐ D122: a belépő bizonyítéka — a titokkal készült HMAC a koinóra, a személyes kulcsra és a horgonyra kötve (másra nem
+ * másolható át). @returns {string} base64url
  */
-export function ellenorzoKod(horgony) {
-  if (!azonositoAlaku(horgony)) return null;
-  const h = createHash('sha256').update('koino-ellenorzo-kod-1|').update(horgony).digest();
-  // az első 30 bit, 5 bitenként
-  let bitek = 0n;
-  for (let i = 0; i < 4; i++) bitek = (bitek << 8n) | BigInt(h[i]);
-  bitek >>= 2n;
-  let kod = '';
-  for (let i = 5; i >= 0; i--) kod += KOD_ABECE[Number((bitek >> BigInt(i * 5)) & 31n)];
-  return kod.slice(0, 3) + '-' + kod.slice(3);
+export function meghivoBizonyitek(titok, kotes) {
+  return bizonyitekBajtjai(titok, kotes).toString('base64url');
+}
+
+/**
+ * ⭐ D122: a bizonyíték ellenőrzése a meghívó készülékén (aki a titkot kiadta) — időben állandó összevetéssel.
+ * @returns {boolean}
+ */
+export function bizonyitekEllenorzese(titok, bizonyitek, kotes) {
+  if (typeof bizonyitek !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(bizonyitek)) return false;
+  if (!azonositoAlaku(kotes?.koino) || !azonositoAlaku(kotes?.szemely) || !azonositoAlaku(kotes?.horgony)) return false;
+  const vart = bizonyitekBajtjai(titok, kotes);
+  const kapott = Buffer.from(bizonyitek, 'base64url');
+  return kapott.length === vart.length && timingSafeEqual(kapott, vart);
 }

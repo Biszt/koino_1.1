@@ -1,230 +1,192 @@
 // koino/felulet/js/koinoMeghivas.js
 
-// Felelősség: ⭐⭐ D121 (⑤) — A MEGHÍVÁS A LAPON (koinós többlet — a prototípus „Meghívóim” pontja helyén): „két ember, két
-// gomb, egy összevetett kód”. Két ablak a fő menüben:
-//   · „✉️ Meghívás…” — a meghívó SZÖVEGE ehhez a koinóhoz (a másoló gombbal, egy nem kötelező megnevezéssel); a figyelmeztetések
-//     (még nem vagyok tag — a meghívásom nem ad tagságot; nem fut az őrjárat — a belépő nem ér el). Ha még nem vagyok tag, az
-//     ablak a várakozást mutatja: az ellenőrző kódomat, amit a meghívómnak bemondok, és hogy tag lettem-e (`varakozasHtml`).
-//   · „👋 Belépők” — akik jelentkeztek és még nem tagok, a kódjukkal (MH3) és a profiljukkal; a „Meghívom” egy megerősítés után
-//     (csak ha a belépő ugyanezt a kódot mondta be).
+// Felelősség: ⭐⭐ D121, D122 — A MEGHÍVÁS A LAPON (koinós többlet a prototípus „Meghívóim” ablaka KÖRÉ): „egy bemásolás, és a
+// következő csere után bent vagy”.
+//   · „✉️ Meghívóim” — a prototípus `MeghivoModal`-ja BÁJTRA VÁLTOZATLANUL (a meghívott teljes neve + a nyilatkozat → „Új meghívó
+//     létrehozása”; a saját meghívók listája: a 📋 a meghívottnak küldendő EGY sort másolja — a telepítő sort a meghívóval —, a 🗑️
+//     visszavon). A program a prototípus útvonalain felel (`/api/meghivo/sajat`, `/api/meghivo`, `/api/meghivo/:id/visszavonas`,
+//     `/api/meghivo/kotelezo`). A koinós többlet: a nyilatkozat szövege („Kijelentem…” — a koinóban a „tanúsítás” a 2. lépcső
+//     neve), egy magyarázó sor, a lejárt meghívó felirata, és a 📋 az egész sort másolja (a listában a rövid kód látszik, mint a
+//     prototípusban — a program `kod`-ja a meghívó azonosítójából, a `szoveg` az egész sor).
+//   · a PROFIL-ŰRLAP (a regisztrációs űrlap kinézetével): teljes név (a meghívóból előtöltve, átírható), becenév, ország, régió,
+//     település — nem kötelező (ha a koinó nem várja); az első megnyitáskor magától, utána a fő menü „eember beállítások” pontja.
+//   · a belépő VÁRAKOZÁSA (`varakozasHtml` — a csatlakozás ablaka mutatja): a meghívó gépe a következő cserénél magától meghív.
+//   · az ELSŐ MEGNYITÁS (`elsoMegnyitas`): ha a készülék még egy koinót sem ismer, a csatlakozás ablaka („Meghívtak? illeszd be”);
+//     ha belépett, de még nincs profilja (és nem hagyta ki), a profil-űrlap.
 //
-// ⭐ A lap csak rajzol (7. szabály): a meghívó szövegét, a jegyzéket és a meghívást a program adja (`koino.js` `meghivoSzovege`,
-// `belepokJegyzeke`, `meghivasVegrehajtasa`, `tagsagAllapotom` — ugyanaz, mint a `meghivo`, `belepok`, `meghiv` parancsé), a lap
-// a kapu útvonalain kérdez (`GET /api/meghivo`, `/api/belepok`, `/api/tagsagom`, `POST /api/meghivas`).
+// ⭐ A lap csak rajzol (7. szabály): a meghívót, a meghívást és a profilt a program végzi (`koino.js` `meghivoKiadasa`,
+// `kiadottMeghivok`, `meghivoVisszavonasa`, `profilomAllapota`, `profilMegadasa` — ugyanaz, mint a parancsoké).
 //
-// Használja: `foMenu.js`, `koinoCsatlakozas.js` (a meghívó elfogadása után a várakozás).
+// Használja: `foMenu.js`, `koinoCsatlakozas.js`, `index.html`.
 
 import Modal from './components/modals/Modal.js';
+import MeghivoModal from './components/modals/MeghivoModal.js';
 import { apiGet, apiPost } from './utils/apiHelper.js';
 
 const MODAL_KONTENER = 'modal-kontener';
-const FRISSITES_MS = 5000;
+const KIHAGYVA = 'koino-profil-kihagyva:';
 
 const html = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const rovid = (az) => String(az ?? '').slice(0, 8) + '…';
-const ido = (t) => (Number.isFinite(t) ? new Date(t).toLocaleString('hu-HU') : '');
 
-/** A vágólapra másolás (ha a vágólap nem érhető el, a szöveg kijelölve marad — kézzel másolható). */
-async function masolas(gomb, szovegElem) {
-  try {
-    await navigator.clipboard.writeText(szovegElem.textContent);
-    gomb.textContent = 'Másolva ✓';
-  } catch {
-    window.getSelection()?.selectAllChildren(szovegElem);
-    gomb.textContent = 'Jelöld ki és másold';
+// ===================================
+// ✉️ MEGHÍVÓIM — a prototípus ablaka, a koinós többlet köré írva
+// ===================================
+
+/** A prototípus-metódus köré ír (a visszatérési értékét is átalakíthatja); kétszeri becsomagolás ellen őrzött. */
+function koruleIr(metodus, fn) {
+  const eredeti = MeghivoModal.prototype[metodus];
+  if (typeof eredeti !== 'function' || eredeti.koinoKorulirva) return;
+  const uj = function (...ervek) {
+    const ertek = eredeti.apply(this, ervek);
+    return ertek && typeof ertek.then === 'function' ? ertek.then((x) => fn.call(this, x, ...ervek)) : fn.call(this, ertek, ...ervek);
+  };
+  uj.koinoKorulirva = true;
+  MeghivoModal.prototype[metodus] = uj;
+}
+
+// a nyilatkozat szövege és a magyarázat (a sablon bájtra a prototípusé — a szövegét itt cseréljük)
+koruleIr('init', function (ertek) {
+  const tanusitas = document.getElementById('meghivo-tanusitas');
+  const span = tanusitas?.parentElement?.querySelector('span');
+  if (span) {
+    span.innerHTML = 'Kijelentem, hogy a meghívott <strong>valódi személy</strong>, és tudomásom szerint <strong>még nem '
+      + 'csatlakozott</strong> ehhez a koinóhoz.';
   }
-  setTimeout(() => { gomb.textContent = 'Másolás'; }, 2500);
+  const letrehozas = document.querySelector('.meghivo-modal__letrehozas');
+  if (letrehozas && !letrehozas.querySelector('.koino-meghivo-magyarazat')) {
+    const p = document.createElement('p');
+    p.className = 'koino-meghivo-magyarazat';
+    p.textContent = 'A meghívó egy hónapig érvényes, és egyszer használható. A 📋 egy sort másol: küldd el a meghívottnak — a '
+      + 'telefonon a Termuxba másolja (ez telepít is), ha nála már fut a koino, a lapon is beillesztheti. A következő csere után '
+      + 'magától tag lesz (ehhez a te gépeden is futnia kell a koinónak).';
+    letrehozas.appendChild(p);
+  }
+  return ertek;
+});
+
+// a 📋 a meghívottnak küldendő EGÉSZ sort másolja (a listában a rövid kód látszik, mint a prototípusban), és a lejárt meghívó
+// felirata (a prototípusban nincs lejárat)
+koruleIr('_elemHtml', function (h, meghivo) {
+  if (typeof h !== 'string') return h;
+  let ki = h;
+  if (meghivo?.szoveg) {
+    ki = ki.replace('class="meghivo-modal__masol" data-kod="' + meghivo.kod + '" title="Kód másolása"',
+      'class="meghivo-modal__masol" data-kod="' + html(meghivo.szoveg) + '" title="A meghívó másolása (egy sor — küldd el a meghívottnak)"');
+  }
+  if (meghivo?.statusz === 'Lejart') {
+    ki = ki.replace('meghivo-modal__statusz--aktiv">Lejart', 'meghivo-modal__statusz--visszavont">Lejárt');
+  }
+  return ki;
+});
+
+/** A „Meghívóim” ablak — a prototípusé. */
+export async function meghivoimMegnyitasa() {
+  console.log('meghivoimMegnyitasa - KEZDÉS');
+  const modal = new MeghivoModal(MODAL_KONTENER);
+  await modal.init();
+  await modal.megnyitas();
+  console.log('meghivoimMegnyitasa - VÉGE');
+  return modal;
+}
+
+// ===================================
+// 📝 A PROFIL-ŰRLAP (a regisztrációs űrlap kinézetével)
+// ===================================
+
+const PROFIL_MEZOK = [
+  { kulcs: 'nev', cimke: 'Teljes név', autocomplete: 'name' },
+  { kulcs: 'becenev', cimke: 'Becenév', autocomplete: 'nickname' },
+  { kulcs: 'orszag', cimke: 'Ország', autocomplete: 'country-name' },
+  { kulcs: 'regio', cimke: 'Régió / Megye', autocomplete: 'address-level1' },
+  { kulcs: 'telepules', cimke: 'Település', autocomplete: 'address-level2' }
+];
+
+/**
+ * A profil-űrlap: a meglévő profilom (ha van), különben az előtöltés (a meghívó által beírt név); a koinó kötelező mezői
+ * csillaggal. Az első megnyitáskor „Most kihagyom” is (a lap ezt koinónként megjegyzi).
+ * @param {{elso?: boolean, koino?: string|null}} [b]
+ */
+export async function profilUrlapMegnyitasa({ elso = false, koino = null } = {}) {
+  console.log('profilUrlapMegnyitasa - KEZDÉS', { elso });
+  let allapot;
+  try { allapot = await apiGet('profil'); } catch { allapot = null; }
+  if (!allapot?.belepve) return null;
+  const ertekek = { ...(allapot.mezok ?? {}) };
+  if (!ertekek.nev && allapot.elotoltes?.nev) ertekek.nev = allapot.elotoltes.nev;
+  const kotelezo = new Set(allapot.kotelezo ?? []);
+
+  const tartalom = document.createElement('div');
+  tartalom.innerHTML = '<p class="koino-profil__leiras">' + (elso
+    ? 'Üdv a koinóban! Ha szeretnéd, add meg az adataidat — a többiek ezekből ismernek fel. Nem kötelező, és később a fő menü '
+      + '„eember beállítások” pontjában is megadhatod.'
+    : 'Az adataid ebben a koinóban — a többiek ezekből ismernek fel.'
+      + (!allapot.tag && allapot.meghivoval ? ' A meghívód a meghíváskor ezt tanúsítja.' : '')) + '</p>'
+    + '<div class="regisztracio-form__altalanos-hiba" role="alert"></div>'
+    + '<form class="regisztracio-form koino-profil" novalidate>'
+    + PROFIL_MEZOK.map((m) => '<div class="form-mezo"><input class="form-mezo__bemenet" type="text" name="' + m.kulcs + '" '
+      + 'placeholder="' + html(m.cimke + (kotelezo.has(m.kulcs) ? ' *' : '')) + '" aria-label="' + html(m.cimke) + '" autocomplete="'
+      + m.autocomplete + '" maxlength="120" value="' + html(ertekek[m.kulcs] ?? '') + '"></div>').join('')
+    + (kotelezo.size ? '<p class="koino-profil__leiras">* a koinó ezeket kéri — a meghívásod ezek nélkül nem írható alá.</p>' : '')
+    + '<button type="submit" class="btn-regisztracio">Mentés</button></form>';
+
+  const modal = new Modal(MODAL_KONTENER, {
+    cim: elso ? '📝 Az adataid' : '⚙️ eember beállítások — az adataid',
+    meret: 'alap',
+    tartalom,
+    gombok: [{ felirat: elso ? 'Most kihagyom' : 'Bezárás', tipus: 'masodlagos', akcio: () => {
+      if (elso && koino) { try { localStorage.setItem(KIHAGYVA + koino, '1'); } catch { /* a tároló nem elérhető */ } }
+      modal.bezaras();
+    } }]
+  });
+  const hiba = tartalom.querySelector('.regisztracio-form__altalanos-hiba');
+  tartalom.querySelector('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const mezok = {};
+    for (const m of PROFIL_MEZOK) mezok[m.kulcs] = tartalom.querySelector('input[name="' + m.kulcs + '"]')?.value.trim() ?? '';
+    const gomb = tartalom.querySelector('button[type="submit"]');
+    gomb.disabled = true;
+    hiba.textContent = '';
+    try {
+      await apiPost('profil', { mezok });
+      modal.bezaras();
+    } catch (h) {
+      hiba.textContent = h.message ?? 'A mentés nem sikerült.';
+      gomb.disabled = false;
+    }
+  });
+  await modal.init();
+  modal.megnyitas();
+  console.log('profilUrlapMegnyitasa - VÉGE');
+  return modal;
+}
+
+// ===================================
+// ⏳ A BELÉPŐ VÁRAKOZÁSA és AZ ELSŐ MEGNYITÁS
+// ===================================
+
+/** ⭐ D122: a belépő várakozása — a meghívó gépe a következő cserénél magától meghív. @returns {string} HTML */
+export function varakozasHtml(t) {
+  if (!t?.horgony) return '<p class="koino-meghivas__leiras">Még nincs belépésed ebben a koinóban.</p>';
+  if (t.tag) return '<p class="koino-meghivas__tag">✅ Tag vagy ebben a koinóban — a meghívásod megérkezett.</p>';
+  return '<p class="koino-meghivas__leiras">⏳ A meghívód gépe a következő cserénél magától meghív — ehhez az ő gépén is futnia '
+    + 'kell a koinónak. Ez az ablak magától frissül.</p>';
 }
 
 /**
- * ⭐ A belépő várakozása (MH3, MH4): az ellenőrző kódom, és hogy tag lettem-e. A `koinoCsatlakozas.js` is ezt rajzolja a meghívó
- * elfogadása után. @returns {string} HTML
+ * ⭐⭐ D122: AZ ELSŐ MEGNYITÁS — ha a készülék még egy koinót sem ismer: a csatlakozás ablaka („Meghívtak? illeszd be”); ha a
+ * mostani koinóba beléptem, de még nincs profilom, és nem hagytam ki: a profil-űrlap.
+ * @param {{csatlakozas: Function}} b - a csatlakozás ablakának megnyitója (a `koinoCsatlakozas.js`-ből — körkörös import nélkül)
  */
-export function varakozasHtml(t, meghivoNeve = null) {
-  if (!t?.horgony) return '<p class="koino-meghivas__leiras">Még nincs belépésed ebben a koinóban.</p>';
-  if (t.tag) {
-    return '<p class="koino-meghivas__tag">✅ Tag vagy ebben a koinóban — a meghívásod megérkezett.</p>';
+export async function elsoMegnyitas({ csatlakozas }) {
+  try {
+    const ter = await apiGet('ter');
+    if (!(ter?.kartyak ?? []).length) { await csatlakozas(); return; }
+    const en = await apiGet('en');
+    const allapot = await apiGet('profil');
+    let kihagyva = false;
+    try { kihagyva = localStorage.getItem(KIHAGYVA + en?.koino) === '1'; } catch { /* a tároló nem elérhető */ }
+    if (allapot?.belepve && allapot.mezok === null && !kihagyva) await profilUrlapMegnyitasa({ elso: true, koino: en?.koino });
+  } catch (hiba) {
+    console.warn('elsoMegnyitas - nem sikerült', { ok: hiba.message });
   }
-  return '<p class="koino-meghivas__leiras">⏳ Várakozás a meghívásra' + (meghivoNeve ? ' — a meghívód: <strong>' + html(meghivoNeve)
-    + '</strong>' : '') + '. Mondd be neki ezt a kódot (élőben vagy telefonon) — ő ugyanezt látja a belépők között, és ha egyezik, '
-    + 'meghív:</p><p class="koino-meghivas__kod">' + html(t.kod) + '</p>'
-    + '<p class="koino-meghivas__leiras">Ehhez a két készüléknek cserélnie kell (az őrjáratok — a telefonon a <code>koino</code> '
-    + 'parancs indítja). Ez az ablak magától frissül.</p>';
-}
-
-// ===================================
-// ✉️ MEGHÍVÁS
-// ===================================
-
-/** A meghívás ablaka: a meghívó szövege (ha tag vagyok), vagy a várakozás a saját meghívásomra (ha még nem). */
-export async function meghivasMegnyitasa() {
-  console.log('meghivasMegnyitasa - KEZDÉS');
-  const tartalom = document.createElement('div');
-  tartalom.className = 'koino-meghivas';
-  let ora = null;
-  const modal = new Modal(MODAL_KONTENER, {
-    cim: '✉️ Meghívás ebbe a koinóba',
-    meret: 'alap',
-    tartalom,
-    gombok: [{ felirat: 'Bezárás', tipus: 'masodlagos', akcio: () => { clearInterval(ora); modal.bezaras(); } }]
-  });
-
-  let tagsag = null;
-  let meghivo = null;
-  let hiba = null;
-  let nev = '';
-
-  const rajzol = () => {
-    if (hiba) {
-      tartalom.innerHTML = '<p class="koino-meghivas__hiba">' + html(hiba) + '</p>';
-      return;
-    }
-    if (!tagsag) { tartalom.innerHTML = '<p class="koino-meghivas__leiras">Betöltés…</p>'; return; }
-    if (!tagsag.tag) {
-      tartalom.innerHTML = varakozasHtml(tagsag) + '<p class="koino-meghivas__leiras">Meghívni csak tag tud — amíg nem vagy tag, '
-        + 'a meghívód nem ad tagságot.</p>';
-      return;
-    }
-    const figyel = [];
-    if (meghivo && !meghivo.orjarat?.fut) {
-      figyel.push('⚠ Nem fut az őrjáratod — a belépő csak akkor ér el, ha fut (a telefonon a <code>koino</code> parancs indítja).');
-    }
-    tartalom.innerHTML = '<p class="koino-meghivas__leiras">Küldd el ezt a szöveget annak, akit meghívsz (üzenetben, e-mailben, '
-      + 'akár papíron). Ő a lapján, a „🔗 Csatlakozás egy koinóhoz…” ablakban beilleszti — a többi magától megy. Utána a '
-      + '„👋 Belépők” között látod, a kódjával.</p>'
-      + '<label class="koino-meghivas__mezo">Hogyan mutatkozz be benne? (nem kötelező)'
-      + '<input type="text" name="nev" maxlength="64" autocomplete="off" value="' + html(nev) + '" placeholder="pl. Csaba laptopja">'
-      + '</label>'
-      + (meghivo ? '<div class="koino-meghivas__szoveg"><code>' + html(meghivo.szoveg) + '</code>'
-        + '<button type="button" class="koino-meghivas__gomb" data-muvelet="masol">Másolás</button></div>' : '')
-      + (meghivo ? '<p class="koino-meghivas__leiras">A címeid benne: ' + html((meghivo.cimek ?? []).map((c) => c.hoszt + ':' + c.port)
-        .join(', ') || '—') + '.</p>' : '')
-      + figyel.map((s) => '<p class="koino-meghivas__figyel">' + s + '</p>').join('');
-  };
-
-  const betolt = async () => {
-    try {
-      tagsag = await apiGet('tagsagom');
-      if (tagsag.tag) meghivo = await apiGet('meghivo' + (nev ? '?nev=' + encodeURIComponent(nev) : ''));
-      hiba = null;
-    } catch (h) {
-      hiba = h.message ?? 'A meghívó most nem készíthető.';
-    }
-    rajzol();
-  };
-
-  tartalom.addEventListener('click', async (e) => {
-    const gomb = e.target.closest('button[data-muvelet]');
-    if (gomb?.dataset.muvelet === 'masol') await masolas(gomb, tartalom.querySelector('.koino-meghivas__szoveg code'));
-  });
-  tartalom.addEventListener('change', async (e) => {
-    if (e.target.name !== 'nev') return;
-    nev = e.target.value.trim();
-    await betolt();
-  });
-
-  await modal.init();
-  rajzol();
-  modal.megnyitas();
-  await betolt();
-  // ⭐ Ha még nem vagyok tag, a várakozás magától frissül (a meghívás a cserével jön).
-  ora = setInterval(async () => {
-    if (!document.body.contains(tartalom)) { clearInterval(ora); return; }
-    if (tagsag && !tagsag.tag) await betolt();
-  }, FRISSITES_MS);
-  console.log('meghivasMegnyitasa - VÉGE');
-  return modal;
-}
-
-// ===================================
-// 👋 BELÉPŐK
-// ===================================
-
-/** A belépők ablaka: a várakozók a kódjukkal; a „Meghívom” a megerősítés után. */
-export async function belepokMegnyitasa() {
-  console.log('belepokMegnyitasa - KEZDÉS');
-  const tartalom = document.createElement('div');
-  tartalom.className = 'koino-meghivas';
-  let ora = null;
-  const modal = new Modal(MODAL_KONTENER, {
-    cim: '👋 Belépők — akik meghívásra várnak',
-    meret: 'alap',
-    tartalom,
-    gombok: [{ felirat: 'Bezárás', tipus: 'masodlagos', akcio: () => { clearInterval(ora); modal.bezaras(); } }]
-  });
-
-  let lista = null;
-  let megerosites = null;       // a horgony, akinél a megerősítés látszik
-  let uzenet = null;
-  let folyamatban = false;
-
-  const profilHtml = (p) => {
-    if (!p) return '';
-    if (p.mezok) return '<span class="koino-belepo__profil">' + Object.entries(p.mezok).map(([k, v]) => html(k) + ': ' + html(v)).join(' · ') + '</span>';
-    return '<span class="koino-belepo__profil">' + (p.van ? 'a profilja még nem jött meg' : '⚠ nincs profilja (a koinó ezt várja: '
-      + html(p.kell.join(', ')) + ')') + '</span>';
-  };
-
-  const rajzol = () => {
-    if (!lista) { tartalom.innerHTML = '<p class="koino-meghivas__leiras">Betöltés…</p>'; return; }
-    const elo = '<p class="koino-meghivas__leiras">Hívd meg azt, akinek a kódját <strong>tőle hallottad</strong> (élőben vagy '
-      + 'telefonon) — a meghívó szöveget más is továbbküldhette, de a kódját előre senki nem tudhatja.</p>'
-      + (uzenet ? '<p class="koino-meghivas__uzenet">' + uzenet + '</p>' : '');
-    if (!lista.length) {
-      tartalom.innerHTML = elo + '<p class="koino-meghivas__leiras">Most senki nem vár. Aki a meghívódat elfogadta, az első cserével '
-        + 'ide érkezik (az ablak magától frissül).</p>';
-      return;
-    }
-    tartalom.innerHTML = elo + '<ul class="koino-belepok">' + lista.map((b) => '<li class="koino-belepo">'
-      + '<span class="koino-belepo__kod">' + html(b.kod) + '</span>'
-      + '<span class="koino-belepo__adat">' + html(rovid(b.horgony)) + ' · belépett: ' + html(ido(b.belepett)) + profilHtml(b.profil) + '</span>'
-      + (megerosites === b.horgony
-        ? '<span class="koino-belepo__megerosites">A belépő ezt a kódot mondta: <strong>' + html(b.kod) + '</strong>? '
-          + '<button type="button" class="koino-meghivas__gomb koino-meghivas__gomb--fo" data-muvelet="meghiv" data-horgony="'
-          + html(b.horgony) + '"' + (folyamatban ? ' disabled' : '') + '>Igen, meghívom</button>'
-          + '<button type="button" class="koino-meghivas__gomb" data-muvelet="megse">Mégse</button></span>'
-        : '<button type="button" class="koino-meghivas__gomb" data-muvelet="kerdez" data-horgony="' + html(b.horgony)
-          + '"' + (b.profil && !b.profil.van ? ' disabled title="A koinó profilt vár — előbb a belépő adja meg"' : '') + '>Meghívom…</button>')
-      + '</li>').join('') + '</ul>';
-  };
-
-  const betolt = async () => {
-    try {
-      lista = (await apiGet('belepok')).belepok ?? [];
-    } catch (h) {
-      lista = [];
-      uzenet = html(h.message ?? 'A belépők most nem olvashatók.');
-    }
-    rajzol();
-  };
-
-  tartalom.addEventListener('click', async (e) => {
-    const gomb = e.target.closest('button[data-muvelet]');
-    if (!gomb || gomb.disabled) return;
-    if (gomb.dataset.muvelet === 'kerdez') { megerosites = gomb.dataset.horgony; uzenet = null; rajzol(); return; }
-    if (gomb.dataset.muvelet === 'megse') { megerosites = null; rajzol(); return; }
-    if (gomb.dataset.muvelet !== 'meghiv') return;
-    folyamatban = true;
-    rajzol();
-    try {
-      const r = await apiPost('meghivas', { horgony: gomb.dataset.horgony });
-      uzenet = '✅ Meghívtad (' + html(r.kod) + ') — a következő csere viszi el hozzá, és tag lesz.';
-    } catch (h) {
-      uzenet = '⚠ ' + html(h.message ?? 'A meghívás nem sikerült.');
-    }
-    folyamatban = false;
-    megerosites = null;
-    await betolt();
-  });
-
-  await modal.init();
-  rajzol();
-  modal.megnyitas();
-  await betolt();
-  ora = setInterval(async () => {
-    if (!document.body.contains(tartalom)) { clearInterval(ora); return; }
-    if (!megerosites && !folyamatban) await betolt();
-  }, FRISSITES_MS);
-  console.log('belepokMegnyitasa - VÉGE');
-  return modal;
 }

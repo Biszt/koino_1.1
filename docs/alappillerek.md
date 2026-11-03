@@ -1690,3 +1690,19 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     (az indító az őrjáratot és a csere a születést pár másodperccel később hozza) · ⛔ elvetve: a tér frissítése az alsó sáv
     csere-jelére (a születés és a tagság a kérelemmel is jön — egyszerűbb és biztos az időzített frissítés) · ⏸️ hiány: gyökér-koinó a
     lapról · `meghivas_atvizsgalas.md` 7.
+230. **2026-11-03 · D122 — a meghívó kulcs (Csaba: „minden javaslatodat elfogadom … nézzen ki úgy mint a prototipusban van”)**
+    → **a meghívó egy titkot hordoz; a belépő az első cserében (a kapu személy-körében) bizonyítja — HMAC a koinóra, a személyére és a
+    horgonyára kötve —, és a meghívó készüléke MAGÁTÓL aláírja a meghívást (a nyilatkozattal); egy üzenet (a telepítő sor a
+    meghívóval), egy hónap, egyszer használható, visszavonható; a lap a prototípus „Meghívóim” ablaka, a profil-űrlap a regisztrációé**
+    · ⭐ a bizonyíték nem esemény (nem marad nyoma, a titok nem utazik); a kiadott meghívók (a titkokkal) helyi feljegyzés · ⛔ mérve: a
+    két párhuzamos munka kétszer írta alá → az aláírás sorban · ⛔ elvetve: a kódos összevetés tartaléknak (Csaba: „nem kell”); a
+    titok a belépés eseményében (közvetlenül olvasható volna, és minden készülékre utazna); a meghívó a meghívott nevét az aláírt
+    meghívásban (a meghívott a saját profilját adja meg — a meghívás azt tanúsítja) · ⚠️ az ára: a meghívó kulcs — aki elsőként
+    használja, az jut be (a D56 szerint az 1. lépcső olcsó) · `meghivas_atvizsgalas.md` 8.
+231. **2026-11-03 · D122 — a bizonyíték a kérelem útján is (a böngészős végigjárás lelete)** → **a kapu személy-köre a kérelemnél
+    (`KELL` → `TAGSAG`) is viszi és igazolja a meghívó bizonyítékát, és a meghívó a nem tag kérelme után is lefuttatja a belépő
+    útját** · ⛔ mérve: a belépő lapjának függő kérelmei (a gyökér fejlécei — nem tagnak elutasítva) minden munkát kérelemmé tettek,
+    és a bizonyíték csak a cserében utazott → B csak a harmadik körben lett tag; két hálózat között a belépő első munkája a
+    jelentkezés (MH6) — szintén kérelem · ⛔ a szelet-kérelem a saját azonosság-objektumát rakta össze (`szeletUdpResen`), a
+    bizonyíték abból is kimaradt · ⛔ elvetve: a belépő lapja ne kérjen, amíg nem tag (a kérés máshol kiszolgálható lehet, és a
+    kapu egy helyen döntsön, ne a kérő találgasson) · `meghivas_atvizsgalas.md` 8.

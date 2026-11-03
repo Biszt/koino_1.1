@@ -1438,16 +1438,17 @@ proba('⭐ a ⑦ lelete: a függő kérelem célja a KÖTÉS mostani címe — a
     }
   });
 
-// ⭐⭐ D121 (②, ④): A MEGHÍVÁS A LAPON — két ember, két gomb, egy összevetett kód. A egy ZÁRT koinó alapítója, felülete és
-// őrjárata fut; B egy friss készülék (kulcs és koinó nélkül), csak a felülete. A a LAPJÁN elkéri a meghívó szövegét
-// (`GET /api/meghivo`); B a LAPJÁN beilleszti (`POST /api/csatlakozas` — csatlakozás, a meghívó készüléke társnak, belépés: MH4),
-// és megkapja az ellenőrző kódját; B elindítja az őrjáratát (a sima `orjarat` — a felület becenevével). ⭐ Viselkedést mérünk:
-// A lapján a belépők között (`GET /api/belepok`) megjelenik B — UGYANAZZAL a kóddal (MH3); A a lapján meghívja (`POST
-// /api/meghivas` — a KÓDDAL); és B lapja (`GET /api/tagsagom`) tagnak mondja (a meghívás B lemezére ért); A belépői közül B
-// eltűnik. Rontás: az elfogadás belépés nélkül → B nem jelenik meg A belépői között; a belépők jegyzéke a tagság szűrése nélkül → B
-// a meghívás után is ott marad; a meghívó cím nélkül → B nem éri el A-t; ⭐ MH6: a jelentkezés (a cél nélküli kérelem A
-// készülék-témájának kopogtatójával) nélkül → bukik — és mivel itt a csere a címen megy, a jelentkezés a menetet nem lassíthatja.
-proba('⭐⭐ D121: a meghívás a lapon — A a meghívót a lapjáról adja, B a lapján beilleszti, A a belépők között B kódját látja, és a lapjáról meghívja; B tag lesz',
+// ⭐⭐ D122: A MEGHÍVÁS A LAPON — „egy bemásolás, és a következő csere után bent vagy”. A egy ZÁRT koinó alapítója, felülete és
+// őrjárata fut (egy próba-értesítővel); B egy friss készülék (kulcs és koinó nélkül), csak a felülete. A a LAPJÁN kiállít egy
+// meghívót (`POST /api/meghivo` — a meghívott teljes neve és a nyilatkozat kötelező: nélkülük 400); a „Meghívóim” listája
+// (`/api/meghivo/sajat`) a meghívottnak küldendő EGY sort adja (a telepítő sor a meghívóval). B a LAPJÁN beilleszti az egész sort
+// (`POST /api/csatlakozas`), B elindítja az őrjáratát. ⭐ Viselkedést mérünk: B MAGÁTÓL tag lesz (`/api/tagsagom` — A semmit nem
+// nyom meg), A listáján a meghívó „Felhasznált” (B-vel), az aláírt meghívás a nyilatkozatot hordozza, A készüléke értesít („belépett
+// a meghívóddal”), B lemezén a jelentkezés (MH6 — a cél nélküli kérelem A készülék-témájának kopogtatójával), és B profil-űrlapja a
+// meghívó által beírt névvel töltődik elő, a mentés után a profiljában. Rontás: a kapu nem igazol → B nem lesz tag; a bizonyíték
+// nélkül (a belépő nem küldi) → nem lesz tag; az automatikus meghívás nélkül → nem lesz tag; a nyilatkozat kimarad a meghívásból
+// → bukik; az értesítés nélkül → bukik.
+proba('⭐⭐ D122: a meghívás a lapon — A kiállítja a meghívót, B a lapján beilleszti, és A gépe MAGÁTÓL meghívja; B tag lesz, a profilja előtöltve',
   async () => {
     const a = await ujKeszulek();
     const b = await ujKeszulek();
@@ -1457,7 +1458,6 @@ proba('⭐⭐ D121: a meghívás a lapon — A a meghívót a lapjáról adja, B
     let fa = null, fb = null;
     const naplo = { a: '', b: '' };
     try {
-      // ⭐ MH5 (A): A őrjárata egy próba-értesítővel (`KOINO_ERTESITO` — fájlba írja a címet és a szöveget)
       const ertNaplo = join(a, 'ertesitesek-naplo.txt');
       const ertSzkript = join(a, 'ertesito.mjs');
       await writeFile(ertSzkript, "import { appendFileSync } from 'node:fs';\nappendFileSync(" + JSON.stringify(ertNaplo)
@@ -1471,56 +1471,59 @@ proba('⭐⭐ D121: a meghívás a lapon — A a meghívót a lapjáról adja, B
       fb = await feluletet(b, FB, helyben);
       await fa.hiv('/api/ertesitesi-beallitasok/globalis', { method: 'PUT',
         body: JSON.stringify({ ertesitesTipusok: [], emailErtesites: true, emailMod: 'azonnal' }) });
-      // A meghívója — megvárjuk, hogy az őrjárat első köre feljegyezze a kapu portját
-      let m = null;
+      // a nyilatkozat és a név kötelező
+      const nyilatkozatNelkul = await fa.hiv('/api/meghivo', { method: 'POST', body: JSON.stringify({ meghivottNev: 'Kovács Anna' }) });
+      const nevNelkul = await fa.hiv('/api/meghivo', { method: 'POST', body: JSON.stringify({ tanusitva: true, meghivottNev: ' ' }) });
+      // megvárjuk, hogy az őrjárat első köre feljegyezze a kapu portját (a meghívó címei ebből)
       for (let i = 0; i < 30; i++) {
-        m = await fa.hiv('/api/meghivo?nev=' + encodeURIComponent('Anna gépe'));
-        if (m.adat?.orjarat?.fut) break;
+        if (JSON.parse(await readFile(join(await koinoMappa(a), 'csere.json'), 'utf8').catch(() => '{}'))?.kor?.port) break;
         await varj(500);
       }
-      const csat = await fb.hiv('/api/csatlakozas', { method: 'POST', body: JSON.stringify({ meghivo: 'Itt a meghívóm: ' + m.adat.szoveg }) });
-      const kod = csat.adat?.kod ?? null;
-      // ⭐ MH6 (A): a jelentkezés — B lemezén a függő kérelem a koinó születésére, cél nélkül, A készülék-témájának kopogtatójával
+      const kiadas = await fa.hiv('/api/meghivo', { method: 'POST', body: JSON.stringify({ tanusitva: true, meghivottNev: 'Kovács Anna' }) });
+      const lista = (await fa.hiv('/api/meghivo/sajat')).adat?.meghivok ?? [];
+      const sor = lista[0]?.szoveg ?? '';
+      const csat = await fb.hiv('/api/csatlakozas', { method: 'POST', body: JSON.stringify({ meghivo: 'Szia! ' + sor }) });
+      const koino = csat.adat?.koino;
       const aAlairo = JSON.parse(await readFile(join(a, 'tabla-kulcs.json'), 'utf8').catch(() => '{}')).alairoNyilvanos ?? null;
-      const bKerelmek = JSON.parse(await readFile(join(b, String(csat.adat?.koino), 'kerelmek.json'), 'utf8').catch(() => '{}'));
-      const jelentkezes = (bKerelmek.fuggo ?? []).some((x) => x.fajta === 'szelet' && x.kulcs === csat.adat?.koino
+      const bKerelmek = JSON.parse(await readFile(join(b, String(koino), 'kerelmek.json'), 'utf8').catch(() => '{}'));
+      const jelentkezes = (bKerelmek.fuggo ?? []).some((x) => x.fajta === 'szelet' && x.kulcs === koino
         && (x.celok ?? []).length === 0 && (x.kopogtatok ?? []).some((k) => k.fajta === 'keszulek' && k.kulcs === aAlairo));
       const ob = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(PB)],
         { env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
       ob.stdout.on('data', (x) => { naplo.b += x; });
       futok.push(ob);
-      let belepo = null;
-      for (let i = 0; i < 60 && !belepo; i++) {
-        await varj(500);
-        belepo = ((await fa.hiv('/api/belepok')).adat?.belepok ?? []).find((x) => x.kod === kod) ?? null;
-      }
-      // ⭐ MH5 (A): az új belépőről a készülék értesítése szólt — a kódjával
-      let ertesites = '';
-      for (let i = 0; i < 40 && !(kod && ertesites.includes(kod)); i++) {
-        ertesites = await readFile(ertNaplo, 'utf8').catch(() => '');
-        if (!(kod && ertesites.includes(kod))) await varj(500);
-      }
-      const meghivas = belepo ? await fa.hiv('/api/meghivas', { method: 'POST', body: JSON.stringify({ horgony: kod }) }) : null;
       let tag = null;
       for (let i = 0; i < 60 && !tag?.tag; i++) {
         await varj(500);
         tag = (await fb.hiv('/api/tagsagom')).adat;
       }
-      const utana = (await fa.hiv('/api/belepok')).adat?.belepok ?? [];
+      let ertesites = '';
+      for (let i = 0; i < 20 && !/belépett a meghívóddal/.test(ertesites); i++) {
+        ertesites = await readFile(ertNaplo, 'utf8').catch(() => '');
+        if (!/belépett a meghívóddal/.test(ertesites)) await varj(500);
+      }
+      const utana = (await fa.hiv('/api/meghivo/sajat')).adat?.meghivok ?? [];
+      const meghivasok = (await readFile(join(await koinoMappa(a), 'esemenyek.jsonl'), 'utf8').catch(() => '')).split('\n')
+        .filter((l) => l.includes('"Meghivas"')).map((l) => JSON.parse(l));
+      // B profilja: az előtöltés a meghívóból, a mentés után a profiljában
+      const profilElotte = (await fb.hiv('/api/profil')).adat;
+      const mentes = await fb.hiv('/api/profil', { method: 'POST', body: JSON.stringify({ mezok: { nev: 'Kovács Anna', telepules: 'Pécs' } }) });
+      const profilUtana = (await fb.hiv('/api/profil')).adat;
       const jo = {
-        meghivo: typeof m?.adat?.szoveg === 'string' && m.adat.tag === true && m.adat.orjarat?.fut === true,
-        csatlakozas: csat.allapot === 200 && /^[0-9A-Z]{3}-[0-9A-Z]{3}$/.test(kod ?? '') && csat.adat.ujBelepes === true
-          && csat.adat.meghivo?.nev === 'Anna gépe' && (csat.adat.meghivo?.tarsak ?? []).some((c) => c.port === PA),
+        kotelezo: nyilatkozatNelkul.allapot === 400 && nevNelkul.allapot === 400,
+        kiadas: kiadas.allapot === 200 && sor.includes('telepit.sh koino-meghivo:2:') && lista[0]?.statusz === 'Aktiv',
+        csatlakozas: csat.allapot === 200 && csat.adat?.ujBelepes === true && csat.adat?.meghivo?.meghivottNev === 'Kovács Anna',
         jelentkezes: !!aAlairo && jelentkezes,
-        belepoKoddal: !!belepo && belepo.horgony === csat.adat.horgony,
-        ertesites: /új belépő/.test(ertesites) && !!kod && ertesites.includes(kod),
-        meghivva: meghivas?.allapot === 200 && meghivas.adat?.meghivva === true,
-        tag: tag?.tag === true && tag.kod === kod,
-        eltunt: !utana.some((x) => x.kod === kod)
+        tag: tag?.tag === true,
+        felhasznalt: utana[0]?.statusz === 'Felhasznalt' && !!utana[0]?.felhasznaloEemberId,
+        egyMeghivas: meghivasok.length === 1 && meghivasok[0].adat?.nyilatkozat === true && meghivasok[0].entitas === csat.adat?.horgony,
+        ertesites: /belépett a meghívóddal/.test(ertesites) && ertesites.includes('Kovács Anna'),
+        profil: profilElotte?.elotoltes?.nev === 'Kovács Anna' && profilElotte.mezok === null && mentes.allapot === 200
+          && profilUtana?.mezok?.nev === 'Kovács Anna' && profilUtana.mezok.telepules === 'Pécs'
       };
       const ok = Object.values(jo).every(Boolean);
       const tiszta = (s) => s.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ');
-      if (!ok) process.stderr.write('    (D121: ' + JSON.stringify({ ...jo, m: m?.adat, csat: csat.adat, tag }) .slice(0, 1200) + ')\n'
+      if (!ok) process.stderr.write('    (D122: ' + JSON.stringify({ ...jo, csat: csat.adat, tag, utana, meghivasok: meghivasok.length }).slice(0, 1400) + ')\n'
         + '    (A napló: ' + tiszta(naplo.a).slice(-600) + ')\n    (B napló: ' + tiszta(naplo.b).slice(-600) + ')\n');
       return ok;
     } finally {
@@ -1532,17 +1535,18 @@ proba('⭐⭐ D121: a meghívás a lapon — A a meghívót a lapjáról adja, B
     }
   });
 
-// ⭐⭐ D121 MH7 (A): A MEGHÍVÁS NYÍLT KOINÓBAN, „ALAP” KÉSZÜLÉKEKKEL (a szigorú (b)). ⛔ Mérve (2026-11-01): enélkül a belépő
-// belépése az „alap” meghívóhoz nem ért át (a közös halmazban nincs — „Nincs ilyen azonosító”). A egy NYÍLT koinó alapítója,
-// őrjárata fut; B a parancssorban a meghívóval csatlakozik és belép, az őrjárata fut. ⭐ Viselkedést mérünk: A belépői között
-// (`belepok`) megjelenik B — a kódjával —, A a kóddal meghívja, és B tag lesz (`tagsag`). Rontás: a nyílt kapu nem kéri el az
-// ismeretlen társ személyét → B nem jelenik meg; a belépő szeletének kérése nélkül → B belépése nincs meg; a belépők jegyzéke
-// csak a tartós tárból → B nem jelenik meg; a meghívás adatai csak a tartós tárból → a meghívás elbukik.
-proba('⭐⭐ D121 MH7: a meghívás NYÍLT koinóban, „alap” készülékekkel — a belépő a meghívó jegyzékében a kódjával, a meghívás után tag',
+// ⭐⭐ D122 (és D121 MH7 (A)): A MEGHÍVÁS NYÍLT KOINÓBAN, „ALAP” KÉSZÜLÉKEKKEL — és a meghívó KULCS: egyszer használható, a
+// visszavont és a meghamisított nem nyit. A egy NYÍLT koinó alapítója (őrjárat fut); a parancssorban három meghívót állít ki (M1, M2,
+// M3), az M2-t visszavonja. B az M1-gyel csatlakozik — tag lesz (nyílt koinóban: a kapu elkéri a személyét, a belépését a kérelem
+// hozza); C UGYANAZZAL az M1-gyel — nem lesz tag (felhasznált); D a visszavont M2-vel — nem; E a még aktív M3 meghamisított titkával —
+// nem, és az M3 aktív marad (a valódi meghívottja még használhatja). Viselkedést
+// mérünk (a `tagsag` és A meghívóinak listája). Rontás: a felhasználtság nincs nézve → C is tag; a visszavonás nincs nézve → D is
+// tag; a bizonyíték nincs ellenőrizve → E is tag; a nyílt kapu nem kéri a személyt → B sem.
+proba('⭐⭐ D122: a meghívó kulcs — nyílt koinóban is, egyszer használható; a felhasznált, a visszavont és a meghamisított nem nyit',
   async () => {
     const a = await ujKeszulek();
-    const b = await ujKeszulek();
-    const PA = 7943, PB = 7945;
+    const tobbi = { b: await ujKeszulek(), c: await ujKeszulek(), d: await ujKeszulek(), e: await ujKeszulek() };
+    const PA = 7943, PORT = { b: 7945, c: 7947, d: 7949, e: 7951 };
     const helyben = { KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9', KOINO_KISZOLGALAS: 'alap' };
     const futok = [];
     const inditas = (hely, port) => {
@@ -1550,34 +1554,112 @@ proba('⭐⭐ D121 MH7: a meghívás NYÍLT koinóban, „alap” készülékekk
         { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...helyben }, stdio: 'ignore' });
       futok.push(o);
     };
+    const tagE = async (hely) => /✔ tag/.test(await fut(hely, 'tagsag', helyben));
     try {
       await fut(a, 'koino', 'Nyílt meghívó-próba', 'nyilt', helyben);
       inditas(a, PA);
       await varj(3000);
-      const sz = ((await fut(a, 'meghivo', helyben)).match(/koino-meghivo:1:[A-Za-z0-9_-]+/) ?? [])[0] ?? '';
-      const csat = await fut(b, 'csatlakoz', sz, helyben);
-      const kod = (csat.match(/kódod: ([0-9A-Z]{3}-[0-9A-Z]{3})/) ?? [])[1] ?? null;
-      inditas(b, PB);
-      let belepok = '';
-      for (let i = 0; i < 40 && !(kod && belepok.includes(kod)); i++) {
-        await varj(1000);
-        belepok = await fut(a, 'belepok', helyben);
-      }
-      const meghiv = kod && belepok.includes(kod) ? await fut(a, 'meghiv', kod, helyben) : '';
-      let tagsag = '';
-      for (let i = 0; i < 40 && !/✔ tag/.test(tagsag); i++) {
-        await varj(1000);
-        tagsag = await fut(b, 'tagsag', helyben);
-      }
-      const jo = { kod: !!kod, belepo: !!kod && belepok.includes(kod), meghivva: /Meghívtad/.test(meghiv), tag: /✔ tag/.test(tagsag) };
+      const m1 = ((await fut(a, 'meghivo', 'Béla', 'kijelentem', helyben)).match(/koino-meghivo:2:[A-Za-z0-9_-]+/) ?? [])[0] ?? '';
+      const m2ki = await fut(a, 'meghivo', 'Dóra', 'kijelentem', helyben);
+      const m2 = (m2ki.match(/koino-meghivo:2:[A-Za-z0-9_-]+/) ?? [])[0] ?? '';
+      const m2az = ((await fut(a, 'meghivok', helyben)).match(/^\s+([A-Za-z0-9_-]{16})\s+Dóra/m) ?? [])[1] ?? '';
+      const visszavon = await fut(a, 'meghivo', 'visszavon', m2az, helyben);
+      // a meghamisított: egy még AKTÍV meghívó (M3) titkának egy jele más — a felhasználtság itt nem fog meg semmit, csak a bizonyíték
+      const m3 = ((await fut(a, 'meghivo', 'Edit', 'kijelentem', helyben)).match(/koino-meghivo:2:[A-Za-z0-9_-]+/) ?? [])[0] ?? '';
+      const j = JSON.parse(Buffer.from(m3.slice('koino-meghivo:2:'.length), 'base64url').toString('utf8'));
+      j.s = (j.s[0] === 'A' ? 'B' : 'A') + j.s.slice(1);
+      const hamis = 'koino-meghivo:2:' + Buffer.from(JSON.stringify(j), 'utf8').toString('base64url');
+      await fut(tobbi.b, 'csatlakoz', m1, helyben);
+      inditas(tobbi.b, PORT.b);
+      let bTag = false;
+      for (let i = 0; i < 40 && !bTag; i++) { await varj(1000); bTag = await tagE(tobbi.b); }
+      await fut(tobbi.c, 'csatlakoz', m1, helyben);
+      await fut(tobbi.d, 'csatlakoz', m2, helyben);
+      await fut(tobbi.e, 'csatlakoz', hamis, helyben);
+      for (const k of ['c', 'd', 'e']) inditas(tobbi[k], PORT[k]);
+      await varj(15000);
+      const lista = await fut(a, 'meghivok', helyben);
+      const jo = {
+        b: bTag,
+        visszavonva: /visszavontad/.test(visszavon),
+        c: !(await tagE(tobbi.c)),
+        d: !(await tagE(tobbi.d)),
+        e: !(await tagE(tobbi.e)),
+        lista: /Béla · felhasznált/.test(lista) && /Dóra · visszavont/.test(lista) && /Edit · aktív/.test(lista)
+      };
       const ok = Object.values(jo).every(Boolean);
-      if (!ok) process.stderr.write('    (MH7: ' + JSON.stringify({ ...jo, csat: csat.slice(-300), belepok: belepok.slice(0, 300),
-        meghiv: meghiv.slice(-200), tagsag: tagsag.slice(0, 200) }) + ')\n');
+      if (!ok) process.stderr.write('    (D122 kulcs: ' + JSON.stringify({ ...jo, lista: lista.slice(0, 300) }) + ')\n');
       return ok;
     } finally {
       for (const f of futok) f.kill();
       await varj(1000);
-      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
+      for (const h of [a, ...Object.values(tobbi)]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
+// ⭐⭐ D122: A MEGHÍVÓ BIZONYÍTÉKA A KÉRELEM ÚTJÁN IS — két hálózat között a belépő első munkája a jelentkezés (MH6), egy
+// KÉRELEM (a koinó születése — ezt nem tagnak is kiadjuk), nem csere; a böngésző-próbán (2026-11-03) a belépő lapjának függő
+// kérelmei is így vitték el az első munkákat. A egy ZÁRT koinó alapítója (őrjárat fut), meghívót állít ki Ferencnek; F csatlakozik
+// a meghívóval, a belépését kézi úton A-hoz juttatja (`kivisz` / `behoz`), és őrjárat NÉLKÜL egyetlen kérelmet küld A-nak (`hozd <a
+// koinó> <cím> <port>` — a zárt kapu `KELL`-t mond, F a `TAGSAG`-ban felel). Utána A-nál a meghívó azonnal felhasznált (a kérelem
+// után A aláírja a meghívást — a belépése már nála van), és F őrjáratával tag lesz. Viselkedést mérünk (A meghívóinak listája, F
+// `tagsag`-a). Ugyanígy G, aki a lapja kérését küldi (a gyökér fejléceit — ezt nem tagnak a zárt kapu elutasítja): a meghívása
+// mégis aláíródik. Rontás: a `KELL`-re adott válasz nem viszi a bizonyítékot, a kiszolgáló kérelem-ága nem adja a kapunak, a
+// szelet-kérelem nem kapja meg → a meghívó aktív marad; a kiszolgált szelet-kérelem, illetve az elutasított kérelem után nincs
+// aláírás → igazolt marad (A háztartása 5 perces körrel csak az indulásakor írna alá).
+proba('⭐⭐ D122: a meghívó bizonyítéka a kérelem útján is — egy kérelem (a jelentkezés) után a meghívás aláírva, csere nélkül',
+  async () => {
+    const a = await ujKeszulek();
+    const f = await ujKeszulek();
+    const g = await ujKeszulek();
+    const PA = 7953, PF = 7955;
+    const helyben = { KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9', KOINO_KISZOLGALAS: 'alap' };
+    const futok = [];
+    // ⚠️ A őrjárata 5 perces körrel: a háztartása (ami szintén aláír) így csak az indulásakor fut — a kérelem utáni aláírás mérhető
+    const inditas = (hely, port, perc = '0.05') => {
+      const o = spawn(process.execPath, [KOINO_JS, 'orjarat', perc, String(port)],
+        { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...helyben }, stdio: 'ignore' });
+      futok.push(o);
+    };
+    try {
+      await fut(a, 'koino', 'Zárt kérelem-próba', helyben);
+      const K = await koinoNeve(a);
+      inditas(a, PA, '5');
+      await varj(3000);
+      const m = ((await fut(a, 'meghivo', 'Ferenc', 'kijelentem', helyben)).match(/koino-meghivo:2:[A-Za-z0-9_-]+/) ?? [])[0] ?? '';
+      const mg = ((await fut(a, 'meghivo', 'Gizella', 'kijelentem', helyben)).match(/koino-meghivo:2:[A-Za-z0-9_-]+/) ?? [])[0] ?? '';
+      for (const [hely, mh] of [[f, m], [g, mg]]) {
+        await fut(hely, 'csatlakoz', mh, helyben);
+        await fut(hely, 'kivisz', join(hely, 'belepes.jsonl'), 'sajat', helyben);
+        await fut(a, 'behoz', join(hely, 'belepes.jsonl'), helyben);
+      }
+      const elotte = await fut(a, 'meghivok', helyben);
+      // F: a jelentkezés alakja (a koinó születése — kiszolgálják); G: a lap kérése (a gyökér fejlécei — nem tagnak elutasítják)
+      // ⛔ külön-külön mérve: G kérelme után az aláírás F igazolt meghívását is aláírná (elfedné, ha F kérelme után nem írna alá)
+      const hozd = await fut(f, 'hozd', K ?? '', '127.0.0.1', String(PA), helyben);
+      await varj(1500);
+      const kozben = await fut(a, 'meghivok', helyben);
+      const gKer = await fut(g, 'kerelem', 'fejlecek', 'gyoker', '127.0.0.1', String(PA), helyben);
+      await varj(1500);
+      const utana = await fut(a, 'meghivok', helyben);
+      inditas(f, PF);
+      let fTag = false;
+      for (let i = 0; i < 40 && !fTag; i++) { await varj(1000); fTag = /✔ tag/.test(await fut(f, 'tagsag', helyben)); }
+      const jo = {
+        nev: !!K,
+        elotte: /Ferenc · aktív/.test(elotte) && /Gizella · aktív/.test(elotte),
+        felhasznalt: /Ferenc · felhasznált/.test(kozben) && /Gizella · aktív/.test(kozben),
+        elutasitottUtan: /Gizella · felhasznált/.test(utana),
+        tag: fTag
+      };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) process.stderr.write('    (D122 kérelem-út: ' + JSON.stringify({ ...jo, kozben: kozben.slice(0, 300), utana: utana.slice(0, 300), hozd: hozd.slice(0, 200),
+        gKer: gKer.slice(0, 200) }) + ')\n');
+      return ok;
+    } finally {
+      for (const o of futok) o.kill();
+      await varj(1000);
+      for (const h of [a, f, g]) await rm(h, { recursive: true, force: true });
     }
   });
 

@@ -15,10 +15,10 @@
 //
 // ===== ⚠️ AMI A P2P-BEN MÁS ÚT =====
 //
-//   · **Meghívóim** — a prototípusban kód, itt aláírt esemény (a meghívott horgonyára — Szakasz 4, szakasz5_terv 6.); ⭐⭐ D121
-//     óta a helyén a „✉️ Meghívás…” és a „👋 Belépők” (`koinoMeghivas.js` — a meghívó szövege, a kód, a meghívás a lapról);
-//   · **eember beállítások** — a prototípusban fiók-adat és jelszó, itt a Profil (D93/5) és a kulcs mentése (D15);
-//   ez a prototípus saját „fejlesztésre vár” jelzését kapja a saját átvizsgálásáig. A **Kijelentkezés** kimarad:
+//   · **Meghívóim** — a prototípusban kód, itt aláírt esemény (a meghívott horgonyára — Szakasz 4, szakasz5_terv 6.); ⭐⭐ D122
+//     óta a prototípus ablaka (`koinoMeghivas.js`): a meghívó egy titkot hordoz, és a meghívó gépe magától hív meg;
+//   · **eember beállítások** — a prototípusban fiók-adat és jelszó, itt a Profil (D93/5 — ⭐ D122: a profil-űrlap); a kulcs
+//     mentése (D15) ma parancs (`mentes`). A **Kijelentkezés** kimarad:
 //   a koinóban nincs bejelentkezés (D15).
 //
 // Használja: `index.html`.
@@ -43,8 +43,8 @@ import { felderitesekMegnyitasa, felderitesInditasa } from './koinoFelderites.js
 import { koltozesMegnyitasa } from './koinoKoltozes.js';
 // ⭐⭐ D119 (①b): az új koino-verzió (gyermek-koinó) űrlapja.
 import { koinoVerzioMegnyitasa } from './koinoVerzio.js';
-// ⭐⭐ D121 (⑤): a meghívás a lapon — a meghívó szövege és a belépők
-import { meghivasMegnyitasa, belepokMegnyitasa } from './koinoMeghivas.js';
+// ⭐⭐ D121, D122: a meghívás a lapon — a „Meghívóim” (a prototípus ablaka) és a profil-űrlap („eember beállítások”)
+import { meghivoimMegnyitasa, profilUrlapMegnyitasa } from './koinoMeghivas.js';
 
 const MODAL_KONTENER = 'modal-kontener';
 
@@ -128,13 +128,11 @@ export class FoMenu {
       { ikon: '✏️', felirat: 'Új gondolat létrehozása', elvalaszto: true, akcio: () => this._ujGondolatModalMegnyitasa() },
       { ikon: '🏷️', felirat: 'Új kategória létrehozása', akcio: () => this._ujKategoriaModalMegnyitasa() },
       { ikon: '🧩', felirat: 'Új gondolat típus létrehozása', akcio: () => this._ujGondolatTipusModalMegnyitasa() },
-      // — 4) Fiók — ⭐⭐ D121 (⑤): a prototípus „Meghívóim” helyén a meghívás a lapon (a meghívó szövege; a várakozás a kóddal),
-      // és a belépők (a kódjukkal — „Meghívom”). ⚠️ Az eember beállítások a P2P-ben más út (lásd a fejlécet).
-      { ikon: '✉️', felirat: 'Meghívás…', elvalaszto: true, akcio: () => meghivasMegnyitasa() },
-      { ikon: '👋', felirat: 'Belépők', akcio: () => belepokMegnyitasa() },
+      // — 4) Fiók — ⭐⭐ D122: a „Meghívóim” a prototípus ablaka (a meghívott neve + a nyilatkozat; a 📋 egy sort másol: a telepítő
+      // sort a meghívóval — a meghívott gépe a következő cserénél magától tag lesz), az „eember beállítások” a profil-űrlap.
+      { ikon: '✉️', felirat: 'Meghívóim', elvalaszto: true, akcio: () => meghivoimMegnyitasa() },
       { ikon: '🌟', felirat: 'Tudatpontok', akcio: () => this._tudatpontokMegnyitasa() },
-      { ikon: '⚙️', felirat: 'eember beállítások',
-        akcio: () => fejlesztesreVarMegjelenitese('eember beállítások — a koinóban a Profil és a kulcs mentése', MODAL_KONTENER) }
+      { ikon: '⚙️', felirat: 'eember beállítások', akcio: () => profilUrlapMegnyitasa() }
     ];
   }
 

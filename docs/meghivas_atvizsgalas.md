@@ -159,3 +159,63 @@ Csaba: *„minden javaslatodat, elfogadom, mehetünk tovább.”* — MH1–MH6 
   Termux mappájából el sem indul) → az indító jelével (`KOINO_INDITO=koino`) `koino orjarat …`.
 - ⏸️ **Ami még hiányzik a laptól:** gyökér-koinó létrehozása (ma csak `koino "<név>"`); a QR-kód (MH1 (A): később); a két
   hálózat közötti jelentkezés terepi mérése (a 🅱️).
+
+## 8. ✅ D122 — a meghívó kulcs: egy bemásolás, és a következő csere után bent vagy (2026-11-03)
+
+**Csaba lelete** (a D121 után): a meghívott kéri a meghívót, hogy hívja meg — ez nem tetszik; legyen elég egy bemásolás. **Az
+átbeszélés:** a meghívás egy aláírás a belépő horgonyára, ami csak a belépéskor születik — ezért valakinek UTÁNA kell aláírnia; ha a
+meghívó egy titkot hordoz, a meghívó készüléke ezt magától teheti: a belépő az első cserében bizonyítja, hogy nála a titok. Az ára:
+a meghívó kulcs — aki elsőként használja, az jut be (egyszer használható, egy hónapig él, visszavonható; a D56 szerint az 1. lépcső
+olcsó). **A döntés: D122** (a fázis-2 terv).
+
+**Az építés:**
+- `js/csere/meghivo.js` — a meghívó 2. alakja (`koino-meghivo:2:` — az azonosító és a titok, a meghívott neve, a lejárat, a koinó
+  kötelező profil-mezői), a telepítő sor (`TELEPITO_SOR`, `telepitoSorMeghivoval`), a bizonyíték (`meghivoBizonyitek`,
+  `bizonyitekEllenorzese` — HMAC, időben állandó összevetéssel); a régi (titok nélküli) meghívóra: „kérj újat”.
+- `koino.js` — a kiadott meghívók (`<koino>/meghivok.json` — a titkok is, helyi): `meghivoKiadasa` (a név és a nyilatkozat
+  kötelező, csak tag), `kiadottMeghivok`, `meghivoVisszavonasa`; a kapu (`tarsKapuja`) a személy-körben kapott bizonyítékot
+  igazolja (`meghivoIgazolasa`); az `igazoltMeghivasokAlairasa` (SORBAN — mérve: két párhuzamos munka kétszer írta alá) a csere után
+  és az őrjárat minden körében aláírja, amint a belépés (és ha a koinó vár, a profil) megvan, a nyilatkozattal; a hír a naplóban és a
+  készülék értesítésében („X belépett a meghívóddal”). A belépő: `meghivoElfogadasa` a meghívót a `<koino>/meghivom.json`-be jegyzi,
+  a `meghivoBizonyitekom` a kapu személy-körébe adja (`azonossagBeallitasa` → `vonal.js` `sajatBizonyitek`); `profilomAllapota`.
+  A parancsok: `meghivo "<név>" kijelentem`, `meghivok`, `meghivo visszavon <az>`; a `belepok` és a kódos `meghiv` megszűnt (a
+  `meghiv <horgony>` a kézi út). A lap végpontjai a prototípus útvonalain (`/api/meghivo/sajat`, `/api/meghivo`,
+  `/api/meghivo/:id/visszavonas`, `/api/meghivo/kotelezo`), és a profil (`GET`/`POST /api/profil`).
+- `koino/termux/indit.sh` — ha az első argumentum egy meghívó (a telepítő sor vége), előbb elfogadja, aztán indul.
+- A lap: a prototípus `MeghivoModal`-ja, `meghivoModal.html`-je és `meghivoModal.css`-e, a `regisztracioForm.css` — bájtra; a
+  koinós többlet (`koinoMeghivas.js`): a nyilatkozat szövege, egy magyarázó sor, a lejárt felirata, a 📋 az egész sort másolja (a
+  listában — és a visszavonás kérdésében — a rövid kód látszik, mint a prototípusban: `XXXX-XXXX-XXXX` a meghívó azonosítójából), a
+  profil-űrlap (a regisztrációs űrlap osztályaival), az első megnyitás; a fő menüben „✉️ Meghívóim” és „⚙️ eember beállítások”.
+  ⚠️ Az ország / régió / település automatikus kiegészítése kimaradt (a prototípusban egy központi helyadatbázisból jött).
+- **A próbák:** a modul (+1 — a bizonyíték kötései), a parancssor: a lapos meghívás (A kiállítja, B beilleszti, B MAGÁTÓL tag; egy
+  aláírás a nyilatkozattal; az értesítés; a profil előtöltése és mentése), a meghívó kulcs (nyílt koinóban is; a felhasznált, a
+  visszavont és a meghamisított nem nyit) és a kérelem útja (lent). Rontás minden ágra (a meghamisított titok egy még AKTÍV meghívóra
+  szól — egy felhasznált meghívón a felhasználtság elfedte volna, hogy a bizonyíték nincs ellenőrizve).
+
+**Böngészőben végigjárva (2026-11-03)** — két próba-készülék a laptopon (A: egy friss, zárt koinó alapítója; B: üres készülék), és
+egy harmadik (C) az első megnyitáshoz: A a „Meghívóim” ablakban kiállít (a prototípus ablaka, a „Kijelentem…” szöveggel), B lapja
+magától a csatlakozás ablakával nyílik, B beilleszti az EGÉSZ sort, a lap kimondja, hogy az őrjárata nem fut (a parancs másoló
+gombbal), B őrjáratával az ablak magától „✅ Tag vagy” lesz, A naplójában „✉️ meghívtam: Nagy Béla — a meghívómmal lépett be”, a
+lista „Felhasznált → Nagy Béla”; B „📝 Az adataim” űrlapja a névvel előtöltve, a mentés után az „eember beállítások” a mentett
+értékekkel; C első megnyitásakor magától a profil-űrlap („Üdv a koinóban!”), a „Most kihagyom” után nem jön újra; A a 🗑️-vel
+visszavon (a megerősítés a rövid kóddal), a sor „Visszavont”. ⚠️ A 📋 vágólapra írását a beépített böngésző tiltja (a próba
+környezete — egy rendes böngészőben a 127.0.0.1 biztonságos környezet). **Három lelet, javítva:**
+1. a lista kód-oszlopában a telepítő sor eleje állt („yes | pkg up…”), és a visszavonás kérdésében az egész sor → a rövid kód
+   (fent);
+2. ⛔ **a bizonyíték csak a CSERÉBEN utazott**: B lapja a koinót üresnek látta, és a gyökér fejléceit kérte (függő kérelem) — egy
+   nem tagnak ezt a zárt kapu nem adja ki, és amíg a kérelem függött, B és A között minden munka kérelem lett, nem csere; B csak a
+   harmadik körben lett tag (~1,5 perc; egy perces körrel — 5 perces körrel, két hálózat között a következő résig). Két hálózat
+   között a belépő ELSŐ munkája a jelentkezés (MH6) — az is kérelem. **Most a kérelem útján is:** a kérő a `KELL`-re adott
+   `TAGSAG`-ban a meghívó bizonyítékát is küldi (`vonal.js` `tagsagValasz` — ⛔ a szelet-kérelem a saját azonosság-objektumát rakta
+   össze, abból kimaradt: `udpVonal.js` `szeletUdpResen`), a kiszolgáló kérelem-ága a kapunak adja, és a meghívó a kiszolgált
+   szelet-kérelem és az elutasított kérelem után is lefuttatja a belépő útját (a belépése elkérése, az automatikus aláírás —
+   `koino.js` `belepoUtja`). A próba: F a jelentkezés alakjával (`hozd <a koinó> <cím> <port>`), G a lap kérésével (`kerelem
+   fejlecek gyoker <cím> <port>` — elutasítva), csere nélkül — mindkettő meghívása aláírva; A őrjárata 5 perces körrel (a háztartása
+   is aláír — 3 mp-es körrel elfedte volna); F és G külön mérve (G aláírása F igazolt meghívóját is aláírná). Öt rontás, mind bukik;
+3. a profil-űrlap tagnak is azt írta, hogy „a meghívód a meghíváskor ezt tanúsítja” — a meghívás már lement → csak a még nem tag,
+   meghívóval érkezett belépőnek.
+
+⏸️ **Mellékes megfigyelések (nem javítva — átbeszélendő):** az üres koinó ALAPÍTÓJÁNAK lapja is azt írja, hogy „a hiányzó részek
+tartóit még keresem … meghívót kaptál?”, és függő kérelmet tesz a gyökér fejléceire (a nem tag B még át is vette továbbadásra) — az
+alapítónak nincs mit keresnie; a meghívó címei közé a gép minden IPv4-címe bekerül, a Hyper-V/WSL virtuális kártyájáé is
+(172.25.176.1 — két rés, két munka ugyanazzal a társsal, amíg a kötés nem csoportosítja őket).
