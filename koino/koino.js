@@ -10813,8 +10813,12 @@ try {
         // prototípusban fiók-adat volt (e-mail, valódi név, lokáció), az itt nincs (D15: nincs fiók) — null, nem kitalált.
         if (utvonal === '/api/eember/sajat-adatok') {
           const lista = await sajatHozzarendelesek(olvasoTar, KOINO, { ...lapHorgonya, szerzo, nezet: pakliNezet, limit: 1 });
+          // ⭐ D122 (Csaba, a terepi próbán): az alsó sáv a profilom BECENEVÉT mutatja, ha van — különben a kulcsom rövid alakját
+          const profil = await profilomAllapota().catch(() => null);
+          const becenev = typeof profil?.mezok?.becenev === 'string' ? profil.mezok.becenev.trim() : '';
           return { adat: {
-            success: true, eemberNev: rovidAzonosito(szerzo), nev: null, email: null, emailMegerositve: false,
+            success: true, eemberNev: becenev || rovidAzonosito(szerzo), nev: profil?.mezok?.nev ?? null, email: null,
+            emailMegerositve: false,
             lokacio: null, tudatpontok: lista.szabad
           } };
         }

@@ -106,6 +106,8 @@ export class AlsoSav {
 
     // A KÁRTYÁK (és a fő menü Tudatpontok modálja) jelzése: pont-módosítás után az infók (szabad tudatpont) frissítése.
     document.addEventListener('koino:tudatpontValtozas', () => this.adatokBetoltese());
+    // ⭐ D122: az adatlap mentése után (a név helyén a becenév — `koinoMeghivas.js`)
+    document.addEventListener('koino:profilValtozas', () => this.adatokBetoltese());
 
     // ===== KÖZÖS NAVIGÁCIÓS JELZÉS → VISSZA/ELŐRE TÖRTÉNET =====
     // Minden entitás-váltás átfut az aktivEntitasMentese()-n, ami elküldi ezt az eseményt (a prototípusé).

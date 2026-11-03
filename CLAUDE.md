@@ -320,7 +320,9 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    megnyitáskor); a meghívás a meghívott saját profilját tanúsítja. ✅ Böngészőben végigjárva (2026-11-03 — három lelet javítva, a
    8. szakasz végén): a listában a rövid kód (a 📋 az egész sort másolja); ⛔ a bizonyíték csak a cserében utazott, és a belépő
    lapjának függő kérelmei minden munkát kérelemmé tettek → most a kérelem `KELL` → `TAGSAG` körében is (két hálózat között a
-   jelentkezés — MH6 — is kérelem; elágazás 231); a profil szövege tagnak. ⛔ LELET (mérve): nyílt koinóban az „alap”
+   jelentkezés — MH6 — is kérelem; elágazás 231); a profil szövege tagnak. ✅ Terepen (2026-11-04): friss telefon, egy sor, tag lett;
+   az alsó sávon a becenév (ha van) a kulcs helyett. ⚠️ A sor a már telepített régi programot nem frissíti (döntési kérdés). A laptop
+   terep-adata: a scratchpad `terep4` („Meghívókulcs-próba”, őrjárat 7373, felület 7499). ⛔ LELET (mérve): nyílt koinóban az „alap”
    meghívóhoz a belépés nem ér át (a szigorú (b) közös halmazában nincs) → ✅ **MH7 (A)** (Csaba, 2026-11-02): a nyílt kapu is elkéri
    az ismeretlen társ személyét, a tag a nem tag társ hiányzó belépését függő kérelemmel hozza (`belepoSzeleteKerese`; elágazás 227). ⏸️ Tíz
    további lelet Csabával átbeszélendő (a 18. szakasz végén — köztük ⭐ Csaba kérése: **a meghívás felhasználóbarát útja, Termux

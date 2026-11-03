@@ -215,6 +215,14 @@ környezete — egy rendes böngészőben a 127.0.0.1 biztonságos környezet). 
 3. a profil-űrlap tagnak is azt írta, hogy „a meghívód a meghíváskor ezt tanúsítja” — a meghívás már lement → csak a még nem tag,
    meghívóval érkezett belépőnek.
 
+✅ **Terepen (2026-11-04, laptop + telefon egy wifin)** — a laptopon egy friss készülék és egy új zárt koinó („Meghívókulcs-próba”),
+a „Meghívóim” ablakból egy sor; a telefonon minden törölve (a Node maradt), a sor bemásolva a Termuxba — a telefon tag lett, a
+laptop magától meghívta. ⚠️ A sor egy már telepített (régebbi) programot NEM frissít (`[ -d ~/koino_1.1 ] || git clone`), és a régi
+kód az új meghívót nem fogadja el — friss telefonon megy; hogy frissítsen-e, az döntési kérdés (D119: a program nem frissül
+magától). **Csaba kérése, kész:** az alsó sávon a „koino” után a kulcs rövid alakja állt → ha a profilban van becenév, azt mutatja
+(`/api/eember/sajat-adatok` `eemberNev`; az adatlap mentése után azonnal — `koino:profilValtozas`); a lapos D122-próba méri,
+rontással.
+
 ⏸️ **Mellékes megfigyelések (nem javítva — átbeszélendő):** az üres koinó ALAPÍTÓJÁNAK lapja is azt írja, hogy „a hiányzó részek
 tartóit még keresem … meghívót kaptál?”, és függő kérelmet tesz a gyökér fejléceire (a nem tag B még át is vette továbbadásra) — az
 alapítónak nincs mit keresnie; a meghívó címei közé a gép minden IPv4-címe bekerül, a Hyper-V/WSL virtuális kártyájáé is

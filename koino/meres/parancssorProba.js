@@ -1507,8 +1507,12 @@ proba('⭐⭐ D122: a meghívás a lapon — A kiállítja a meghívót, B a lap
         .filter((l) => l.includes('"Meghivas"')).map((l) => JSON.parse(l));
       // B profilja: az előtöltés a meghívóból, a mentés után a profiljában
       const profilElotte = (await fb.hiv('/api/profil')).adat;
-      const mentes = await fb.hiv('/api/profil', { method: 'POST', body: JSON.stringify({ mezok: { nev: 'Kovács Anna', telepules: 'Pécs' } }) });
+      const nevElotte = (await fb.hiv('/api/eember/sajat-adatok')).adat?.eemberNev ?? '';
+      const mentes = await fb.hiv('/api/profil', { method: 'POST', body: JSON.stringify({ mezok: { nev: 'Kovács Anna', becenev: 'Panni',
+        telepules: 'Pécs' } }) });
       const profilUtana = (await fb.hiv('/api/profil')).adat;
+      // az alsó sáv neve: előtte a kulcs rövid alakja, a mentés után a becenév
+      const nevUtana = (await fb.hiv('/api/eember/sajat-adatok')).adat?.eemberNev ?? '';
       const jo = {
         kotelezo: nyilatkozatNelkul.allapot === 400 && nevNelkul.allapot === 400,
         kiadas: kiadas.allapot === 200 && sor.includes('telepit.sh koino-meghivo:2:') && lista[0]?.statusz === 'Aktiv',
@@ -1519,7 +1523,8 @@ proba('⭐⭐ D122: a meghívás a lapon — A kiállítja a meghívót, B a lap
         egyMeghivas: meghivasok.length === 1 && meghivasok[0].adat?.nyilatkozat === true && meghivasok[0].entitas === csat.adat?.horgony,
         ertesites: /belépett a meghívóddal/.test(ertesites) && ertesites.includes('Kovács Anna'),
         profil: profilElotte?.elotoltes?.nev === 'Kovács Anna' && profilElotte.mezok === null && mentes.allapot === 200
-          && profilUtana?.mezok?.nev === 'Kovács Anna' && profilUtana.mezok.telepules === 'Pécs'
+          && profilUtana?.mezok?.nev === 'Kovács Anna' && profilUtana.mezok.telepules === 'Pécs',
+        alsoSavNev: /…/.test(nevElotte) && nevUtana === 'Panni'
       };
       const ok = Object.values(jo).every(Boolean);
       const tiszta = (s) => s.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ');

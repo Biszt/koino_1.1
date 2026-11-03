@@ -148,6 +148,8 @@ export async function profilUrlapMegnyitasa({ elso = false, koino = null } = {})
     hiba.textContent = '';
     try {
       await apiPost('profil', { mezok });
+      // az alsó sáv a becenevet mutatja — a mentés után azonnal frissüljön (`alsoSav.js`)
+      document.dispatchEvent(new CustomEvent('koino:profilValtozas'));
       modal.bezaras();
     } catch (h) {
       hiba.textContent = h.message ?? 'A mentés nem sikerült.';
