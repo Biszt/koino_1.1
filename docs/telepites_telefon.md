@@ -60,6 +60,10 @@ A koino futás közben ébren tartja a telefont (`termux-wake-lock`), és a Term
 ⭐ **Te is meghívhatsz** (ha tag vagy): a lap fő menüjében „✉️ Meghívóim” — a meghívott teljes neve és a nyilatkozat után a 📋
 egy sort másol, ezt küldd el neki. Egy hónapig érvényes, egyszer használható, és felhasználás előtt visszavonható.
 
+💻 **Windowsos gépre** (2026-11-04) a meghívó mellett a 💻 gomb másol egy sort, ugyanazzal a meghívóval. Ezt a PowerShellbe
+vagy a parancssorba kell beilleszteni: a Termux-sor ott már az első szónál megáll. A részletek:
+[`telepites_windows.md`](telepites_windows.md).
+
 *Az adat a `~/koino-adat` mappában él (más: `KOINO_ADAT=<mappa> koino`); a naplók ugyanott: `orjarat.log`, `felulet.log`.
 A program magától nem frissül — hogy egy koinó melyik kódot futtatja, az a közösség dolga (a koino-verzió kártya).*
 

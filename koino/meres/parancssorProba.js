@@ -22,7 +22,7 @@ import { probaGyujtemeny } from './probaFuttato.js';
 import { execFile, spawn } from 'node:child_process';
 import { mkdtemp, rm, readFile, writeFile, readdir, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 // ⭐ A néma DHT-gép és a néma tükör próbájához (40. mérés): egy foglalat, ami hall, de nem felel.
 import { createSocket } from 'node:dgram';
 // ⭐ D78: a lánc-gyökér újraszámolása a láncból (a mérce — a kézi út eseményeit ezzel vetjük össze).
@@ -1599,6 +1599,72 @@ proba('⭐⭐ D122: a meghívó kulcs — nyílt koinóban is, egyszer használh
       for (const f of futok) f.kill();
       await varj(1000);
       for (const h of [a, ...Object.values(tobbi)]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
+// ⭐⭐ A WINDOWSOS INDÍTÓ (elágazás 232 — a terepi lelet: a Termux-sor egy windowsos laptopon az első szónál megállt): a meghívó
+// windowsos sora a letöltés után a `windows/telepit.ps1`-et, az pedig a `windows/indit.ps1`-et hívja a meghívóval. Itt az INDÍTÓT
+// mérjük egy valódi meghívóval (a telepítő a Node-ot és az asztali ikont intézi — azt a gépen kézzel járjuk végig). A egy NYÍLT
+// koinó alapítója (őrjárat fut), kiállít egy meghívót; B-n az `indit.ps1 <meghívó>` fut (a böngésző nélkül): csatlakozik, elindítja
+// a felületet és az őrjáratot (ugyanabban a konzolban), és A gépe MAGÁTÓL meghívja. A tagságot B-n UGYANAZ az indító kérdezi
+// (`indit.ps1 tagsag` — az argumentumos út, ugyanazzal az adat-mappával). Viselkedést mérünk: B koinója A-é, B tag, a felület és
+// az őrjárat kimondta, hogy fut. Rontás: az indító nem csatlakozik a meghívóval → B-nek nincs koinója, nem tag; nem indítja az
+// őrjáratot → B nem tag; az argumentumos út nem a program parancsa → a tagság kérdése nem felel.
+proba('⭐⭐ (Windowson) az indit.ps1 a meghívóval csatlakozik, elindítja a felületet és az őrjáratot — és A gépe magától meghívja',
+  async () => {
+    if (process.platform !== 'win32') { process.stdout.write('    (nem Windows — kihagyva)\n'); return true; }
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const PA = 7957, PB = 7959, FB = 7973;
+    const helyben = { KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9', KOINO_KISZOLGALAS: 'alap' };
+    const INDITO = join(dirname(KOINO_JS), 'windows', 'indit.ps1');
+    const bKornyezet = { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...helyben, KOINO_ORJARAT_PORT: String(PB),
+      KOINO_FELULET_PORT: String(FB), KOINO_KOR: '0.05', KOINO_BONGESZO: 'nem',
+      PATH: dirname(process.execPath) + ';' + (process.env.PATH ?? process.env.Path ?? '') };
+    const psErvek = (...e) => ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', INDITO, ...e];
+    let orjaratA = null;
+    let inditoB = null;
+    let bKimenet = '';
+    try {
+      await fut(a, 'koino', 'Windowsos indító-próba', 'nyilt', helyben);
+      orjaratA = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(PA)],
+        { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...helyben }, stdio: 'ignore' });
+      await varj(3000);
+      const m = ((await fut(a, 'meghivo', 'Tábori Éva', 'kijelentem', helyben)).match(/koino-meghivo:2:[A-Za-z0-9_-]+/) ?? [])[0] ?? '';
+      inditoB = spawn('powershell.exe', psErvek(m), { env: bKornyezet, windowsHide: true });
+      inditoB.stdout.on('data', (d) => { bKimenet += d; });
+      inditoB.stderr.on('data', (d) => { bKimenet += d; });
+      const tagsagB = () => new Promise((teljesul) => execFile('powershell.exe', psErvek('tagsag'),
+        { env: bKornyezet, timeout: 30000, windowsHide: true }, (h, ki, hk) => teljesul(String(ki) + String(hk))));
+      let tag = false;
+      let utolso = '';
+      for (let i = 0; i < 45 && !tag; i++) {
+        await varj(1000);
+        utolso = await tagsagB();
+        tag = /✔ tag/.test(utolso);
+      }
+      const nevA = await koinoNeve(a);
+      const jo = {
+        koino: !!nevA && nevA === await koinoNeve(b),
+        felulet: new RegExp('A felület fut: http://127\\.0\\.0\\.1:' + FB + '/\\?kulcs=').test(bKimenet),
+        orjarat: new RegExp('Az őrjárat fut \\(' + PB + '-es kapu').test(bKimenet),
+        tag
+      };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) {
+        process.stderr.write('    (windowsos indító: ' + JSON.stringify({ ...jo, kimenet: bKimenet.slice(0, 900),
+          tagsag: utolso.slice(0, 300) }) + ')\n');
+      }
+      return ok;
+    } finally {
+      // ⚠️ a fát kell leállítani: az indító a két program-folyamatot maga indítja (egy konzolban), a PowerShell leállítása nem
+      // vinné magával őket
+      if (inditoB?.pid) {
+        await new Promise((t) => execFile('taskkill', ['/PID', String(inditoB.pid), '/T', '/F'], { windowsHide: true }, () => t()));
+      }
+      orjaratA?.kill();
+      await varj(1500);
+      for (const h of [a, b]) await rm(h, { recursive: true, force: true });
     }
   });
 

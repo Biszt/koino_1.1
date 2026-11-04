@@ -1706,3 +1706,18 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     jelentkezés (MH6) — szintén kérelem · ⛔ a szelet-kérelem a saját azonosság-objektumát rakta össze (`szeletUdpResen`), a
     bizonyíték abból is kimaradt · ⛔ elvetve: a belépő lapja ne kérjen, amíg nem tag (a kérés máshol kiszolgálható lehet, és a
     kapu egy helyen döntsön, ne a kérő találgasson) · `meghivas_atvizsgalas.md` 8.
+232. **2026-11-04 · a meghívó WINDOWSOS sora (Csaba lelete: anyukája laptopján a Termux-sor a parancssorban az első szónál, a
+    `yes`-nél megállt → „Igen, csináld”)** → **a meghívó mellé egy második sor, ugyanazzal a meghívóval: `powershell … -Command
+    "<letöltés + telepit.ps1>" <meghívó>` — a PowerShellben és a régi parancssorban (cmd) is ugyanígy fut; a program a GitHub
+    zip-jéből jön (`curl.exe` + `Expand-Archive`, git nélkül), a Node-ot a `winget` hozza; a `koino/windows/` a `termux/` párja
+    (`telepit.ps1`, `indit.ps1`, `koino.cmd`), az adat a program mappáján kívül (`%USERPROFILE%\koino-adat`), az asztalon egy
+    „koino” ikon; a lapon a 📋 mellett 💻, a `meghivo` parancs mindkettőt kiírja** · ⭐ a -Command szövegében nincs `$`, `` ` ``,
+    `%`, `!` és belső idézőjel (a PowerShell a dupla idézőjelben a `$`-t, a cmd a `%`-ot bontaná ki — `windowsSorHibaja`), a
+    meghívó a záró idézőjel UTÁN (a Windows PowerShell a -Command utáni szavakat a parancshoz fűzi) · ⛔ mérve: a `tar` a PATH-on
+    a Git GNU tar-ja is lehet, és az a zip-et nem ismeri → `Expand-Archive`; a BOM nélküli .ps1-et a Windows PowerShell 5.1
+    ANSI-ként olvassa, és a „ idézőjelnek számít — a szkript el sem indul → UTF-8 BOM (próba őrzi); átirányított kimenetnél a
+    Write-Host a konzol kódlapján ír („fel�let”) → ott UTF-8 · ⭐ a két program-folyamat ugyanabban a konzolban (`-NoNewWindow`):
+    a Ctrl+C és az ablak bezárása őket is leállítja · ⛔ elvetve: egy sor, ami a Termuxban és a Windowson is fut (olvashatatlan és
+    törékeny); a `-EncodedCommand` (fekete doboz — vírusirtó-gyanús is); a lap kérdezze meg, kinek szól (a meghívó nem tudja, a
+    meghívott milyen gépet használ — két gomb egyszerűbb); a `koino` a felhasználó PATH-ján (a rendszerleíró adatbázis Path-ját
+    bővítené — a REG_EXPAND_SZ elvesztése a winget saját útját is elronthatja; az asztali ikon elég) · `telepites_windows.md`.

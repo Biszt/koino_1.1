@@ -3,8 +3,8 @@
 // Felelősség: ⭐⭐ D121, D122 — A MEGHÍVÁS A LAPON (koinós többlet a prototípus „Meghívóim” ablaka KÖRÉ): „egy bemásolás, és a
 // következő csere után bent vagy”.
 //   · „✉️ Meghívóim” — a prototípus `MeghivoModal`-ja BÁJTRA VÁLTOZATLANUL (a meghívott teljes neve + a nyilatkozat → „Új meghívó
-//     létrehozása”; a saját meghívók listája: a 📋 a meghívottnak küldendő EGY sort másolja — a telepítő sort a meghívóval —, a 🗑️
-//     visszavon). A program a prototípus útvonalain felel (`/api/meghivo/sajat`, `/api/meghivo`, `/api/meghivo/:id/visszavonas`,
+//     létrehozása”; a saját meghívók listája: a 📋 a meghívottnak küldendő EGY sort másolja — a telepítő sort a meghívóval, a
+//     Termuxba —, a 💻 ugyanezt Windowsra (a PowerShellbe vagy a parancssorba — elágazás 232), a 🗑️ visszavon). A program a prototípus útvonalain felel (`/api/meghivo/sajat`, `/api/meghivo`, `/api/meghivo/:id/visszavonas`,
 //     `/api/meghivo/kotelezo`). A koinós többlet: a nyilatkozat szövege („Kijelentem…” — a koinóban a „tanúsítás” a 2. lépcső
 //     neve), egy magyarázó sor, a lejárt meghívó felirata, és a 📋 az egész sort másolja (a listában a rövid kód látszik, mint a
 //     prototípusban — a program `kod`-ja a meghívó azonosítójából, a `szoveg` az egész sor).
@@ -56,22 +56,28 @@ koruleIr('init', function (ertek) {
   if (letrehozas && !letrehozas.querySelector('.koino-meghivo-magyarazat')) {
     const p = document.createElement('p');
     p.className = 'koino-meghivo-magyarazat';
-    p.textContent = 'A meghívó egy hónapig érvényes, és egyszer használható. A 📋 egy sort másol: küldd el a meghívottnak — a '
-      + 'telefonon a Termuxba másolja (ez telepít is), ha nála már fut a koino, a lapon is beillesztheti. A következő csere után '
-      + 'magától tag lesz (ehhez a te gépeden is futnia kell a koinónak).';
+    p.textContent = 'A meghívó egy hónapig érvényes, és egyszer használható. A 📋 és a 💻 egy-egy sort másol (ugyanazzal a '
+      + 'meghívóval) — küldd el a meghívottnak azt, amelyik neki kell: a 📋-t a telefonján a Termuxba, a 💻-t a Windowsos gépén a '
+      + 'PowerShellbe vagy a parancssorba másolja (mindkettő telepít is); ha nála már fut a koino, a lapon is beillesztheti. A '
+      + 'következő csere után magától tag lesz (ehhez a te gépeden is futnia kell a koinónak).';
     letrehozas.appendChild(p);
   }
   return ertek;
 });
 
-// a 📋 a meghívottnak küldendő EGÉSZ sort másolja (a listában a rövid kód látszik, mint a prototípusban), és a lejárt meghívó
-// felirata (a prototípusban nincs lejárat)
+// a 📋 a meghívottnak küldendő EGÉSZ sort másolja (a listában a rövid kód látszik, mint a prototípusban), mellette a 💻 a windowsosat
+// (a prototípus másolója a gomb szövegét visszaállítja, így egy második gomb ugyanazzal az osztállyal is jól jár), és a lejárt
+// meghívó felirata (a prototípusban nincs lejárat)
 koruleIr('_elemHtml', function (h, meghivo) {
   if (typeof h !== 'string') return h;
   let ki = h;
   if (meghivo?.szoveg) {
-    ki = ki.replace('class="meghivo-modal__masol" data-kod="' + meghivo.kod + '" title="Kód másolása"',
-      'class="meghivo-modal__masol" data-kod="' + html(meghivo.szoveg) + '" title="A meghívó másolása (egy sor — küldd el a meghívottnak)"');
+    ki = ki.replace('class="meghivo-modal__masol" data-kod="' + meghivo.kod + '" title="Kód másolása">📋</button>',
+      'class="meghivo-modal__masol" data-kod="' + html(meghivo.szoveg) + '" title="A meghívó másolása telefonra — a Termuxba (egy sor: '
+      + 'küldd el a meghívottnak)">📋</button>'
+      + (meghivo.windowsSzoveg ? '<button type="button" class="meghivo-modal__masol" data-kod="' + html(meghivo.windowsSzoveg)
+        + '" title="A meghívó másolása Windowsra — a PowerShellbe vagy a parancssorba (egy sor: küldd el a meghívottnak)">💻</button>'
+        : ''));
   }
   if (meghivo?.statusz === 'Lejart') {
     ki = ki.replace('meghivo-modal__statusz--aktiv">Lejart', 'meghivo-modal__statusz--visszavont">Lejárt');

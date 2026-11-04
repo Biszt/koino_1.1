@@ -37,6 +37,21 @@ export const MEGHIVO_ELETTARTAM = 30 * 24 * 3600 * 1000;
  */
 export const TELEPITO_SOR = 'yes | pkg upgrade && pkg install -y nodejs git && { [ -d ~/koino_1.1 ] || git clone --depth 1 '
   + 'https://github.com/Biszt/koino_1.1.git ~/koino_1.1; } && sh ~/koino_1.1/koino/termux/telepit.sh';
+/**
+ * ⭐ A WINDOWSOS telepítő sor (2026-11-04 — a terepi lelet: a Termux-sor egy Windowsos laptop parancssorában az első szónál, a
+ * `yes`-nél megállt; elágazás 232). EGY sor, ami a PowerShellben ÉS a régi parancssorban (cmd) is ugyanígy fut: a `powershell` maga
+ * a parancs, a többi egy idézőjeles -Command szöveg. ⛔ Ezért a szövegben nincs `$`, `` ` ``, `%`, `!` és belső `"` — a PowerShell a
+ * dupla idézőjelben a `$`-t kibontaná, a cmd a `%`-ot (`windowsSorHibaja` őrzi). ⭐ A meghívó a záró idézőjel UTÁN jön: a Windows
+ * PowerShell a -Command utáni szavakat a parancshoz fűzi, így a meghívó a telepítő első argumentuma lesz (mint a Termux-sorban).
+ * A program a GitHub zip-jéből jön (`curl.exe` — a Windows része a 10-es 1803 óta — és az `Expand-Archive`; git nem kell; ⛔ nem
+ * a `tar`: ahol a Git eszközei a PATH-on vannak, ott a GNU tar jön, és az a zip-et nem ismeri — mérve), a Node-ot a telepítő hozza
+ * (`winget`), ha nincs. A sor a már telepített gépen is jó (a letöltést kihagyja).
+ */
+export const WINDOWS_TELEPITO_SOR = 'powershell -NoProfile -ExecutionPolicy Bypass -Command "cd ~; if (-not (Test-Path koino_1.1)) '
+  + '{ curl.exe -fL -o koino_1.1.zip https://github.com/Biszt/koino_1.1/archive/refs/heads/main.zip; Expand-Archive koino_1.1.zip .; '
+  + 'Rename-Item koino_1.1-main koino_1.1; Remove-Item koino_1.1.zip }; & .\\koino_1.1\\koino\\windows\\telepit.ps1"';
+/** A Windowsos sor a telepítőt itt keresi (a `koino/` mappához képest) — a próba ebből nézi, hogy a fájl ott van. */
+export const WINDOWS_TELEPITO_UT = 'windows/telepit.ps1';
 const NEV_KORLAT = 64;
 const MEZO_MINTA = /^[a-z]{1,32}$/;
 const HOSZT_MINTA = /^[A-Za-z0-9.:%_-]{1,64}$/;
@@ -98,6 +113,40 @@ export function meghivoKeszitese({ koino, alairo, cimek = [], azonosito, titok, 
 /** ⭐ D122: a meghívottnak küldendő EGY szöveg — a telepítő sor, a végén a meghívóval. */
 export function telepitoSorMeghivoval(meghivo) {
   return TELEPITO_SOR + ' ' + meghivo;
+}
+
+/** ⭐ Ugyanez Windowsra (a PowerShellbe vagy a parancssorba) — a `WINDOWS_TELEPITO_SOR`, a végén a meghívóval. */
+export function windowsTelepitoSorMeghivoval(meghivo) {
+  return WINDOWS_TELEPITO_SOR + ' ' + meghivo;
+}
+
+/**
+ * A puszta meghívó egy szövegből (a tárolt telepítő sorból — a Windowsos sor ebből készül a régi feljegyzéseknél is); ha nincs
+ * benne, null.
+ */
+export function meghivoSzovegbol(szoveg) {
+  if (typeof szoveg !== 'string') return null;
+  const i = szoveg.indexOf(MEGHIVO_ELOTAG);
+  if (i < 0) return null;
+  const torzs = szoveg.slice(i + MEGHIVO_ELOTAG.length).match(/^[A-Za-z0-9_-]*/)[0];
+  return torzs ? MEGHIVO_ELOTAG + torzs : null;
+}
+
+/**
+ * ⛔ A Windowsos sor őre: a -Command szövegében (a két idézőjel között) nincs olyan jel, amit a hívó héj kibontana — a PowerShell
+ * a `$`-t és a `` ` ``-t, a cmd a `%`-ot és a `!`-t —, belső idézőjel sincs, és a sor `powershell`-lel kezdődik. A meghívó
+ * (a záró idézőjel után) csak a saját jeleit hordozhatja. @returns {string|null} a hiba, vagy null
+ */
+export function windowsSorHibaja(sor) {
+  if (typeof sor !== 'string' || !sor.startsWith('powershell ')) return 'nem a powershell-lel kezdődik';
+  const idezojelek = [...sor].filter((c) => c === '"').length;
+  if (idezojelek !== 2) return 'nem pontosan két idézőjel van benne (' + idezojelek + ')';
+  const parancs = sor.slice(sor.indexOf('"') + 1, sor.lastIndexOf('"'));
+  const rossz = [...new Set([...parancs].filter((c) => '$`%!'.includes(c)))];
+  if (rossz.length) return 'a héj kibontaná: ' + rossz.join(' ');
+  const utana = sor.slice(sor.lastIndexOf('"') + 1).trim();
+  if (utana && !/^[A-Za-z0-9_:-]+$/.test(utana)) return 'a záró idézőjel után nem csak a meghívó jelei állnak';
+  return null;
 }
 
 // ===== A MEGHÍVÓ BEOLVASÁSA =====

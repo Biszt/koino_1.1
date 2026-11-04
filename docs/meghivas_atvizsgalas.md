@@ -227,3 +227,9 @@ rontással.
 tartóit még keresem … meghívót kaptál?”, és függő kérelmet tesz a gyökér fejléceire (a nem tag B még át is vette továbbadásra) — az
 alapítónak nincs mit keresnie; a meghívó címei közé a gép minden IPv4-címe bekerül, a Hyper-V/WSL virtuális kártyájáé is
 (172.25.176.1 — két rés, két munka ugyanazzal a társsal, amíg a kötés nem csoportosítja őket).
+
+✅ **A meghívó windowsos sora (2026-11-04 — Csaba lelete):** anyukája laptopján a „Meghívóim” sora a Windows parancssorában az
+első szónál (`yes`) megállt — az a Termuxnak szólt. Most a 📋 mellett egy 💻 gomb: ugyanaz a meghívó egy PowerShell-sor végén, ami
+a PowerShellben és a régi parancssorban is fut (letöltés a GitHub zip-jéből, a Node a `winget`-tel, `koino/windows/`; a
+`meghivo` parancs mindkettőt kiírja). Ezzel Csaba kérésének („a meghívás felhasználóbarát útja, Termux nélkül”) a windowsos fele
+kész; a részletek: [`telepites_windows.md`](telepites_windows.md), elágazás 232.

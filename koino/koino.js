@@ -190,7 +190,7 @@ import {
 // ⭐⭐ D121: a meghívó szövege és az ellenőrző kód (a meghívás a lapon)
 import {
   meghivoKeszitese, meghivoOlvasasa, meghivoE, telepitoSorMeghivoval, meghivoBizonyitek, bizonyitekEllenorzese, ujMeghivoJelei,
-  MEGHIVO_ELETTARTAM
+  windowsTelepitoSorMeghivoval, meghivoSzovegbol, MEGHIVO_ELETTARTAM
 } from './js/csere/meghivo.js';
 // ⭐⭐ D107 L4 (④c): a felajánlás tiszta számításai.
 import {
@@ -1709,7 +1709,8 @@ async function meghivoKiadasa({ nev, nyilatkozat }) {
   await kiadottMeghivokModositasa((lista) => [...lista, { i: azonosito, s: titok, nev: meghivottNev, nyilatkozat: true,
     letrehozva: most, lejar: lejarat, allapot: 'aktiv', szoveg }]);
   const fut = csereAllapotKepe(allas, most).orjarat.fut;
-  return { azonosito, szoveg, meghivo, lejarat, cimek, orjarat: { fut, port } };
+  return { azonosito, szoveg, windowsSzoveg: windowsTelepitoSorMeghivoval(meghivo), meghivo, lejarat, cimek,
+    orjarat: { fut, port } };
 }
 
 /**
@@ -1732,8 +1733,11 @@ async function kiadottMeghivok() {
         if (p) felhasznalta.nev = JSON.parse(new TextDecoder().decode(await blob.olvas(p.adat.lenyomat)))?.mezok?.nev ?? null;
       } catch { /* a profil darabja még nincs nálam */ }
     }
+    // ⭐ a windowsos sor a tárolt (Termux-) sor meghívójából — a régi feljegyzéseknél is (elágazás 232)
+    const meghivo = allapot === 'aktiv' ? meghivoSzovegbol(x.szoveg) : null;
     ki.push({ azonosito: x.i, nev: x.nev, allapot, letrehozva: x.letrehozva, lejar: x.lejar,
-      ...(allapot === 'aktiv' ? { szoveg: x.szoveg } : {}), ...(felhasznalta ? { felhasznalta } : {}) });
+      ...(allapot === 'aktiv' ? { szoveg: x.szoveg, windowsSzoveg: meghivo ? windowsTelepitoSorMeghivoval(meghivo) : null } : {}),
+      ...(felhasznalta ? { felhasznalta } : {}) });
   }
   return ki;
 }
@@ -7044,9 +7048,13 @@ try {
       }
       const m = await meghivoKiadasa({ nev, nyilatkozat: true });
       kiir('A meghívó elkészült ide (' + rovidAzonosito(KOINO) + '): ' + nev + ' — egy hónapig érvényes, egyszer használható.');
-      kiir('Küldd el neki ezt az egy sort (a telefonon a Termuxba másolja — ha ott már fut a koino, a lapon is beilleszthető):');
+      kiir('Küldd el neki az egyik sort — ha nála már fut a koino, a lapon is beilleszthető (mindkettőben ugyanaz a meghívó).');
       kiir();
+      kiir(SZIN.vastag + '📱 Telefonon a Termuxba:' + SZIN.vege);
       kiir(m.szoveg);
+      kiir();
+      kiir(SZIN.vastag + '💻 Windowson a PowerShellbe vagy a parancssorba:' + SZIN.vege);
+      kiir(m.windowsSzoveg);
       kiir();
       kiir(SZIN.halvany + 'A címeid benne: ' + (m.cimek.map((c) => c.hoszt + ':' + c.port).join(', ') || '(nincs)')
         + '. Amikor az első cserében bizonyítja, hogy nála a meghívó, a géped magától meghívja (meghivok — az állása).' + SZIN.vege);
@@ -10370,10 +10378,11 @@ try {
           const STATUSZ = { aktiv: 'Aktiv', igazolt: 'Felhasznalt', felhasznalt: 'Felhasznalt', visszavont: 'Visszavont', lejart: 'Lejart' };
           const lista = await kiadottMeghivok();
           // a `kod` a prototípus rövid kódjának helyén a meghívó azonosítójából (nem titok — a bizonyítékkal utazik; a listában és a
-          // visszavonás kérdésében ez látszik), a `szoveg` a meghívottnak küldendő egész sor (a 📋 ezt másolja)
+          // visszavonás kérdésében ez látszik), a `szoveg` a meghívottnak küldendő egész sor (a 📋 ezt másolja — a Termuxba), a
+          // `windowsSzoveg` ugyanez Windowsra (a 💻 — elágazás 232)
           const rovidKod = (az) => String(az ?? '').slice(0, 12).replace(/(.{4})(?=.)/g, '$1-');
           return { adat: { meghivok: lista.map((x) => ({ _id: x.azonosito, kod: rovidKod(x.azonosito), szoveg: x.szoveg ?? '',
-            meghivottNev: x.nev,
+            windowsSzoveg: x.windowsSzoveg ?? '', meghivottNev: x.nev,
             statusz: STATUSZ[x.allapot] ?? x.allapot, letrehozva: x.letrehozva, lejar: x.lejar,
             ...(x.felhasznalta ? { felhasznaloEemberId: { eemberNev: x.felhasznalta.nev ?? x.nev } } : {}) })) } };
         }

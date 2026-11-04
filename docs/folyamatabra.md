@@ -33,7 +33,8 @@ alakja, a kapu, a tár, a szabály-réteg — az 1. ábra közepe), a végén a 
 
 Nincs szerver: **minden a készüléken fut**, két hosszan futó folyamatban — a **felület** (`koino
 felulet`: a lap és a helyi kapu) és az **őrjárat** (`koino orjarat`: a csere a társakkal). A telefonon
-a `koino` indító (`koino/termux/indit.sh`) mindkettőt elindítja. Ami közös bennük: **egy kapu** és
+a `koino` indító (`koino/termux/indit.sh`), Windowson az asztali „koino” ikon (`koino/windows/indit.ps1`) mindkettőt
+elindítja. Ami közös bennük: **egy kapu** és
 **egy tár**.
 
 ```mermaid
@@ -282,7 +283,7 @@ flowchart TD
     subgraph BEL["1. A BELÉPÉS — D121, D122"]
         direction TB
         A1["a meghívó a lapon: „Meghívóim” → a meghívott neve + nyilatkozat<br/>→ EGY sor: a telepítő és a meghívó · egy hónap · egyszer"]
-        A2["a meghívott bemásolja — a telefonon a Termuxba, vagy a lapon: 🔗 Csatlakozás…<br/>telepít · csatlakozik · belép a horgonyával · a meghívó a társa"]
+        A2["a meghívott bemásolja — a telefonon a Termuxba (📋), Windowson a PowerShellbe vagy a parancssorba (💻),<br/>vagy a lapon: 🔗 Csatlakozás…<br/>telepít · csatlakozik · belép a horgonyával · a meghívó a társa"]
         A3["az első megnyitáskor: a profil-űrlap"]
         A4["az első csere: bizonyítja, hogy nála a titok — HMAC<br/>a meghívó gépe MAGÁTÓL meghív → TAG, az 1. lépcső"]
         A1 --> A2 --> A3 --> A4
@@ -376,7 +377,7 @@ flowchart TB
     ALAP["🧱 AZ ALAP<br/>aláírt esemény · kanonikus alak · a kulcs — D15<br/>az egyetlen kapu · a tár és a mutató · az író — D70, D73<br/>összegző Merkle-fa · lánc-gyökér · lánc-ellenőrzés — D78–D82, D98"]
     SZAM["🧮 A SZÁMÍTÁS<br/>szabályok · entitások · döntés → egyezmény · végrehajtás<br/>— D17, D85<br/>identitás: tagság · 2. lépcső szúrópróbával · kontraszt-jelzés<br/>— D56–D62, D93–D94<br/>a koinó szabályai a születésben · a két réteg — D118"]
     HAL["🌐 A HÁLÓZAT<br/>UDP-kapu · lyukfúrás · titkosítás — D69, D89<br/>szeletenkénti csere · szigorú (b) · közös halmaz<br/>· társ-emlékezet — D74, D97, D98<br/>kötések · hirdetőtábla · DHT-címjegyzék · raj — D71, D91<br/>kérelem · függő kérelem · továbbadás · kiszolgálási keret<br/>— D92, D109<br/>kereső-réteg · felderítés · törzs-határ · több forrás<br/>— D105–D114, D120<br/>családi őrjárat és csere — D119"]
-    FEL["🖥️ A FELÜLET<br/>pakli · modálok · alsó sáv · értesítések — D100–D104<br/>tér · csatlakozás · társak · költözés · koino-verzió — D118–D119<br/>meghívás a lapon: Meghívóim + profil — D121–D122<br/>telepítés egy bemásolt sorral — a Termux marad, D30"]
+    FEL["🖥️ A FELÜLET<br/>pakli · modálok · alsó sáv · értesítések — D100–D104<br/>tér · csatlakozás · társak · költözés · koino-verzió — D118–D119<br/>meghívás a lapon: Meghívóim + profil — D121–D122<br/>telepítés egy bemásolt sorral — a Termux marad, D30; Windowson is (232.)"]
     NY["⏸️ NYITOTT — Csabánál, vagy a terepen mérendő<br/>a telepítő sor a RÉGI programot nem frissíti — döntési kérdés<br/>gyökér-koinó a lapról nem hozható létre<br/>a családi őrjárat terepi leletei — 18. szakasz<br/>a meghívás mellékes megfigyelései<br/>a 🅱️ terep: két mobilnet — kihagyva · IPv6<br/>régebbi kérdések: véletlen séta · olcsóbb tábla-kulcs ·<br/>a fájl-bájtok kézi útja · a hívás ötlete"]
     NI["○ MÉG NINCS<br/>a pénz — a 2. lépcső pénztárcája,<br/>a kiköltözés kivezetése<br/>a forráskód-kormányzás 2. és 5. lépcsője:<br/>az elismerés és a sürgősségi út — N9"]
     ALAP --> SZAM
