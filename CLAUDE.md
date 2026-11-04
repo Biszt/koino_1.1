@@ -19,7 +19,7 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ### ▶️ SESSION-VÁLTÁS (2026-10-15) — A KÖVETKEZŐ SESSION INNEN INDUL
 
-**Az állapot:** **1371 önpróba** (64 próba-fájl; a legutóbbi teljes soron mind zöld — 2026-11-04, a D122 után; a windowsos sor után a meghívó-, a parancssor- és a felület-csoport) · 354 fájl / 6856,9 KB (⚠️ CR nélkül mérve —
+**Az állapot:** **1371 önpróba** (64 próba-fájl; a legutóbbi teljes soron mind zöld — 2026-11-04, a D122 után; a windowsos sor után a meghívó-, a parancssor- és a felület-csoport) · 354 fájl / 6857,1 KB (⚠️ CR nélkül mérve —
 lásd a 6. szabályt) · 0 npm-csomag · minden pusholva. ✅ **A telefon friss** (Csaba 2026-10-23-án a felderítés kézi
 próbájához és a három javításhoz frissítette — *„működik”*); a parancs lent, *„Ami nyitva maradt"*. A laptopon a próbához három
 fa: „Felderítés-próba” (60 gondolat), „Nagy felderítés-próba” és „Harmadik felderítés-próba” (400–400 gondolat, ≤ 8 szint, ≤ 8
@@ -510,7 +510,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés, terepen — TCP-n 334 bájt volt; ⚠️ D89/1 óta titkosítva +~0,4 KB: kézfogás, csomagonként ~18 B, az aláírás — 57. mérés; D95/4 óta a gyökér-darab jele +76–100 B) · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **354 fájl, 6856,9 KB** — ⚠️ *ebből a `felulet/` 146 fájl / 1603,8 KB (2026-10-22), ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **354 fájl, 6857,1 KB** — ⚠️ *ebből a `felulet/` 146 fájl / 1603,8 KB (2026-10-22), ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -808,7 +808,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — ⭐ **2026-11-01 óta EGY bemásolt sor** (a „legegyszerűbb út”: `pkg` + `git clone` + `koino/termux/telepit.sh` — az Ed25519 vizsgája, a `koino` parancs a Termux PATH-ján, és az indítás; utána minden indításhoz `koino`, a program parancsai `koino <parancs>`-ként; `koino/termux/indit.sh` — a két folyamat, a lap a böngészőben, az őrjárat csak a csatlakozás után, Ctrl+C mindkettőt leállítja; Csaba: a D30 marad, a Termux marad, saját alkalmazás nincs) · a Szakasz 2 / 4. lépéséhez. 💻 **Windowsra (2026-11-04, elágazás 232):**
 [`docs/telepites_windows.md`](docs/telepites_windows.md) — a meghívó 💻 sora (a PowerShellbe vagy a cmd-be): a GitHub zip-je, a Node a
 `winget`-tel, `koino/windows/telepit.ps1` → `indit.ps1` (a két folyamat egy konzolban, Ctrl+C vagy az ablak bezárása leállítja), az
-adat `%USERPROFILE%\koino-adat`, a további indítás az asztali „koino” ikon, a parancsok `koino\windows\koino.cmd <parancs>`. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 354 fájl, 6856,9 KB (egyben tömörítve ~1,9 MB — 84. mérés), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+adat `%USERPROFILE%\koino-adat`, a további indítás az asztali „koino” ikon, a parancsok `koino\windows\koino.cmd <parancs>`. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 354 fájl, 6857,1 KB (egyben tömörítve ~1,9 MB — 84. mérés), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 
