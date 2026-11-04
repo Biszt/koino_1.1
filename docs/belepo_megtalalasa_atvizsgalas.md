@@ -76,6 +76,24 @@ legalább egy gép eltárolta a bejelentést (`koino.js` — a `bejelentve` a t�
   döntés.
 - **M6 — igaz felirat (F6):** „N témán jelentkeztem”, és a „kérő vár rám” a kiszűrt zaj nélkül — nincs döntés.
 
+- **M7 — a belépő lapja kimondja, hogy keresi az első kapcsolatot** (Csaba, 2026-11-04: *„a meghívott felületén értesítse a
+  meghívottat, hogy a készüléke, éppen próbálja fel venni az első kapcsolatot, és jelezhetné a probálkozásokat is.”*). Ma a
+  belépő a lapon csak annyit lát, hogy „a hiányzó részek tartóit még keresem … meghívót kaptál?” — este a barátod fél órán át nem
+  tudhatta, történik-e valami. **A javasolt állapotok** (egy sáv a lap tetején, amíg nem tag; a szöveg a laptól függetlenül is igaz):
+  1. *„✔ A meghívót elfogadtad (Csaba Laptopja hívott meg). Keresem a meghívód készülékét…”*
+  2. *„📡 Bejelentkeztem a hálózaton, hogy a meghívód készüléke rám találjon — utoljára 21:04-kor (3 helyen), legközelebb 21:24-kor.”*
+  3. *„🚪 Kopogok a meghívód készülékére: 17 próbálkozás, az utolsó 21:18-kor — még nem válaszolt.”* (percenként frissül)
+  4. *„🤝 Megvan a kapcsolat (21:19) — a meghívód készüléke most fogad be…”*
+  5. *„✅ Bent vagy a koinóban (21:21) — jönnek a gondolatok.”* (néhány perc múlva eltűnik)
+
+  Ha sokáig nincs kapcsolat (pl. 30 perc), egy segítő mondat: *„Akkor tud rád találni, ha a meghívód készülékén fut a koinó. Ha
+  ugyanazon a wifin vagytok, azonnal megy. A meghívód december 4-ig érvényes.”* **Az adat forrása:** a belépés lépéseit az őrjárat
+  jegyzi (a csere-állapot mellé — `csere.json`, amit a lap úgyis 10 mp-enként kérdez); címet a lap nem mutat (csak a „részletek”
+  alatt, a hibakereséshez). ⏸️ **B5:** (a) ⭐ **a meghívó oldalán is:** a „Meghívóim” ablak a „aktív” helyett kimondja, hogy *„jelentkezett —
+  kopogok rá (5 próbálkozás)”*, aztán *„igazolta — befogadom”*, *„felhasznált”* (este a te oldaladon sem látszott semmi); (b) és a
+  készülék saját értesítése (D103), amikor a belépés sikerült — mindkét oldalon (*„Bent vagy a koinóban”* / *„Csikós Alex belépett”*),
+  mert a lapot közben bezárhatják; (c) csak a belépő lapján.
+
 ⛔ **Amit nem javaslok:** központi segítő (jelzőpont, közvetítő szerver — a 2. szabály); a meghívott a saját címét a meghívóba
 vagy egy válaszüzenetbe tegye (a mobilcím változik, és egy második üzenet visszahozná a „kódos utat”, amit a D122 megszüntetett).
 
@@ -92,6 +110,10 @@ laptop mindegyiket 0, 2, 5, 10 és 20 perc múlva keresi.
 
 ## 6. A sorrend (a döntések után)
 
-① a 87. mérés → ② B2–B4 Csabánál (a mérés számaival) → ③ az építés: M5 + M6 (javítás), M3, M1, M4, M2 — mindegyik próbával és
-rontással (a DHT-t a próbák hamis DHT-vel helyettesítik, ahogy a ③c próbái) → ④ terep: egy telefon mobilneten, a meghívó a lapról —
-a cél, hogy **kézi segítség nélkül**, néhány percen belül bent legyen.
+① a 87. mérés → ② B2–B5 Csabánál (a mérés számaival) → ③ az építés: M5 + M6 (javítás), M7 (a belépés lépéseinek feljegyzése és a
+lap sávja — előre, hogy a többi javítás hatása a terepen látsszon), M3, M1, M4, M2 — mindegyik próbával és rontással (a DHT-t a próbák
+hamis DHT-vel helyettesítik, ahogy a ③c próbái; a lap sávját böngészőben is végigjárva) → ④ terep: egy telefon mobilneten, a meghívó a
+lapról — a cél, hogy **kézi segítség nélkül**, néhány percen belül bent legyen, és **mindkét fél lássa, hol tart**.
+
+✅ **Csaba (2026-11-04): „rendben elfogadom”** — a terv (M1–M6, B2 (b), B3 (c), B4 (a)) és a sorrend; hozzátéve az M7-et (a belépő
+lapja). ⏸️ Nyitott: B5.
