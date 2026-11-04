@@ -233,3 +233,33 @@ első szónál (`yes`) megállt — az a Termuxnak szólt. Most a 📋 mellett e
 a PowerShellben és a régi parancssorban is fut (letöltés a GitHub zip-jéből, a Node a `winget`-tel, `koino/windows/`; a
 `meghivo` parancs mindkettőt kiírja). Ezzel Csaba kérésének („a meghívás felhasználóbarát útja, Termux nélkül”) a windowsos fele
 kész; a részletek: [`telepites_windows.md`](telepites_windows.md), elágazás 232.
+
+## 9. 🔍 A terep két hálózat között (2026-11-04 este) — a meghívó gépe nem találta meg a belépőt
+
+**A menet:** Csaba a laptopról (otthon, a router mögött — 31.46.251.159) meghívott egy barátot, akinek a telefona **mobilneten**
+volt. A telefon egy sorral telepített, elfogadta a meghívót, 21:04-kor a DHT-n bejelentkezett a laptop készülék-témáján („4
+tartónál jelentkeztem”), és percenként kopogott a meghívó címeire. A laptop meghívója „aktív” maradt, gondolat nem jött át.
+
+**Mérve (a laptop oldalán):**
+- A laptop egyszer sem hallott a telefonról: nem volt igazolás, kötés, bekopogó; 16:55 óta senkivel nem cserélt (a két másik
+  telefon utolsó címe Éváék hálózatán volt).
+- ⛔ **A DHT-n a laptop témáin szinte csak ZAJ**: a „tartóként” visszajövő címek (31.200.249.x, 130.43.x és mások) **három véletlen,
+  soha nem használt témán is ugyanígy jönnek** — a DHT néhány gépe bármilyen kérdésre ezt adja. Ez a ⑦ 1. leletének (idegen címek
+  a vakított témákon) a mérése: nem koinós készülékek, és a kör percenként rájuk kopog.
+- A barátod valódi bejelentése (`130.43.211.148:24653`) csak 4 DHT-gépen volt; a laptop ~20 percenkénti keresése nem azokhoz ért
+  (21:12:48: „1 kérő vár rám” — a zaj), egy második kézi keresés megtalálta.
+- ⭐ **A laptopnak kézzel megadva (`tars 130.43.211.148 24653`) a rés AZ ELSŐ PRÓBÁRA megnyílt** (21:19:00, 44 ms), a telefon a
+  kérelme `KELL` → `TAGSAG` körében igazolta a meghívót (21:19:00), 21:21:00-kor a laptop magától meghívta, és utána a csere ment
+  („küldtem 3”); Csaba: *„sikerűlt 🙂 átmentek a gondolatok.”* — **az otthoni router és ennek a mobilszolgáltatónak a NAT-ja tehát
+  engedi a résfúrást; ami hiányzik, a belépő címének MEGTALÁLÁSA.**
+- ⚠️ **Egy apró hiba (a ⑦ ütközés-javításából, `dfda545`):** a bizonyíték az ütközés útján jött (a két gép egyszerre kért; a laptop
+  engedett és kiszolgált — `kerelemAtvetele`), és onnan kimarad a „belépő útja” (a belépés elkérése és az automatikus meghívás —
+  a `resMunka` csere-ágában van). Itt két percet késett (a következő rendes csere pótolta). Javítandó: a kiszolgálás közös útja
+  (`kerelemAtvetele`) is hívja.
+
+**⏸️ Döntés Csabánál — a belépő megtalálása két hálózat között:**
+- **(A) Gyakrabban néz rá, amíg van élő meghívója:** a kiállítás utáni első napban a meghívó gépe 20 helyett 2 percenként nézi a saját
+  témáját (egy keresés ~3 KB; ~2 MB/nap ez idő alatt).
+- **(B) Kiszűri a zajt:** amelyik kopogtató címen néhány próba után sem nyílik rés, azt egy ideig nem hívja (a ⑦ 1. lelete).
+- **(C) Marad így** (a 20 perces keresés előbb-utóbb talál — ma este fél óra alatt nem).
+- ⭐ Javaslat: **(A) + (B)**.

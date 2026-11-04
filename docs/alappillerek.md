@@ -1721,3 +1721,9 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     törékeny); a `-EncodedCommand` (fekete doboz — vírusirtó-gyanús is); a lap kérdezze meg, kinek szól (a meghívó nem tudja, a
     meghívott milyen gépet használ — két gomb egyszerűbb); a `koino` a felhasználó PATH-ján (a rendszerleíró adatbázis Path-ját
     bővítené — a REG_EXPAND_SZ elvesztése a winget saját útját is elronthatja; az asztali ikon elég) · `telepites_windows.md`.
+233. **2026-11-04 · a terep két hálózat között: a rés nyílik, a belépő címét a meghívó gépe nem találja (⏸️ Csabánál)**
+    → **mérve: a laptop (otthon) és a mobilneten lévő telefon között a rés az első próbára megnyílt, amikor a laptop a telefon
+    DHT-n bejelentett címére kopogott — de a laptop ~20 percenkénti keresése a témáin szinte csak zajt kap (a DHT néhány gépe
+    bármilyen témára ugyanazokat a címeket adja: három véletlen témán ellenőrizve), a valódi bejelentést nem** · ⏸️ (A) gyakoribb
+    keresés, amíg él egy meghívó · (B) a zaj kiszűrése (a ⑦ 1. lelete) · (C) marad — javaslat (A)+(B) · ⚠️ közben: az ütközés útján
+    jött bizonyíték után kimarad a belépő útja (`kerelemAtvetele`) — két perc késés · `meghivas_atvizsgalas.md` 9. szakasz.

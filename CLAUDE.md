@@ -325,7 +325,12 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    meghívó WINDOWSOS sora** (2026-11-04 — Csaba lelete: anyukája laptopján a Termux-sor a parancssorban az első szónál, a `yes`-nél
    megállt; elágazás 232): a 📋 mellett 💻 — ugyanaz a meghívó egy `powershell … -Command "…"` sor végén, ami a PowerShellben és a cmd-ben
    is fut (a GitHub zip-je, a Node a `winget`-tel; `koino/windows/` — `telepit.ps1`, `indit.ps1`, `koino.cmd`; az asztalon „koino”
-   ikon; [`telepites_windows.md`](docs/telepites_windows.md)); ⏭️ anyukája gépén kipróbálni. A laptop
+   ikon; [`telepites_windows.md`](docs/telepites_windows.md)); ⏭️ anyukája gépén kipróbálni. 🔍 **Terep két hálózat között (2026-11-04 este — az
+   átvizsgálás 9. szakasza, elágazás 233):** a mobilneten lévő telefon és az otthoni laptop között a rés az ELSŐ próbára megnyílt, amikor
+   a laptop a telefon DHT-n bejelentett címére kopogott (kézzel megadva) — a meghívás és a csere utána ment (Csaba: *„sikerűlt 🙂
+   átmentek a gondolatok.”*); ⛔ magától a laptop nem találta meg a címet: a témáin a DHT szinte csak ZAJT ad (bármilyen témára
+   ugyanazok a címek — véletlen témákon mérve; a ⑦ 1. lelete). ⏸️ **Csabánál:** (A) gyakoribb keresés, amíg él egy meghívó · (B) a
+   zaj kiszűrése · (C) marad — javaslat (A)+(B); ⚠️ és az ütközés útján jött bizonyíték után kimarad a belépő útja (`kerelemAtvetele`). A laptop
    terep-adata: a scratchpad `terep4` („Meghívókulcs-próba”, őrjárat 7373, felület 7499). ⛔ LELET (mérve): nyílt koinóban az „alap”
    meghívóhoz a belépés nem ér át (a szigorú (b) közös halmazában nincs) → ✅ **MH7 (A)** (Csaba, 2026-11-02): a nyílt kapu is elkéri
    az ismeretlen társ személyét, a tag a nem tag társ hiányzó belépését függő kérelemmel hozza (`belepoSzeleteKerese`; elágazás 227). ⏸️ Tíz
