@@ -60,6 +60,8 @@ Write-Host ('✓ A Node tud Ed25519-et (' + (& $NODE -v) + ')')
 $indito = Join-Path $PSScriptRoot 'indit.ps1'
 try {
   $asztal = [Environment]::GetFolderPath('Desktop')
+  # (mérve: egy kicserélt USERPROFILE mellett a Windows üres asztal-mappát ad — akkor nincs hova tenni az ikont)
+  if (-not $asztal) { throw 'a Windows nem mondta meg, hol az asztal' }
   $ikon = (New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path $asztal 'koino.lnk'))
   $ikon.TargetPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
   $ikon.Arguments = '-NoProfile -ExecutionPolicy Bypass -NoExit -File "' + $indito + '"'
