@@ -246,8 +246,9 @@ tartónál jelentkeztem”), és percenként kopogott a meghívó címeire. A la
 - ⛔ **A DHT-n a laptop témáin szinte csak ZAJ**: a „tartóként” visszajövő címek (31.200.249.x, 130.43.x és mások) **három véletlen,
   soha nem használt témán is ugyanígy jönnek** — a DHT néhány gépe bármilyen kérdésre ezt adja. Ez a ⑦ 1. leletének (idegen címek
   a vakított témákon) a mérése: nem koinós készülékek, és a kör percenként rájuk kopog.
-- A barátod valódi bejelentése (`130.43.211.148:24653`) csak 4 DHT-gépen volt; a laptop ~20 percenkénti keresése nem azokhoz ért
-  (21:12:48: „1 kérő vár rám” — a zaj), egy második kézi keresés megtalálta.
+- A barátod valódi bejelentését (`130.43.211.148:24653`) a laptop ~20 percenkénti keresése nem kapta meg (21:12:48: „1 kérő vár
+  rám” — a zaj), egy második kézi keresés megtalálta. ⚠️ *Helyesbítés: a telefon „4 tartónál jelentkeztem” sora négy TÉMÁT jelent, nem
+  négy gépet — az esti elemzésben félreolvastam.*
 - ⭐ **A laptopnak kézzel megadva (`tars 130.43.211.148 24653`) a rés AZ ELSŐ PRÓBÁRA megnyílt** (21:19:00, 44 ms), a telefon a
   kérelme `KELL` → `TAGSAG` körében igazolta a meghívót (21:19:00), 21:21:00-kor a laptop magától meghívta, és utána a csere ment
   („küldtem 3”); Csaba: *„sikerűlt 🙂 átmentek a gondolatok.”* — **az otthoni router és ennek a mobilszolgáltatónak a NAT-ja tehát
@@ -263,3 +264,6 @@ tartónál jelentkeztem”), és percenként kopogott a meghívó címeire. A la
 - **(B) Kiszűri a zajt:** amelyik kopogtató címen néhány próba után sem nyílik rés, azt egy ideig nem hívja (a ⑦ 1. lelete).
 - **(C) Marad így** (a 20 perces keresés előbb-utóbb talál — ma este fél óra alatt nem).
 - ⭐ Javaslat: **(A) + (B)**.
+
+✅ Csaba: *„elfogadom a javaslataidat, és igen szeretném hogy kidólgozd a tervet, még kódírás elött.”* → a terv:
+[`belepo_megtalalasa_atvizsgalas.md`](belepo_megtalalasa_atvizsgalas.md) (az (A), a (B) és a megbízhatóbb keresés; előbb a 87. mérés).

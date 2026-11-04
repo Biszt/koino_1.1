@@ -1,0 +1,97 @@
+# A belépő megtalálása két hálózat között — átvizsgálás (2026-11-04)
+
+*Csaba (a terep után): „elfogadom a javaslataidat, és igen szeretném hogy kidólgozd a tervet, még kódírás elött.” — Ez a terv;
+kód csak a döntések után. A kiinduló lelet: [`meghivas_atvizsgalas.md`](meghivas_atvizsgalas.md) 9. szakasz, elágazás 233.*
+
+---
+
+## 1. Mi történt (mérve, 2026-11-04 este)
+
+A laptop (otthon, router mögött) meghívott egy mobilneten lévő telefont. A telefon elfogadta a meghívót, 21:04-kor a DHT-n
+bejelentkezett, és percenként kopogott a laptopra — a laptop viszont nem talált rá, a meghívó „aktív” maradt. Amikor a telefon
+DHT-n bejelentett címét kézzel adtam a laptopnak, a rés az első percben megnyílt, és két perc múlva a laptop magától meghívta.
+
+⭐ **A tanulság:** a két NAT (az otthoni router és ennek a mobilszolgáltatónak a NAT-ja) engedi a résfúrást; ami elakadt, az a belépő
+CÍMÉNEK MEGTALÁLÁSA.
+
+⚠️ **Helyesbítés:** a telefon naplójának „4 tartónál jelentkeztem” sora nem négy DHT-gépet jelent, hanem **négy témát** (rekeszt), amin
+legalább egy gép eltárolta a bejelentést (`koino.js` — a `bejelentve` a témák száma). A felirat félrevezető (az esti elemzésben
+én is félreolvastam) — lásd M6.
+
+## 2. Hogyan megy ma az első találkozás
+
+1. **A meghívó** (a szöveg, amit a meghívó elküld) hordozza a meghívó készülék címeit (a belső és a kifelé látszó) és a
+   készülék-nevét (tábla-aláíró). A belépő tehát tudja, hol a meghívó — a meghívó semmit nem tud a belépőről.
+2. **A belépő** a meghívó elfogadásakor (`meghivoElfogadasa`) a címeket induló címnek veszi, és felvesz egy **jelentkezés-kérelmet**
+   (cél nélküli függő kérelem — MH6), aminek a kopogtató témája a meghívó **készülék-témája** (a koinó nevéből és a meghívó
+   készülék-nevéből számolt rekesz). ⚠️ Mint minden függő kérelem, ez is **két óra után lejár**.
+3. **A belépő őrjárata** az új függő kérelemnél azonnal, aztán ~20 percenként a **BitTorrent DHT-n** (a világ torrent-programjainak
+   közös, gazdátlan hálója — nem koinós gépek) bejelenti a címét ezen a rekeszen: a DHT ismert belépőin (`router.bittorrent.com`
+   stb. — csak indítás; utána a megismert gépekből) a rekesz számához „legközelebbi” ~8 géphez jut, és azok eltárolják: „ezen a
+   rekeszen ez a cím” (az IP a csomagból, a port a saját, kívülről látszó portja — STUN). A rekesz száma vakított: csak az tudja,
+   melyiket nézze, akinél ott a meghívó.
+4. **A meghívó őrjárata** ~20 percenként (`cimjegyzekKor`) ugyanezen a rekeszen (és a gyökér-darabjai párjain) megkérdezi, ki jelentkezett;
+   akit talál, azt 30 percig a kör céljai közé veszi (`KOPOGTATO_ELEVULES`), és percenként kopog rá.
+5. **A résfúrás:** mindkét fél percenként, ugyanabban az ablakban kopog a másikra — a két router „válasznak” látja a másik csomagját,
+   és beengedi. Megindul a csere, a belépő bizonyítja a meghívót (D122), a meghívó magától meghív.
+
+## 3. Hol vész el
+
+- **F1 — a keresés elhibázza a valódi bejelentést.** Egy keresés (`tarsakKeresese`) témánként 1–3 címet hozott, és ugyanaz a
+  bejelentés hol benne volt, hol nem: 21:05-kor a telefon címe a gyökér-pár témán megvolt, a készülék-témán nem; 21:12:48-kor a laptop
+  egyetlen „kérőt” talált, és az nem a telefon volt (különben a rés 21:13-kor megnyílt volna); 21:18-kor mindkét témán megvolt.
+- **F2 — a zaj.** A DHT néhány gépe BÁRMILYEN rekeszre hamis „tartókat” ad (31.200.249.x és mások — három véletlen, soha nem használt
+  témán ugyanígy jöttek; a ⑦ 1. lelete). A kör percenként rájuk kopog, és a „kérő vár rám” szám hazudik.
+- **F3 — a ritkaság.** Egy elhibázott keresés után 20 perc a következő próba.
+- **F4 — a jelentkezés lejár.** Két óra után a belépő abbahagyja a jelentkezést a meghívó készülék-témáján (a lapja kérései — a
+  gyökér-fejlécek — addig jelentkeznek a gyökér-pár témákon, amíg a lap kér). Ha a meghívó addig nem talált rá, a belépés
+  elakad.
+- **F5 — az ütközés útja.** Ha a két gép egy munkában egymástól kér, és a meghívó enged és kiszolgál (`kerelemAtvetele` — a ⑦
+  javítása, `dfda545`), a bizonyíték igazolódik, de a „belépő útja” (a belépés elkérése, az automatikus meghívás) kimarad — ma két
+  perc késés (a következő rendes csere pótolja).
+- **F6 — a félrevezető naplósor:** „N tartónál jelentkeztem” (témák, nem gépek); a „kérő vár rám” a zajt is számolja.
+- ⚠️ *Nem e terv tárgya:* a kifelé látszó port a STUN-é — egy cél-függő (szimmetrikus) NAT mögött más porton megy ki a csomag, és a
+  résfúrás így nem sikerülne. Ennél a szolgáltatónál működött; a két mobil közötti eset (🅱️) változatlanul nyitott.
+
+## 4. A javaslatok (Csaba elfogadta az irányt: a gyakoribb keresést, a zaj szűrését és a megbízhatóbb keresést)
+
+- **M1 — a keresés megbízhatóbb (F1):** egy körben ugyanazt a rekeszt **többször** kérdezzük (pl. 3×, rövid szünettel, más-más
+  belépési pontról indulva), és az eredményeket **egyesítjük**; a bejelentő pedig a bejelentés után **egy ellenőrző kereséssel** nézi,
+  hány gép tartja (ha egy sem, azonnal újra). *A számokat a mérés adja (5. szakasz).*
+- **M2 — gyakrabban, amíg él egy meghívó (F3):** csak a készülék-témát (a meghívottak rekeszét), és csak amíg van fel nem használt,
+  le nem járt meghívó. ⏸️ **B2 — az ütem:**
+  - (a) az első napban 2 percenként, utána a mai 20 perc;
+  - (b) ⭐ **lépcsős:** az első órában 2, az első napban 5, utána 10 percenként, amíg a meghívó él (egy hónap) — a belépő napok múlva is
+    beillesztheti a meghívót;
+  - (c) 5 percenként, amíg él.
+  Egy keresés ~3 KB: a (b) az első napban ~1,5 MB, utána ~0,4 MB/nap meghívónként (a telefonos meghívónál számít).
+- **M3 — a zaj kiszűrése (F2):** ⏸️ **B3:**
+  - (a) **kudarc-számláló:** amelyik kopogtató címen 3 kör után sem nyílik rés, azt 6 óráig nem hívjuk;
+  - (b) **ellenpróba-rekesz:** körönként egy véletlen, soha nem használt rekeszt is megkérdezünk — ami ott is megjelenik, az zaj (a
+    mostani mérés pontosan így ismerte fel), és kimarad;
+  - (c) ⭐ **mindkettő:** a (b) azonnal kiszűri a „mindenre felelő” gépeket, az (a) a többi halott címet.
+- **M4 — a jelentkezés nem jár le, amíg van értelme (F4):** ⏸️ **B4:** (a) ⭐ a belépő a jelentkezést addig újítja, amíg a meghívója él és
+  ő még nem tag (a meghívó egy hónapig érvényes — a teher korlátos: egy rekesz); (b) marad a két óra.
+- **M5 — az ütközés útja (F5):** a kiszolgálás közös útja (`kerelemAtvetele`) is lefuttatja a belépő útját — hibajavítás, nincs
+  döntés.
+- **M6 — igaz felirat (F6):** „N témán jelentkeztem”, és a „kérő vár rám” a kiszűrt zaj nélkül — nincs döntés.
+
+⛔ **Amit nem javaslok:** központi segítő (jelzőpont, közvetítő szerver — a 2. szabály); a meghívott a saját címét a meghívóba
+vagy egy válaszüzenetbe tegye (a mobilcím változik, és egy második üzenet visszahozná a „kódos utat”, amit a D122 megszüntetett).
+
+## 5. Előbb a mérés (87.)
+
+A valódi DHT-n két készülékkel (a laptop otthon és egy telefon mobilneten — hogy a két cím különbözzön: a DHT-gépek egy része a
+kérdező saját címét nem adja vissza, ezért egy gépről nem mérhető): a telefon K véletlen rekeszen bejelent (ahogy egy belépő), a
+laptop mindegyiket 0, 2, 5, 10 és 20 perc múlva keresi.
+- **Mit mér:** egy keresés találati aránya; ugyanez 2×, 3× ismételve és egyesítve (M1); hány gép tárolta a bejelentést, és ezt az
+  ellenőrző keresés látja-e; a zaj aránya és az ellenpróba-rekesz szűrőjének pontossága (M3 (b) — téves kiszűrés nincs-e).
+- **Mire dönt:** az M1 ismétlésszáma és szünete, az M2 ütemének értelme (ha 3 ismétléssel ~100%, a ritkább ütem is elég), az M3 (b)
+  érvényessége.
+- Egy mérő-szkript a `koino/meres/`-ben (nem a program része); a telefonon Csaba futtatja (`node ~/koino_1.1/koino/meres/…`).
+
+## 6. A sorrend (a döntések után)
+
+① a 87. mérés → ② B2–B4 Csabánál (a mérés számaival) → ③ az építés: M5 + M6 (javítás), M3, M1, M4, M2 — mindegyik próbával és
+rontással (a DHT-t a próbák hamis DHT-vel helyettesítik, ahogy a ③c próbái) → ④ terep: egy telefon mobilneten, a meghívó a lapról —
+a cél, hogy **kézi segítség nélkül**, néhány percen belül bent legyen.
