@@ -334,8 +334,11 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    elfogadta, előbb a terv → 🔍 [`belepo_megtalalasa_atvizsgalas.md`](docs/belepo_megtalalasa_atvizsgalas.md): M1 megbízhatóbb keresés (ismétlés,
    egyesítés, ellenőrző keresés) · M2 gyakrabban, amíg él a meghívó · M3 a zaj szűrése (kudarc-számláló + ellenpróba-rekesz) · M4 a
    jelentkezés nem jár le, amíg a meghívó él · M5 az ütközés útja · M6 igaz felirat · ⭐ M7 a belépő lapja kimondja, hogy keresi az első
-   kapcsolatot, és a próbálkozásokat (Csaba kérése); ✅ Csaba: „rendben elfogadom” (B2 (b), B3 (c), B4 (a)); ⏸️ **B5 Csabánál** (a meghívó
-   oldala és a készülék-értesítés); előbb a **87. mérés** (két készülékkel, a valódi DHT-n). A laptop
+   kapcsolatot, és a próbálkozásokat (Csaba kérése); ✅ Csaba: „rendben elfogadom” (B2 (b), B3 (c), B4 (a)); ✅ B5 (a)+(b); ⛔⭐ **a 87. mérés helyi része**
+   (`dhtTalalatMeres.js`): a BEP 5 cetli témánként vagy mindig megvan, vagy soha (75%, a második kliens nem segít), és HAMISÍT (a mi
+   portunkon idegen IP-k is visszajöttek); a BEP 44 (aláírt — a tábla útja) 100% → javaslat **M8: a meghívó rekesze BEP 44-en** (a
+   meghívó titkából számolt kulcspár, titkosított cím); ⏸️ **B6 Csabánál**; hátra a 87. két készülékes része (a telefon mobilneten);
+   ⚠️ a koinó többi BEP 5 útja (a címjegyzék, D91) ugyanettől szenved — külön átvizsgálás. A laptop
    terep-adata: a scratchpad `terep4` („Meghívókulcs-próba”, őrjárat 7373, felület 7499). ⛔ LELET (mérve): nyílt koinóban az „alap”
    meghívóhoz a belépés nem ér át (a szigorú (b) közös halmazában nincs) → ✅ **MH7 (A)** (Csaba, 2026-11-02): a nyílt kapu is elkéri
    az ismeretlen társ személyét, a tag a nem tag társ hiányzó belépését függő kérelemmel hozza (`belepoSzeleteKerese`; elágazás 227). ⏸️ Tíz

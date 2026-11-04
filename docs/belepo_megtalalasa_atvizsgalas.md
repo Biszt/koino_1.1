@@ -116,4 +116,37 @@ hamis DHT-vel helyettesítik, ahogy a ③c próbái; a lap sávját böngészőb
 lapról — a cél, hogy **kézi segítség nélkül**, néhány percen belül bent legyen, és **mindkét fél lássa, hol tart**.
 
 ✅ **Csaba (2026-11-04): „rendben elfogadom”** — a terv (M1–M6, B2 (b), B3 (c), B4 (a)) és a sorrend; hozzátéve az M7-et (a belépő
-lapja). ⏸️ Nyitott: B5.
+lapja). ✅ **B5:** (a) + (b) (Csaba: „elfogadom a javaslataidat, kezdheted a munát a 87.-el.”).
+
+## 7. ⛔⭐ A 87. mérés helyi része (2026-11-04 éjjel) — és ami ettől a tervben változik
+
+*A részletek: [`eredmenyek.md`](../koino/meres/eredmenyek.md) 87. — egy gépen, két szerepben; a két készülékes rész (a kiíró
+mobilneten) hátravan.*
+
+- ⛔ **A BEP 5 (a belépő mai cetlije) témánként dől el:** egy téma vagy mindig megvan, vagy soha (75% — és a második, friss kliens nem
+  segít); az első próbán négyből 0, egy perc múlva 1. **Az M1 (a megismételt keresés) tehát keveset ér** — ahol a cetli nincs, oda
+  hiába kérdezünk újra.
+- ⛔⛔ **A BEP 5 hamisít:** a mi portunkon a valódi cím mellett két idegen IP is visszajött — gépek, amik a bejelentést elfogják, és a
+  saját címükkel adják vissza. A „zaj” ennek a tábornak a része (BitTorrent-figyelők, amik a kulcstérben „közelinek” adják ki
+  magukat).
+- ⭐ **A BEP 44 (aláírt bejegyzés — a hirdetőtábla útja) 100%:** hamisíthatatlan, titkosítható; egy keresés ~16 mp, ~7,5 KB.
+- Az ellenpróba-téma (M3 (b)) keveset szűr: a zaj címei egy /24-en belül forognak.
+
+**A javasolt új út — M8, a meghívó rekesze (BEP 44):** a meghívó titkából (ami a meghívóban utazik, és csak a két félnél van)
+mindkét fél ugyanazt a kulcspárt és sót számolja. A belépő erre a rekeszre aláírva kiteszi a címét (és a tábla-aláíróját), a meghívó
+titkából számolt kulccsal **titkosítva** (a DHT-figyelők így a címét sem látják); 20 percenként, és amíg a meghívója él, de ő még nem
+tag, újra (M4). A meghívó minden élő meghívójának rekeszét nézi (az M2 ütemében — BEP 44 `get`), és amit talál, arra kopog. Mint a
+hirdetőtábla rekesze (2026-09-20), csak a rekesz kulcsa nem a két tábla-kulcsból, hanem a meghívó titkából jön.
+
+**⏸️ A döntések (Csabánál) — a mérés után:**
+- **B6 — a belépő cetlije:** (a) ⭐ **BEP 44 a fő út, a BEP 5 mellette marad** (ahol megvan, ott is talál — semmi nem vész el) · (b) csak
+  BEP 44 · (c) marad a BEP 5 az M1/M3-mal.
+- **B3 (javítva):** az ellenpróba-téma helyett csak a **kudarc-számláló** (M3 (a)) — a mérés szerint az ellenpróba keveset szűr.
+- **B2 (az ütem) változatlan** — csak most BEP 44 keresésre vonatkozik (~7,5 KB / keresés: az első napban ~2 MB, utána ~0,8 MB/nap
+  meghívónként; ha sok, a 10 perces lépcső 20 percre nyújtható).
+- **M1 kimarad** (a BEP 44-nél nem kell; a BEP 5-nél nem segít).
+- ⚠️ **Külön átvizsgálás kell (nem most):** a koino többi BEP 5 útja — a címjegyzék (D91: a gyökér-darab hirdetése, a függő kérelmek
+  kopogtatói, a kereső-régió társai, a D111 tippje) — ugyanettől a szennyezéstől szenved; a hirdetőtábla (BEP 44) nem.
+
+**A sorrend (javítva):** ① a 87. két készülékes része (a telefon mobilneten kiír, a laptop keres — megerősíti, hogy a BEP 44 mobilnetről is
+megy, és a hamisítást) → ② B6, B3 → ③ az építés: M5, M6, M7, M8, M3 (a), M4, M2 → ④ terep.

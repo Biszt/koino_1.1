@@ -5372,6 +5372,48 @@ nézet jele, a sorrendet nem dönti el. → a felderítetlen rész (D116).
 
 ---
 
+## 87. ⛔⭐ MEGTALÁLJA-E A MEGHÍVÓ A BELÉPŐ CETLIJÉT? — BEP 5 és BEP 44 a valódi DHT-n (a belépő megtalálása, 2026-11-04, a laptopon — a helyi rész)
+
+*`dhtTalalatMeres.js` (a terv: `docs/belepo_megtalalasa_atvizsgalas.md` 5. szakasz). A kiváltó lelet: a terepen (2026-11-04 este)
+a laptop nem találta a mobilneten lévő belépő BEP 5 bejelentését. Itt egy gépen, két szerepben (két folyamat, friss kliensekkel):
+4 téma; a kiíró BEP 5-tel bejelent (a felismerő porttal) és BEP 44-gyel aláírt bejegyzést tesz ki (a kulcspár a kódból — mint egy
+meghívó titkából); a kereső két friss klienssel, sorban keres. ⏸️ A két készülékes rész (a kiíró mobilneten) még hátravan.*
+
+```
+  (előtte, egy gyors próba — 4 véletlen téma, a kiírás után friss klienssel:)
+  5 mp után:  BEP 44 3/4 megvan · BEP 5 0/4 megvan
+  60 mp után: BEP 44 4/4 megvan · BEP 5 1/4 megvan
+
+  23:13:45 KIÍRÁS 1: BEP 5 8/8, 8/8, 8/8, 8/8 · BEP 44 8/8, 7/8, 8/8, 8/8 gép tárolta · 105,5 mp · 111,6 KB
+           ellenőrző keresés: BEP 5 3/4 · BEP 44 4/4 témán látom a saját cetlimet
+  23:16:03 ( 0. perc)  BEP 5: A ●●●· B ●●●·   BEP 44: A ●●●● B ●●●●   · ellenpróba: (senki)
+  23:19:18 ( 4. perc)  BEP 5: A ●●●· B ●●●·   BEP 44: A ●●●● B ●●●●   · ellenpróba: (senki)
+  23:22:09 ( 7. perc)  BEP 5: A ●●●· B ●●●·   BEP 44: A ●●●● B ●●●●   · ellenpróba: 31.200.249.244:31929
+    BEP 5  — egy kliens (A): 75% · két kliens (A∪B): 75% · egy keresés átlag 7,0 mp, 4,5 KB
+    BEP 44 — egy kliens (A): 100% · két kliens (A∪B): 100% · egy keresés átlag 15,9 mp, 7,5 KB
+  a BEP 5 cetli ezekről a címekről jött: 31.46.251.159:46822 31.217.176.37:46822 190.104.120.166:46822
+```
+
+⛔ **A lelet:**
+- **A BEP 5 témánként dől el:** egy téma vagy mindig megvan, vagy soha — a kiírás „8/8 gép tárolta” akkor is, ha egyetlen keresés
+  sem kapja vissza. **A második (friss) kliens nem segít** (75% → 75%): a keresés ugyanoda ér, ahol a cetli nincs. Az első próbán 4
+  témából 0, egy perc múlva 1 volt meg.
+- ⛔⛔ **A BEP 5 HAMISÍT:** a mi (csak itt használt) portunkon a laptop valódi címe MELLETT két idegen IP is visszajött — gépek, amik a
+  bejelentést elfogják, és a saját címükkel szolgálják ki. A meghívó ilyen címre hiába kopogna; a 2026-11-04-i terep „zaja”
+  (31.200.249.x — bármilyen témára) ugyanennek a tábornak a része: a BitTorrent DHT-t figyelő gépek, amik a kulcstérben
+  „közelinek” adják ki magukat (a keresés ~14 kérdés után „célba ér”).
+- ⭐ **A BEP 44 (aláírt bejegyzés) megtalálható:** 100% (a gyors próbán 5 mp után 3/4, egy perc múlva 4/4); hamisítani nem lehet (az
+  aláírás a kulcspáré), és a tartalma titkosítható. Ára: egy keresés ~16 mp, ~7,5 KB (a BEP 5 7 mp, 4,5 KB). A hirdetőtábla
+  (2026-09-20) ezen az úton olvasta a terepen megbízhatóan a társak címét.
+- Az ellenpróba-téma (az M3 (b)) keveset szűr: a zaj címei egy /24-en belül forognak (31.200.249.x, más-más porttal), a pontos
+  címre szűrő ellenpróba ritkán találja el ugyanazt; a kudarc-számláló (M3 (a)) a járható út.
+- Az ellenőrző keresés (a kiíró látja-e a saját cetlijét) működik — de BEP 5-nél a „látom” nem jelenti, hogy más is látja.
+
+→ A belépő cetlije BEP 44-re költözzön (a meghívó titkából származó kulcspárral — „a meghívó rekesze”); ⚠️ és a koinó többi BEP 5
+útja (a címjegyzék — D91: a gyökér-darab hirdetése, a kopogtatók, a kereső-régió társai) ugyanettől szenved — külön átvizsgálás.
+
+---
+
 ## 86. ⭐ A TÖRZS-HATÁR HATÁSA — mit hoz el a nem vállaló a kártyák kódjából? (D120, a 85. megismételve, 2026-10-29, a laptopon)
 
 `node koino/meres/csaladCsereMeres.js 1 2 3` — ugyanaz a menet, mint a 85.-é (B minden gyermekbe költözött, a kártyákra nem tett
