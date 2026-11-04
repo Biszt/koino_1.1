@@ -466,6 +466,10 @@ D100 parancssor-próbája méri, egy végig futó felülettel) · a lap a még m
   sorrendben, és miért) → [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
   („HOL TARTUNK" + a D1–D122 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
   `szakasz5_terv.md`). A gépezet ábrákon: [`docs/gepezet.md`](docs/gepezet.md).
+- ⭐ **A program folyamatábrái — a tervezéshez** (2026-11-04, Csaba kérésére):
+  [`docs/folyamatabra.md`](docs/folyamatabra.md) — nyolc mermaid-ábra: a nagy kép, egy esemény útja, az őrjárat
+  köre, egy csere, a társkeresés, az e-ember útja, a koinó családja, és **hol tartunk** (kész · nyitott · még nincs).
+  ⚠️ Ha egy pillér vagy egy nyitott ág változik, az ábrát is javítsd.
 - ⚠️ **Új session-váltáskor** a fenti „SESSION-VÁLTÁS" blokkot **cseréld le**, ne fölé írj
   újat — a régit (ha kell) a napló tetejére tedd. *Így maradt 233 KB-os ez a fájl.*
 

@@ -14,6 +14,10 @@ egy infografikus dokumentációt."*
 >
 > A képek `mermaid` alakban vannak: a GitHub, a Claude Code és a legtöbb szerkesztő
 > rendereli, a nyers szöveg pedig olvasható marad — nulla függőség (6. szabály).
+>
+> ⭐ **A testvére (2026-11-04):** a [`folyamatabra.md`](folyamatabra.md) a PROGRAM egészét rajzolja
+> (a készülék, a csere, a társkeresés, az e-ember útja, a koinó családja) — és a tervezéshez azt,
+> hogy mi kész, mi nyitott, mi nincs még.
 
 ---
 
