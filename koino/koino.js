@@ -5071,7 +5071,7 @@ async function orjaratHazimunkaja(allapot, { port, sikeres }) {
         }
         if (ujKopogtato || h.bejelentve) {
           kiir(SZIN.halvany + '  🚪 ' + ora() + ' ' + kk + 'kopogtatás: ' + (ujKopogtato ? ujKopogtato + ' kérő vár rám' : '')
-            + (ujKopogtato && h.bejelentve ? ' · ' : '') + (h.bejelentve ? h.bejelentve + ' tartónál jelentkeztem' : '')
+            + (ujKopogtato && h.bejelentve ? ' · ' : '') + (h.bejelentve ? h.bejelentve + ' témán jelentkeztem' : '')
             + SZIN.vege);
         }
         // ⭐ D107 L2 (③c): a régióm többi tartója ugyanígy a kör céljai közé (a csere a közös régiót egyezteti).
@@ -5195,8 +5195,29 @@ async function kerelemAtvetele(u, x) {
     kerelemKiszolgalo: kerelemKiszolgaloja(), kiszolgalasiKeret: kiszolgalasiKeretKapcsolo(), valaszFogado: valaszFogadasa,
     keresoTar, fajlOlvas: fajlok.olvas
   };
-  return parbeszed(x.kapcsolat, tar, KOINO, { ...b, sor: x.sor, elsoUzenet: u,
+  const r = await parbeszed(x.kapcsolat, tar, KOINO, { ...b, sor: x.sor, elsoUzenet: u,
     ...(typeof x.kezfogas === 'function' ? { kezfogas: x.kezfogas(KOINO, b) } : {}) });
+  // ⭐ M5 (a belépő megtalálása — a 2026-11-04-i terep lelete): ezen az úton is lefut a belépő útja — az ütközésben a meghívó
+  // enged és kiszolgál, a belépő itt bizonyítja a meghívóját; e nélkül a meghívás a következő rendes cserére várt.
+  await belepoUtjaFuttatasa(r?.tarsAzonossaga, { cim: x.kapcsolat?.remoteAddress, port: x.kapcsolat?.remotePort });
+  return r;
+}
+
+/**
+ * ⭐⭐ D121 MH7 (A), D122: A BELÉPŐ ÚTJA — ha a társ ebben a munkában bizonyította a személyét (a cserében VAGY egy kérelem
+ * `KELL` → `TAGSAG` körében), és nem tag: a belépését elkérem (ha még nincs nálam — a következő munka hozza, az átmeneti
+ * tárba), és az igazolt meghívók belépőit meghívom (ha a belépésük már nálam van). A munka (`resMunka`) és a kiszolgálás közös
+ * útja (`kerelemAtvetele` — a családi átadás és az ütközés, M5) hívja.
+ * @param {{h?: string}|null} tarsAzonossaga - a társ bizonyított személye (a horgonyával)
+ * @param {{cim?: string, port?: number}} tars
+ */
+async function belepoUtjaFuttatasa(tarsAzonossaga, tars, jel = '') {
+  if (tarsAzonossaga?.h) {
+    try { await belepoSzeleteKerese(tarsAzonossaga, tars); }
+    catch (hiba) { console.warn('a belépő szeletének kérése nem sikerült', { ok: hiba.message }); }
+  }
+  try { await automatikusMeghivas(jel); }
+  catch (hiba) { console.warn('az automatikus meghívás most nem ment', { ok: hiba.message }); }
 }
 
 /**
@@ -5362,14 +5383,7 @@ function resMunka(allapot, halo, tars) {
     // tárba), és az igazolt meghívók belépőit meghívom (ha a belépésük már nálam van). ⭐ A nem tag kérelme után is (a kiszolgált
     // szelet-kérelem és az elutasított kérelem): két hálózat között a belépő első munkája a jelentkezés (MH6), és a lapja is kér
     // (a gyökér fejléceit) — ha csak a csere után néznénk, a meghívás a következő résre (vagy körre) várna.
-    const belepoUtja = async () => {
-      if (csere.tarsAzonossaga?.h) {
-        try { await belepoSzeleteKerese(csere.tarsAzonossaga, tars); }
-        catch (hiba) { console.warn('a belépő szeletének kérése nem sikerült', { ok: hiba.message }); }
-      }
-      try { await automatikusMeghivas(allapot.koinoJel ?? ''); }
-      catch (hiba) { console.warn('az automatikus meghívás most nem ment', { ok: hiba.message }); }
-    };
+    const belepoUtja = () => belepoUtjaFuttatasa(csere.tarsAzonossaga, tars, allapot.koinoJel ?? '');
 
     // ⚠️ MÁSIK KOINO: nincs miről beszélni, és tanulni sem tanulunk tőle — kimondjuk (D19).
     if (csere.masKoino) {
@@ -5390,6 +5404,7 @@ function resMunka(allapot, halo, tars) {
     if (csere.kerelemKiszolgalva) {
       kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' kérelem: '
         + csere.kerelemKiszolgalva.fajta + ' (' + String(csere.kerelemKiszolgalva.kulcs).slice(0, 8) + '…)' + SZIN.vege);
+      await belepoUtja();
       return { ...alap, kerelemKiszolgalva: csere.kerelemKiszolgalva };
     }
     if (csere.kerelem) {
@@ -8170,7 +8185,7 @@ try {
         kiir(SZIN.vastag + 'FÜGGŐ KÉRELEM: ' + k.fajta + ' ' + (k.kulcs === GYOKER_KULCS ? 'a gyökér' : k.kulcs.slice(0, 12) + '…')
           + SZIN.vege + SZIN.halvany + (r.uj ? '' : '  (már függött — kiegészítve)') + SZIN.vege);
         kiir('  ' + fuggo.celok.length + ' cél · ' + fuggo.kopogtatok.length + ' kopogtató téma (' + bejelentve
-          + ' helyen jelentkeztem a DHT-n)');
+          + ' témán jelentkeztem a DHT-n)');
         kiir(SZIN.halvany + '  Az őrjárat a következő buliban kéri; a tartó a kopogtató témáján látja, hogy kérünk, és ő is'
           + ' kopog. Az állás: node koino/koino.js kerelem' + SZIN.vege);
         break;

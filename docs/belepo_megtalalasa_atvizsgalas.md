@@ -150,3 +150,16 @@ hirdetőtábla rekesze (2026-09-20), csak a rekesz kulcsa nem a két tábla-kulc
 
 **A sorrend (javítva):** ① a 87. két készülékes része (a telefon mobilneten kiír, a laptop keres — megerősíti, hogy a BEP 44 mobilnetről is
 megy, és a hamisítást) → ② B6, B3 → ③ az építés: M5, M6, M7, M8, M3 (a), M4, M2 → ④ terep.
+
+## 8. 🚧 Az építés
+
+✅ **B6 (a)** (Csaba: *„elfogadom a javaslataidat, mehetünk tovább.”*) — a BEP 44 a fő út, a BEP 5 marad mellette; a mobilos
+megerősítés a terepi próbán (Csabának nincs mobilnetes készüléke).
+
+- ✅ **M5 — az ütközés útja:** a belépő útja (a belépés elkérése, az automatikus meghívás) egy függvény (`belepoUtjaFuttatasa`),
+  amit a munka és a kiszolgálás közös útja (`kerelemAtvetele` — a családi átadás és az ütközés) is hív; a munka a kiszolgált
+  kérelem után is (nyílt koinóban a nem tag kérelmét kiszolgáljuk — MH7). Próba (parancssor): A-nak függő törzs-kérelme van F felé,
+  F szelet-kérelemmel jön, F kérelme megy elöl, A enged, kiszolgál — és ugyanabban a munkában meghív (a meghívó felhasznált).
+  Rontás: a `kerelemAtvetele` hívása nélkül a meghívó „igazolt — a belépése még nem jött meg” marad (pontosan a terepi állapot).
+- ✅ **M6 — igaz felirat:** „N témán jelentkeztem” (az őrjárat és a `kerelem` parancs; eddig „tartónál” / „helyen”). A „kérő vár
+  rám” zajszűrése az M3-mal jön.

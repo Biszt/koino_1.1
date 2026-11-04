@@ -1734,6 +1734,60 @@ proba('⭐⭐ D122: a meghívó bizonyítéka a kérelem útján is — egy kér
     }
   });
 
+// ⭐⭐ M5 (a belépő megtalálása — a 2026-11-04-i terep lelete): AZ ÜTKÖZÉS ÚTJÁN JÖTT BIZONYÍTÉK. A terepen a meghívó és a belépő
+// egy munkában egymástól kért; a meghívó engedett és kiszolgált (`kerelemAtvetele` — a ⑦ ütközés-javítása), a belépő ezen az úton
+// bizonyította a meghívóját — és a belépő útja (a belépés elkérése, az automatikus meghívás) kimaradt, a meghívás két percet várt.
+// Itt A egy zárt koinó alapítója (őrjárat 5 perces körrel: a háztartása a próba alatt nem ír alá), meghívót állít ki Ferencnek; F
+// csatlakozik, a belépését kézi úton A-hoz juttatja. A-nak FÜGGŐ törzs-kérelme van F felé; F őrjárat nélkül egy szelet-kérelmet
+// küld A-nak (`hozd`). A munkában mindketten kérnek: F kérelme megy elöl (a `kerelemUtkozes` döntése: „szelet” < „torzs”), A enged
+// és kiszolgál, F a `KELL` → `TAGSAG` körben bizonyítja a meghívót. ⭐ Viselkedést mérünk: A naplója kimondja az ütközést, és a
+// meghívó a kérelem után azonnal FELHASZNÁLT (a meghívás aláírva). Rontás: a `kerelemAtvetele` nem futtatja a belépő útját → a
+// meghívó „igazolt” marad.
+proba('⭐⭐ M5: a meghívó bizonyítéka az ütközés útján — a meghívó enged, kiszolgál, és ugyanabban a munkában meg is hív',
+  async () => {
+    const a = await ujKeszulek();
+    const f = await ujKeszulek();
+    const PA = 7977, PF = 7979;
+    const helyben = { KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9', KOINO_KISZOLGALAS: 'alap' };
+    let orjaratA = null;
+    let naplo = '';
+    try {
+      await fut(a, 'koino', 'Ütközés-meghívó', helyben);
+      const K = await koinoNeve(a);
+      orjaratA = spawn(process.execPath, [KOINO_JS, 'orjarat', '5', String(PA)],
+        { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
+      orjaratA.stdout.on('data', (x) => { naplo += x; });
+      await varj(3000);
+      const m = ((await fut(a, 'meghivo', 'Ferenc', 'kijelentem', helyben)).match(/koino-meghivo:2:[A-Za-z0-9_-]+/) ?? [])[0] ?? '';
+      await fut(f, 'csatlakoz', m, helyben);
+      await fut(f, 'kivisz', join(f, 'belepes.jsonl'), 'sajat', helyben);
+      await fut(a, 'behoz', join(f, 'belepes.jsonl'), helyben);
+      // A függő törzs-kérelme F felé (az induló címéből) — a munkában A is kér
+      await fut(a, 'tars', '127.0.0.1', String(PF), 'F', helyben);
+      const felvetel = await fut(a, 'kerelem', 'torzs', K ?? '', helyben);
+      const elotte = await fut(a, 'meghivok', helyben);
+      const hozd = await fut(f, 'hozd', K ?? '', '127.0.0.1', String(PA), helyben);
+      await varj(1500);
+      const utana = await fut(a, 'meghivok', helyben);
+      const tiszta = naplo.replace(/\x1b\[[0-9;]*m/g, '');
+      const jo = {
+        nev: !!K,
+        fuggo: /FÜGGŐ KÉRELEM: torzs/.test(felvetel),
+        elotte: /Ferenc · aktív/.test(elotte),
+        utkozes: /a társ is kért \(torzs/.test(tiszta),
+        felhasznalt: /Ferenc · felhasznált/.test(utana)
+      };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) process.stderr.write('    (M5: ' + JSON.stringify({ ...jo, utana: utana.slice(0, 300), hozd: hozd.slice(0, 200) }) + ')\n'
+        + '    (A napló: ' + tiszta.replace(/\s+/g, ' ').slice(-600) + ')\n');
+      return ok;
+    } finally {
+      orjaratA?.kill();
+      await varj(1000);
+      for (const h of [a, f]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ⭐⭐ D118 (②b): A KAPU KOINÓ-SZABÁLYA a parancssoron és a cserén. Az A a szülőben ír egy gondolatot a gyermek születése
 // ELŐTT és egyet UTÁNA; a szülő kivitele a gyermekbe behozva csak az elsőt adja (a második a szülő jelene — „másik koinóé”),
 // és a csere (két „mindent” készülék) ugyanígy viszi tovább a B-nek. Viselkedést mérünk (a két lemezt). ⚠️ A számítás még
