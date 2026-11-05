@@ -128,6 +128,7 @@ import {
 import { csereAllapotAlakja, korKezdete, korVege, csereFeljegyzese, csereAllapotKepe, belepesKezdete, belepesJelentkezese,
   belepesKopogasa, belepesKapcsolata, belepesTagsaga } from './js/csere/csereAllapot.js';
 import { meghivoRekesze, rekeszBejegyzes, rekeszBejegyzesbol, rekeszKeresesKoze } from './js/csere/meghivoRekesz.js';
+import { kopogtatoFelvetele, kopogtatoEredmenyek, REKESZ_FORRAS } from './js/csere/kopogtatoSzuro.js';
 // ⭐⭐ D101 ⑥: az értesítés-réteg — a postafiók a készüléken, két pillanatkép különbségéből
 import {
   beallitasokAlakja, ervenyesBeallitas, beallitasMentese, globalisMentese, ertesitesekSzamitasa,
@@ -1789,8 +1790,11 @@ async function meghivoRekeszekKore(allapot, port, kk = '') {
         if (!t.bejegyzes) continue;
         const cimek = t.bejegyzes.cimek.filter((c) => !sajat.has(c.hoszt + ':' + c.port)
           && !((/^127\./.test(c.hoszt) || c.hoszt === '::1') && c.port === port));
+        allapot.kopogtatoTiltott ??= new Map();
         for (const c of cimek) {
-          allapot.kopogtatok.set(c.hoszt + ':' + c.port, { cim: c.hoszt, port: c.port, lejar: Date.now() + KOPOGTATO_ELEVULES });
+          // ⭐ M3 (a): a rekesz címe nem esik a kudarc-számláló alá (a belépő maga írta ki — napokig is keresni kell)
+          kopogtatoFelvetele(allapot.kopogtatok, allapot.kopogtatoTiltott,
+            { cim: c.hoszt, port: c.port, lejar: Date.now() + KOPOGTATO_ELEVULES, forras: REKESZ_FORRAS }, Date.now());
         }
         kiir(SZIN.halvany + '  📮 ' + ora() + ' ' + kk + t.nev + ' jelentkezett a meghívóm rekeszében — kopogok rá ('
           + cimek.map((c) => c.hoszt + ':' + c.port).join(', ') + ')' + SZIN.vege);
@@ -2045,6 +2049,15 @@ async function belepesKovetese(jel = '') {
   if (!tag) return false;
   await csereAllapota().modosit((x) => belepesTagsaga(x, { most: Date.now() }));
   kiir(SZIN.jo + '  ✅ ' + ora() + ' ' + jel + 'bent vagyok a koinóban — a meghívóm befogadott (tag lettem)' + SZIN.vege);
+  // ⭐ M4: a jelentkezés (a meghívó lejáratáig élne) a tagsággal lezárul
+  try {
+    let ny = await kerelmekOlvasasa();
+    for (const x of ny.fuggo.filter((y) => y.fajta === 'szelet' && y.kulcs === KOINO
+      && (y.kopogtatok ?? []).some((k) => k.fajta === 'keszulek' && k.kulcs === m.alairo))) {
+      ny = kerelemLezarasa(ny, x.az, 'tag lettem', Date.now());
+    }
+    await kerelmekIrasa(ny);
+  } catch (hiba) { console.warn('belepesKovetese - a jelentkezés lezárása nem ment', { ok: hiba.message }); }
   try {
     const nyers = await ertesitesTarolo(KOINO).beallitasOlvas();
     if (nyers?.globalis?.emailErtesites !== false) {
@@ -3428,7 +3441,8 @@ async function fuggoKerelemFelvetele(k, { cimek = null, dht = false, kopogtatok:
   const kp = await kapuPortja();
   const idegenCelok = celok.filter((c) => !(sajatCimE(c.hoszt, sajatGep) && Number(c.port) === kp));
   const r = kerelemFelvetele(await kerelmekOlvasasa(), { fajta: k.fajta, kulcs: k.kulcs, n: k.n ?? 20, m: k.m === true,
-    ...(k.utan ? { utan: k.utan } : {}), hatter: k.hatter === true, celok: idegenCelok, kopogtatok }, Date.now(), randomUUID());
+    ...(k.utan ? { utan: k.utan } : {}), hatter: k.hatter === true, celok: idegenCelok, kopogtatok,
+    ...(Number.isFinite(k.meddig) ? { meddig: k.meddig } : {}) }, Date.now(), randomUUID());
   await kerelmekIrasa(r.nyilvantartas);
   return { r, kopogtatok, kp };
 }
@@ -5265,18 +5279,22 @@ async function orjaratHazimunkaja(allapot, { port, sikeres }) {
         // kopogok (30 percig). A saját címemet kihagyom.
         allapot.bejelentettKopogtatok = new Set(h.bejelentett);
         allapot.kopogtatok ??= new Map();
+        allapot.kopogtatoTiltott ??= new Map();
         const sajat = allapot.sajatKulsoUdp ? allapot.sajatKulsoUdp.cim + ':' + allapot.sajatKulsoUdp.port : null;
-        let ujKopogtato = 0;
+        // ⭐⭐ M3 (a): a 3 kör óta néma kopogtató címek 6 óráig tiltottak (a DHT zaja) — se nem cél, se nem „kérő vár rám”
+        let ujKopogtato = 0, kiszurt = 0;
         for (const k of h.kopogtatok) {
           const kulcs = k.cim + ':' + k.port;
           if (kulcs === sajat || ((/^127\./.test(k.cim) || k.cim === '::1') && k.port === port)) continue;
-          if (!allapot.kopogtatok.has(kulcs)) ujKopogtato++;
-          allapot.kopogtatok.set(kulcs, { cim: k.cim, port: k.port, lejar: Date.now() + KOPOGTATO_ELEVULES });
+          const r = kopogtatoFelvetele(allapot.kopogtatok, allapot.kopogtatoTiltott,
+            { cim: k.cim, port: k.port, lejar: Date.now() + KOPOGTATO_ELEVULES, forras: 'dht' }, Date.now());
+          if (r === 'uj') ujKopogtato++;
+          else if (r === 'tiltott') kiszurt++;
         }
-        if (ujKopogtato || h.bejelentve) {
-          kiir(SZIN.halvany + '  🚪 ' + ora() + ' ' + kk + 'kopogtatás: ' + (ujKopogtato ? ujKopogtato + ' kérő vár rám' : '')
-            + (ujKopogtato && h.bejelentve ? ' · ' : '') + (h.bejelentve ? h.bejelentve + ' témán jelentkeztem' : '')
-            + SZIN.vege);
+        if (ujKopogtato || h.bejelentve || kiszurt) {
+          kiir(SZIN.halvany + '  🚪 ' + ora() + ' ' + kk + 'kopogtatás: ' + [ujKopogtato ? ujKopogtato + ' kérő vár rám' : '',
+            h.bejelentve ? h.bejelentve + ' témán jelentkeztem' : '',
+            kiszurt ? kiszurt + ' néma címet kihagytam (3 kör óta nem nyílt rés — zaj)' : ''].filter(Boolean).join(' · ') + SZIN.vege);
         }
         // ⭐ D107 L2 (③c): a régióm többi tartója ugyanígy a kör céljai közé (a csere a közös régiót egyezteti).
         // ⛔ A kopogtatók UTÁN (mérve — a D92/1 kopogtatás-próba): ha előbb jön, egy kérő, aki a régiómnak is
@@ -5285,8 +5303,8 @@ async function orjaratHazimunkaja(allapot, { port, sikeres }) {
         for (const k of h.regioTarsak ?? []) {
           const kulcs = k.cim + ':' + k.port;
           if (kulcs === sajat || ((/^127\./.test(k.cim) || k.cim === '::1') && k.port === port)) continue;
-          if (!allapot.kopogtatok.has(kulcs)) ujRegioTars++;
-          allapot.kopogtatok.set(kulcs, { cim: k.cim, port: k.port, lejar: Date.now() + KOPOGTATO_ELEVULES });
+          if (kopogtatoFelvetele(allapot.kopogtatok, allapot.kopogtatoTiltott,
+            { cim: k.cim, port: k.port, lejar: Date.now() + KOPOGTATO_ELEVULES, forras: 'dht' }, Date.now()) === 'uj') ujRegioTars++;
         }
         if (ujRegioTars) {
           kiir(SZIN.halvany + '  🔍 ' + ora() + ' ' + kk + 'a kereső-régióm ' + ujRegioTars + ' további tartója a DHT-n — a kör'
@@ -6473,7 +6491,8 @@ async function meghivoElfogadasa(szoveg, { becenev = null, felulir = false, peld
   // munka csak egy ismeretlen bekopogónál választja — amikor épp kopogtatunk).
   let jelentkezes = false;
   try {
-    await p.fuggoKerelemFelvetele({ fajta: 'szelet', kulcs: m.koino }, { cimek: [], dht: false,
+    // ⭐ M4 (B4 (a)): a jelentkezés a meghívó lejáratáig él (nem két óráig) — a tagsággal lezárul (`belepesKovetese`)
+    await p.fuggoKerelemFelvetele({ fajta: 'szelet', kulcs: m.koino, meddig: m.lejarat }, { cimek: [], dht: false,
       kopogtatok: [{ fajta: 'keszulek', kulcs: m.alairo }] });
     jelentkezes = true;
   } catch (hiba) {
@@ -8989,6 +9008,22 @@ try {
           sikeresEbbenAKorben = sikeresCimek.size;
           korCelok = elso.celok;
           korUj = osszesUj;
+
+          // ⭐⭐ M3 (a): A KOPOGTATÓK KUDARC-SZÁMLÁLÓJA — az első menet eredményei a család minden példányának kopogtatóira (a
+          // sikeres nulláz, a sikertelen nő; 3 egymás utáni kudarc után 6 órára tiltott — a DHT zaja). A rekesz címe kivétel.
+          try {
+            let tiltott = 0;
+            for (const [k] of csaladPeldanyok) {
+              const a = await csaladAllapota(k, res);
+              if (!a.kopogtatok?.size) continue;
+              a.kopogtatoTiltott ??= new Map();
+              tiltott += kopogtatoEredmenyek(a.kopogtatok, a.kopogtatoTiltott, elso.eredmenyek, Date.now()).length;
+            }
+            if (tiltott) {
+              kiir(SZIN.halvany + '  🚫 ' + ora() + ' ' + tiltott + ' kopogtató címen 3 kör óta nem nyílt rés — 6 óráig nem hívom'
+                + ' (a DHT zaja)' + SZIN.vege);
+            }
+          } catch (hiba) { console.warn('a kopogtatók könyvelése nem sikerült', { ok: hiba.message }); }
 
           // ⭐ A KÖNYVELÉS: az induló címek közül ki felelt, ki nem — csak az ELSŐ menetből
           // (a többi menet csak az ott sikereseket ismételte). ⚠️ A `modosit()`-on át, és

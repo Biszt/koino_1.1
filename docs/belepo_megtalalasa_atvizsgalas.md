@@ -189,5 +189,14 @@ megerősítés a terepi próbán (Csabának nincs mobilnetes készüléke).
   rontással); ⛔ a (c) rontás eleinte nem bukott: a hamis hálón a BEP 5 hibátlan volt, és a két gép a közös kereső-régió és
   gyökér-darab hirdetőiként is megtalálta egymást → a hamis háló `bep5Elvesz` kapcsolója (a 87. mérés leletét utánozza). Böngészőben
   végigjárva. ⚠️ A mobilnetes megerősítés a terepi próbán.
-- ⏭️ **Hátra:** M3 (a) (a kudarc-számláló a BEP 5 kopogtató címekre — a zaj továbbra is jön a régi úton) · M4 a BEP 5 jelentkezésre (a
-  rekesz már nem jár le, a régi jelentkezés kérelme két óra után igen) · terep.
+- ✅ **M3 (a) — a kopogtatók kudarc-számlálója** (2026-11-05, elágazás 236): `koino/js/csere/kopogtatoSzuro.js` — `kopogtatoFelvetele`
+  (a tiltottat nem veszi fel, a DHT-ról újra jött cím a számlálóját megtartja, a rekesz címe feloldja a tiltást), `kopogtatoEredmenyek`
+  (a kör első menetének eredményei: a siker nulláz, a kudarc nő, 3 után 6 órára tiltott; a tiltások jegyzéke ≤ 1024). A program: a
+  címjegyzék-kör kopogtatói és régió-társai a szűrőn át („N néma címet kihagytam”), a rekesz címei `REKESZ_FORRAS`-sal, és a kör után a
+  család minden példányára (`🚫 … 6 óráig nem hívom`). Próbák: két modul-próba (öt rontás) és egy parancssor-próba (egy „figyelő” egy
+  halott címet jelent be a meghívó készülék-témáján: a kör céljainak száma 1-ről 0-ra esik — egy rontással).
+- ✅ **M4 — a jelentkezés a meghívó lejáratáig** (2026-11-05, elágazás 236): a függő kérelem `meddig`-je (`fuggoKerelmek.js` —
+  rövidebbre nem, legfeljebb 31 nap, egy újabb felvétel kitolhatja); a meghívó elfogadása a meghívó lejáratát adja, a tagsággal
+  (`belepesKovetese`) a jelentkezés lezárul. Próbák: egy modul-próba (három rontás) és az M7 parancssor-próbájában a belépő lemeze
+  (két rontással).
+- ⏭️ **Hátra:** a terepi próba (egy mobilnetes telefon — a 87. két készülékes része is), és a koinó többi BEP 5 útjának átvizsgálása.

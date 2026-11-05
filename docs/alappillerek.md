@@ -1752,3 +1752,11 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     adja vissza) · ⚠️ amit a rekesz nem véd: aki a meghívót ismeri, a rekeszt is írhatja (egy hamis címre kopogtat a meghívó — a
     meghívást a kapu bizonyítéka dönti el, nem a rekesz) · ⛔ elvetve: a belépő címe a meghívóban vagy egy válaszüzenetben (a mobilcím
     változik; egy második üzenet visszahozná a kódos utat) · `belepo_megtalalasa_atvizsgalas.md` 8.
+236. **2026-11-05 · M3 (a) — a kopogtatók kudarc-számlálója, és M4 — a jelentkezés a meghívó lejáratáig (B3, B4 (a))** → **a BEP 5
+    témákon (a kopogtató témák, a kereső-régió) talált címek közül amelyiken 3 egymás utáni kör után sem nyílik rés, azt 6 óráig nem
+    hívjuk, és a „kérő vár rám” sem számolja (`kopogtatoSzuro.js` — a kör első menetének eredményei a család minden példányának
+    kopogtatóira; a DHT-ról újra jött cím a számlálóját megtartja; a tiltások jegyzéke korlátos, 1024); a meghívó rekeszéből (M8) jött
+    cím kivétel, és feloldja a tiltást; a belépő BEP 5 jelentkezése a meghívó lejáratáig él (a kérelem `meddig`-je — rövidebbre nem,
+    legfeljebb 31 nap), és a tagsággal lezárul** · ⭐ a rekesz címe azért kivétel, mert a belépő maga írta ki, és ha épp nem érhető
+    el, napokig is keresni kell · ⛔ mérve: az M4 modul-próbájának (b) rontása eleinte nem bukott (a próba három óránál nézett, ahol a
+    régi két órás szabály is lejáratott) → egy egy óránál vett ellenőrzés · `belepo_megtalalasa_atvizsgalas.md` 8.

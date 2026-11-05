@@ -1802,7 +1802,9 @@ proba('⭐⭐ M5: a meghívó bizonyítéka az ütközés útján — a meghív�
 // nélkül (a meghívó címéről ismerte fel). Rontás: (a) az elfogadás nem jegyez → a sáv üres; (b) a kör nem számol → nincs „kopog”;
 // (c) a munka nem jegyzi a kapcsolatot → a kapcsolat ideje a tagságé (a tagság pótolja) → bukik; (d) a háztartás nem követi a
 // belépést → nincs „tag”, nincs értesítés; (e) a jelentkezés nem jegyez → bukik; (f) a kérelem munkája nem jegyez → G-nél nincs
-// kapcsolat; (g) a meghívó címei nem kerülnek a feljegyzésbe → ugyanígy.
+// kapcsolat; (g) a meghívó címei nem kerülnek a feljegyzésbe → ugyanígy. ⭐⭐ És az M4 (B4 (a)): F lemezén a jelentkezés kérelme a
+// meghívó lejáratáig él (`meddig`), és a tagsággal lezárul. Rontás: (h) a `meddig` nem megy át → bukik; (i) a tagság nem zárja le
+// → a jelentkezés függőben marad → bukik.
 proba('⭐⭐ M7: a belépő sávja — elfogadva, kopog (amíg a meghívó készüléke nem fut), kapcsolat, bent vagy; és a készülék értesít',
   async () => {
     const a = await ujKeszulek();
@@ -1839,6 +1841,10 @@ proba('⭐⭐ M7: a belépő sávja — elfogadva, kopog (amíg a meghívó kés
       const csat = await ff.hiv('/api/csatlakozas', { method: 'POST', body: JSON.stringify({ meghivo: m }) });
       const kep = async () => (await ff.hiv('/api/csere-allapot')).adat?.adatok?.belepes ?? null;
       const elfogadva = await kep();
+      // M4: a jelentkezés kérelme a meghívó lejáratáig
+      const fKerelmek = async () => JSON.parse(await readFile(join(f, String(csat.adat?.koino), 'kerelmek.json'), 'utf8').catch(() => '{}'));
+      const jelentkezesE = (x) => x.fajta === 'szelet' && x.kulcs === csat.adat?.koino;
+      const jelElotte = ((await fKerelmek()).fuggo ?? []).find(jelentkezesE) ?? null;
       const of = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(PF)],
         { env: { ...process.env, KOINO_ADAT: f, KOINO_NAPLO: '', KOINO_ERTESITO: ertSzkript, ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
       of.stdout.on('data', (x) => { naplo.f += x; });
@@ -1870,6 +1876,7 @@ proba('⭐⭐ M7: a belépő sávja — elfogadva, kopog (amíg a meghívó kés
         ertesites = await readFile(ertNaplo, 'utf8').catch(() => '');
         if (!/Bent vagy a koinóban/.test(ertesites)) await varj(500);
       }
+      const jelUtana = await fKerelmek();
       const jo = {
         meghivo: m.length > 20 && csat.allapot === 200,
         elfogadva: elfogadva?.allapot === 'elfogadva' && Number.isFinite(elfogadva.elfogadva) && elfogadva.kopogas?.szam === 0
@@ -1878,11 +1885,14 @@ proba('⭐⭐ M7: a belépő sávja — elfogadva, kopog (amíg a meghívó kés
         jelentkezett: !!kopog?.jelentkezes && Number.isFinite(kopog.jelentkezes.ido) && kopog.jelentkezes.gepek === 0,
         bent: !!bent && Number.isFinite(bent.kapcsolat) && bent.kapcsolat < bent.tag,
         ertesites: /koino — bent vagy\|Bent vagy a koinóban/.test(ertesites),
-        kerelemUtja: Number.isFinite(gAllapot.belepes?.kapcsolat) && !gAllapot.belepes?.tag && !gAllapot.csere
+        kerelemUtja: Number.isFinite(gAllapot.belepes?.kapcsolat) && !gAllapot.belepes?.tag && !gAllapot.csere,
+        m4meddig: !!jelElotte && jelElotte.meddig === elfogadva?.lejar,
+        m4lezarva: !(jelUtana.fuggo ?? []).some(jelentkezesE) && (jelUtana.kesz ?? []).some((x) => jelentkezesE(x))
       };
       const ok = Object.values(jo).every(Boolean);
       const tiszta = (x) => x.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ');
       if (!ok) process.stderr.write('    (M7: ' + JSON.stringify({ ...jo, elfogadva, kopog, bent, latott: [...latott], csat: csat.adat, g: gAllapot,
+        jelElotte, jelUtana,
         gCsere: tiszta(gCsere).slice(-300) }).slice(0, 2000)
         + ')\n    (A napló: ' + tiszta(naplo.a).slice(-500) + ')\n    (F napló: ' + tiszta(naplo.f).slice(-700) + ')\n');
       return ok;
@@ -1969,6 +1979,63 @@ proba('⭐⭐ M8: a meghívó rekesze — a belépő a BEP 44-en jelentkezik, a 
       halo.bezar();
       await varj(1000);
       for (const h of [a, f]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
+// ⭐⭐ M3 (a) (B3 — a 87. mérés után: „csak a kudarc-számláló”): A KOPOGTATÓK ZAJA. A 2026-11-04-i terepen a meghívó készülék-témáján
+// a DHT szinte csak zajt adott (a bejelentést figyelő gépek címét), és a meghívó minden körben rájuk is kopogott. Itt A egy koinó
+// alapítója egy hamis DHT-n (12 gép), és egy „figyelő” a készülék-témáján bejelent egy halott címet (127.0.0.1:9). A őrjárata a
+// címjegyzék-körben megtalálja („kérő vár rám”), körönként rákopog — és ⭐ 3 sikertelen kör után 6 órára kihagyja. Viselkedést mérünk:
+// A csere-állapotában a kör céljainak száma 1-ről 0-ra esik (más célja nincs), és a napló kimondja. Rontás: a kör eredménye nem jut
+// el a számlálóig → a cél marad → bukik.
+proba('⭐⭐ M3 (a): a kopogtatók zaja — a 3 kör óta néma kopogtató címet az őrjárat 6 óráig kihagyja',
+  async () => {
+    const { hamisHalozat } = await import('./dhtProba.js');
+    const { dhtKliens } = await import('../js/csere/dht.js');
+    const { keszulekKopogtatoTemaja } = await import('../js/csere/cimjegyzek.js');
+    const a = await ujKeszulek();
+    const PA = 7995;
+    const halo = await hamisHalozat(12);
+    const helyben = { KOINO_DHT_BELEPOK: halo.belepo(0), KOINO_TUKOR: '127.0.0.1:9', KOINO_KISZOLGALAS: 'alap' };
+    let oa = null;
+    let naplo = '';
+    try {
+      await fut(a, 'koino', 'Zaj-próba', helyben);
+      const K = await koinoNeve(a);
+      await fut(a, 'tabla', helyben);   // a tábla-kulcs (a készülék-téma ebből)
+      const alairo = JSON.parse(await readFile(join(a, 'tabla-kulcs.json'), 'utf8').catch(() => '{}')).alairoNyilvanos ?? null;
+      // a „figyelő”: egy halott cím a készülék-témán
+      const kliens = await dhtKliens({ belepok: [halo.belepo(0)] });
+      let bejelentve = 0;
+      try { bejelentve = (await kliens.bejelent(keszulekKopogtatoTemaja(K, alairo), 9)).tarolta ?? 0; } finally { kliens.bezar(); }
+      oa = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(PA)],
+        { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
+      oa.stdout.on('data', (x) => { naplo += x; });
+      const celok = [];
+      let kiesett = false;
+      for (let i = 0; i < 80 && !kiesett; i++) {
+        await varj(500);
+        const k = JSON.parse(await readFile(join(await koinoMappa(a), 'csere.json'), 'utf8').catch(() => '{}'))?.kor;
+        if (k && Number.isInteger(k.celok) && k.vege && (celok.at(-1)?.vege !== k.vege)) celok.push({ vege: k.vege, celok: k.celok });
+        kiesett = celok.some((c) => c.celok === 1) && /kopogtató címen 3 kör óta nem nyílt rés/.test(naplo)
+          && celok.at(-1).celok === 0;
+      }
+      const tiszta = naplo.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ');
+      const jo = {
+        elokeszites: !!K && !!alairo && bejelentve > 0,
+        kero: /1 kérő vár rám/.test(tiszta),
+        kopogott: celok.filter((c) => c.celok === 1).length >= 1,
+        kiesett
+      };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) process.stderr.write('    (M3 (a): ' + JSON.stringify({ ...jo, celok: celok.slice(-8) }) + ')\n    (A napló: '
+        + tiszta.slice(-700) + ')\n');
+      return ok;
+    } finally {
+      oa?.kill();
+      halo.bezar();
+      await varj(1000);
+      await rm(a, { recursive: true, force: true });
     }
   });
 

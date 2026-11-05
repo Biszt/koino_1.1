@@ -20,6 +20,12 @@ export const CEL_KORLAT = 12;
 export const KOPOGTATO_KORLAT = 12;
 /** Egy függő kérelem ennyi után lejár (a DHT 30–60 perc alatt felejt — 58. mérés —, két óra bőven elég). */
 export const FUGGO_ELEVULES = 2 * 60 * 60 * 1000;
+/**
+ * ⭐ M4 (B4 (a) — Csaba, 2026-11-04): egy kérelem a két óránál tovább is élhet, ha a felvevője megmondja, meddig (`meddig` — a
+ * belépő jelentkezése a meghívója lejáratáig: a belépő napok múlva is beillesztheti a meghívót, és a meghívó gépe akkor is
+ * megtalálja). Rövidebbre nem, és legfeljebb ennyivel a felvétel után (korlátos — 9. szabály; a meghívó egy hónapig él).
+ */
+export const MEDDIG_KORLAT = 31 * 24 * 60 * 60 * 1000;
 
 const KULCS_MINTA = /^[A-Za-z0-9_-]{43}$/;
 /** ⭐ D112 ③ (F6): a háttér-kérés ennyivel hátrébb áll a rangsorban (több, mint a célok száma — minden előtér előtte). */
@@ -71,9 +77,12 @@ function kerelemAlakja(x) {
   if (x.fajta === 'kereses' && !ker) return null;
   // ⭐ D102: `m` (mélyen — a válaszoló maga jár be) és a folytatás a régi `d` helyett.
   // ⭐ D112 ③ (F6): `hatter` — a felderítés kérése; egy társnál a lap (az előtér) kérései előbb mennek.
+  const ido = Number.isFinite(x.ido) ? x.ido : 0;
+  // ⭐ M4: meddig él (ha a felvevő megmondta) — a felvételtől legfeljebb `MEDDIG_KORLAT`
+  const meddig = Number.isFinite(x.meddig) ? Math.min(x.meddig, ido + MEDDIG_KORLAT) : null;
   return { az: x.az, fajta: x.fajta, kulcs: x.kulcs, n: Number.isInteger(x.n) ? x.n : 20, m: x.m === true,
     ...(utan ? { utan } : {}), ...(ker ? { ker } : {}), ...(x.hatter === true ? { hatter: true } : {}),
-    ido: Number.isFinite(x.ido) ? x.ido : 0, probalt: Number.isInteger(x.probalt) ? x.probalt : 0, celok, kopogtatok };
+    ido, probalt: Number.isInteger(x.probalt) ? x.probalt : 0, celok, kopogtatok, ...(meddig !== null ? { meddig } : {}) };
 }
 
 /** Ugyanaz a kérelem-e (fajta + kulcs + a folytatás helye + a kérdés) — egy folytatás, egy másik kérdés KÜLÖN kérelem. */
@@ -98,7 +107,7 @@ export function nyilvantartasAlakja(x) {
  * @returns {{nyilvantartas: Object, az: string, uj: boolean}}
  */
 export function kerelemFelvetele(ny, { fajta, kulcs, n = 20, m = false, utan = null, ker = null, hatter = false, celok = [],
-  kopogtatok = [] }, most, azonosito) {
+  kopogtatok = [], meddig = null }, most, azonosito) {
   const alap = nyilvantartasAlakja(ny);
   const utanJo = utanAlakja(utan);
   const kerJo = kerAlakja(ker);
@@ -114,10 +123,12 @@ export function kerelemFelvetele(ny, { fajta, kulcs, n = 20, m = false, utan = n
     meglevo.kopogtatok = meglevo.kopogtatok.slice(0, KOPOGTATO_KORLAT);
     // ⭐ D112 ③: ha az előtér (a lap) is kéri, már nem háttér-kérés.
     if (!hatter) delete meglevo.hatter;
+    // ⭐ M4: egy későbbi `meddig` kitolhatja (a felvételtől most számolt korláton belül), rövidebbre nem
+    if (Number.isFinite(meddig)) meglevo.meddig = Math.max(meglevo.meddig ?? 0, Math.min(meddig, most + MEDDIG_KORLAT));
     return { nyilvantartas: alap, az: meglevo.az, uj: false };
   }
   const uj = kerelemAlakja({ az: azonosito, fajta, kulcs, n, m, ...(utanJo ? { utan: utanJo } : {}), ...(kerJo ? { ker: kerJo } : {}),
-    ...(hatter ? { hatter: true } : {}), ido: most, probalt: 0, celok, kopogtatok });
+    ...(hatter ? { hatter: true } : {}), ido: most, probalt: 0, celok, kopogtatok, ...(Number.isFinite(meddig) ? { meddig } : {}) });
   if (!uj) throw new Error('hibás kérelem: ' + fajta + ' ' + kulcs);
   alap.fuggo.push(uj);
   while (alap.fuggo.length > FUGGO_KORLAT) {
@@ -128,12 +139,16 @@ export function kerelemFelvetele(ny, { fajta, kulcs, n = 20, m = false, utan = n
   return { nyilvantartas: alap, az: uj.az, uj: true };
 }
 
-/** A lejárt függő kérelmek a kész naplóba kerülnek (`lejart`) — nem tűnnek el szó nélkül (D19). */
+/**
+ * A lejárt függő kérelmek a kész naplóba kerülnek (`lejart`) — nem tűnnek el szó nélkül (D19). ⭐ M4: a `meddig`-es kérelem addig
+ * él (ha az a két óránál később van).
+ */
 export function lejartakKivetele(ny, most, elevules = FUGGO_ELEVULES) {
   const alap = nyilvantartasAlakja(ny);
   const maradnak = [];
   for (const x of alap.fuggo) {
-    if (most - x.ido > elevules) alap.kesz.push({ az: x.az, fajta: x.fajta, kulcs: x.kulcs, ido: most, eredmeny: 'lejart' });
+    const hatar = Math.max(x.ido + elevules, Number.isFinite(x.meddig) ? x.meddig : 0);
+    if (most > hatar) alap.kesz.push({ az: x.az, fajta: x.fajta, kulcs: x.kulcs, ido: most, eredmeny: 'lejart' });
     else maradnak.push(x);
   }
   alap.fuggo = maradnak;

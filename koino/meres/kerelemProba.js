@@ -35,6 +35,9 @@ import {
   elobbJon, felajanlasValaszAlakja
 } from '../js/csere/kerelem.js';
 import { keresoRegioKulcsa } from '../js/csere/keresoReteg.js';
+import {
+  kopogtatoFelvetele, kopogtatoEredmenyek, tiltottE, KOPOGTATO_KUDARC_HATAR, KOPOGTATO_TILTAS, TILTAS_KORLAT, REKESZ_FORRAS
+} from '../js/csere/kopogtatoSzuro.js';
 import { CSOMAG_ESEMENY_KORLAT } from '../js/allapot/tagsag.js';
 import { bejegyzesekEpitese } from '../js/tar/keresoTar.js';
 
@@ -985,6 +988,94 @@ proba('⭐⭐ a KÉRDÉS a védett résen — a tartó megkapja a helyet és a k
     p.bezar();
     await rm(hely, { recursive: true, force: true });
   }
+});
+
+// ⭐⭐ M3 (a) — A KOPOGTATÓK KUDARC-SZÁMLÁLÓJA (B3, Csaba, 2026-11-04 — a 87. mérés után): a BEP 5 témákon a DHT szinte csak zajt ad;
+// amelyik kopogtató címen 3 egymás utáni kör után sem nyílik rés, azt 6 óráig nem hívjuk. A rekeszből (M8) jött cím kivétel.
+// Rontás: (a) a siker nem nulláz → a közbeiktatott siker után a harmadik kudarc már tilt → bukik; (b) a rekesz címe is számol → bukik;
+// (c) a DHT-ról újra jött cím nullázza a számlálót → soha nem tilt → bukik; (d) a tiltott cím újra felvehető → bukik.
+proba('⭐⭐ M3 (a): a kopogtató kudarc-számlálója — 3 sikertelen kör után 6 órára tiltott, a siker nulláz, a rekesz címe kivétel', () => {
+  const t0 = Date.UTC(2026, 10, 5, 3, 0, 0);
+  const kop = new Map();
+  const tilt = new Map();
+  const lejar = t0 + 30 * 60 * 1000;
+  kopogtatoFelvetele(kop, tilt, { cim: '31.200.249.244', port: 31929, lejar, forras: 'dht' }, t0);
+  kopogtatoFelvetele(kop, tilt, { cim: '10.0.0.7', port: 7373, lejar, forras: 'dht' }, t0);
+  kopogtatoFelvetele(kop, tilt, { cim: '100.64.1.2', port: 40001, lejar, forras: REKESZ_FORRAS }, t0);
+  const kudarc = (cim, port) => ({ cel: { cim, port }, ok: false });
+  const siker = (cim, port) => ({ cel: { cim, port }, ok: true });
+  // 1–2. kör: mind néma
+  kopogtatoEredmenyek(kop, tilt, [kudarc('31.200.249.244', 31929), kudarc('10.0.0.7', 7373), kudarc('100.64.1.2', 40001)], t0 + 60e3);
+  // a 20 perces ránézés újra hozza a zajt — a számláló marad
+  const frissites = kopogtatoFelvetele(kop, tilt, { cim: '31.200.249.244', port: 31929, lejar: lejar + 60e3, forras: 'dht' }, t0 + 90e3);
+  kopogtatoEredmenyek(kop, tilt, [kudarc('31.200.249.244', 31929), siker('10.0.0.7', 7373), kudarc('100.64.1.2', 40001),
+    { cel: { cim: '10.0.0.7', port: 7373 }, ok: false, kihagyva: true }], t0 + 120e3);
+  // 3. kör: a zaj harmadszor is néma → tiltott; a 10.0.0.7 a siker után csak egyszer
+  const tiltva = kopogtatoEredmenyek(kop, tilt, [kudarc('31.200.249.244', 31929), kudarc('10.0.0.7', 7373), kudarc('100.64.1.2', 40001)],
+    t0 + 180e3);
+  const ujraFel = kopogtatoFelvetele(kop, tilt, { cim: '31.200.249.244', port: 31929, lejar: lejar + 300e3, forras: 'dht' }, t0 + 240e3);
+  const lejarta = tiltottE(tilt, '31.200.249.244:31929', t0 + 180e3 + KOPOGTATO_TILTAS + 1);
+  // a rekeszből újra jött tiltott cím feloldódik
+  tilt.set('100.64.1.9:40002', t0 + KOPOGTATO_TILTAS);
+  const rekeszbol = kopogtatoFelvetele(kop, tilt, { cim: '100.64.1.9', port: 40002, lejar, forras: REKESZ_FORRAS }, t0 + 300e3);
+  const jo = {
+    hatar: KOPOGTATO_KUDARC_HATAR === 3 && KOPOGTATO_TILTAS === 6 * 3600 * 1000,
+    frissites: frissites === 'frissitve',
+    tiltva: tiltva.length === 1 && tiltva[0] === '31.200.249.244:31929' && !kop.has('31.200.249.244:31929'),
+    sikerNullaz: kop.get('10.0.0.7:7373')?.kudarc === 1,
+    rekesz: kop.get('100.64.1.2:40001')?.kudarc === 0 && kop.has('100.64.1.2:40001'),
+    ujraFel: ujraFel === 'tiltott' && !kop.has('31.200.249.244:31929'),
+    lejar: lejarta === false && !tilt.has('31.200.249.244:31929'),
+    rekeszbolFeloldva: rekeszbol === 'uj' && !tilt.has('100.64.1.9:40002')
+  };
+  if (!Object.values(jo).every(Boolean)) console.log('    (ami bukott: ' + Object.keys(jo).filter((k) => !jo[k]).join(', ') + ')');
+  return Object.values(jo).every(Boolean);
+});
+
+// ⭐ M3 (a): a tiltások jegyzéke korlátos (9. szabály) — a legkorábban lejáró esik ki. Rontás: a korlát nélkül → bukik.
+proba('⭐ M3 (a): a tiltások jegyzéke korlátos — a legkorábban lejáró esik ki', () => {
+  const t0 = Date.UTC(2026, 10, 5, 3, 0, 0);
+  const kop = new Map();
+  const tilt = new Map();
+  for (let i = 0; i < TILTAS_KORLAT; i++) tilt.set('10.1.' + (i >> 8) + '.' + (i & 255) + ':1', t0 + KOPOGTATO_TILTAS + i);
+  kopogtatoFelvetele(kop, tilt, { cim: '10.9.9.9', port: 2, lejar: t0 + 1e6 }, t0);
+  for (let k = 0; k < KOPOGTATO_KUDARC_HATAR; k++) kopogtatoEredmenyek(kop, tilt, [{ cel: { cim: '10.9.9.9', port: 2 }, ok: false }], t0 + 1000 * k);
+  return tilt.size === TILTAS_KORLAT && tilt.has('10.9.9.9:2') && !tilt.has('10.1.0.0:1');
+});
+
+// ⭐⭐ M4 (B4 (a) — Csaba, 2026-11-04): a belépő BEP 5 jelentkezése nem jár le két óra után, amíg a meghívója él — a kérelem
+// `meddig`-je (a meghívó lejárata) tovább tartja, de rövidebbre nem; korlátos (legfeljebb 31 nap); egy másodszori felvétel
+// (ugyanaz a kérelem) is kitolhatja. Rontás: (a) a `meddig` figyelmen kívül → két óra után lejár → bukik; (b) a `meddig` rövidíthet
+// → bukik; (c) nincs korlát → bukik.
+proba('⭐⭐ M4: a jelentkezés kérelme a meghívó lejáratáig él (meddig) — két óra után sem jár le, rövidebbre nem, korlátos', () => {
+  const t0 = Date.UTC(2026, 10, 5, 3, 0, 0);
+  const nap = 24 * 3600 * 1000;
+  const K = 'K'.repeat(43);
+  const L = 'L'.repeat(43);
+  const M = 'M'.repeat(43);
+  let ny = ujNyilvantartas();
+  ny = kerelemFelvetele(ny, { fajta: 'szelet', kulcs: K, meddig: t0 + 30 * nap, kopogtatok: [{ fajta: 'keszulek', kulcs: L }] }, t0, 'a1').nyilvantartas;
+  ny = kerelemFelvetele(ny, { fajta: 'szelet', kulcs: L, meddig: t0 + 60 * 1000 }, t0, 'a2').nyilvantartas;   // rövidebb: nem rövidít
+  ny = kerelemFelvetele(ny, { fajta: 'szelet', kulcs: M, meddig: t0 + 400 * nap }, t0, 'a3').nyilvantartas;   // korlát: 31 nap
+  const egyOra = lejartakKivetele(ny, t0 + 3600 * 1000);
+  const harom = lejartakKivetele(ny, t0 + 3 * 3600 * 1000);
+  const huszNap = lejartakKivetele(ny, t0 + 20 * nap);
+  const harmincEgy = lejartakKivetele(ny, t0 + 31 * nap + 1);
+  // a lemezről olvasott alak megtartja
+  const ujraOlvasva = nyilvantartasAlakja(JSON.parse(JSON.stringify(ny)));
+  // egy másodszori felvétel kitolja
+  const kitolt = kerelemFelvetele(ny, { fajta: 'szelet', kulcs: L, meddig: t0 + 5 * nap }, t0 + 1000, 'a4').nyilvantartas;
+  const van = (n, k) => n.fuggo.some((x) => x.kulcs === k);
+  const jo = {
+    egyOra: van(egyOra, L),   // a rövidebb meddig nem rövidít: a két óra áll
+    haromOra: van(harom, K) && !van(harom, L) && van(harom, M),
+    huszNap: van(huszNap, K) && van(huszNap, M),
+    harmincEgy: !van(harmincEgy, K) && !van(harmincEgy, M),
+    alak: ujraOlvasva.fuggo.find((x) => x.kulcs === K)?.meddig === t0 + 30 * nap,
+    kitolt: van(lejartakKivetele(kitolt, t0 + 4 * nap), L)
+  };
+  if (!Object.values(jo).every(Boolean)) console.log('    (ami bukott: ' + Object.keys(jo).filter((k) => !jo[k]).join(', ') + ')');
+  return Object.values(jo).every(Boolean);
 });
 
 export default futtatas;
