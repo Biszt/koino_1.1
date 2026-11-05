@@ -143,7 +143,11 @@ const magvasVeletlen = (mag) => () => {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
 
-export async function hamisHalozat(n, { hazudo = new Set(), csakFindNode = new Set(), nema = new Set(), nemaPut = false, mag = null, cel = null } = {}) {
+// ⭐ M8: `bep5Elvesz` — a 87. mérés lelete a valódi DHT-n: a BEP 5 bejelentést a gépek elfogadják („tárolta”), de a keresés soha nem
+// kapja vissza. Ezzel a hamis hálón is csak a BEP 44 (aláírt bejegyzés) útja marad — különben egy próba a valódi hálón bizonytalan
+// BEP 5 utat (a kopogtatók, a gyökér-darab és a kereső-régió hirdetőit) hibátlannak mérné.
+export async function hamisHalozat(n, { hazudo = new Set(), csakFindNode = new Set(), nema = new Set(), nemaPut = false, mag = null, cel = null,
+  bep5Elvesz = false } = {}) {
   // ⚠️ Mag NÉLKÜL marad a régi, véletlen viselkedés — a többi próba így használja.
   const veletlen = mag === null ? null : magvasVeletlen(mag);
   const azonosito = (i) => {
@@ -197,6 +201,7 @@ export async function hamisHalozat(n, { hazudo = new Set(), csakFindNode = new S
       if (q === 'announce_peer') {
         if (nemaPut) return;
         if (!Buffer.isBuffer(a.token) || a.token.toString() !== 'jegy') return hiba(203, 'bad token');
+        if (bep5Elvesz) return valasz({});   // „tárolta” — de nem adja vissza soha (87. mérés)
         if (!g.hirdetok) g.hirdetok = new Map();
         const kulcs = a.info_hash.toString('hex');
         const lista = g.hirdetok.get(kulcs) ?? [];

@@ -1739,3 +1739,16 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     a régebben elfogadott meghívónál a lap nem mond „bent vagy”-ot · ⛔ elvetve: a lap maga kérdezze a tagságot (a lépéseket a
     hosszan futó őrjárat látja — D100; a szöveg a laptól függetlenül igaz); külön végpont (az alsó sáv kérdése úgyis 10 mp-enként
     jön) · `belepo_megtalalasa_atvizsgalas.md` 8.
+235. **2026-11-05 · M8 — a meghívó rekesze a BEP 44-en (+ M2, az üteme; B6 (a) — Csaba: „elfogadom a javaslataidat, mehetünk
+    tovább.”)** → **a meghívó titkából (ami a meghívóban utazik, és csak a két félnél van) mindkét fél ugyanazt számolja: egy Ed25519
+    kulcspárt (a rekesz neve), egy sót (a helye — só nélkül megtalálni sem lehet) és egy AES-kulcsot (`meghivoRekesz.js`); a belépő a
+    címjegyzék-körében ide írja ki a címeit (a nyilvánost, ha a tükör mérte, és a helyieket a kapuja portjával) és a tábla-aláíróját,
+    titkosítva, amíg a meghívója él és nem tag (M4 a fő úton); a meghívó minden élő (aktív vagy igazolt) meghívójának rekeszét nézi
+    — az első órában 2, az első napban 5, utána 10 percenként (M2, B2 (b)) —, a talált címeket 30 percre a kör céljai közé veszi, és
+    feljegyzi (`meghivok.json` `rekesz`); a „Meghívóim” és a `meghivok` parancs kimondja: „jelentkezett — kopogok rá: N próbálkozás”,
+    illetve „igazolta — befogadom” (B5 (a))** · ⭐ a BEP 5 jelentkezés marad mellette (ahol megvan, ott is talál) · ⛔ mérve (a
+    parancssor-próba (c) rontása): a hamis DHT-n a BEP 5 hibátlan, ezért a két gép a közös kereső-régió és gyökér-darab hirdetőiként a
+    rekesz nélkül is megtalálta egymást → a hamis háló `bep5Elvesz` kapcsolója a 87. mérés leletét utánozza („tárolta”, de soha nem
+    adja vissza) · ⚠️ amit a rekesz nem véd: aki a meghívót ismeri, a rekeszt is írhatja (egy hamis címre kopogtat a meghívó — a
+    meghívást a kapu bizonyítéka dönti el, nem a rekesz) · ⛔ elvetve: a belépő címe a meghívóban vagy egy válaszüzenetben (a mobilcím
+    változik; egy második üzenet visszahozná a kódos utat) · `belepo_megtalalasa_atvizsgalas.md` 8.

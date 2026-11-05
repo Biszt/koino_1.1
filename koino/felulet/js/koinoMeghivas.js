@@ -82,8 +82,27 @@ koruleIr('_elemHtml', function (h, meghivo) {
   if (meghivo?.statusz === 'Lejart') {
     ki = ki.replace('meghivo-modal__statusz--aktiv">Lejart', 'meghivo-modal__statusz--visszavont">Lejárt');
   }
+  // ⭐ M8 / B5 (a): a belépés állása — jelentkezett-e a belépő a meghívó rekeszében (és hány kopogás azóta), vagy igazolta-e már
+  // (a prototípus felirata az igazoltra is „Felhasznált”)
+  const allas = belepesAllasa(meghivo?.koinoBelepes);
+  if (allas) ki = ki.replace('<span class="meghivo-modal__akciok">', allas + '<span class="meghivo-modal__akciok">');
   return ki;
 });
+
+/** ⭐ M8 / B5 (a): a meghívó sorának koinós többlete — a belépés állása (null, ha nincs mit mondani). */
+function belepesAllasa(b) {
+  if (!b) return null;
+  if (b.allapot === 'igazolt') {
+    return '<span class="koino-meghivo-allas">✔ igazolta a meghívót — befogadom (a belépése még úton van)</span>';
+  }
+  if (b.allapot !== 'aktiv') return null;
+  if (!Number.isFinite(b.jelentkezett)) {
+    return '<span class="koino-meghivo-allas koino-meghivo-allas--var">még nem jelentkezett</span>';
+  }
+  const ora = new Date(b.jelentkezett).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
+  return '<span class="koino-meghivo-allas">📡 jelentkezett (' + html(ora) + ') — kopogok rá: ' + Number(b.kopogas ?? 0)
+    + ' próbálkozás</span>';
+}
 
 /** A „Meghívóim” ablak — a prototípusé. */
 export async function meghivoimMegnyitasa() {

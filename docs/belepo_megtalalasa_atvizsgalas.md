@@ -176,3 +176,18 @@ megerősítés a terepi próbán (Csabának nincs mobilnetes készüléke).
   „kopog” → A elindul: „kapcsolat” → „tag” + értesítés; G a kérelem útján) — hét rontással; böngészőben végigjárva (asztali és
   telefon-szélességen). ⚠️ A „Meghívóim” igazi állapota (B5 (a): „jelentkezett — kopogok rá”) az M8-cal jön: a meghívó rekeszéből
   tudja a meghívó, MELYIK meghívója jelentkezett.
+- ✅ **M8 — a meghívó rekesze (BEP 44)** és vele **✅ M2 (az üteme)** és **B5 (a)** (2026-11-05, elágazás 235): `koino/js/csere/meghivoRekesz.js`
+  — a meghívó titkából a kulcspár, a só és az AES-kulcs (`meghivoRekesze`), a belépő bejegyzése (`rekeszBejegyzes`: legfeljebb 4 cím
+  és a tábla-aláíró, titkosítva, másodperc-sorszámmal), a kibontás (`rekeszBejegyzesbol`: a sértett, az idegen alakú és a más titkú
+  null), az ütem (`rekeszKeresesKoze`: 2 / 5 / 10 perc a meghívó kora szerint). A program: a belépő a címjegyzék-körében ír
+  (`belepoRekeszKiirasa` — amíg a meghívója él és nem tag: ez az M4 a fő úton), a meghívó a háztartásában keres
+  (`meghivoRekeszekKore` — a háttérben, egy DHT-munkamenetben; a talált címek 30 percre a kör céljai közé), és feljegyzi
+  (`meghivok.json` `rekesz`: mikor jelentkezett, hány próbálkozás azóta); a „Meghívóim” sorában „📡 jelentkezett (21:04) — kopogok
+  rá: 5 próbálkozás”, „még nem jelentkezett”, „✔ igazolta a meghívót — befogadom”; a `meghivok` parancs ugyanígy; a belépő sávjának
+  jelentkezése a rekesz gépeit is mondja. Próbák: három modul-próba (a rekesz, az alakja, az ütem — öt rontással) és egy
+  parancssor-próba a hamis DHT-n (a belépő nem éri el a meghívót, és a BEP 5 elveszik: csak a rekeszből találhatnak egymásra — négy
+  rontással); ⛔ a (c) rontás eleinte nem bukott: a hamis hálón a BEP 5 hibátlan volt, és a két gép a közös kereső-régió és
+  gyökér-darab hirdetőiként is megtalálta egymást → a hamis háló `bep5Elvesz` kapcsolója (a 87. mérés leletét utánozza). Böngészőben
+  végigjárva. ⚠️ A mobilnetes megerősítés a terepi próbán.
+- ⏭️ **Hátra:** M3 (a) (a kudarc-számláló a BEP 5 kopogtató címekre — a zaj továbbra is jön a régi úton) · M4 a BEP 5 jelentkezésre (a
+  rekesz már nem jár le, a régi jelentkezés kérelme két óra után igen) · terep.

@@ -1894,6 +1894,84 @@ proba('⭐⭐ M7: a belépő sávja — elfogadva, kopog (amíg a meghívó kés
     }
   });
 
+// ⭐⭐ M8 (a belépő megtalálása — a 87. mérés: a BEP 5 cetli elvész és hamisítódik, a BEP 44 megtalálható): A MEGHÍVÓ REKESZE. Két
+// készülék egy hamis DHT-n (12 gép). A egy zárt koinó alapítója, az őrjárata fut (a rekesz keresése 2 mp-enként — `KOINO_REKESZ_KOZ`),
+// meghívót állít ki Ferencnek. ⭐ F a meghívót úgy kapja, hogy a meghívó címei egy halott címre mutatnak (mint két hálózat között: F nem
+// éri el A-t), és a hamis DHT a BEP 5 bejelentéseket elnyeli (`bep5Elvesz` — a 87. mérés lelete: „tárolta”, de soha nem adja vissza;
+// e nélkül a két gép a közös kereső-régió és gyökér-darab hirdetőiként is megtalálta egymást — a (c) rontás mérte) — A tehát CSAK a
+// rekeszből találhatja meg F-et. F őrjárata a címjegyzék-körében kiírja a címeit a meghívó rekeszébe; A megtalálja, rákopog, a csere után
+// meghívja. Viselkedést mérünk: F tag lesz; A meghívói között a rekesz feljegyezve (mikor jelentkezett); A felülete (`/api/meghivo/sajat`)
+// a lapnak is kimondja (`koinoBelepes.jelentkezett`); F sávjának jelentkezése a rekesz gépeit mondja. Rontás: (a) F nem ír a rekeszbe;
+// (b) A nem keresi; (c) A megtalálja, de nem veszi a kör céljai közé → F nem lesz tag; (d) az API nem adja → bukik.
+proba('⭐⭐ M8: a meghívó rekesze — a belépő a BEP 44-en jelentkezik, a meghívó gépe megtalálja és rákopog; F tag lesz',
+  async () => {
+    const { hamisHalozat } = await import('./dhtProba.js');
+    const a = await ujKeszulek();
+    const f = await ujKeszulek();
+    const PA = 7989, PF = 7991, FA = 7993;
+    const halo = await hamisHalozat(12, { bep5Elvesz: true });
+    const helyben = { KOINO_DHT_BELEPOK: halo.belepo(0), KOINO_TUKOR: '127.0.0.1:9', KOINO_KISZOLGALAS: 'alap',
+      KOINO_REKESZ_KOZ: '2000' };
+    const futok = [];
+    let fa = null;
+    const naplo = { a: '', f: '' };
+    const inditas = (hely, port, kulcs) => {
+      const o = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(port)],
+        { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
+      o.stdout.on('data', (x) => { naplo[kulcs] += x; });
+      futok.push(o);
+    };
+    try {
+      await fut(a, 'koino', 'Rekesz-próba', helyben);
+      const K = await koinoNeve(a);
+      inditas(a, PA, 'a');
+      for (let i = 0; i < 30; i++) {
+        if (JSON.parse(await readFile(join(await koinoMappa(a), 'csere.json'), 'utf8').catch(() => '{}'))?.kor?.port) break;
+        await varj(500);
+      }
+      const m = ((await fut(a, 'meghivo', 'Ferenc', 'kijelentem', helyben)).match(/koino-meghivo:2:[A-Za-z0-9_-]+/) ?? [])[0] ?? '';
+      // F nem éri el A-t: a meghívó címei egy halott címre cserélve (a meghívó nem aláírt — a bizonyíték a titok)
+      const ELOTAG = 'koino-meghivo:2:';
+      const j = m ? JSON.parse(Buffer.from(m.slice(ELOTAG.length), 'base64url').toString('utf8')) : {};
+      const vak = ELOTAG + Buffer.from(JSON.stringify({ ...j, c: [['127.0.0.1', 9]] }), 'utf8').toString('base64url');
+      await fut(f, 'csatlakoz', vak, helyben);
+      // a régi (BEP 5) jelentkezés megvan — de a hamis DHT elnyeli (fent)
+      const ny = JSON.parse(await readFile(join(await koinoMappa(f), 'kerelmek.json'), 'utf8').catch(() => '{}'));
+      const voltJelentkezes = (ny.fuggo ?? []).some((x) => x.fajta === 'szelet' && x.kulcs === K);
+      inditas(f, PF, 'f');
+      let tag = false;
+      for (let i = 0; i < 90 && !tag; i++) {
+        await varj(1000);
+        tag = /✔ tag/.test(await fut(f, 'tagsag', helyben));
+      }
+      const meghivok = JSON.parse(await readFile(join(await koinoMappa(a), 'meghivok.json'), 'utf8').catch(() => '[]'));
+      const rekesz = meghivok.find((x) => x.nev === 'Ferenc')?.rekesz ?? null;
+      const fAllapot = JSON.parse(await readFile(join(await koinoMappa(f), 'csere.json'), 'utf8').catch(() => '{}'));
+      fa = await feluletet(a, FA, helyben);
+      const lista = (await fa.hiv('/api/meghivo/sajat')).adat?.meghivok ?? [];
+      const tiszta = (x) => x.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ');
+      const jo = {
+        meghivo: !!K && m.length > 20 && voltJelentkezes,
+        tag,
+        rekesz: Number.isFinite(rekesz?.talalt) && rekesz.cimek >= 1,
+        aNaplo: /Ferenc jelentkezett a meghívóm rekeszében — kopogok rá/.test(tiszta(naplo.a)),
+        fNaplo: /a meghívóm rekeszébe kiírtam a címeimet \([1-9]\d* gép tárolta\)/.test(tiszta(naplo.f)),
+        lap: Number.isFinite(lista.find((x) => x.meghivottNev === 'Ferenc')?.koinoBelepes?.jelentkezett),
+        fSav: (fAllapot.belepes?.jelentkezes?.gepek ?? 0) > 0
+      };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) process.stderr.write('    (M8: ' + JSON.stringify({ ...jo, rekesz, lista: lista.slice(0, 2), fBelepes: fAllapot.belepes }).slice(0, 1600)
+        + ')\n    (A napló: ' + tiszta(naplo.a).slice(-700) + ')\n    (F napló: ' + tiszta(naplo.f).slice(-700) + ')\n');
+      return ok;
+    } finally {
+      if (fa) fa.folyamat.kill();
+      for (const x of futok) x.kill();
+      halo.bezar();
+      await varj(1000);
+      for (const h of [a, f]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ⭐⭐ D118 (②b): A KAPU KOINÓ-SZABÁLYA a parancssoron és a cserén. Az A a szülőben ír egy gondolatot a gyermek születése
 // ELŐTT és egyet UTÁNA; a szülő kivitele a gyermekbe behozva csak az elsőt adja (a második a szülő jelene — „másik koinóé”),
 // és a csere (két „mindent” készülék) ugyanígy viszi tovább a B-nek. Viselkedést mérünk (a két lemezt). ⚠️ A számítás még

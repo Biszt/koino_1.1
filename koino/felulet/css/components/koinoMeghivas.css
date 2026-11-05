@@ -6,6 +6,10 @@
 
 .koino-meghivo-magyarazat { margin: 0; font-size: var(--text-sm, 0.85em); color: var(--color-text-muted); line-height: 1.4; }
 
+/* ⭐ M8 / B5 (a): a meghívó sorában a belépés állása (jelentkezett-e a rekeszben, hány kopogás; igazolta-e) — saját sorban */
+.koino-meghivo-allas { flex-basis: 100%; font-size: 0.8em; opacity: 0.85; line-height: 1.3; }
+.koino-meghivo-allas--var { opacity: 0.6; }
+
 /* a belépő várakozása (a csatlakozás ablakában) */
 .koino-meghivas__leiras { font-size: 0.85em; opacity: 0.85; margin: 0; line-height: 1.4; }
 .koino-meghivas__tag { margin: 0; font-size: 1em; }

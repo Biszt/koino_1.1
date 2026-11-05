@@ -127,6 +127,7 @@ import {
 // ⭐ Az alsó sáv (2026-10-15): mikor cserélt utoljára a készülék, és mikor jön a következő kör (helyi feljegyzés)
 import { csereAllapotAlakja, korKezdete, korVege, csereFeljegyzese, csereAllapotKepe, belepesKezdete, belepesJelentkezese,
   belepesKopogasa, belepesKapcsolata, belepesTagsaga } from './js/csere/csereAllapot.js';
+import { meghivoRekesze, rekeszBejegyzes, rekeszBejegyzesbol, rekeszKeresesKoze } from './js/csere/meghivoRekesz.js';
 // ⭐⭐ D101 ⑥: az értesítés-réteg — a postafiók a készüléken, két pillanatkép különbségéből
 import {
   beallitasokAlakja, ervenyesBeallitas, beallitasMentese, globalisMentese, ertesitesekSzamitasa,
@@ -1738,9 +1739,104 @@ async function kiadottMeghivok() {
     const meghivo = allapot === 'aktiv' ? meghivoSzovegbol(x.szoveg) : null;
     ki.push({ azonosito: x.i, nev: x.nev, allapot, letrehozva: x.letrehozva, lejar: x.lejar,
       ...(allapot === 'aktiv' ? { szoveg: x.szoveg, windowsSzoveg: meghivo ? windowsTelepitoSorMeghivoval(meghivo) : null } : {}),
-      ...(felhasznalta ? { felhasznalta } : {}) });
+      ...(felhasznalta ? { felhasznalta } : {}),
+      // ⭐ M8 / B5 (a): a belépő jelentkezett-e a rekeszben (mikor, hány próbálkozás azóta)
+      ...(x.rekesz ? { rekesz: { talalt: x.rekesz.talalt, utolso: x.rekesz.utolso, kopogas: x.rekesz.kopogas ?? 0 } } : {}) });
   }
   return ki;
+}
+
+// ----- ⭐⭐ M8: a meghívóim rekeszei (a belépő itt jelentkezik — BEP 44, a meghívó titkából) -----
+
+/** M2: a rekesz keresésének üteme (a próbák `KOINO_REKESZ_KOZ`-zel rövidíthetik — ms). */
+function rekeszKoz(x, most) {
+  const k = Number(process.env.KOINO_REKESZ_KOZ);
+  return Number.isFinite(k) && k > 0 ? k : rekeszKeresesKoze(x.letrehozva, most);
+}
+
+/** Él-e még a meghívó belépés szempontjából (aktív vagy igazolt — a belépését még el kell hoznom —, és nem járt le). */
+const rekeszeElo = (x, most) => ['aktiv', 'igazolt'].includes(meghivoAllapota(x, most)) && most <= (x.lejar ?? 0);
+
+/**
+ * ⭐⭐ M8 (+ M2): a meghívóim rekeszeinek köre a háztartásban — az esedékeseket a háttérben megnézi (egy DHT-munkamenetben), a talált
+ * címeket a kör céljai közé veszi, a meghívókhoz feljegyzi (`rekesz`); és körönként a kopogást (B5 (a)).
+ */
+async function meghivoRekeszekKore(allapot, port, kk = '') {
+  allapot.rekeszUtolso ??= new Map();
+  allapot.kopogtatok ??= new Map();
+  const most = Date.now();
+  const lista = await kiadottMeghivokOlvasasa();
+  // B5 (a): ha egy élő meghívóm belépője jelentkezett, és a címei még a céljaim közt vannak, ez a kör egy próbálkozás volt
+  if (lista.some((x) => meghivoAllapota(x, most) === 'aktiv' && x.rekesz && most - x.rekesz.utolso <= KOPOGTATO_ELEVULES)) {
+    await kiadottMeghivokModositasa((l) => l.map((x) => (meghivoAllapota(x, most) === 'aktiv' && x.rekesz
+      && most - x.rekesz.utolso <= KOPOGTATO_ELEVULES ? { ...x, rekesz: { ...x.rekesz, kopogas: (x.rekesz.kopogas ?? 0) + 1 } } : x)));
+  }
+  if (allapot.rekeszFut) return;
+  const esedekes = lista.filter((x) => rekeszeElo(x, most) && most - (allapot.rekeszUtolso.get(x.i) ?? 0) >= rekeszKoz(x, most));
+  if (!esedekes.length) return;
+  for (const x of esedekes) allapot.rekeszUtolso.set(x.i, most);
+  allapot.rekeszFut = meghivoRekeszekKeresese(esedekes)
+    .then(async (talalatok) => {
+      // a saját címeim kimaradnak (a kapum portján — egy gépen több készülék is lehet)
+      const sajat = new Set((await helyiCimeim()).map((h) => h + ':' + port));
+      if (allapot.sajatKulsoUdp) sajat.add(allapot.sajatKulsoUdp.cim + ':' + allapot.sajatKulsoUdp.port);
+      for (const t of talalatok) {
+        if (t.olvashatatlan) {
+          kiir(SZIN.halvany + '  ⚠ ' + ora() + ' ' + kk + t.nev + ' meghívójának rekeszében olvashatatlan bejegyzés áll — kihagyom'
+            + SZIN.vege);
+          continue;
+        }
+        if (!t.bejegyzes) continue;
+        const cimek = t.bejegyzes.cimek.filter((c) => !sajat.has(c.hoszt + ':' + c.port)
+          && !((/^127\./.test(c.hoszt) || c.hoszt === '::1') && c.port === port));
+        for (const c of cimek) {
+          allapot.kopogtatok.set(c.hoszt + ':' + c.port, { cim: c.hoszt, port: c.port, lejar: Date.now() + KOPOGTATO_ELEVULES });
+        }
+        kiir(SZIN.halvany + '  📮 ' + ora() + ' ' + kk + t.nev + ' jelentkezett a meghívóm rekeszében — kopogok rá ('
+          + cimek.map((c) => c.hoszt + ':' + c.port).join(', ') + ')' + SZIN.vege);
+      }
+      await rekeszTalalatokFeljegyzese(talalatok);
+    })
+    .catch((hiba) => {
+      kiir(SZIN.halvany + '  ⚠ ' + kk + 'a meghívóim rekeszét most nem értem el: ' + hiba.message + SZIN.vege);
+    })
+    .finally(() => { allapot.rekeszFut = null; });
+}
+
+/**
+ * ⭐⭐ M8: a megadott meghívók rekeszeinek keresése egy DHT-munkamenetben (BEP 44 — az aláírást a `dht.js` ellenőrzi, a
+ * titkosítást és az alakot a `rekeszBejegyzesbol`).
+ * @returns {Promise<Array<{i: string, nev: string, bejegyzes: Object|null, olvashatatlan: boolean}>>}
+ */
+async function meghivoRekeszekKeresese(meghivok) {
+  const kliens = await tablaKliens();
+  const ki = [];
+  try {
+    for (const x of meghivok) {
+      const r = await meghivoRekesze(x.s);
+      const e = await kliens.keres(r.kulcs, r.so);
+      if (!e.legjobb) { ki.push({ i: x.i, nev: x.nev, bejegyzes: null, olvashatatlan: false }); continue; }
+      const b = await rekeszBejegyzesbol(x.s, e.legjobb.ertek);
+      ki.push({ i: x.i, nev: x.nev, bejegyzes: b, olvashatatlan: !b });
+    }
+    await dhtIsmertekMentese(kliens);
+  } finally {
+    kliens.bezar();
+  }
+  return ki;
+}
+
+/** ⭐ M8 / B5 (a): a talált rekeszek a meghívókhoz — mikor jelentkezett először és utoljára, hány címmel (helyi feljegyzés). */
+async function rekeszTalalatokFeljegyzese(talalatok) {
+  const talalt = talalatok.filter((t) => t.bejegyzes);
+  if (!talalt.length) return;
+  const most = Date.now();
+  await kiadottMeghivokModositasa((lista) => lista.map((x) => {
+    const t = talalt.find((y) => y.i === x.i);
+    if (!t) return x;
+    return { ...x, rekesz: { talalt: x.rekesz?.talalt ?? most, utolso: most, mikor: t.bejegyzes.mikor, cimek: t.bejegyzes.cimek.length,
+      kopogas: x.rekesz?.kopogas ?? 0 } };
+  }));
 }
 
 /** ⭐ D122: egy még fel nem használt meghívó visszavonása. @returns {Promise<boolean>} */
@@ -1890,14 +1986,41 @@ async function kerelemKapcsolata(fk, tars) {
   await csereAllapota().modosit((a) => belepesKapcsolata(a, { most: Date.now() }));
 }
 
-/** ⭐ M7: a címjegyzék-kör a meghívóm készülék-témáján jelentkezett — mikor, hány gép tárolta, mikor jön a következő. */
-async function belepesJelentkezesFeljegyzese(bejelentesek) {
+/**
+ * ⭐ M7: a címjegyzék-kör jelentkezett — a meghívóm rekeszében (M8, BEP 44 — a fő út) és/vagy a meghívóm készülék-témáján (BEP 5):
+ * mikor, hány gép tárolta (a kettő közül a több), mikor jön a következő.
+ */
+async function belepesJelentkezesFeljegyzese(bejelentesek, rekesz = null) {
   const m = await meghivomOlvasasa();
   if (!m) return;
   const be = (bejelentesek ?? []).find((x) => x.kulcs === 'keszulek:' + m.alairo);
-  if (!be) return;
+  if (!be && !rekesz) return;
   const most = Date.now();
-  await csereAllapota().modosit((a) => belepesJelentkezese(a, { gepek: be.tarolta, kovetkezo: most + HIRDETES_KOZ, most }));
+  const gepek = Math.max(rekesz?.tarolta ?? 0, be?.tarolta ?? 0);
+  await csereAllapota().modosit((a) => belepesJelentkezese(a, { gepek, kovetkezo: most + HIRDETES_KOZ, most }));
+}
+
+/**
+ * ⭐⭐ M8: A BELÉPŐ REKESZE — ha egy meghívóval léptem be ide, a meghívóm még él (M4: addig újítom), és még nem vagyok tag: a
+ * címeim (a nyilvános, ha a tükör mérte, és a helyiek a kapum portjával) és a tábla-aláíróm a meghívó rekeszébe (BEP 44 — a
+ * kulcspár, a só és a titkosítás a meghívó titkából: `meghivoRekesz.js`). A címjegyzék-kör DHT-munkamenetében.
+ * @returns {Promise<{tarolta: number, probalt: number}|null>} null, ha nincs mit kiírni
+ */
+async function belepoRekeszKiirasa(kliens, { kulso = null, kapuPort = null } = {}) {
+  const m = await meghivomOlvasasa();
+  if (!m || typeof m.s !== 'string' || Date.now() > (m.lejar ?? 0)) return null;
+  const b = (await csereAllapota().olvas()).belepes;
+  if (b?.tag) return null;
+  if (!b) {
+    const h = await sajatHorgonyom();
+    if (h && (await tagE(tar, KOINO, h).catch(() => ({ igen: false }))).igen) return null;
+  }
+  const port = Number.isInteger(kapuPort) ? kapuPort : await kapuPortja();
+  const cimek = [...(kulso && typeof kulso.cim === 'string' && Number.isInteger(kulso.port) ? [{ hoszt: kulso.cim, port: kulso.port }] : []),
+    ...(await helyiCimeim()).map((hoszt) => ({ hoszt, port }))];
+  const alairo = (await tablaKulcsBiztositasa()).alairoNyilvanos;
+  const r = await kliens.kozzetesz(await rekeszBejegyzes(m.s, { cimek, alairo, most: Date.now() }));
+  return { tarolta: r.tarolta ?? 0, probalt: r.probalt ?? 0 };
 }
 
 /**
@@ -2797,7 +2920,7 @@ function kopogtatoTemaBuffer(k) {
 /** ⭐ D107 L2 (③c): egy címjegyzék-körben legfeljebb ennyi régió-társat veszünk a kör céljai közé. */
 const REGIO_TARS_KORLAT = 4;
 
-async function cimjegyzekKor(port) {
+async function cimjegyzekKor(port, { kulso = null, kapuPort = null } = {}) {
   const { temak } = await sajatHirdetendoTemak();
   const tablaKulcs = await tablaKulcsBiztositasa();
   const kliens = await tablaKliens();
@@ -2832,9 +2955,13 @@ async function cimjegyzekKor(port) {
       bejelentesek.push({ kulcs: k.fajta + ':' + k.kulcs, tarolta: be.tarolta ?? 0 });
       if (be.tarolta > 0) bejelentve++;
     }
+    // ⭐⭐ M8: ha egy meghívóval léptem be, és még nem vagyok tag — a címeim a meghívó rekeszébe (BEP 44; a meghívó gépe ezt nézi)
+    let rekesz = null;
+    try { rekesz = await belepoRekeszKiirasa(kliens, { kulso, kapuPort }); }
+    catch (hiba) { console.warn('a meghívó rekeszébe most nem írtam', { ok: hiba.message }); }
     await dhtIsmertekMentese(kliens);
     return { eredmeny, kopogtatok: [...kopogtatok.values()], regioTarsak: [...regioTarsak.values()], bejelentve, bejelentett,
-      bejelentesek, felajanlas, forgalom: kliens.forgalom() };
+      bejelentesek, rekesz, felajanlas, forgalom: kliens.forgalom() };
   } finally {
     kliens.bezar();
   }
@@ -5125,7 +5252,7 @@ async function orjaratHazimunkaja(allapot, { port, sikeres }) {
   }
   if (!allapot.hirdetesFut && Date.now() - (allapot.utolsoHirdetes ?? 0) >= HIRDETES_KOZ) {
     allapot.utolsoHirdetes = Date.now();
-    allapot.hirdetesFut = cimjegyzekKor(allapot.sajatKulsoUdp?.port ?? port)
+    allapot.hirdetesFut = cimjegyzekKor(allapot.sajatKulsoUdp?.port ?? port, { kulso: allapot.sajatKulsoUdp ?? null, kapuPort: port })
       .then(async (h) => {
         // ⚠️ A „nem értem el a DHT-t" és a „senki nem tárolta" két külön dolog (a 40. mérés tanulsága).
         const tarolt = h.eredmeny.filter((e) => e.tarolta > 0).length;
@@ -5165,14 +5292,26 @@ async function orjaratHazimunkaja(allapot, { port, sikeres }) {
           kiir(SZIN.halvany + '  🔍 ' + ora() + ' ' + kk + 'a kereső-régióm ' + ujRegioTars + ' további tartója a DHT-n — a kör'
             + ' céljai közé' + SZIN.vege);
         }
-        // ⭐ M7: ha a meghívóm készülék-témáján jelentkeztem, a lap sávja kimondja (mikor, hány gép tárolta, mikor legközelebb)
-        await belepesJelentkezesFeljegyzese(h.bejelentesek);
+        // ⭐⭐ M8: a meghívóm rekesze
+        if (h.rekesz) {
+          kiir(SZIN.halvany + '  📮 ' + ora() + ' ' + kk + 'a meghívóm rekeszébe kiírtam a címeimet ('
+            + (h.rekesz.tarolta > 0 ? h.rekesz.tarolta + ' gép tárolta' : 'egyetlen gép sem tárolta — a DHT most nem érhető el')
+            + ')' + SZIN.vege);
+        }
+        // ⭐ M7: ha jelentkeztem (a rekeszben vagy a meghívóm készülék-témáján), a lap sávja kimondja
+        await belepesJelentkezesFeljegyzese(h.bejelentesek, h.rekesz);
       })
       .catch((hiba) => {
         kiir(SZIN.halvany + '  ⚠ ' + kk + 'a címjegyzék hirdetése most nem sikerült: ' + hiba.message + SZIN.vege);
       })
       .finally(() => { allapot.hirdetesFut = null; });
   }
+
+  // ⭐⭐ M8 (+ M2): A MEGHÍVÓIM REKESZEI — az élő meghívóim közül, amelyiké esedékes (az első órában 2, az első napban 5, utána 10
+  // percenként), a rekeszét megnézem (BEP 44, a háttérben — egy keresés ~16 mp, 87. mérés); ha a belépője kiírta a címeit, a kör
+  // céljai közé veszem őket (30 percig, mint a kopogtatókat). B5 (a): a „Meghívóim” ebből mondja, hogy jelentkezett.
+  try { await meghivoRekeszekKore(allapot, port, kk); }
+  catch (hiba) { kiir(SZIN.halvany + '  ⚠ ' + kk + 'a meghívóim rekeszét most nem néztem meg: ' + hiba.message + SZIN.vege); }
 
   // ⭐⭐ M7: a belépés követése — ha egy meghívóval léptem be ide, és közben tag lettem: a lap „bent vagy”-a és az értesítés.
   try { await belepesKovetese(kk); }
@@ -7177,7 +7316,10 @@ try {
       for (const x of lista) {
         kiir('  ' + x.azonosito + '  ' + x.nev + ' · ' + (FELIRAT[x.allapot] ?? x.allapot)
           + (x.felhasznalta ? ' → ' + (x.felhasznalta.nev ?? rovidAzonosito(x.felhasznalta.horgony)) : '')
-          + (x.allapot === 'aktiv' ? ' · lejár: ' + new Date(x.lejar).toLocaleDateString('hu-HU') : ''));
+          + (x.allapot === 'aktiv' ? ' · lejár: ' + new Date(x.lejar).toLocaleDateString('hu-HU') : '')
+          // ⭐ M8 / B5 (a): a belépő jelentkezett a rekeszben
+          + (x.allapot === 'aktiv' && x.rekesz ? ' · jelentkezett (' + new Date(x.rekesz.talalt).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })
+            + ') — kopogok rá: ' + x.rekesz.kopogas + ' próbálkozás' : ''));
       }
       break;
     }
@@ -10491,6 +10633,8 @@ try {
           return { adat: { meghivok: lista.map((x) => ({ _id: x.azonosito, kod: rovidKod(x.azonosito), szoveg: x.szoveg ?? '',
             windowsSzoveg: x.windowsSzoveg ?? '', meghivottNev: x.nev,
             statusz: STATUSZ[x.allapot] ?? x.allapot, letrehozva: x.letrehozva, lejar: x.lejar,
+            // ⭐ M8 / B5 (a): a belépés állása (a lap a prototípus sora mellé írja — `koinoMeghivas.js`)
+            koinoBelepes: { allapot: x.allapot, jelentkezett: x.rekesz?.talalt ?? null, kopogas: x.rekesz?.kopogas ?? 0 },
             ...(x.felhasznalta ? { felhasznaloEemberId: { eemberNev: x.felhasznalta.nev ?? x.nev } } : {}) })) } };
         }
         // ⭐ A koinóban a tagsághoz mindig meghívás kell (D56) — a prototípus tájékoztató sávja ebből szól.

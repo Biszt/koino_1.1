@@ -28,6 +28,11 @@ import {
   windowsTelepitoSorMeghivoval, meghivoSzovegbol, windowsSorHibaja,
   MEGHIVO_ELOTAG, MEGHIVO_CIM_KORLAT, MEGHIVO_KORLAT, MEGHIVO_ELETTARTAM, TELEPITO_SOR, WINDOWS_TELEPITO_SOR, WINDOWS_TELEPITO_UT
 } from '../js/csere/meghivo.js';
+import {
+  meghivoRekesze, rekeszBejegyzes, rekeszBejegyzesbol, rekeszKeresesKoze, REKESZ_CIM_KORLAT,
+  REKESZ_KOZ_ELSO_ORA, REKESZ_KOZ_ELSO_NAP, REKESZ_KOZ_UTANA
+} from '../js/csere/meghivoRekesz.js';
+import { bejegyzesEllenorzese, bencodeKodol, valtozoCel } from '../js/csere/dht.js';
 import { probaGyujtemeny } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A MEGHÍVÓ SZÖVEGE ÉS A BIZONYÍTÉK (D121, D122)');
@@ -216,6 +221,86 @@ proba('⭐⭐ (Windowson) a sor a cmd-ben ÉS a PowerShellben is az otthonban fu
   } finally {
     await rm(otthon, { recursive: true, force: true });
   }
+});
+
+// ⭐⭐ M8: A MEGHÍVÓ REKESZE (a belépő megtalálása — a 87. mérés lelete: a BEP 5 cetli elvész és hamisítódik, a BEP 44 megtalálható).
+// A meghívó titkából mindkét fél ugyanazt a kulcspárt, sót és titkosító kulcsot számolja; a belépő ide írja ki a címeit, a meghívó
+// innen olvassa. Rontás: (a) a só nem a titokból (fix) → két meghívó rekesze egy helyre esne → bukik; (b) a titkosító kulcs a
+// kulcspár magjából (nem külön cimkével) → a „független” ág bukik; (c) az alak nincs ellenőrizve → az idegen alakú tartalom
+// átmegy → bukik; (d) a címlista nincs korlátozva → bukik.
+proba('⭐⭐ M8: a meghívó rekesze — a két fél ugyanazt számolja, más titokkal se megtalálni, se olvasni nem lehet, a bejegyzés aláírt', async () => {
+  const titok = ujMeghivoJelei().titok;
+  const masik = ujMeghivoJelei().titok;
+  const alairo = randomBytes(32).toString('base64url');
+  const cimek = [{ hoszt: '203.0.113.7', port: 41777 }, { hoszt: '192.168.1.5', port: 7373 }, { hoszt: '192.168.1.5', port: 7373 },
+    { hoszt: 'rossz cím!', port: 1 }, { hoszt: '10.0.0.2', port: 70000 }, { hoszt: '10.0.0.3', port: 7373 }, { hoszt: '10.0.0.4', port: 7373 },
+    { hoszt: '10.0.0.5', port: 7373 }, { hoszt: '10.0.0.6', port: 7373 }];
+  const most = Date.UTC(2026, 10, 5, 12, 0, 0);
+  const b = await rekeszBejegyzes(titok, { cimek, alairo, most });
+  const r1 = await meghivoRekesze(titok);
+  const r2 = await meghivoRekesze(titok);
+  const rm = await meghivoRekesze(masik);
+  const ki = await rekeszBejegyzesbol(titok, b.ertek);
+  const kiMas = await rekeszBejegyzesbol(masik, b.ertek);
+  // a sértett tartalom (egy bájt átírva) nem olvasható
+  const nyers = Buffer.from(String(b.ertek), 'base64url');
+  nyers[nyers.length - 1] ^= 1;
+  const serult = await rekeszBejegyzesbol(titok, nyers.toString('base64url'));
+  const celSajat = await valtozoCel(r1.kulcs, r1.so);
+  const celMas = await valtozoCel(rm.kulcs, rm.so);
+  const jo = {
+    ugyanaz: Buffer.compare(r1.kulcs, r2.kulcs) === 0 && Buffer.compare(r1.so, r2.so) === 0 && Buffer.compare(r1.kulcs, Buffer.from(b.k)) === 0,
+    aSoA20: r1.so.length === 20 && Buffer.compare(Buffer.from(b.salt), r1.so) === 0,
+    masHely: Buffer.compare(rm.kulcs, r1.kulcs) !== 0 && Buffer.compare(rm.so, r1.so) !== 0 && Buffer.compare(celSajat, celMas) !== 0,
+    alairva: await bejegyzesEllenorzese({ k: b.k, salt: b.salt, seq: b.seq, v: bencodeKodol(b.ertek), sig: b.sig }),
+    seq: b.seq === Math.floor(most / 1000),
+    olvashato: ki?.alairo === alairo && ki.mikor === most && ki.cimek.length === REKESZ_CIM_KORLAT
+      && ki.cimek[0].hoszt === '203.0.113.7' && ki.cimek[1].hoszt === '192.168.1.5' && ki.cimek[2].hoszt === '10.0.0.3',
+    masTitokkal: kiMas === null,
+    serult: serult === null,
+    // a tartalom nem nyílt: a cím a bejegyzés értékében nem olvasható
+    rejtett: !String(b.ertek).includes('203.0.113.7') && !Buffer.from(String(b.ertek), 'base64url').toString('latin1').includes('203.0.113.7')
+  };
+  if (!Object.values(jo).every(Boolean)) console.log('    (ami bukott: ' + Object.keys(jo).filter((k) => !jo[k]).join(', ') + ')');
+  return Object.values(jo).every(Boolean);
+});
+
+// ⭐ M8: a kívülről jött tartalom alakja — a rossz titok, az üres címlista, a rossz tábla-aláíró nem lesz bejegyzés; egy idegen alakú
+// (de a titokkal titkosított) tartalom nem lesz cím. Rontás: az alak ellenőrzése nélkül az idegen alakú tartalom átmegy → bukik.
+proba('⭐ M8: a rekesz alakja — rossz titok, üres címlista, rossz aláíró nem lesz bejegyzés; az idegen alakú tartalom nem cím', async () => {
+  const titok = ujMeghivoJelei().titok;
+  const alairo = randomBytes(32).toString('base64url');
+  const dob = async (fn) => { try { await fn(); return false; } catch { return true; } };
+  // egy idegen alakú tartalom ugyanazzal a kulccsal titkosítva (mintha egy régi vagy hamis program írta volna)
+  const r = await meghivoRekesze(titok);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const zart = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, r.aes,
+    new TextEncoder().encode(JSON.stringify({ a: 'valami-mas', c: [['10.0.0.1', 7373]], t: alairo, m: 1 })));
+  const idegen = Buffer.concat([Buffer.from(iv), Buffer.from(zart)]).toString('base64url');
+  const jo = {
+    rosszTitok: await dob(() => rekeszBejegyzes('rövid', { cimek: [{ hoszt: '10.0.0.1', port: 1 }], alairo })),
+    uresCimek: await dob(() => rekeszBejegyzes(titok, { cimek: [{ hoszt: 'rossz cím', port: 1 }], alairo })),
+    rosszAlairo: await dob(() => rekeszBejegyzes(titok, { cimek: [{ hoszt: '10.0.0.1', port: 1 }], alairo: 'x' })),
+    idegenAlak: (await rekeszBejegyzesbol(titok, idegen)) === null,
+    szemet: (await rekeszBejegyzesbol(titok, 'nem base64 !!')) === null && (await rekeszBejegyzesbol(titok, '')) === null
+  };
+  if (!Object.values(jo).every(Boolean)) console.log('    (ami bukott: ' + Object.keys(jo).filter((k) => !jo[k]).join(', ') + ')');
+  return Object.values(jo).every(Boolean);
+});
+
+// ⭐ M2 (B2 (b) — Csaba, 2026-11-04): a rekesz keresésének üteme a meghívó kora szerint lépcsőzve — az első órában 2, az első napban
+// 5, utána 10 percenként. Rontás: a lépcső nélkül (mindig 10 perc) → bukik.
+proba('⭐ M2: a rekesz keresésének üteme — az első órában 2, az első napban 5, utána 10 percenként', () => {
+  const t0 = Date.UTC(2026, 10, 5, 12, 0, 0);
+  const ora = 3600 * 1000;
+  const jo = {
+    elsoOra: rekeszKeresesKoze(t0, t0) === REKESZ_KOZ_ELSO_ORA && rekeszKeresesKoze(t0, t0 + ora - 1) === 2 * 60 * 1000,
+    elsoNap: rekeszKeresesKoze(t0, t0 + ora) === REKESZ_KOZ_ELSO_NAP && rekeszKeresesKoze(t0, t0 + 24 * ora - 1) === 5 * 60 * 1000,
+    utana: rekeszKeresesKoze(t0, t0 + 24 * ora) === REKESZ_KOZ_UTANA && rekeszKeresesKoze(t0, t0 + 29 * 24 * ora) === 10 * 60 * 1000,
+    ismeretlen: rekeszKeresesKoze(undefined, t0) === REKESZ_KOZ_ELSO_ORA
+  };
+  if (!Object.values(jo).every(Boolean)) console.log('    (ami bukott: ' + Object.keys(jo).filter((k) => !jo[k]).join(', ') + ')');
+  return Object.values(jo).every(Boolean);
 });
 
 export default futtatas;
