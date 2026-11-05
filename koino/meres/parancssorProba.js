@@ -1788,6 +1788,112 @@ proba('⭐⭐ M5: a meghívó bizonyítéka az ütközés útján — a meghív�
     }
   });
 
+// ⭐⭐ M7 (a belépő megtalálása — Csaba, 2026-11-04: „a meghívott felületén értesítse a meghívottat, hogy a készüléke éppen próbálja
+// felvenni az első kapcsolatot, és jelezhetné a próbálkozásokat is”): A BELÉPŐ SÁVJA. A egy zárt koinó alapítója; az őrjárata
+// elindul (a kapu portja a meghívóba kerül), A kiállít egy meghívót Ferencnek, aztán az őrjárata LEÁLL (a meghívó készüléke nem
+// fut — mint a terepen, amíg a laptop alszik). F felülete beilleszti a meghívót: a sáv (`/api/csere-allapot` → `belepes`) azonnal
+// „elfogadva”. F őrjárata elindul (egy próba-értesítővel, a beállítását nem érintjük — egy friss belépőnek nincs): amíg A nem fut,
+// körönként egy próbálkozás („kopog”, legalább kettő, kapcsolat nélkül), és a címjegyzék-kör a meghívó készülék-témáján jelentkezett
+// (a DHT itt nem érhető el: 0 gép — de az ideje feljegyezve). A őrjárata újra elindul ugyanazon a porton: F sávja előbb „kapcsolat”
+// (a munka a meghívó készülékének tábla-aláírójával), aztán „tag” — és F készüléke értesít („Bent vagy”). ⭐ Viselkedést mérünk (F
+// felületének válaszát és az értesítő naplóját). ⭐ És a KÉRELEM ÚTJA (a böngésző-próba lelete: az első munka a lap kérése volt, és a
+// kérelem útján a társ tábla-kulcsát nem kapjuk meg): G a második meghívóval csatlakozik (parancsból), egy függő kérelmet vesz fel (a
+// gyökér fejlécei — a zárt kapu nem tagnak elutasítja), és egy kézi `csere` ezt viszi A-hoz: G lemezén a kapcsolat feljegyezve, csere
+// nélkül (a meghívó címéről ismerte fel). Rontás: (a) az elfogadás nem jegyez → a sáv üres; (b) a kör nem számol → nincs „kopog”;
+// (c) a munka nem jegyzi a kapcsolatot → a kapcsolat ideje a tagságé (a tagság pótolja) → bukik; (d) a háztartás nem követi a
+// belépést → nincs „tag”, nincs értesítés; (e) a jelentkezés nem jegyez → bukik; (f) a kérelem munkája nem jegyez → G-nél nincs
+// kapcsolat; (g) a meghívó címei nem kerülnek a feljegyzésbe → ugyanígy.
+proba('⭐⭐ M7: a belépő sávja — elfogadva, kopog (amíg a meghívó készüléke nem fut), kapcsolat, bent vagy; és a készülék értesít',
+  async () => {
+    const a = await ujKeszulek();
+    const f = await ujKeszulek();
+    const g = await ujKeszulek();
+    const PA = 7983, PF = 7985, FF = 7987;
+    const helyben = { KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9', KOINO_KISZOLGALAS: 'alap' };
+    const futok = [];
+    let ff = null;
+    const naplo = { a: '', f: '' };
+    const orjaratA = () => {
+      const o = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(PA)],
+        { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
+      o.stdout.on('data', (x) => { naplo.a += x; });
+      futok.push(o);
+      return o;
+    };
+    try {
+      const ertNaplo = join(f, 'ertesitesek-naplo.txt');
+      const ertSzkript = join(f, 'ertesito.mjs');
+      await writeFile(ertSzkript, "import { appendFileSync } from 'node:fs';\nappendFileSync(" + JSON.stringify(ertNaplo)
+        + ", process.argv[2] + '|' + process.argv[3] + '\\n');\n", 'utf8');
+      await fut(a, 'koino', 'Belépő-sáv próba', helyben);
+      const elsoA = orjaratA();
+      for (let i = 0; i < 30; i++) {
+        if (JSON.parse(await readFile(join(await koinoMappa(a), 'csere.json'), 'utf8').catch(() => '{}'))?.kor?.port) break;
+        await varj(500);
+      }
+      const m = ((await fut(a, 'meghivo', 'Ferenc', 'kijelentem', helyben)).match(/koino-meghivo:2:[A-Za-z0-9_-]+/) ?? [])[0] ?? '';
+      const mg = ((await fut(a, 'meghivo', 'Gizella', 'kijelentem', helyben)).match(/koino-meghivo:2:[A-Za-z0-9_-]+/) ?? [])[0] ?? '';
+      elsoA.kill();
+      await varj(1500);
+      ff = await feluletet(f, FF, helyben);
+      const csat = await ff.hiv('/api/csatlakozas', { method: 'POST', body: JSON.stringify({ meghivo: m }) });
+      const kep = async () => (await ff.hiv('/api/csere-allapot')).adat?.adatok?.belepes ?? null;
+      const elfogadva = await kep();
+      const of = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(PF)],
+        { env: { ...process.env, KOINO_ADAT: f, KOINO_NAPLO: '', KOINO_ERTESITO: ertSzkript, ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
+      of.stdout.on('data', (x) => { naplo.f += x; });
+      futok.push(of);
+      let kopog = null;
+      for (let i = 0; i < 120; i++) {
+        await varj(500);
+        const k = await kep();
+        if (k?.allapot === 'kopog' && k.kopogas?.szam >= 2 && k.jelentkezes) { kopog = k; break; }
+      }
+      // a meghívó készüléke újra fut — F sávja: kapcsolat, aztán bent
+      orjaratA();
+      // G: a kérelem útja — a második meghívóval csatlakozik, egy függő kérelem, és egy kézi csere viszi A-hoz
+      await fut(g, 'csatlakoz', mg, helyben);
+      await varj(2000);
+      await fut(g, 'kerelem', 'fejlecek', 'gyoker', helyben);
+      const gCsere = await fut(g, 'csere', helyben);
+      const gAllapot = JSON.parse(await readFile(join(await koinoMappa(g), 'csere.json'), 'utf8').catch(() => '{}'));
+      let bent = null;
+      const latott = new Set();
+      for (let i = 0; i < 120; i++) {
+        await varj(500);
+        const k = await kep();
+        if (k?.allapot) latott.add(k.allapot);
+        if (k?.allapot === 'tag') { bent = k; break; }
+      }
+      let ertesites = '';
+      for (let i = 0; i < 20 && !/Bent vagy a koinóban/.test(ertesites); i++) {
+        ertesites = await readFile(ertNaplo, 'utf8').catch(() => '');
+        if (!/Bent vagy a koinóban/.test(ertesites)) await varj(500);
+      }
+      const jo = {
+        meghivo: m.length > 20 && csat.allapot === 200,
+        elfogadva: elfogadva?.allapot === 'elfogadva' && Number.isFinite(elfogadva.elfogadva) && elfogadva.kopogas?.szam === 0
+          && Number.isFinite(elfogadva.lejar),
+        kopog: !!kopog && kopog.kapcsolat === null && Number.isFinite(kopog.kopogas.utolso),
+        jelentkezett: !!kopog?.jelentkezes && Number.isFinite(kopog.jelentkezes.ido) && kopog.jelentkezes.gepek === 0,
+        bent: !!bent && Number.isFinite(bent.kapcsolat) && bent.kapcsolat < bent.tag,
+        ertesites: /koino — bent vagy\|Bent vagy a koinóban/.test(ertesites),
+        kerelemUtja: Number.isFinite(gAllapot.belepes?.kapcsolat) && !gAllapot.belepes?.tag && !gAllapot.csere
+      };
+      const ok = Object.values(jo).every(Boolean);
+      const tiszta = (x) => x.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ');
+      if (!ok) process.stderr.write('    (M7: ' + JSON.stringify({ ...jo, elfogadva, kopog, bent, latott: [...latott], csat: csat.adat, g: gAllapot,
+        gCsere: tiszta(gCsere).slice(-300) }).slice(0, 2000)
+        + ')\n    (A napló: ' + tiszta(naplo.a).slice(-500) + ')\n    (F napló: ' + tiszta(naplo.f).slice(-700) + ')\n');
+      return ok;
+    } finally {
+      if (ff) ff.folyamat.kill();
+      for (const x of futok) x.kill();
+      await varj(1000);
+      for (const h of [a, f, g]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ⭐⭐ D118 (②b): A KAPU KOINÓ-SZABÁLYA a parancssoron és a cserén. Az A a szülőben ír egy gondolatot a gyermek születése
 // ELŐTT és egyet UTÁNA; a szülő kivitele a gyermekbe behozva csak az elsőt adja (a második a szülő jelene — „másik koinóé”),
 // és a csere (két „mindent” készülék) ugyanígy viszi tovább a B-nek. Viselkedést mérünk (a két lemezt). ⚠️ A számítás még

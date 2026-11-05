@@ -63,6 +63,9 @@
   <button type="button" id="ter-tarsak">🤝 Társak…</button>
 </div>
 
+<!-- ⭐⭐ M7: a belépő sávja — amíg nem tag, hol tart az első kapcsolat (`koinoBelepes.js`) -->
+<div class="koino-belepes" id="belepes-sav" role="status" aria-live="polite" hidden></div>
+
 <p class="allapot" id="allapot">Betöltés…</p>
 
 <main id="pakli" class="pakli"></main>
@@ -160,6 +163,8 @@ import { TerNezet } from './js/terNezet.js';
 import { csatlakozasMegnyitasa, tarsakMegnyitasa } from './js/koinoCsatlakozas.js';
 // ⭐⭐ D122: az első megnyitás — a csatlakozás ablaka (ha még egy koinót sem ismer a készülék), vagy a profil-űrlap
 import { elsoMegnyitas } from './js/koinoMeghivas.js';
+// ⭐⭐ M7: a belépő sávja (az alsó sáv kérdéséből — a `koino:csereAllapot` jelzés)
+import { belepesSavInditasa } from './js/koinoBelepes.js';
 // ⭐ D101: a maradék modálok koinós többlete (a tudás határa a modálok alján) — a betöltéskor csomagol.
 import './js/koinoModalok.js';
 // ⭐ D112 ⑤: a felderítés — a kártya menüjének „📷 Felderítés…” pontja (a kártya bővítési pontján) a betöltéskor.
@@ -179,6 +184,9 @@ const pakli = new KoinoPakli('pakli', 'modal-kontener', {
 });
 
 document.getElementById('tovabb').addEventListener('click', () => pakli.tovabbiKartyak());
+
+// ⭐⭐ M7: a belépő sávja — előbb, mint az alsó sáv első kérdése (az adja a jelzést)
+belepesSavInditasa(document.getElementById('belepes-sav'));
 
 // ⭐ Az alsó sáv — a pakli első betöltése után jön létre (lent); a tér váltása már előtte hivatkozhat rá.
 let alsoSav = null;

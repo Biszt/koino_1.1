@@ -1727,3 +1727,15 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     bármilyen témára ugyanazokat a címeket adja: három véletlen témán ellenőrizve), a valódi bejelentést nem** · ⏸️ (A) gyakoribb
     keresés, amíg él egy meghívó · (B) a zaj kiszűrése (a ⑦ 1. lelete) · (C) marad — javaslat (A)+(B) · ⚠️ közben: az ütközés útján
     jött bizonyíték után kimarad a belépő útja (`kerelemAtvetele`) — két perc késés · `meghivas_atvizsgalas.md` 9. szakasz.
+234. **2026-11-05 · M7 — a belépő sávja (Csaba: „a meghívott felületén értesítse a meghívottat, hogy a készüléke éppen próbálja
+    felvenni az első kapcsolatot, és jelezhetné a próbálkozásokat is”)** → **a csere-állapot (`<koino>/csere.json`) egy `belepes`
+    résszel: a meghívó elfogadása (a lap / a `csatlakoz`), a jelentkezés a meghívó készülék-témáján (az őrjárat címjegyzék-köre —
+    mikor, hány gép tárolta, mikor legközelebb), a kopogás (körönként egy próbálkozás, ha volt célja és még nincs kapcsolat), a
+    kapcsolat (a munka a meghívó tábla-aláírójával — vagy a kérelem útján a jelentkezés kérelme, illetve a meghívó egy címe) és a
+    tagság (a háztartás, egyszer — a készülék értesítésével, B5 (b)); a lap sávja (`koinoBelepes.js`) az alsó sáv 10 mp-es
+    kérdéséből rajzol** · ⭐ a kérelem útján a társ tábla-kulcsát nem kapjuk meg (a böngészős végigjárás lelete: az első munka a lap
+    kérése volt) → a meghívó címei a `meghivom.json`-ba · ⭐ a belépő értesítése csak akkor marad el, ha a készülék értesítését
+    kifejezetten kikapcsolták (egy friss belépőnek még nincs beállítása — az alapja „ki” —, és épp ő az, aki a lapot bezárva vár);
+    a régebben elfogadott meghívónál a lap nem mond „bent vagy”-ot · ⛔ elvetve: a lap maga kérdezze a tagságot (a lépéseket a
+    hosszan futó őrjárat látja — D100; a szöveg a laptól függetlenül igaz); külön végpont (az alsó sáv kérdése úgyis 10 mp-enként
+    jön) · `belepo_megtalalasa_atvizsgalas.md` 8.

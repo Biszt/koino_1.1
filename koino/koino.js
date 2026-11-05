@@ -125,7 +125,8 @@ import {
   torzsElemTarolo
 } from './js/tar/fajlTar.js';
 // ⭐ Az alsó sáv (2026-10-15): mikor cserélt utoljára a készülék, és mikor jön a következő kör (helyi feljegyzés)
-import { csereAllapotAlakja, korKezdete, korVege, csereFeljegyzese, csereAllapotKepe } from './js/csere/csereAllapot.js';
+import { csereAllapotAlakja, korKezdete, korVege, csereFeljegyzese, csereAllapotKepe, belepesKezdete, belepesJelentkezese,
+  belepesKopogasa, belepesKapcsolata, belepesTagsaga } from './js/csere/csereAllapot.js';
 // ⭐⭐ D101 ⑥: az értesítés-réteg — a postafiók a készüléken, két pillanatkép különbségéből
 import {
   beallitasokAlakja, ervenyesBeallitas, beallitasMentese, globalisMentese, ertesitesekSzamitasa,
@@ -1860,6 +1861,78 @@ async function meghivoBizonyitekom() {
   return { i: m.i, b: meghivoBizonyitek(m.s, { koino: KOINO, szemely: szerzo, horgony: h }) };
 }
 
+// ----- ⭐⭐ M7: a belépés útja — a lépések a lap sávjának (`csereAllapot.js`; a belépő megtalálása, 2026-11-04) -----
+
+/** ⭐ M7: megvan a kapcsolat — ha a társ (a hitelesített tábla-aláírója szerint) a meghívóm készüléke. */
+async function belepesKapcsolatFeljegyzese(alairo) {
+  if (typeof alairo !== 'string') return;
+  const m = await meghivomOlvasasa();
+  if (!m || m.alairo !== alairo) return;
+  await csereAllapota().modosit((a) => belepesKapcsolata(a, { most: Date.now() }));
+}
+
+/**
+ * ⭐ M7: egy függő kérelem munkája lement (kiszolgálva, elutasítva vagy ütközve — a társ felelt). A kérelem útján a társ
+ * tábla-kulcsát nem kapjuk meg, ezért a meghívóm készülékét másképp ismerjük fel: a jelentkezésem kérelme (MH6 — a koinó
+ * születése, a meghívó készülékének kopogtatójával; ezt csak a jelentkezésemre visszakopogó társnál választja a munka), vagy a
+ * társ címe a meghívó címei közül való (a böngésző-próbán az első munka a lap kérése volt: a zárt kapu elutasította, de a meghívó
+ * gépe felelt, és a kérelem `TAGSAG` körében megkapta a bizonyítékomat).
+ * @param {Object} fk - a függő kérelem
+ * @param {{cim: string, port: number}} tars
+ */
+async function kerelemKapcsolata(fk, tars) {
+  const m = await meghivomOlvasasa();
+  if (!m) return;
+  const jelentkezes = fk?.fajta === 'szelet' && fk.kulcs === KOINO
+    && (fk.kopogtatok ?? []).some((k) => k.fajta === 'keszulek' && k.kulcs === m.alairo);
+  const meghivoCime = Array.isArray(m.cimek) && !!tars && m.cimek.includes(tars.cim + ':' + tars.port);
+  if (!jelentkezes && !meghivoCime) return;
+  await csereAllapota().modosit((a) => belepesKapcsolata(a, { most: Date.now() }));
+}
+
+/** ⭐ M7: a címjegyzék-kör a meghívóm készülék-témáján jelentkezett — mikor, hány gép tárolta, mikor jön a következő. */
+async function belepesJelentkezesFeljegyzese(bejelentesek) {
+  const m = await meghivomOlvasasa();
+  if (!m) return;
+  const be = (bejelentesek ?? []).find((x) => x.kulcs === 'keszulek:' + m.alairo);
+  if (!be) return;
+  const most = Date.now();
+  await csereAllapota().modosit((a) => belepesJelentkezese(a, { gepek: be.tarolta, kovetkezo: most + HIRDETES_KOZ, most }));
+}
+
+/**
+ * ⭐⭐ M7: A BELÉPÉS KÖVETÉSE a háztartásban — ha egy meghívóval léptem be ide: a feljegyzés (ha a lap nem írta — egy régebben
+ * elfogadott meghívónál; ha már tag vagyok, a lap semmit nem mutat), és ha közben tag lettem: a „bent vagy” (egyszer), a naplósor
+ * és (B5 (b)) a készülék értesítése — a lapot közben bezárhatták. ⚠️ Az értesítés csak akkor marad el, ha a készülék értesítését
+ * kifejezetten kikapcsolták: egy friss belépőnek még nincs beállítása (az alapja „ki”), és épp ő az, aki a lapot bezárva vár.
+ * @returns {Promise<boolean>} tag lett-e most
+ */
+async function belepesKovetese(jel = '') {
+  const m = await meghivomOlvasasa();
+  if (!m) return false;
+  const a = await csereAllapota().olvas();
+  if (a.belepes?.tag) return false;
+  const h = await sajatHorgonyom();
+  const tag = h ? (await tagE(tar, KOINO, h).catch(() => ({ igen: false }))).igen : false;
+  const elfogadva = Number.isFinite(m.ido) ? m.ido : Date.now();
+  if (!a.belepes || a.belepes.elfogadva !== elfogadva) {
+    await csereAllapota().modosit((x) => belepesKezdete(x, { elfogadva, lejar: m.lejar ?? null, tag: tag ? elfogadva : null }));
+    return false;
+  }
+  if (!tag) return false;
+  await csereAllapota().modosit((x) => belepesTagsaga(x, { most: Date.now() }));
+  kiir(SZIN.jo + '  ✅ ' + ora() + ' ' + jel + 'bent vagyok a koinóban — a meghívóm befogadott (tag lettem)' + SZIN.vege);
+  try {
+    const nyers = await ertesitesTarolo(KOINO).beallitasOlvas();
+    if (nyers?.globalis?.emailErtesites !== false) {
+      await keszulekErtesitese([{ cim: 'koino — bent vagy', szoveg: 'Bent vagy a koinóban — a meghívód befogadott, jönnek a gondolatok.' }]);
+    }
+  } catch (hiba) {
+    console.warn('belepesKovetese - az értesítés nem ment', { ok: hiba.message });
+  }
+  return true;
+}
+
 /** ⭐ D121 (②): a tagságom ebben a koinóban — a belépő lapjának (a horgonyom, tag vagyok-e). */
 async function tagsagAllapotom() {
   await tar.frissit?.();   // a meghívást az őrjárat hozza — a hosszan futó felület így látja (D100)
@@ -2752,14 +2825,16 @@ async function cimjegyzekKor(port) {
     try { felajanlas = await felajanlasKor(kliens); } catch (hiba) { console.warn('a felajánlás most nem ment', { ok: hiba.message }); }
     let bejelentve = 0;
     const bejelentett = [];
+    const bejelentesek = [];   // ⭐ M7: témánként, hány gép tárolta (a belépő lapja ebből mondja ki a jelentkezést)
     for (const k of fuggoKopogtatok(await kerelmekOlvasasa())) {
       const be = await kliens.bejelent(kopogtatoTemaBuffer(k), port);
       bejelentett.push(k.fajta + ':' + k.kulcs);
+      bejelentesek.push({ kulcs: k.fajta + ':' + k.kulcs, tarolta: be.tarolta ?? 0 });
       if (be.tarolta > 0) bejelentve++;
     }
     await dhtIsmertekMentese(kliens);
     return { eredmeny, kopogtatok: [...kopogtatok.values()], regioTarsak: [...regioTarsak.values()], bejelentve, bejelentett,
-      felajanlas, forgalom: kliens.forgalom() };
+      bejelentesek, felajanlas, forgalom: kliens.forgalom() };
   } finally {
     kliens.bezar();
   }
@@ -3920,6 +3995,8 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
     await kerelmekIrasa(probalkozas(await kerelmekOlvasasa(), fk.az));
     return vege;
   }
+  // ⭐ M7: ha a kérelem a meghívóm készülékénél ment le (az ütközés is kapcsolat), a lap sávja kimondja.
+  await kerelemKapcsolata(fk, tars);
   if (r.utkozes) {
     // ⭐ A ⑦: nem bukott próbálkozás — a társ kérelme ment elöl; a miénk a következő munkában (a kétperces jel nélkül).
     allapot.kerelemProbaltak.delete(fk.az + '|' + tars.cim + ':' + tars.port);
@@ -5049,7 +5126,7 @@ async function orjaratHazimunkaja(allapot, { port, sikeres }) {
   if (!allapot.hirdetesFut && Date.now() - (allapot.utolsoHirdetes ?? 0) >= HIRDETES_KOZ) {
     allapot.utolsoHirdetes = Date.now();
     allapot.hirdetesFut = cimjegyzekKor(allapot.sajatKulsoUdp?.port ?? port)
-      .then((h) => {
+      .then(async (h) => {
         // ⚠️ A „nem értem el a DHT-t" és a „senki nem tárolta" két külön dolog (a 40. mérés tanulsága).
         const tarolt = h.eredmeny.filter((e) => e.tarolta > 0).length;
         const elerte = h.eredmeny.some((e) => e.probalt > 0);
@@ -5088,12 +5165,18 @@ async function orjaratHazimunkaja(allapot, { port, sikeres }) {
           kiir(SZIN.halvany + '  🔍 ' + ora() + ' ' + kk + 'a kereső-régióm ' + ujRegioTars + ' további tartója a DHT-n — a kör'
             + ' céljai közé' + SZIN.vege);
         }
+        // ⭐ M7: ha a meghívóm készülék-témáján jelentkeztem, a lap sávja kimondja (mikor, hány gép tárolta, mikor legközelebb)
+        await belepesJelentkezesFeljegyzese(h.bejelentesek);
       })
       .catch((hiba) => {
         kiir(SZIN.halvany + '  ⚠ ' + kk + 'a címjegyzék hirdetése most nem sikerült: ' + hiba.message + SZIN.vege);
       })
       .finally(() => { allapot.hirdetesFut = null; });
   }
+
+  // ⭐⭐ M7: a belépés követése — ha egy meghívóval léptem be ide, és közben tag lettem: a lap „bent vagy”-a és az értesítés.
+  try { await belepesKovetese(kk); }
+  catch (hiba) { kiir(SZIN.halvany + '  ⚠ ' + kk + 'a belépés követése most nem sikerült: ' + hiba.message + SZIN.vege); }
 
   // ⭐⭐ ÉS A HÁZTARTÁS: az elakadt tudatpontok visszavétele (2026-09-07).
   // A készülék magától könyvel — de csak megülepedés után, mert egy késve érkező,
@@ -5391,6 +5474,8 @@ function resMunka(allapot, halo, tars) {
         + csere.masKoino + '), nem cseréltünk' + SZIN.vege);
       return alap;
     }
+    // ⭐ M7: ha a társ a meghívóm készüléke, a belépés útján megvan a kapcsolat (a lap sávja: „a meghívód most fogad be”).
+    await belepesKapcsolatFeljegyzese(alairo);
     // ⭐ Ha a társ csak EGY szeletet kért (`hozd`), az nem csere — nincs mit tanulni belőle.
     if (csere.szeletKiszolgalva) {
       kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port
@@ -6235,8 +6320,14 @@ async function meghivoElfogadasa(szoveg, { becenev = null, felulir = false, peld
   const p = await koinoPeldanyEgyszer(m.koino);
   const b = await p.belepesHaNincs();
   // ⭐⭐ D122: a meghívóm (az azonosító és a titok — a bizonyítékhoz; a meghívó által beírt név — a profil-űrlap előtöltéséhez)
+  const elfogadva = Date.now();
+  // ⭐ M7: a meghívó címei is (a kérelem útján a társ tábla-kulcsát nem kapjuk meg — a címéről ismerjük fel a meghívó gépét)
   await writeFile(join(alapHely(), m.koino, 'meghivom.json'), JSON.stringify({ i: m.azonosito, s: m.titok, nev: m.meghivottNev,
-    alairo: m.alairo, lejar: m.lejarat, profilMezok: m.profilMezok, ido: Date.now() }), 'utf8');
+    alairo: m.alairo, lejar: m.lejarat, profilMezok: m.profilMezok, ido: elfogadva,
+    cimek: m.cimek.map((c) => c.hoszt + ':' + c.port) }), 'utf8');
+  // ⭐ M7: a belépés útja innen indul — a lap sávja azonnal kimondja (az őrjárat még el sem indult)
+  try { await p.csereAllapota().modosit((a) => belepesKezdete(a, { elfogadva, lejar: m.lejarat ?? null })); }
+  catch (hiba) { console.warn('meghivoElfogadasa - a belépés feljegyzése nem ment', { ok: hiba.message }); }
   // ⭐⭐ D121 MH6 (A): A JELENTKEZÉS KÉT HÁLÓZAT KÖZÖTT — függő kérelem a koinó születésére, CÉL NÉLKÜL, csak a meghívó
   // készülékének kopogtatójával: az őrjáratom a DHT-n jelentkezik a meghívó készülék-témáján (D92/1), a meghívó őrjárata
   // visszakopog, és a rés megnyílik. Ugyanazon a wifin nem zavar: ott a csere a felvett címen megy (a cél nélküli kérelmet a
@@ -8787,8 +8878,9 @@ try {
         {
           const korUtan = Date.now() + (Number.parseInt(process.env.KOINO_ORAELTOLAS ?? '0', 10) || 0);
           const kovetkezo = Math.ceil((korUtan + 1) / kozMs) * kozMs - (korUtan - Date.now());
-          await csaladKorFeljegyzese((a) => korVege(a, { perc, port: kapu.port, kulso: res.sajatKulsoUdp ?? null, kovetkezo,
-            sikeres: sikeresEbbenAKorben, celok: korCelok, uj: korUj, most: Date.now() }));
+          // ⭐ M7: és ha egy belépés még keresi az első kapcsolatot, ez a kör egy próbálkozás volt (ha volt célja)
+          await csaladKorFeljegyzese((a) => belepesKopogasa(korVege(a, { perc, port: kapu.port, kulso: res.sajatKulsoUdp ?? null,
+            kovetkezo, sikeres: sikeresEbbenAKorben, celok: korCelok, uj: korUj, most: Date.now() }), { celok: korCelok, most: Date.now() }));
         }
 
         // ===== ⭐⭐⭐ A KOPOGÁS SAJÁT ÜTEME (41., 45., 80. mérés — 2026-10-19) =====

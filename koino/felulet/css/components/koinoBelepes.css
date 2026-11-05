@@ -1,0 +1,45 @@
+/* koino/felulet/css/components/koinoBelepes.css */
+
+/* Felelősség: ⭐⭐ M7 — a belépő sávja a lap tetején (`koinoBelepes.js`): amíg a belépő nem tag, hol tart az első kapcsolat
+   (elfogadva → bejelentkezett → kopog → kapcsolat → bent). A színek a lap meglévő változóiból (`base/variables.css`). */
+
+.koino-belepes {
+  position: relative;
+  margin: 0 1rem .75rem;
+  padding: .6rem 2.2rem .6rem .9rem;
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-primary);
+  border-radius: 6px;
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: .9rem;
+  line-height: 1.4;
+}
+
+.koino-belepes[data-allapot="tag"] { background: var(--color-primary-highlight); }
+.koino-belepes[data-allapot="lejart"] { border-left-color: var(--color-error); background: var(--color-error-highlight); }
+
+.koino-belepes__cim { margin: 0; font-weight: 600; }
+
+.koino-belepes__lepesek { margin: .35rem 0 0; padding: 0; list-style: none; }
+.koino-belepes__lepesek li { margin: .15rem 0; }
+.koino-belepes__kesz { opacity: .7; }
+.koino-belepes__var { opacity: .55; }
+
+.koino-belepes__segitseg,
+.koino-belepes__figyelem { margin: .45rem 0 0; font-size: .85rem; }
+.koino-belepes__figyelem { color: var(--color-error); }
+
+.koino-belepes__bezar {
+  position: absolute;
+  top: .3rem;
+  right: .4rem;
+  border: 0;
+  background: transparent;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-text);
+  opacity: .6;
+}
+.koino-belepes__bezar:hover { opacity: 1; }

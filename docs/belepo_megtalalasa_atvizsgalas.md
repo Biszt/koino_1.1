@@ -163,3 +163,16 @@ megerősítés a terepi próbán (Csabának nincs mobilnetes készüléke).
   Rontás: a `kerelemAtvetele` hívása nélkül a meghívó „igazolt — a belépése még nem jött meg” marad (pontosan a terepi állapot).
 - ✅ **M6 — igaz felirat:** „N témán jelentkeztem” (az őrjárat és a `kerelem` parancs; eddig „tartónál” / „helyen”). A „kérő vár
   rám” zajszűrése az M3-mal jön.
+- ✅ **M7 — a belépő sávja** (2026-11-05, elágazás 234): a csere-állapot (`csere.json`, amit a lap úgyis 10 mp-enként kérdez) egy
+  `belepes` résszel — `csereAllapot.js`: `belepesKezdete` (a meghívó elfogadása: a lap / a `csatlakoz`), `belepesJelentkezese` (az
+  őrjárat címjegyzék-köre a meghívó készülék-témáján: mikor, hány gép tárolta, mikor legközelebb), `belepesKopogasa` (körönként
+  egy próbálkozás, ha volt célja és még nincs kapcsolat), `belepesKapcsolata` (a munka a meghívó tábla-aláírójával; a kérelem útján
+  — ahol a társ tábla-kulcsát nem kapjuk meg — a jelentkezés kérelme, vagy a társ címe a meghívó címei közül), `belepesTagsaga` (a
+  háztartás, egyszer); a kép (`belepesKepe`) a legelőrébb tartó lépés, a „bent vagy” 5 percig látszik, fél óra kapcsolat nélkül
+  segítő mondat. A lap: `felulet/js/koinoBelepes.js` — a sáv a lap tetején (a lépések listája; ha az őrjárat nem fut, kimondja;
+  10 perccel a kapcsolat után tagság nélkül: „a meghívód nézze meg a Meghívóim ablakát”). ⭐ B5 (b) a belépő oldalán: a tagsággal a
+  készülék értesít („Bent vagy a koinóban”) — csak akkor nem, ha a készülék értesítését kifejezetten kikapcsolták (egy friss belépőnek
+  még nincs beállítása). Próbák: két modul-próba (a lépések sorrendje, a szélek) és egy parancssor-próba (A őrjárata előbb áll: F
+  „kopog” → A elindul: „kapcsolat” → „tag” + értesítés; G a kérelem útján) — hét rontással; böngészőben végigjárva (asztali és
+  telefon-szélességen). ⚠️ A „Meghívóim” igazi állapota (B5 (a): „jelentkezett — kopogok rá”) az M8-cal jön: a meghívó rekeszéből
+  tudja a meghívó, MELYIK meghívója jelentkezett.

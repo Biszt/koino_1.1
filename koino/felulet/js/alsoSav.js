@@ -379,6 +379,8 @@ export class AlsoSav {
       // A program órája és a lapé ugyanaz a gép — de a visszaszámlálás a válasz pillanatától számol, nem a lap órájától.
       this.csere = a;
       this.csereKerdezveEkkor = Date.now();
+      // ⭐ M7: a belépő sávja (`koinoBelepes.js`) ugyanebből a válaszból rajzol — külön kérdés nélkül
+      document.dispatchEvent(new CustomEvent('koino:csereAllapot', { detail: a }));
       const uj = a.utolsoUj ?? null;
       if (this.latottUj === undefined) {
         this.latottUj = uj;                       // az első kérdés: alapvonal (a lap épp most töltött be)
