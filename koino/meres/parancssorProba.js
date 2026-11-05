@@ -6982,6 +6982,81 @@ proba('⛔⛔ AZ ŐRJÁRAT MEGNEVEZI, HA NEM TUDJA MEGMÉRNI A KÜLSŐ CÍMÉT �
     }
   });
 
+// ===================================
+// ⛔ A TÁBLÁN TALÁLT CÍM NEM TALÁLKOZÁS (a terep lelete, 2026-11-05)
+// ===================================
+//
+// ⛔ MIÉRT SZÜLETETT: a laptop két régen leállt telefon 25 órás tábla-bejegyzését minden második percben megtalálta, és
+// mindannyiszor TALÁLKOZÁSNAK könyvelte — a néma kötés így soha nem lett régi: a táblát kétpercenként olvasta (a 72.
+// mérés visszalépő üteme helyett), a `talalkozasok` a hallgatás alatt is nőtt, és a halott kötés nem esett ki. ⭐ A próba
+// egy valódi őrjáratot futtat hamis DHT-n: a társ kiírja a címét, az őrjárat a néma kötést kétszer megtalálja a táblán
+// (először új, másodszor a régi címként), és a LEMEZEN a kötés címe az új, de a találkozások száma és a hallgatás ideje
+// változatlan. Rontás: az őrjárat a régi `kotesFeljegyzese`-t hívja (a `talalkozasok` 3 → 5).
+proba('⛔ A TÁBLÁN TALÁLT CÍM NEM TALÁLKOZÁS — a kötés címe frissül, a hallgatása nem (őrjárat, hamis DHT)',
+  async () => {
+    const { hamisHalozat } = await import('./dhtProba.js');
+    const { ujTablaKulcs, nyilvanosResz } = await import('../js/csere/tablaKulcs.js');
+    const { kotesTarolo } = await import('../js/tar/fajlTar.js');
+
+    const iro = await ujKeszulek();
+    const olvaso = await ujKeszulek();
+    const halo = await hamisHalozat(12);
+    const tukor = await nemaFoglalat();
+    const P = { KOINO_AZONOSITO: 'p' };
+    let orjarat = null;
+    try {
+      const iroK = await ujTablaKulcs();
+      const olvasoK = await ujTablaKulcs();
+      await writeFile(join(iro, 'tabla-kulcs.json'), JSON.stringify(iroK), 'utf8');
+      await writeFile(join(olvaso, 'tabla-kulcs.json'), JSON.stringify(olvasoK), 'utf8');
+      // ⚠️ A kör 12 mp; a néma kötést az első 4 körben mindig keressük — a hallgatás 13 mp-ről indul, így az első két
+      // kereséshez ~45 mp van.
+      const hallgat = Date.now() - 13000;
+      await kotesTarolo(iro, 'p').ir([{ ...nyilvanosResz(olvasoK), hoszt: '10.0.0.1', port: 7373,
+        utoljara: Date.now(), talalkozasok: 3, eloszor: Date.now() }]);
+      await kotesTarolo(olvaso, 'p').ir([{ ...nyilvanosResz(iroK), hoszt: '10.0.0.2', port: 7373,
+        utoljara: hallgat, talalkozasok: 3, eloszor: hallgat - 3600000 }]);
+      const kornyezet = { KOINO_DHT_BELEPOK: halo.belepo(0), ...P };
+      const kiiras = await fut(iro, 'tabla', 'kiir', '203.0.113.7', '41777', kornyezet);
+
+      let kimenet = '';
+      orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.2', '7997'], {
+        env: { ...process.env, KOINO_ADAT: olvaso, KOINO_NAPLO: '', ...kornyezet,
+          KOINO_TUKOR: '127.0.0.1:' + tukor.address().port },
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+      orjarat.stdout.on('data', (d) => { kimenet += d; });
+      const kezdet = Date.now();
+      while (Date.now() - kezdet < 60000 && !/címe a táblán a régi: 203\.0\.113\.7:41777/.test(kimenet)) await varj(500);
+      orjarat.kill();
+      orjarat = null;
+      await varj(500);
+
+      const k = (await kotesTarolo(olvaso, 'p').olvas()).find((x) => x.alairo === nyilvanosResz(iroK).alairo);
+      const jo = {
+        kiirva: /1 rekeszbe kiírva/.test(kiiras),
+        uj: /a táblán megvan egy néma társ új címe: 203\.0\.113\.7:41777/.test(kimenet),
+        regi: /címe a táblán a régi: 203\.0\.113\.7:41777/.test(kimenet),
+        cim: k?.hoszt === '203.0.113.7' && k?.port === 41777,
+        talalkozasok: k?.talalkozasok === 3,
+        hallgat: k?.utoljara === hallgat
+      };
+      const ok = Object.values(jo).every(Boolean);
+      if (!ok) {
+        process.stderr.write('    (a tábla-találat: ' + JSON.stringify(jo) + ' · ' + JSON.stringify(k) + ')\n');
+        process.stderr.write(kimenet.split('\n').slice(-25).map((s) => '      ' + s).join('\n') + '\n');
+      }
+      return ok;
+    } finally {
+      if (orjarat) orjarat.kill();
+      tukor.close();
+      halo.bezar();
+      await varj(500);
+      await rm(iro, { recursive: true, force: true });
+      await rm(olvaso, { recursive: true, force: true });
+    }
+  });
+
 proba('⭐⭐ A MEGISMERT DHT-GÉPEK ÁTKERÜLNEK A TÁRSHOZ (a belépő csak kurbli)',
   async () => {
     // ⛔ MIT MÉR: Csaba (c) döntését — a csere adjon át néhány DHT-gépet, hogy egy friss

@@ -14,7 +14,7 @@ import {
   titkositva, kititkositva, bajtokka
 } from '../js/csere/tablaKulcs.js';
 import {
-  talalkozasFeljegyzese, kotesek, kopogasCeljai, nemaKotesek, tablanKeresendok, jegyzekTakaritasa,
+  talalkozasFeljegyzese, tablaCimFeljegyzese, kotesek, kopogasCeljai, nemaKotesek, tablanKeresendok, jegyzekTakaritasa,
   kotesCimei, helyiCimE, cimRangja, KOTES_CEL, KOTES_KORLAT
 } from '../js/csere/kotesek.js';
 
@@ -312,6 +312,32 @@ proba('⭐ A RÉGÓTA NÉMA KÖTÉST VISSZALÉPŐ ÜTEMBEN keressük a táblán 
   for (let k = 1; k <= 1440; k++) if (keresunk(k)) egyNap.push(k);
   return JSON.stringify(korok) === JSON.stringify([1, 2, 3, 4, 8, 16, 32, 64, 128, 192, 256])
     && egyNap.length <= 30 && !keresunk(0);
+});
+
+// ⛔ A TERÉP LELETE (2026-11-05): a táblán talált cím találkozásnak számított — két régen leállt telefon 25 órás
+// bejegyzése a kötésüket kétpercenként „élővé” tette. Rontás: a `tablaCimFeljegyzese` helyett `talalkozasFeljegyzese`.
+proba('⛔ A TÁBLÁN TALÁLT CÍM NEM TALÁLKOZÁS (a terep lelete) — a cím a kötésé lesz, a hallgatás és az ütem marad', () => {
+  const ablak = 60000;
+  let j = talalkozasFeljegyzese([], kulcs('anna'), { hoszt: '10.0.0.1', port: 1 }, 0);
+  // a hallgatás 4. körében a táblán egy cím (mint az őrjáratban)
+  const t4 = 4 * ablak + 30000;
+  j = tablaCimFeljegyzese(j, kulcs('anna'), { hoszt: '203.0.113.7', port: 41777 }, t4);
+  const anna = j.find((k) => k.alairo === kulcs('anna').alairo);
+  const cel = kopogasCeljai(j).some((c) => c.cim === '203.0.113.7' && c.port === 41777 && c.alairo === anna.alairo);
+  const marad = anna.utoljara === 0 && anna.talalkozasok === 1 && anna.eloszor === 0;
+  // a 6. körben a tábla NEM jön (az ütem a hallgatás hosszából: 1, 2, 3, 4, 8, …) — a hibás változat itt újra keresne
+  // (nála a 4. kör óta 2 kör telt el)
+  const utem = tablanKeresendok(j, ablak, 6 * ablak + 30000).length === 0
+    && tablanKeresendok(j, ablak, 8 * ablak + 30000).length === 1;
+  // a takarítás: a hallgató kötés a tábla-találat után is a legrégebben hallott (egy hellyel Béla marad)
+  let k2 = talalkozasFeljegyzese(j, kulcs('bela'), { hoszt: '10.0.0.2', port: 2 }, 2 * ablak);
+  k2 = tablaCimFeljegyzese(k2, kulcs('anna'), { hoszt: '203.0.113.8', port: 41778 }, 9 * ablak);
+  const takaritas = jegyzekTakaritasa(k2, 1).map((k) => k.alairo).join() === kulcs('bela').alairo;
+  // ismeretlen kötést nem szül
+  const nemSzul = tablaCimFeljegyzese(j, kulcs('cili'), { hoszt: '203.0.113.9', port: 1 }, t4) === j;
+  const jo = { cel, marad, utem, takaritas, nemSzul };
+  if (!Object.values(jo).every(Boolean)) process.stderr.write('    (a tábla-cím: ' + JSON.stringify(jo) + ')\n');
+  return Object.values(jo).every(Boolean);
 });
 
 export default futtatas;

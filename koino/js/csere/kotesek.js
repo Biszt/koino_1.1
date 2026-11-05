@@ -124,6 +124,37 @@ export function talalkozasFeljegyzese(jegyzek, tablaKulcs, cim, most = Date.now(
 }
 
 /**
+ * ⭐ A TÁBLÁN TALÁLT CÍM — NEM TALÁLKOZÁS (a terep lelete, 2026-11-05).
+ *
+ * A cím a kötés címei közé kerül (a következő kör rá kopog), de a társról a kötés NEM hallott: az `utoljara`, a
+ * `talalkozasok` és az `eloszor` marad. Ha a cím él, az első csere a rendes találkozás (`talalkozasFeljegyzese`).
+ *
+ * ⛔ MIÉRT KELL KÜLÖN: eddig a tábla-találat is a `talalkozasFeljegyzese`-n ment. Terepen két régen leállt telefon
+ * 25 órás bejegyzését a DHT még őrizte, és a laptop minden második percben megtalálta — a kötésük így minden
+ * második percben „élő” lett: a visszalépő ütem (72. mérés) elmaradt (a táblát kétpercenként olvastuk), a
+ * `talalkozasok` a hallgatás alatt is nőtt (971), és a halott kötés soha nem esett ki a jegyzékből (a takarítás az
+ * `utoljara` szerint dönt — 2026-09-21).
+ *
+ * ⚠️ Új kötést nem szül: a táblán csak a meglévő (néma) kötéseinket keressük.
+ *
+ * @param {Array<Object>} jegyzek
+ * @param {{alairo: string, titkosito?: string}} tablaKulcs - a társ tábla-kulcsa
+ * @param {{hoszt: string, port: number}} cim - amit a táblán találtunk
+ * @returns {Array<Object>} az ÚJ jegyzék (ismeretlen kötésnél vagy rossz címnél a régi)
+ */
+export function tablaCimFeljegyzese(jegyzek, tablaKulcs, cim, most = Date.now()) {
+  const regi = (jegyzek ?? []).find((k) => k.alairo === tablaKulcs?.alairo);
+  if (!regi || !cim?.hoszt || !Number.isInteger(cim?.port)) return jegyzek;
+  const cimek = [
+    { hoszt: cim.hoszt, port: cim.port, utoljara: most },
+    ...kotesCimei(regi).filter((c) => c.hoszt !== cim.hoszt || c.port !== cim.port)
+  ].sort((a, b) => (b.utoljara ?? 0) - (a.utoljara ?? 0)).slice(0, KOTES_CIM_KORLAT);
+  const uj = { ...regi, titkosito: tablaKulcs.titkosito ?? regi.titkosito ?? null,
+    hoszt: cim.hoszt, port: cim.port, cimek };
+  return [...jegyzek.filter((k) => k.alairo !== regi.alairo), uj];
+}
+
+/**
  * Kik a KÖTÉSEIM? — a legrendszeresebbek, legfeljebb `korlat`.
  *
  * ⭐ A SORREND: akivel többször értünk össze, az előrébb; azonos számnál a frissebb.

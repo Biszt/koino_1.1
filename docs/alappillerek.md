@@ -1760,3 +1760,13 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     legfeljebb 31 nap), és a tagsággal lezárul** · ⭐ a rekesz címe azért kivétel, mert a belépő maga írta ki, és ha épp nem érhető
     el, napokig is keresni kell · ⛔ mérve: az M4 modul-próbájának (b) rontása eleinte nem bukott (a próba három óránál nézett, ahol a
     régi két órás szabály is lejáratott) → egy egy óránál vett ellenőrzés · `belepo_megtalalasa_atvizsgalas.md` 8.
+237. **2026-11-05 · a terep — a belépő megtalálása mobilneten, és a lelete: a tábla-találat nem találkozás** → **Schubert Zoltán (Csaba barátja) mobilneten: a meghívó sorát bemásolta, a telefonja 17:30-kor a rekeszbe írt, a laptop (otthoni wifi) 17:32:20-kor megtalálta (az M2 kétperces üteme), a rés 17:33:00-kor az első próbára nyílt, 17:33:07-kor a laptop magától meghívta (D122) — cím beírása nélkül; 50 percen át percenként csere, a gondolata átért.
+    ⛔ A lelet: a hirdetőtábláról olvasott cím a `talalkozasFeljegyzese`-n ment, vagyis TALÁLKOZÁSNAK számított — két egy napja
+    leállt telefon bejegyzését a DHT még őrizte, és a laptop kétpercenként megtalálta: a visszalépő ütem (72. mérés) elmaradt (a
+    táblát kétpercenként olvasta), a `talalkozasok` a hallgatás alatt is nőtt (971), és a halott kötés nem esett ki a jegyzékből (a
+    takarítás az `utoljara` szerint dönt — 2026-09-21). Most `kotesek.js` `tablaCimFeljegyzese`: a cím a kötés címei közé kerül (a
+    következő kör rá kopog), a hallgatás marad; ha a cím él, az első csere a találkozás; a napló kimondja, ha a táblán a régi cím
+    áll** · ⭐ miért nem a tábla-bejegyzés idejével: a `mikor` a társ órája (idegen óra) — a hallgatás a saját megfigyelésünk ·
+    próbák: egy modul-próba és egy parancssor-próba (valódi őrjárat hamis DHT-n, a lemezt nézi) — a rontásra a `talalkozasok` 3 → 5,
+    pontosan a terepi viselkedés · ⚠️ nyitott: a laptop régi őrjárata egyszer 35 percre megállt (oka ismeretlen, mérjük) ·
+    `belepo_megtalalasa_atvizsgalas.md` 9.

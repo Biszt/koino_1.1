@@ -5412,6 +5412,12 @@ meghívó titkából); a kereső két friss klienssel, sorban keres. ⏸️ A k�
 → A belépő cetlije BEP 44-re költözzön (a meghívó titkából származó kulcspárral — „a meghívó rekesze”); ⚠️ és a koinó többi BEP 5
 útja (a címjegyzék — D91: a gyökér-darab hirdetése, a kopogtatók, a kereső-régió társai) ugyanettől szenved — külön átvizsgálás.
 
+
+⭐ **A két készülékes rész — a terep (2026-11-05 este, laptop otthoni wifin + egy mobilnetes telefon a CGNAT mögött):** a belépő a
+meghívó rekeszébe (BEP 44) 17:30:08-kor írt, a meghívó a valódi DHT-n 17:32:20-kor megtalálta (a meghívó kora szerinti kétperces
+keresés első-második menete), a rés 17:33:00-kor az első próbára nyílt, 17:33:07-kor tag — cím beírása nélkül. A BEP 5 zaja a terepen
+is jelen volt (20 percenként két „kérő”, mindig más cím; az M3 (a) 3 kör után kidobta). Részletek: `docs/belepo_megtalalasa_atvizsgalas.md` 9.
+
 ---
 
 ## 86. ⭐ A TÖRZS-HATÁR HATÁSA — mit hoz el a nem vállaló a kártyák kódjából? (D120, a 85. megismételve, 2026-10-29, a laptopon)

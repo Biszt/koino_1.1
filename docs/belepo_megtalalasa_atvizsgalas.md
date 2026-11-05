@@ -200,3 +200,35 @@ megerősítés a terepi próbán (Csabának nincs mobilnetes készüléke).
   (`belepesKovetese`) a jelentkezés lezárul. Próbák: egy modul-próba (három rontás) és az M7 parancssor-próbájában a belépő lemeze
   (két rontással).
 - ⏭️ **Hátra:** a terepi próba (egy mobilnetes telefon — a 87. két készülékes része is), és a koinó többi BEP 5 útjának átvizsgálása.
+
+## 9. ✅ A terep (2026-11-05 este) — mobilnet és otthoni wifi, cím beírása nélkül
+
+Csaba a laptop lapján (`terep4`, „Meghívókulcs-próba”, az M3 (a) és az M4 utáni kóddal) 17:26:46-kor meghívót állított ki Schubert
+Zoltánnak (Csaba barátja, mobilneten — a telefonja a CGNAT mögött: 151.0.83.29, belül 10.40.217.106 és 100.113.152.100). Zoltán a
+sort bemásolta a Termuxba; a telepítés (`pkg`, Node, a program) a mobilneten néhány perc. A laptop naplója szerint:
+
+- **17:28** (az ő órája) a belépése; **17:30:08** a telefonja kiírta a címeit a meghívó rekeszébe (BEP 44).
+- **17:32:20** a laptop a háztartásában megtalálta: *„📮 Schubert Zoltán jelentkezett a meghívóm rekeszében — kopogok rá
+  (151.0.83.29:42957, 10.40.217.106:7373, 100.113.152.100:7373)”* — az M8 a valódi DHT-n működik, az M2 kétperces üteme elkapta.
+- **17:33:00** a rés az első próbára megnyílt (50 ms); Zoltán első kérelmét a laptop még nem szolgálta ki (*„zárt koinó, nem tag”*),
+  a saját függő kérelmével elhozta a belépését.
+- **17:33:07** *„✉️ meghívtam: Schubert Zoltán — a meghívómmal lépett be”* (D122) — a csere ugyanabban a percben.
+- **17:34** Zoltán lapja fejléceket kért; amit a laptop nem tartott, azt továbbadásra átvette. **17:35** megjött a „Teszt” gondolata.
+- 50 percen át percenként egy csere (2,5–3,2 KB, „nincs újdonság”), a telefon címe (a CGNAT portja) végig ugyanaz.
+- **18:23** óta a telefon hallgat (valószínűleg a Termux leállt — Androidon `termux-wake-lock` kell, különben a háttérben leállhat).
+
+⭐ Ami ezzel igazolva: a belépő megtalálása mobilnet és otthoni router között **cím beírása nélkül** (M8 + M2), a rés a két NAT között
+az első próbára, és a meghívó gépe magától meghív. Az M3 (a) a terepen is dolgozott: a címjegyzék-kör 20 percenként két „kérőt”
+hozott a DHT zajából (mindig másikat), és a szűrő 3 kör után kidobta őket. ⚠️ Amit nem láttunk: a belépő lapjának sávját (M7) — Zoltán
+telefonján volt; és a B5 (a) számlálója a rekesz feljegyzésében 0 maradt (a rés a megtalálás utáni első körben nyílt).
+
+⛔ **A lelet (javítva, elágazás 237):** a hirdetőtábláról olvasott cím TALÁLKOZÁSNAK számított. A laptop két régi kötése (két egy napja
+leállt telefon) bejegyzését a DHT még őrizte (*„az ő órája szerint 1500 perce írta ki”*), és a laptop kétpercenként megtalálta — a
+kötésük így kétpercenként „élő” lett: a visszalépő ütem (72. mérés) elmaradt, a találkozás-számláló a hallgatás alatt is nőtt (971), és
+a halott kötés nem eshetett ki a jegyzékből. Most `kotesek.js` `tablaCimFeljegyzese`: a cím a kötés címei közé kerül, a hallgatás
+marad. Az új kóddal újraindított laptop a két halott telefont már nem keresi kétpercenként (a következő keresés a hallgatás 64. körében).
+
+⚠️ **Nyitott:** a laptop régi őrjárata 18:40:26-kor (egy tábla-találat kiírása után) megállt, és 19:15-ig semmit nem csinált — nem
+kopogott, fájlt nem írt; a gép nem aludt (a Windows eseménynaplója), a Ctrl+C azonnal leállította. Az oka ismeretlen: a kör a táblától
+függetlenül fut (D115), tehát az egész folyamat állt. Az új folyamat mellett percenként jegyezzük a processzoridőt és a `csere.json`
+írását — egy újabb megállásnál ebből látszik, hogy pörög-e vagy blokkolva áll (egy kiírásnál, egy szinkron hívásnál).

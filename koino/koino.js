@@ -280,7 +280,7 @@ import { udpKapuNyitasa } from './js/csere/udpKapu.js';
 import { ujTablaKulcs, nyilvanosResz, ervenyesTablaKulcs } from './js/csere/tablaKulcs.js';
 import { szovegFeloldasa, szovegDarabbol, szovegHivatkozasE } from './js/esemeny/szovegDarab.js';
 import {
-  talalkozasFeljegyzese, kopogasCeljai, jegyzekTakaritasa, kotesek as kotesLista,
+  talalkozasFeljegyzese, tablaCimFeljegyzese, kopogasCeljai, jegyzekTakaritasa, kotesek as kotesLista,
   tablanKeresendok, kotesCimei
 } from './js/csere/kotesek.js';
 // ⭐⭐⭐ A HIRDETŐTÁBLA (2026-09-20): a leszakadt készülék KIFELÉ írja ki az új címét, a
@@ -3059,7 +3059,7 @@ async function tablarolOlvasas(sajatKulcs, nemak, naplo = () => {}) {
         talaltak.push({ alairo: k.alairo, titkosito: k.titkosito, ...cim });
         // ⚠️ A `mikor` a TÁRS órája — tájékoztatás, nem döntés (lásd `tabla.js`): a címet
         // frissként jegyezzük be akkor is, ha a bejegyzés órákkal ezelőtti.
-        naplo({ mi: 'MEGVAN-A-TABLAN', tars: k.alairo.slice(0, 8),
+        naplo({ mi: 'MEGVAN-A-TABLAN', tars: k.alairo.slice(0, 8), alairo: k.alairo,
           hoszt: cim.hoszt, port: cim.port, mikor: cim.mikor });
       } catch (hiba) {
         naplo({ mi: 'OLVASAS-BUKOTT', tars: k.alairo.slice(0, 8), ok: hiba.message });
@@ -9103,11 +9103,19 @@ try {
                     // ⚠️ A kor a TÁRS órájából jön (idegen óra), ezért csak tájékoztatás —
                     // a címet frissként jegyezzük be, mert a táblán a MOSTANI címe áll.
                     const perce = e.mikor ? Math.round((Date.now() - e.mikor) / 60000) : null;
-                    kiir(SZIN.jo + '  ⭐ ' + ora() + ' a táblán megvan egy néma társ új címe: '
-                      + e.hoszt + ':' + e.port + SZIN.vege
-                      + (perce === null ? ''
-                        : SZIN.halvany + ' (az ő órája szerint ' + perce + ' perce írta ki)'
-                          + SZIN.vege));
+                    const kora = perce === null ? ''
+                      : SZIN.halvany + ' (az ő órája szerint ' + perce + ' perce írta ki)' + SZIN.vege;
+                    // ⭐ (a terep lelete, 2026-11-05): ha a táblán az a cím áll, amit már ismerünk, az nem „új cím” — a
+                    // társ azóta nem írt ki újat (lehet, hogy le van állítva).
+                    const kotes = nemak.find((n) => n.alairo === e.alairo);
+                    const ismert = kotesCimei(kotes).some((c) => c.hoszt === e.hoszt && c.port === e.port);
+                    if (ismert) {
+                      kiir(SZIN.halvany + '  · ' + ora() + ' egy néma társ (' + e.tars + '…) címe a táblán a régi: '
+                        + e.hoszt + ':' + e.port + SZIN.vege + kora);
+                    } else {
+                      kiir(SZIN.jo + '  ⭐ ' + ora() + ' a táblán megvan egy néma társ új címe: '
+                        + e.hoszt + ':' + e.port + SZIN.vege + kora);
+                    }
                   }
                   // ⭐ A TÁRSAT IS MEGNEVEZZÜK (40. mérés): két néma kötésnél a napló eddig
                   // nem mondta meg, melyikük hiányzik — utólag kellett kikövetkeztetni.
@@ -9126,11 +9134,13 @@ try {
                       + '…: ' + e.ok + ')' + SZIN.vege);
                   }
                 });
-                // ⭐ A TALÁLT CÍM A FRISS JEGYZÉKBE KERÜL — a következő buli már rá kopog.
+                // ⭐ A TALÁLT CÍM A FRISS JEGYZÉKBE ÉS A KÖTÉS CÍMEI KÖZÉ KERÜL — a következő buli már rá kopog.
+                // ⛔ De NEM találkozás (a terep lelete, 2026-11-05 — `tablaCimFeljegyzese`): a kötés hallgatása marad, így
+                // a visszalépő ütem (72. mérés) és a takarítás áll; ha a cím él, az első csere jegyzi a találkozást.
                 for (const t of talaltak) {
                   await frissUdpCimJegyzese(udpTarolo, t.hoszt, t.port, udpElevules);
-                  await kotesFeljegyzese(kotesTar, { alairo: t.alairo, titkosito: t.titkosito },
-                    { hoszt: t.hoszt, port: t.port });
+                  await kotesTar.modosit((jegyzek) => tablaCimFeljegyzese(jegyzek,
+                    { alairo: t.alairo, titkosito: t.titkosito }, { hoszt: t.hoszt, port: t.port }));
                 }
                 if (talaltak.length) res.frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
               }
