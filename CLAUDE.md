@@ -342,7 +342,13 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    (a terv 8. szakasza): ✅ M5 (az ütközés útja — `belepoUtjaFuttatasa`) · ✅ M6 (igaz felirat) · ✅ **M7 a belépő sávja** (2026-11-05 —
    a csere-állapot `belepes` része: elfogadva → bejelentkezett → kopog → kapcsolat → tag, `csereAllapot.js`; a lap tetején
    `felulet/js/koinoBelepes.js`; a tagsággal a belépő készüléke is értesít; elágazás 234) → ⏭️ **M8 a meghívó rekesze (BEP 44)** —
-   vele a „Meghívóim” igazi állapota (B5 (a)) → M3 (a) → M4 → M2 → terep. ⚠️ a koinó többi BEP 5 útja (a címjegyzék, D91) ugyanettől
+   vele a „Meghívóim” igazi állapota (B5 (a)) → M3 (a) → M4 → M2 → terep. ⭐⭐ **Utána (Csaba, 2026-11-05): a PROGRAM RÉTEGEI
+   szerinti verziók** — *„a megjelenítési módozatok közül, amiket a közösség »feltölt«, szabadon lehet használni, költözés nélkül …
+   ami meglévő számításokat is módosítja, az már költözést igényel”* — ez a D118 négy változás-fajtája (`koltozes_atvizsgalas.md`
+   4.1, KZ1, KZ4); a hiány: a program ma EGY csomag (a gyermek születése a teljes program lenyomatát nevezi meg — ezért „más
+   programverzió” egy felületi eltérésre is; rétegezve csak a számítás magját), a feltöltött nézet a kulcsoddal fut (engedély-réteg:
+   alapból csak olvas), és a KZ5 (a protokoll-törés) még nyitott. Közben kimondva: a kártya ma nem telepít (nincs „telepítés a
+   kártyáról”), és a Windowsos telepítő sor a meglévő programot nem frissíti. ⚠️ a koinó többi BEP 5 útja (a címjegyzék, D91) ugyanettől
    szenved — külön átvizsgálás. A laptop
    terep-adata: a scratchpad `terep4` („Meghívókulcs-próba”, őrjárat 7373, felület 7499). ⛔ LELET (mérve): nyílt koinóban az „alap”
    meghívóhoz a belépés nem ér át (a szigorú (b) közös halmazában nincs) → ✅ **MH7 (A)** (Csaba, 2026-11-02): a nyílt kapu is elkéri
