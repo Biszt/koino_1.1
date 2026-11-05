@@ -386,7 +386,10 @@ teljes sor kimenete fájlban volt). A program jól számol; a próba most B tud�
 ⏸️ **Kisebb nyitottak (2026-11-05, a terep):** ⚠️ a laptop régi őrjárata (`terep4`, a tábla-javítás előtti kód) 18:40:26-kor egy
 tábla-találat kiírása után MEGÁLLT, és 19:15-ig semmit nem csinált (nem kopogott, fájlt nem írt; a gép nem aludt — a Windows
 eseménynaplója szerint; a Ctrl+C azonnal leállította) — az oka ismeretlen; az új folyamat mellett a scratchpad `orjaratFigyelo.ps1`
-percenként jegyzi a processzoridőt és a `csere.json` írását (pörög vagy blokkolva áll — a következő megállás dönti el) · ⚠️ az FL1
+percenként jegyzi a processzoridőt és a `csere.json` írását (pörög vagy blokkolva áll — a következő megállás dönti el; az új
+folyamatnál három órán át nem jött elő) · ⭐ este a hirdetőtábla visszahozta az első barát (11-04) telefonját egy MÁSIK hálózatról
+(mobilnet → otthoni router): a laptop 34 perccel a kiírása után a táblán találta meg, a rés az első próbára nyílt, és percenként
+cserélnek ([a belépő terve, 9. szakasz](docs/belepo_megtalalasa_atvizsgalas.md)) · ⚠️ az FL1
 parancssor-próba a csoport terhelése alatt egyszer bukott: a kártya össz-pontja `bemondas` maradt (a szám jó, 110 — a minta-ellenőrzés
 a várakozás végéig nem ért be); magában 3/3 zöld.
 

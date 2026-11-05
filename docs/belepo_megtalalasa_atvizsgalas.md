@@ -231,4 +231,19 @@ marad. Az új kóddal újraindított laptop a két halott telefont már nem kere
 ⚠️ **Nyitott:** a laptop régi őrjárata 18:40:26-kor (egy tábla-találat kiírása után) megállt, és 19:15-ig semmit nem csinált — nem
 kopogott, fájlt nem írt; a gép nem aludt (a Windows eseménynaplója), a Ctrl+C azonnal leállította. Az oka ismeretlen: a kör a táblától
 függetlenül fut (D115), tehát az egész folyamat állt. Az új folyamat mellett percenként jegyezzük a processzoridőt és a `csere.json`
-írását — egy újabb megállásnál ebből látszik, hogy pörög-e vagy blokkolva áll (egy kiírásnál, egy szinkron hívásnál).
+írását — egy újabb megállásnál ebből látszik, hogy pörög-e vagy blokkolva áll (egy kiírásnál, egy szinkron hívásnál). ✅ Három órán
+át (19:17–22:16) nem jött elő: a `csere.json` percenként frissült, a processzoridő három óra alatt 0,8 → 13,8 mp.
+
+⭐ **Este a hirdetőtábla is vizsgázott (2026-11-05, 19:47).** Az első barát telefonja (a 2026-11-04-i esti próbáé — akkor mobilneten,
+130.43.211.148) 11-05 hajnal óta hallgatott; este egy másik hálózatról (89.132.199.77, a port 7373 maradt — otthoni router) ~19:13-kor
+kiírta az új címét a laptop rekeszébe. A laptop 19:47:24-kor a táblán megtalálta (*„⭐ a táblán megvan egy néma társ új címe:
+89.132.199.77:7373 (az ő órája szerint 34 perce írta ki)”*), a rés 19:48:00-kor az első próbára nyílt, és a csere elhozta, ami az
+előző este óta nála volt (a 11-04-i pontja a „2. gondolat”-on); utána percenként csere, a kötése a valódi cseréktől él (374
+találkozás). ⭐ Ez a hirdetőtábla első terepi visszatalálása egy HÁLÓZATOT VÁLTOTT társhoz (a ⑦ címváltása egy wifin belül volt, a
+kötés követte). A 34 perc a javított ütemből jön: ~17 óra hallgatás után a néma kötést 64 körönként keressük (`tablanKeresendok`),
+tehát a visszatérés után legfeljebb ~64 perc. Közben a két halott telefont a táblán „régi” címmel látta, és a kötésük nem éledt fel —
+a javítás a terepen is áll.
+
+⚠️ **Egy mellékes jel:** 19:46:30-kor egy próba-készülék (127.0.0.1:7701 — a futó csoport-próbák egyike) a helyi felfedezéssel
+bekopogott a terep-őrjáratra, és a laptop a függő kérelmét próbálta rajta (más koinó — semmi nem ment át). Ezért kell a próbasor előtt
+a kézi folyamatokat leállítani: nem csak a portjuk ütközhet, a próba készülékei meg is találják őket.
