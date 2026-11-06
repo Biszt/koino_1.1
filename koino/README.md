@@ -1,5 +1,9 @@
 # koino — a P2P program
 
+> ⭐⭐ **2026-11-06: a P2P koino saját tárba költözött: [github.com/Biszt/koino](https://github.com/Biszt/koino).** Ez a
+> mappa a régi tár fagyasztott másolata — csak a régi telepítő sorok miatt áll itt, és a telepítői az új tárba költöztetnek.
+> Fejleszteni az új tárban kell.
+
 *Ez a mappa a **Fázis 2** koinója: a készüléken futó, aláírt eseményekre épülő,
 központi szerver nélküli program.*
 

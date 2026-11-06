@@ -48,14 +48,17 @@ Részletek: [`docs/utiterv.md`](docs/utiterv.md) és
 
 ## Két program egy repóban
 
+> ⭐⭐ **2026-11-06 óta a P2P koino saját tárban él: [github.com/Biszt/koino](https://github.com/Biszt/koino).** Ez a tár
+> a **prototípusé** (`backend/` + `frontend/` — Fázis 1, ez fut a koino.hu-n; ⏸️ befagyasztva). A `koino/` mappa itt csak
+> átmenetileg maradt, fagyasztva: a régi telepítő sorok miatt, a telepítői az új tárba költöztetnek.
+
 | Mappa | Mi ez | Állapot |
 |-------|-------|---------|
-| **`koino/`** | **Az új program** — P2P koino (Fázis 2). Önálló Node-program, nem böngészőben fut; a felülete egy helyi kapun át a böngészőben nyílik meg | 🚧 **itt folyik a fejlesztés** |
 | `backend/` + `frontend/` | **A prototípus** — központi szerveres koino (Fázis 1), ez fut a koino.hu-n | ⏸️ **befagyasztva** — üzemel, de nem fejlesztjük |
+| `koino/` | A P2P koino **régi másolata** (2026-11-06) — a fejlesztés a [Biszt/koino](https://github.com/Biszt/koino) tárban folyik | 🧊 **fagyasztva**, átmenetileg |
 
 > ⚠️ A prototípus mappáihoz ne nyúlj: az éles deploy a repó gyökeréből épít, egy
-> átrendezés némán eltörné. A `koino/felulet/` a prototípus kártyáit és modáljait
-> örökölte, jórészt bájtra változatlanul (ezt önpróba őrzi).
+> átrendezés némán eltörné.
 
 ## A központi ötlet dióhéjban
 

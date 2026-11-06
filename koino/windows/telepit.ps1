@@ -25,6 +25,30 @@ if ($env:OS -ne 'Windows_NT') {
   exit 1
 }
 
+# ===== ⭐ A KÖLTÖZÉS (2026-11-06): a P2P koino saját tárba költözött =====
+#
+# Ez a régi tár (`koino_1.1`) fagyasztott másolata — csak a régi meghívó-sorok miatt áll itt. Az új program a github.com/Biszt/koino
+# tárban van, a gépen a `%USERPROFILE%\koino` mappában: letöltjük a régi MELLÉ (`koino-uj`), és az ÚJ telepítő folytat, a
+# meghívóval — az cserél, leállítja a régi helyről futó koinót, és az asztali ikont az új helyre állítja. Az adat
+# (`%USERPROFILE%\koino-adat`) közös, marad.
+if ($env:KOINO_KOLTOZES -ne 'nem') {
+  $kZip = Join-Path $HOME 'koino.zip'
+  $kUj = Join-Path $HOME 'koino-uj'
+  Remove-Item -LiteralPath $kUj, $kZip -Recurse -Force -ErrorAction SilentlyContinue
+  & curl.exe -fL -o $kZip https://github.com/Biszt/koino/archive/refs/heads/main.zip
+  if (Test-Path -LiteralPath $kZip) {
+    Expand-Archive -LiteralPath $kZip -DestinationPath $kUj -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $kZip -Force -ErrorAction SilentlyContinue
+  }
+  $kTelepito = Join-Path $kUj 'koino-main\windows\telepit.ps1'
+  if (Test-Path -LiteralPath $kTelepito) {
+    Write-Host ('· A koino új helyre költözött: ' + (Join-Path $HOME 'koino') + ' — onnan folytatom.')
+    & $kTelepito @args
+    exit $LASTEXITCODE
+  }
+  Write-Host '⚠ Az új helyet (github.com/Biszt/koino) most nem sikerült letölteni — a régi program indul.'
+}
+
 # ===== ⭐⭐ D123 (PR7): A FRISSÍTÉS — a sor az új változatot a régi MELLÉ tölti, ez a szkript cserél =====
 #
 # A windowsos sor minden bemásoláskor letölti a programot a `koino_1.1-uj` mappába, és ha a kicsomagolás sikerült, az ott lévő (ÚJ)

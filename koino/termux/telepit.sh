@@ -23,6 +23,25 @@ if [ -z "$PREFIX" ] || [ ! -d "$PREFIX/bin" ]; then
   exit 1
 fi
 
+# ===== ⭐ A KÖLTÖZÉS (2026-11-06): a P2P koino saját tárba költözött =====
+#
+# Ez a régi tár (`koino_1.1`) fagyasztott másolata — csak a régi meghívó-sorok miatt áll itt. Az új program a github.com/Biszt/koino
+# tárban van, a telefonon a `~/koino` mappában: letöltjük (vagy frissítjük), és az ő telepítője folytat, a meghívóval. Az adat
+# (`~/koino-adat`) közös, marad; a régi helyről futó koinót az új telepítő leállítja, és a `koino` parancs az új helyre mutat.
+if [ "$KOINO_KOLTOZES" != "nem" ]; then
+  UJ_HELY="$HOME/koino"
+  if [ -d "$UJ_HELY/.git" ]; then
+    git -C "$UJ_HELY" fetch --depth 1 origin main && git -C "$UJ_HELY" reset --hard FETCH_HEAD
+  else
+    git clone --depth 1 https://github.com/Biszt/koino.git "$UJ_HELY"
+  fi
+  if [ -f "$UJ_HELY/termux/telepit.sh" ]; then
+    echo "· A koino új helyre költözött: $UJ_HELY — onnan folytatom."
+    exec sh "$UJ_HELY/termux/telepit.sh" "$@"
+  fi
+  echo "⚠ Az új helyet (github.com/Biszt/koino) most nem sikerült letölteni — a régi program indul."
+fi
+
 # ===== A VIZSGA: tud-e a Node Ed25519-et? =====
 if ! node -e "crypto.subtle.generateKey({name:'Ed25519'},true,['sign','verify']).then(()=>process.exit(0),()=>process.exit(1))"; then
   echo "⚠ A telefon Node-ja nem tud Ed25519-aláírást — a koino így nem futhat. Frissítsd: pkg upgrade nodejs"

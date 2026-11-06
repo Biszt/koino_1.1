@@ -309,7 +309,7 @@ async function frissitesOtthona(otthon, { git = false } = {}) {
 }
 
 const ujTelepitoFuttatasa = (otthon, telepito, sz) => futtat('powershell.exe',
-  ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', telepito, sz], { env: { ...process.env, KOINO_INDITAS: 'nem' }, cwd: otthon });
+  ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', telepito, sz], { env: { ...process.env, KOINO_INDITAS: 'nem', KOINO_KOLTOZES: 'nem' }, cwd: otthon });
 
 // ⭐⭐ A csere: a futó régi koino leáll (a másik mappáé nem), a régi a `koino_1.1-regi`-be, az új a helyére, a letöltés mappája
 // eltűnik, és a régi telepítő NEM fut. Rontás: (a) a leállítás kimarad → a régi „koino.js” tovább fut → bukik; (b) a leállítás
@@ -477,7 +477,7 @@ proba('⭐ (Termuxon) PR7: a telepit.sh leállítja az ebből a mappából futó
     folyamatok.push(a, b);
     await vart(500);
     const r = await futtat('sh', [join(konyvtar, 'termux', 'telepit.sh')],
-      { env: { ...process.env, PREFIX: join(otthon, 'prefix'), HOME: otthon, KOINO_INDITAS: 'nem' } });
+      { env: { ...process.env, PREFIX: join(otthon, 'prefix'), HOME: otthon, KOINO_INDITAS: 'nem', KOINO_KOLTOZES: 'nem' } });
     await vart(300);
     const jo = { kod: r.kod === 0, aLeallt: leallt(a), bFut: !leallt(b),
       parancs: existsSync(join(otthon, 'prefix', 'bin', 'koino')), kimondja: /leállítottam/.test(r.ki) };
