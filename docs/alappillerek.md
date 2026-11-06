@@ -1785,3 +1785,14 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     segédje a koinó-példány gyárában állt, a lap kezelője nem látta („hiba”) — most a gyár előtt (koinó-független) · ⚠️ a mag-jegyzék
     darabja még nem utazik (a kártya kódjából bárki kiszámolja, ugyanazzal a függvénnyel) — a PR5 (telepítés a kártyáról) hozza, ha a
     számítás módja egyszer változna · `program_retegek_atvizsgalas.md` 6.
+239. **2026-11-06 · D123 ② — a telepítő sor a már telepített programot is frissíti (PR7)** → **a Termux-sor `git fetch --depth 1` +
+    `git reset --hard FETCH_HEAD` (az adat a mappán kívül; a reset a nem követett fájlokat amúgy sem törli; hálózat nélkül kimondja, és a
+    meglévő indul); a windowsos sor a zip-et a régi MELLÉ csomagolja ki (`koino_1.1-uj` — egy korábbi maradékot előbb eltávolít), és
+    ha sikerült, az ÚJ telepítőt hívja: az leállítja a régi mappából futó koinót (a node és az indító a parancssoruk szerint), a régit
+    `koino_1.1-regi`-nek nevezi, az újat a helyére teszi, és a helyén folytat; a Termux-telepítő a futó régi koinót `pkill`-lel állítja
+    le (a `procps` a sorba került); a „Meghívóim” a még élő meghívóknál is a mai sort adja** · ⭐ a meghívó a windowsos sor végén a
+    parancshoz fűződik, ezért a sor egy `& { … @args }` blokkal zárul (a blokk kapja, és a választott telepítőnek adja — a `$`-tilalom
+    marad; mérve cmd-ben és PowerShellben) · ⛔ mérve: egy mappa nem nevezhető át, amíg egy folyamat munkakönyvtára benne áll → a
+    leállítás a csere ELŐTT; ⛔ a rontás mutatta meg, hogy a próba ezt eleinte nem mérte (a csere utáni második kör a régit amúgy is
+    leállította) · ⛔ egy git-tárat (`koino_1.1\.git`) a telepítő nem cserél le (egy fejlesztő munkáját vinné el) · a zárolt mappánál a
+    régi visszakerül, és a régi program indul — kimondva · `program_retegek_atvizsgalas.md` 7.

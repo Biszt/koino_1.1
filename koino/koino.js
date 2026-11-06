@@ -1769,10 +1769,12 @@ async function kiadottMeghivok() {
         if (p) felhasznalta.nev = JSON.parse(new TextDecoder().decode(await blob.olvas(p.adat.lenyomat)))?.mezok?.nev ?? null;
       } catch { /* a profil darabja még nincs nálam */ }
     }
-    // ⭐ a windowsos sor a tárolt (Termux-) sor meghívójából — a régi feljegyzéseknél is (elágazás 232)
+    // ⭐ a windowsos sor a tárolt (Termux-) sor meghívójából — a régi feljegyzéseknél is (elágazás 232); ⭐ D123 (PR7): a Termux-sor
+    // is a MAI alakjában (a frissítő sor), nem a kiadáskor tárolt szöveg
     const meghivo = allapot === 'aktiv' ? meghivoSzovegbol(x.szoveg) : null;
     ki.push({ azonosito: x.i, nev: x.nev, allapot, letrehozva: x.letrehozva, lejar: x.lejar,
-      ...(allapot === 'aktiv' ? { szoveg: x.szoveg, windowsSzoveg: meghivo ? windowsTelepitoSorMeghivoval(meghivo) : null } : {}),
+      ...(allapot === 'aktiv' ? { szoveg: meghivo ? telepitoSorMeghivoval(meghivo) : x.szoveg,
+        windowsSzoveg: meghivo ? windowsTelepitoSorMeghivoval(meghivo) : null } : {}),
       ...(felhasznalta ? { felhasznalta } : {}),
       // ⭐ M8 / B5 (a): a belépő jelentkezett-e a rekeszben (mikor, hány próbálkozás azóta)
       ...(x.rekesz ? { rekesz: { talalt: x.rekesz.talalt, utolso: x.rekesz.utolso, kopogas: x.rekesz.kopogas ?? 0 } } : {}) });

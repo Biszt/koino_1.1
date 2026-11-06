@@ -1,7 +1,7 @@
 # A program rétegei szerinti verziók — átvizsgálás (2026-11-05, kód nélkül)
 
 > **Állapot:** ✅ **D123** (Csaba, 2026-11-06: *„Mindet elfogadom”* — PR1–PR7 a javaslat szerint, a 4. szakasz ⭐ jelű válaszai). 🚧
-> Az építés: ✅ ① PR1–PR3 (a 6. szakasz) → ② PR7 → ③ PR6 → ④ PR5 → ⑤ PR4.
+> Az építés: ✅ ① PR1–PR3 (a 6. szakasz) → ✅ ② PR7 (a 7. szakasz) → ③ PR6 → ④ PR5 → ⑤ PR4.
 >
 > **A kérdés (Csaba, 2026-11-05):** *„beszéljük át, hogy hogyan lehetne program rétegek szerint, program verziókat létrehozni. pl. a
 > megjelenítési módozatok közül, amiket a közösség »feltölt«, szabadon lehet használni, költözés nélkül, gondolom, de ami meglévő
@@ -35,7 +35,8 @@ A gond tehát nem az elv, hanem hogy **a program ma nem rétegzett**: egyetlen c
 - **A kártya nem telepít.** A koino-verzió kártyán a teljes kód utazik (D119 ①b), de nincs lépés, ami belőle programot rakna össze
   a készüléken.
 - **A telepítő sorok nem frissítenek.** A Termux-sor és a Windowsos sor (232.) a már meglévő programmappát kihagyja — a frissítés ma
-  a Termuxban a git-es sor, Windowson a mappa törlése és a sor újrafuttatása (az adat a mappán kívül van, megmarad).
+  a Termuxban a git-es sor, Windowson a mappa törlése és a sor újrafuttatása (az adat a mappán kívül van, megmarad). *(✅ D123 ②: a
+  sorok frissítenek — a 7. szakasz.)*
 - **A protokoll-törésre nincs szabály** (KZ5). A fejlesztés közben „tiszta törésekkel” mentünk (`REGI-PROTOKOLL`), a telefont pedig
   a terepkor frissítettük.
 
@@ -128,6 +129,50 @@ lapos próbája a két szinttel. Rontás minden ágra (8 rontás, mind bukik). B
 **Kimondott határok:** a mag a Node változatát nem köti (a `kulsok` csak a modulok nevét — pl. az NFC-normalizálás a Node Unicode-
 változatától függhet; ma nem mérve) · a mag-jegyzék darabja még nem utazik: a kártya kódjából bárki kiszámolja, ugyanazzal a
 függvénnyel — ha a számítás módja egyszer változna (új belépő, más zárvány), a PR5-nek (telepítés a kártyáról) a jegyzéket is vinnie kell.
+
+## 7. ✅ Az építés ② — PR7: a telepítő sor frissít is (2026-11-06, elágazás 239)
+
+**A Termux-sor** (`meghivo.js` `TELEPITO_SOR`): ha a `~/koino_1.1` megvan, `git fetch --depth 1 origin main` + `git reset --hard
+FETCH_HEAD` — a program mappája a legújabbra áll; az adat (`~/koino-adat`) a mappán kívül van, és a reset a nem követett fájlokat
+amúgy sem törli. Ha a frissítés nem sikerül (nincs hálózat), a sor kimondja („a program most nem frissült — a meglévő indul”), és a
+meglévő telepítő indul. Friss telefonon a régi `git clone`. A `procps` a csomagok közé került (a `pkill` — lent). Idézőjel nincs
+a sorban (egy üzenetküldő kacskaringósra cserélhetné).
+
+**A windowsos sor** (`WINDOWS_TELEPITO_SOR`): minden bemásoláskor előbb eltávolítja egy korábbi letöltés maradékát (`koino_1.1-uj`,
+`koino_1.1.zip`), letölti a zip-et, és a régi MELLÉ csomagolja ki (`koino_1.1-uj`); ha ott a telepítő megvan, az ÚJ telepítőt hívja,
+különben a meglévőt. ⭐ A meghívó a záró idézőjel után a parancshoz fűződik, ezért a sor egy `& { if … { & <az új> @args } else { &
+<a meglévő> @args } }` blokkal végződik — a blokk kapja argumentumként, és továbbadja (`@args`: a `$args` dollár nélkül — a héj-őr
+`windowsSorHibaja` változatlan; mérve: cmd-ben és PowerShellben is egy argumentum).
+
+**A windowsos telepítő** (`windows/telepit.ps1` — „A FRISSÍTÉS”): ha a letöltött helyről fut (`…\koino_1.1-uj\koino_1.1-main`),
+megnézi, hogy a csomag teljes-e (öt lényeges fájl), leállítja a régi mappából futó koinót (a node — `…\koino\koino.js` — és az
+indító — `…\koino\windows\indit.ps1` —, a parancssoruk szerint, magát kivéve), a régit `koino_1.1-regi`-nek nevezi (a következő
+frissítésig megmarad; az előző generáció ilyenkor törlődik), az újat a helyére teszi, és a helyén lévő (már új) telepítőt hívja a
+meghívóval. ⛔ Egy git-tárat (`koino_1.1\.git`) nem cserél le. Ha a csere nem sikerül, a régi visszakerül a helyére, és a régi
+program indul — kimondva. A meglévő telepítő is leállítja a futó koinót, mielőtt indít (a felület különben foglalt portot találna);
+`KOINO_INDITAS=nem`: csak frissít és leállít.
+
+**A Termux-telepítő** (`termux/telepit.sh`): a sor már frissített, ez a szkript az új kód — ha egy másik Termux-ablakban a régi koino
+fut (ebből a mappából), az indítót és a két folyamatot TERM-mel leállítja (az indító csapdája az ébren tartást is elengedi), ami 10
+mp után is fut, azt erővel; `pkill` nélkül a felület induláskor kimondja, hogy egy koino már fut.
+
+**A „Meghívóim”** a már kiadott, még élő meghívóknál is a MAI sort adja (a tárolt meghívóból — eddig a kiadáskori szöveget).
+
+⛔ **A mérés, ami a sorrendet adta:** egy mappa nem nevezhető át, amíg egy folyamat munkakönyvtára benne áll (Windows, EBUSY) — ezért a
+leállítás a csere ELŐTT jön. A rontás-próba meg is mutatta, hogy a próba eleinte ezt nem mérte: a csere utáni második kör a régi
+folyamatot amúgy is leállította (a parancssora a régi utat mondja, ami a csere után az új mappa) — most a próba „régi koinója” a
+saját mappájában áll.
+
+**A próbák** (`meghivoProba.js`, +4): a windowsos sor a cmd-ben és a PowerShellben, három esetben (friss gépen és frissítéskor az új
+telepítő; hálózat nélkül a meglévő, a régi letöltés maradéka nélkül), a letöltés helyén egy helyi zip vagy egy elérhetetlen cím · a
+valódi telepítő cseréje (a régi „koino” leáll, a másik mappáé nem; a régi a `-regi`-be, az előző generáció törlődik) · a zárolt mappa és
+a git-tár (a régi marad, a régi telepítő folytat a meghívóval) · a Termux-sor egy helyi forrás-tárral (git; hálózat nélkül kimondja és a
+meglévő indul; a nem követett adat marad) · a Termux-telepítő leállítása (csak ahol van `pkill` — a telefonon). 12 rontás, mind bukik.
+
+**Kimondott határok:** a frissítés a GitHub `main`-jére áll (a terjesztés útja — D30); hogy egy koinóban melyik kód fut, továbbra is a
+közösség dolga — ha a frissített program magja más, mint amivel a koinó született, a lap kimondja (① — „⚠ más számítás”) · a Termuxon
+a csere a futó régi koino mellett történik (a git a fájlokat a leállítás előtt cseréli — másodpercek; a régi folyamat a betöltött
+kóddal fut tovább, amíg a telepítő le nem állítja) · a Termux-leállítás próbája Windowson nem fut (nincs `pkill`) — a telefonon igen.
 
 *Kapcsolódik:* `koltozes_atvizsgalas.md` (D118, KZ1–KZ5), `csaladi_orjarat_atvizsgalas.md` (D119 — a koino-verzió kártya),
 `torzs_hatar_atvizsgalas.md` (D120 — a kártya kódja elemként), `kormanyzas.md` (a három szint), `platform_fuggetlenseg.md` (D30).

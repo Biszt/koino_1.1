@@ -14,19 +14,25 @@
 //   · ⭐ a WINDOWSOS sor (elágazás 232): ugyanaz a meghívó a végén; a héjak semmit nem bontanak ki belőle (az őr a rossz jelet,
 //     a belső idézőjelet és a meghívó utáni idegen szöveget is megfogja); a telepítő ott van, ahol a sor keresi; a két .ps1
 //     UTF-8 BOM-mal (a Windows PowerShell 5.1 nélküle ANSI-ként olvasná); és Windowson: a PowerShell hibátlanul értelmezi a
-//     szkripteket, és a sor a cmd-ben ÉS a PowerShellben is egyetlen argumentumként adja át a meghívót a telepítőnek.
+//     szkripteket, és a sor a cmd-ben ÉS a PowerShellben is egyetlen argumentumként adja át a meghívót a telepítőnek;
+//   · ⭐⭐ D123 (PR7): a telepítő sor a már telepített programot FRISSÍTI — a windowsos sor friss gépen és frissítéskor az ÚJ
+//     telepítőt, hálózat nélkül a meglévőt hívja (a régi letöltés maradékát nem); az új telepítő a régi mappából futó koinót
+//     leállítja (a másikét nem), cserél (a régi a `koino_1.1-regi`-be), és a zárolt mappát és a git-tárat nem cseréli; a Termux-sor
+//     a git-tel frissít (a nem követett adat marad; hálózat nélkül kimondja, és a meglévő indul), és a Termux-telepítő a futó régi
+//     koinót leállítja (ahol van `pkill`).
 
 import { randomBytes } from 'node:crypto';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   meghivoKeszitese, meghivoOlvasasa, meghivoE, telepitoSorMeghivoval, meghivoBizonyitek, bizonyitekEllenorzese, ujMeghivoJelei,
   windowsTelepitoSorMeghivoval, meghivoSzovegbol, windowsSorHibaja,
-  MEGHIVO_ELOTAG, MEGHIVO_CIM_KORLAT, MEGHIVO_KORLAT, MEGHIVO_ELETTARTAM, TELEPITO_SOR, WINDOWS_TELEPITO_SOR, WINDOWS_TELEPITO_UT
+  MEGHIVO_ELOTAG, MEGHIVO_CIM_KORLAT, MEGHIVO_KORLAT, MEGHIVO_ELETTARTAM, TELEPITO_SOR, WINDOWS_TELEPITO_SOR, WINDOWS_TELEPITO_UT,
+  TELEPITO_SOR_CSOMAGOK, WINDOWS_UJ_MAPPA
 } from '../js/csere/meghivo.js';
 import {
   meghivoRekesze, rekeszBejegyzes, rekeszBejegyzesbol, rekeszKeresesKoze, REKESZ_CIM_KORLAT,
@@ -149,15 +155,19 @@ proba('⭐ a WINDOWSOS sor: ugyanaz a meghívó a végén, a lap kiolvassa, a t�
     && rosszak.every((r) => windowsSorHibaja(r) !== null);
 });
 
-// Rontás: a sor máshol keresi a telepítőt (vagy a fájl hiányzik); a .ps1 BOM nélkül kerül a tárba → bukik.
-proba('⭐ a windowsos telepítő ott van, ahol a sor keresi; a két .ps1 UTF-8 BOM-mal (és van bennük magyar betű), a koino.cmd csak ASCII', () => {
-  const ut = WINDOWS_TELEPITO_SOR.match(/& \.\\koino_1\.1\\koino\\(\S+?)"/)?.[1]?.replace(/\\/g, '/');
+// Rontás: a sor máshol keresi a telepítőt (vagy a fájl hiányzik — a meglévő vagy a letöltött helyen); a .ps1 BOM nélkül kerül a
+// tárba → bukik.
+proba('⭐ a windowsos telepítő ott van, ahol a sor keresi (a meglévő és a letöltött helyen is); a két .ps1 UTF-8 BOM-mal (és van bennük magyar betű), a koino.cmd csak ASCII', () => {
+  const utak = [...WINDOWS_TELEPITO_SOR.matchAll(/& \.\\(\S+?\\telepit\.ps1)/g)].map((m) => m[1].replace(/\\/g, '/'));
+  const vizsgalt = WINDOWS_TELEPITO_SOR.match(/Test-Path (\S+?\\telepit\.ps1)/)?.[1]?.replace(/\\/g, '/');
   const bomos = WINDOWS_SZKRIPTEK.every((f) => {
     const b = readFileSync(join(KOINO_MAPPA, f));
     return b[0] === 0xEF && b[1] === 0xBB && b[2] === 0xBF && /[^\x00-\x7F]/.test(b.subarray(3).toString('utf8'));
   });
   const cmd = readFileSync(join(KOINO_MAPPA, 'windows/koino.cmd'));
-  return ut === WINDOWS_TELEPITO_UT && WINDOWS_SZKRIPTEK.every((f) => existsSync(join(KOINO_MAPPA, f))) && bomos
+  return utak.length === 2 && utak[0] === WINDOWS_UJ_MAPPA + '/koino_1.1-main/koino/' + WINDOWS_TELEPITO_UT && vizsgalt === utak[0]
+    && utak[1] === 'koino_1.1/koino/' + WINDOWS_TELEPITO_UT
+    && WINDOWS_SZKRIPTEK.every((f) => existsSync(join(KOINO_MAPPA, f))) && bomos
     && cmd.every((x) => x < 0x80) && /indit\.ps1/.test(cmd.toString('latin1'));
 });
 
@@ -188,37 +198,295 @@ proba('⭐ (Windowson) a PowerShell hibátlanul értelmezi a két szkriptet és 
   }
 });
 
-// ⭐ A sor VISELKEDÉSE a két héjban: egy ideiglenes „otthon”, benne egy koino_1.1 (a letöltést a sor így kihagyja) egy
-// helyettes telepítővel, ami felírja, hol fut és mit kapott. Rontás: a meghívó az idézőjelen belülre kerül, vagy a sor egy héj
-// által kibontott jelet kap (`$`, `%`) → az átadott argumentum más, vagy a telepítő nem fut → bukik.
-proba('⭐⭐ (Windowson) a sor a cmd-ben ÉS a PowerShellben is az otthonban futtatja a telepítőt, és a meghívót EGY argumentumként adja át', async () => {
+// ===== ⭐⭐ D123 (PR7): A TELEPÍTŐ SOR FRISSÍT IS =====
+
+// A helyettes telepítő (Windows): felírja, honnan jött, hol fut, és mit kapott.
+const helyettesTelepito = (forras) => "[IO.File]::WriteAllText((Join-Path (Get-Location).Path 'kapott.json'), (ConvertTo-Json -Compress "
+  + "@{ forras = '" + forras + "'; hely = (Get-Location).Path; ervek = @($args) }))\r\n";
+const kapottOlvasasa = async (otthon) => {
+  try { return JSON.parse((await readFile(join(otthon, 'kapott.json'), 'utf8')).replace(/^﻿/, '')); } catch { return null; }
+};
+// A sor letöltő része — a próba ezt cseréli le (a hálózat helyett egy helyi zip, vagy egy biztosan elérhetetlen cím).
+const LETOLTES = 'curl.exe -fL -o koino_1.1.zip https://github.com/Biszt/koino_1.1/archive/refs/heads/main.zip';
+const torolve = (...utak) => Promise.all(utak.map((u) => rm(u, { recursive: true, force: true })));
+
+// ⭐ A sor VISELKEDÉSE a két héjban, három esetben — egy ideiglenes „otthon”, a letöltés helyén egy helyi zip (benne egy helyettes
+// ÚJ telepítő) vagy egy elérhetetlen cím; a meglévő program is egy helyettes telepítő. Rontás: (a) a blokk `@args` nélkül → a
+// telepítő nem kapja a meghívót → bukik; (b) a sor nem távolítja el előbb a régi letöltés maradékát → hálózat nélkül a maradékot
+// (vagy a régi zip-et) futtatja → bukik; (c) a választás fordítva → bukik; (d) a meghívó az idézőjelen belül, vagy egy héj által
+// kibontott jel (`$`, `%`) → az átadott argumentum más → bukik.
+proba('⭐⭐ (Windowson) PR7: a sor a cmd-ben ÉS a PowerShellben — friss gépen és frissítéskor az ÚJ telepítőt, hálózat nélkül a meglévőt hívja (a régi letöltés maradékát nem), a meghívót EGY argumentumként', async () => {
   if (process.platform !== 'win32') { process.stdout.write('    (nem Windows — kihagyva)\n'); return true; }
   const otthon = await mkdtemp(join(tmpdir(), 'koino-windows-otthon-'));
   try {
-    await mkdir(join(otthon, 'koino_1.1', 'koino', 'windows'), { recursive: true });
-    await writeFile(join(otthon, 'koino_1.1', 'koino', ...WINDOWS_TELEPITO_UT.split('/')),
-      "[IO.File]::WriteAllText((Join-Path (Get-Location).Path 'kapott.json'), (ConvertTo-Json -Compress @{ hely = (Get-Location).Path; "
-      + 'ervek = @($args) }))\r\n');
+    // a „letöltött” csomag: koino_1.1-main\koino\windows\telepit.ps1 egy zip-ben (mint a GitHubé)
+    const csomag = join(otthon, 'csomag');
+    await mkdir(join(csomag, 'koino_1.1-main', 'koino', 'windows'), { recursive: true });
+    await writeFile(join(csomag, 'koino_1.1-main', 'koino', ...WINDOWS_TELEPITO_UT.split('/')), helyettesTelepito('uj'));
+    const z = await futtat('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "Compress-Archive -Path '"
+      + join(csomag, 'koino_1.1-main') + "' -DestinationPath '" + join(otthon, 'kesz.zip') + "'"]);
+    if (!existsSync(join(otthon, 'kesz.zip'))) { process.stderr.write('    (a zip nem készült el: ' + z.ki.slice(0, 300) + ')\n'); return false; }
     const sz = meghivoKeszitese(alap());
     const sor = windowsTelepitoSorMeghivoval(sz);
+    if (!sor.includes(LETOLTES)) { process.stderr.write('    (a sor letöltő része megváltozott — a próbát is igazítsd)\n'); return false; }
+    const meglevo = async () => {
+      await mkdir(join(otthon, 'koino_1.1', 'koino', 'windows'), { recursive: true });
+      await writeFile(join(otthon, 'koino_1.1', 'koino', ...WINDOWS_TELEPITO_UT.split('/')), helyettesTelepito('regi'));
+    };
+    const esetek = [
+      ['friss gépen', 'Copy-Item kesz.zip koino_1.1.zip', async () => {}, 'uj'],
+      ['hálózat nélkül', 'curl.exe -fsL -o koino_1.1.zip http://127.0.0.1:9/', async () => {
+        await meglevo();
+        // egy korábbi letöltés maradéka: egy kicsomagolt mappa és egy zip — egyiket sem szabad használni
+        await mkdir(join(otthon, WINDOWS_UJ_MAPPA, 'koino_1.1-main', 'koino', 'windows'), { recursive: true });
+        await writeFile(join(otthon, WINDOWS_UJ_MAPPA, 'koino_1.1-main', 'koino', ...WINDOWS_TELEPITO_UT.split('/')), helyettesTelepito('maradek'));
+        await writeFile(join(otthon, 'koino_1.1.zip'), await readFile(join(otthon, 'kesz.zip')));
+      }, 'regi'],
+      ['frissítéskor', 'Copy-Item kesz.zip koino_1.1.zip', meglevo, 'uj']
+    ];
     const env = { ...process.env, USERPROFILE: otthon, HOMEDRIVE: '', HOMEPATH: '' };
-    const eredmeny = {};
-    for (const [nev, fajl, tartalom, inditas] of [
-      ['cmd', 'sor.cmd', '@echo off\r\n' + sor + '\r\n', (f) => ['cmd.exe', ['/d', '/c', f]]],
-      ['powershell', 'sor.ps1', sor + '\r\n', (f) => ['powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', f]]]
-    ]) {
-      await rm(join(otthon, 'kapott.json'), { force: true });
-      await writeFile(join(otthon, fajl), tartalom);
-      const [exe, e] = inditas(join(otthon, fajl));
-      const r = await futtat(exe, e, { env, cwd: tmpdir() });
-      let kapott = null;
-      try { kapott = JSON.parse((await readFile(join(otthon, 'kapott.json'), 'utf8')).replace(/^﻿/, '')); } catch { /* nem futott */ }
-      const ervekLista = [].concat(kapott?.ervek ?? []);
-      eredmeny[nev] = kapott?.hely?.toLowerCase() === otthon.toLowerCase() && ervekLista.length === 1 && ervekLista[0] === sz;
-      if (!eredmeny[nev]) process.stderr.write('    (' + nev + ': ' + JSON.stringify(kapott) + ' | ' + r.ki.slice(0, 400) + ')\n');
+    let mind = true;
+    for (const [esetNev, letoltes, elokeszites, vart] of esetek) {
+      const esetSor = sor.replace(LETOLTES, letoltes);
+      for (const [nev, fajl, tartalom, inditas] of [
+        ['cmd', 'sor.cmd', '@echo off\r\n' + esetSor + '\r\n', (f) => ['cmd.exe', ['/d', '/c', f]]],
+        ['powershell', 'sor.ps1', esetSor + '\r\n', (f) => ['powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', f]]]
+      ]) {
+        await torolve(...['koino_1.1', WINDOWS_UJ_MAPPA, 'koino_1.1.zip', 'kapott.json'].map((f) => join(otthon, f)));
+        await elokeszites();
+        await writeFile(join(otthon, fajl), tartalom);
+        const [exe, e] = inditas(join(otthon, fajl));
+        const r = await futtat(exe, e, { env, cwd: tmpdir() });
+        const kapott = await kapottOlvasasa(otthon);
+        const ervekLista = [].concat(kapott?.ervek ?? []);
+        const jo = kapott?.forras === vart && kapott.hely?.toLowerCase() === otthon.toLowerCase()
+          && ervekLista.length === 1 && ervekLista[0] === sz && !existsSync(join(otthon, 'koino_1.1.zip'))
+          && (vart === 'uj' || !existsSync(join(otthon, WINDOWS_UJ_MAPPA)));
+        if (!jo) process.stderr.write('    (' + esetNev + ', ' + nev + ': ' + JSON.stringify(kapott) + ' | ' + r.ki.slice(0, 400) + ')\n');
+        mind = mind && jo;
+      }
     }
-    return eredmeny.cmd && eredmeny.powershell;
+    return mind;
   } finally {
+    await rm(otthon, { recursive: true, force: true });
+  }
+});
+
+// ----- a valódi windowsos telepítő cseréje (KOINO_INDITAS=nem: csak frissít és leállít) -----
+
+const VALODI_WINDOWS_TELEPITO = join(KOINO_MAPPA, 'windows', 'telepit.ps1');
+const FUTO_PROGRAM = 'setInterval(() => {}, 1000);\n';
+// A régi „koino” a saját mappájában áll (mint egy folyamat, ami a mappát fogja — mérve: amíg ott áll, a mappa nem nevezhető át):
+// ha a telepítő a csere ELŐTT nem állítja le, a csere nem sikerül. (A csere utáni második kör a régi folyamatot amúgy is
+// leállítaná — e nélkül a próba nem mérné a sorrendet; a rontás mutatta meg.)
+const FUTO_ZAROLO = "process.chdir(require('path').dirname(process.argv[1])); setInterval(() => {}, 1000);\n";
+const fut = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+const leallt = (p) => p.exitCode !== null || p.signalCode !== null || !fut(p.pid);
+const vart = (ms) => new Promise((t) => setTimeout(t, ms));
+
+// Egy otthon: a meglévő program (egy helyettes telepítő, egy jel és egy „koino.js”), egy még régebbi generáció, és a letöltött
+// új program (a VALÓDI telepítő, a lényeges fájlok helyettesei, egy jel); és egy másik mappa „koinója”.
+async function frissitesOtthona(otthon, { git = false } = {}) {
+  const regi = join(otthon, 'koino_1.1');
+  await mkdir(join(regi, 'koino', 'windows'), { recursive: true });
+  await writeFile(join(regi, 'koino', 'windows', 'telepit.ps1'), helyettesTelepito('regi'));
+  await writeFile(join(regi, 'koino', 'koino.js'), FUTO_ZAROLO);
+  await writeFile(join(regi, 'regi.txt'), 'régi');
+  if (git) await mkdir(join(regi, '.git'));
+  await mkdir(join(otthon, 'koino_1.1-regi'), { recursive: true });
+  await writeFile(join(otthon, 'koino_1.1-regi', 'regebbi.txt'), 'még régebbi');
+  const uj = join(otthon, WINDOWS_UJ_MAPPA, 'koino_1.1-main');
+  for (const f of ['koino/js/esemeny/esemeny.js', 'koino/felulet/index.html', 'koino/windows/indit.ps1']) {
+    await mkdir(dirname(join(uj, f)), { recursive: true });
+    await writeFile(join(uj, f), '');
+  }
+  await writeFile(join(uj, 'koino', 'koino.js'), FUTO_PROGRAM);
+  await writeFile(join(uj, 'koino', 'windows', 'telepit.ps1'), readFileSync(VALODI_WINDOWS_TELEPITO));
+  await writeFile(join(uj, 'uj.txt'), 'új');
+  await mkdir(join(otthon, 'mas', 'koino'), { recursive: true });
+  await writeFile(join(otthon, 'mas', 'koino', 'koino.js'), FUTO_PROGRAM);
+  return join(uj, 'koino', 'windows', 'telepit.ps1');
+}
+
+const ujTelepitoFuttatasa = (otthon, telepito, sz) => futtat('powershell.exe',
+  ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', telepito, sz], { env: { ...process.env, KOINO_INDITAS: 'nem' }, cwd: otthon });
+
+// ⭐⭐ A csere: a futó régi koino leáll (a másik mappáé nem), a régi a `koino_1.1-regi`-be, az új a helyére, a letöltés mappája
+// eltűnik, és a régi telepítő NEM fut. Rontás: (a) a leállítás kimarad → a régi „koino.js” tovább fut → bukik; (b) a leállítás
+// mintája túl tág (csak `koino.js`) → a másik mappáé is leáll → bukik; (c) a régebbi generáció nem törlődik / a régi nem kerül
+// a `-regi`-be → bukik.
+proba('⭐⭐ (Windowson) PR7: a letöltött telepítő leállítja a régi mappából futó koinót (a másikét nem), cserél (a régi a koino_1.1-regi-be), és a helyén folytat', async () => {
+  if (process.platform !== 'win32') { process.stdout.write('    (nem Windows — kihagyva)\n'); return true; }
+  const otthon = realpathSync.native(await mkdtemp(join(tmpdir(), 'koino-csere-')));
+  const folyamatok = [];
+  try {
+    const telepito = await frissitesOtthona(otthon);
+    const a = spawn(process.execPath, [join(otthon, 'koino_1.1', 'koino', 'koino.js')], { cwd: tmpdir(), stdio: 'ignore', windowsHide: true });
+    const b = spawn(process.execPath, [join(otthon, 'mas', 'koino', 'koino.js')], { cwd: tmpdir(), stdio: 'ignore', windowsHide: true });
+    folyamatok.push(a, b);
+    await vart(500);
+    const sz = meghivoKeszitese(alap());
+    const r = await ujTelepitoFuttatasa(otthon, telepito, sz);
+    await vart(300);
+    const jo = {
+      kod: r.kod === 0, aLeallt: leallt(a), bFut: !leallt(b),
+      ujAHelyen: existsSync(join(otthon, 'koino_1.1', 'uj.txt')) && !existsSync(join(otthon, 'koino_1.1', 'regi.txt')),
+      regiMegvan: existsSync(join(otthon, 'koino_1.1-regi', 'regi.txt')) && !existsSync(join(otthon, 'koino_1.1-regi', 'regebbi.txt')),
+      letoltesEltunt: !existsSync(join(otthon, WINDOWS_UJ_MAPPA)),
+      regiTelepitoNemFutott: (await kapottOlvasasa(otthon)) === null,
+      kimondja: /frissült/.test(r.ki) && /leállítottam/.test(r.ki)
+    };
+    const ok = Object.values(jo).every(Boolean);
+    if (!ok) process.stderr.write('    (' + JSON.stringify(jo) + ' | ' + r.ki.slice(0, 600) + ')\n');
+    return ok;
+  } finally {
+    for (const p of folyamatok) p.kill();
+    await vart(200);
+    await rm(otthon, { recursive: true, force: true });
+  }
+});
+
+// ⭐ Ha a csere nem lehetséges, a régi marad, és a régi telepítő folytat (a meghívóval) — kimondva: (1) egy másik folyamat a régi
+// mappában áll (mérve: amíg egy folyamat munkakönyvtára ott van, a mappa nem nevezhető át); (2) a meglévő egy git-tár. Rontás: (a)
+// a git-őr kimarad → a git-tárat lecseréli → bukik; (b) a hibánál nem a meglévő telepítő folytat → bukik; (c) a letöltés mappája
+// hiba után is megmarad → bukik.
+proba('⭐ (Windowson) PR7: ha a régi mappát egy folyamat fogja, vagy git-tár, a telepítő nem cserél — a régi marad, a régi telepítő folytat a meghívóval, kimondva', async () => {
+  if (process.platform !== 'win32') { process.stdout.write('    (nem Windows — kihagyva)\n'); return true; }
+  const eredmeny = {};
+  for (const [nev, git, minta] of [['zárolt', false, /nem frissült: a csere nem sikerült/], ['git-tár', true, /git-tár/]]) {
+    const otthon = realpathSync.native(await mkdtemp(join(tmpdir(), 'koino-csere-')));
+    const folyamatok = [];
+    try {
+      const telepito = await frissitesOtthona(otthon, { git });
+      if (!git) {
+        // egy folyamat, ami nem a koino (nem áll le), de a régi mappában áll
+        folyamatok.push(spawn(process.execPath, ['-e', FUTO_PROGRAM], { cwd: join(otthon, 'koino_1.1'), stdio: 'ignore', windowsHide: true }));
+        await vart(500);
+      }
+      const sz = meghivoKeszitese(alap());
+      const r = await ujTelepitoFuttatasa(otthon, telepito, sz);
+      const kapott = await kapottOlvasasa(otthon);
+      const jo = {
+        kod: r.kod === 0, regiTelepito: kapott?.forras === 'regi' && [].concat(kapott.ervek ?? []).join() === sz,
+        regiMarad: existsSync(join(otthon, 'koino_1.1', 'regi.txt')) && !existsSync(join(otthon, 'koino_1.1', 'uj.txt')),
+        letoltesEltunt: !existsSync(join(otthon, WINDOWS_UJ_MAPPA)),
+        gitNemNyul: !git || (existsSync(join(otthon, 'koino_1.1', '.git')) && existsSync(join(otthon, 'koino_1.1-regi', 'regebbi.txt'))),
+        kimondja: minta.test(r.ki) && /meglévő program indul/.test(r.ki)
+      };
+      eredmeny[nev] = Object.values(jo).every(Boolean);
+      if (!eredmeny[nev]) process.stderr.write('    (' + nev + ': ' + JSON.stringify(jo) + ' | ' + r.ki.slice(0, 600) + ')\n');
+    } finally {
+      for (const p of folyamatok) p.kill();
+      await vart(200);
+      await rm(otthon, { recursive: true, force: true });
+    }
+  }
+  return eredmeny['zárolt'] && eredmeny['git-tár'];
+});
+
+// ----- a Termux-sor: a git frissít (a próba a `pkg` nélkül futtatja, egy helyi „GitHub”-bal) -----
+
+async function shKeresese() {
+  if (process.platform !== 'win32') return 'sh';
+  const r = await futtat('git', ['--exec-path']);
+  const ut = r.kod === 0 ? r.ki.trim() : null;
+  if (!ut) return null;
+  for (const c of [join(ut, '..', '..', '..', 'bin', 'sh.exe'), join(ut, '..', '..', '..', 'usr', 'bin', 'sh.exe')]) {
+    if (existsSync(c)) return c;
+  }
+  return null;
+}
+
+// ⭐⭐ Egy helyi forrás-tár (a GitHub helyett) két változattal: az A-n telepítve, a B a forrásban. Hálózat nélkül (a forrás címe nem
+// él) a sor kimondja, hogy nem frissült, és a meglévő (A) telepítő fut; a forrással a B — a nem követett adat (`koino-adat`) marad.
+// Rontás: (a) a régi sor (`[ -d ~/koino_1.1 ] || git clone …`) → a frissítés elmarad, az A fut → bukik; (b) a `|| echo …` kimarad →
+// hálózat nélkül a telepítő el sem indul → bukik; (c) `git clean` is → az adat eltűnik → bukik.
+proba('⭐⭐ PR7: a Termux-sor a már telepített programot FRISSÍTI (git) — a nem követett adat marad; hálózat nélkül kimondja, és a meglévő indul; a meghívó egy argumentum', async () => {
+  const sh = await shKeresese();
+  if (!sh || (await futtat('git', ['--version'])).kod !== 0) { process.stdout.write('    (nincs sh vagy git — kihagyva)\n'); return true; }
+  const otthon = realpathSync.native(await mkdtemp(join(tmpdir(), 'koino-termux-')));
+  try {
+    const g = (cwd, ...e) => futtat('git', ['-c', 'user.name=proba', '-c', 'user.email=proba@koino.invalid', '-c', 'core.autocrlf=false',
+      '-c', 'init.defaultBranch=main', ...e], { cwd });
+    const forras = join(otthon, 'forras.git');
+    const munka = join(otthon, 'munka');
+    const telepitett = join(otthon, 'koino_1.1');
+    const helyettes = (v) => "#!/bin/sh\nprintf '%s|%s|%s\\n' " + v + ' "$#" "$1" > "$HOME/kapott.txt"\n';
+    const valtozat = async (v) => {
+      await writeFile(join(munka, 'koino', 'termux', 'telepit.sh'), helyettes(v));
+      await g(munka, 'add', '-A');
+      await g(munka, 'commit', '-q', '-m', v);
+      return g(munka, 'push', '-q', forras, 'HEAD:refs/heads/main');
+    };
+    await g(otthon, 'init', '-q', '--bare', forras);
+    await g(otthon, 'init', '-q', munka);
+    await mkdir(join(munka, 'koino', 'termux'), { recursive: true });
+    await valtozat('A');
+    const forrasCim = pathToFileURL(forras).href;
+    await g(otthon, 'clone', '-q', forrasCim, telepitett);
+    await g(telepitett, 'config', 'core.autocrlf', 'false');
+    await mkdir(join(telepitett, 'koino-adat'), { recursive: true });
+    await writeFile(join(telepitett, 'koino-adat', 'kulcs.json'), 'a kulcsom');
+    await valtozat('B');
+    const sz = meghivoKeszitese(alap());
+    if (!TELEPITO_SOR.startsWith(TELEPITO_SOR_CSOMAGOK)) { process.stderr.write('    (a sor eleje megváltozott)\n'); return false; }
+    const sor = TELEPITO_SOR.slice(TELEPITO_SOR_CSOMAGOK.length) + ' ' + sz;
+    const futtatas = async () => {
+      await rm(join(otthon, 'kapott.txt'), { force: true });
+      const r = await futtat(sh, ['-c', sor], { env: { ...process.env, HOME: otthon }, cwd: tmpdir() });
+      let k = null; try { k = (await readFile(join(otthon, 'kapott.txt'), 'utf8')).trim(); } catch { /* nem futott */ }
+      return { r, k };
+    };
+    await g(telepitett, 'remote', 'set-url', 'origin', pathToFileURL(join(otthon, 'nincs.git')).href);
+    const halozatNelkul = await futtatas();
+    await g(telepitett, 'remote', 'set-url', 'origin', forrasCim);
+    const frissitve = await futtatas();
+    const adat = await readFile(join(telepitett, 'koino-adat', 'kulcs.json'), 'utf8').catch(() => null);
+    const jo = {
+      halozatNelkul: halozatNelkul.k === 'A|1|' + sz && /nem frissült/.test(halozatNelkul.r.ki),
+      frissitve: frissitve.k === 'B|1|' + sz,
+      adatMarad: adat === 'a kulcsom'
+    };
+    const ok = Object.values(jo).every(Boolean);
+    if (!ok) process.stderr.write('    (' + JSON.stringify(jo) + ' | ' + halozatNelkul.r.ki.slice(0, 300) + ' | ' + frissitve.r.ki.slice(0, 300) + ')\n');
+    return ok;
+  } finally {
+    await rm(otthon, { recursive: true, force: true });
+  }
+});
+
+// ⭐ (Termuxon / Linuxon, ahol van `pkill`) a valódi telepit.sh leállítja az ebből a mappából futó régi koinót — a másik mappáét nem.
+// Rontás: (a) a leállítás kimarad → a régi „koino.js” fut → bukik; (b) a minta túl tág → a másik is leáll → bukik.
+proba('⭐ (Termuxon) PR7: a telepit.sh leállítja az ebből a mappából futó régi koinót (a másikét nem), és a `koino` parancsot felveszi', async () => {
+  if (process.platform === 'win32' || !(await futtat('sh', ['-c', 'command -v pkill'])).ki.trim()) {
+    process.stdout.write('    (nincs pkill — kihagyva; a telefonon fut)\n');
+    return true;
+  }
+  const otthon = realpathSync.native(await mkdtemp(join(tmpdir(), 'koino-termux-')));
+  const folyamatok = [];
+  try {
+    const konyvtar = join(otthon, 'koino_1.1', 'koino');
+    await mkdir(join(konyvtar, 'termux'), { recursive: true });
+    await writeFile(join(konyvtar, 'termux', 'telepit.sh'), readFileSync(join(KOINO_MAPPA, 'termux', 'telepit.sh')));
+    await writeFile(join(konyvtar, 'koino.js'), FUTO_PROGRAM);
+    await mkdir(join(otthon, 'mas', 'koino'), { recursive: true });
+    await writeFile(join(otthon, 'mas', 'koino', 'koino.js'), FUTO_PROGRAM);
+    await mkdir(join(otthon, 'prefix', 'bin'), { recursive: true });
+    const a = spawn(process.execPath, [join(konyvtar, 'koino.js')], { stdio: 'ignore' });
+    const b = spawn(process.execPath, [join(otthon, 'mas', 'koino', 'koino.js')], { stdio: 'ignore' });
+    folyamatok.push(a, b);
+    await vart(500);
+    const r = await futtat('sh', [join(konyvtar, 'termux', 'telepit.sh')],
+      { env: { ...process.env, PREFIX: join(otthon, 'prefix'), HOME: otthon, KOINO_INDITAS: 'nem' } });
+    await vart(300);
+    const jo = { kod: r.kod === 0, aLeallt: leallt(a), bFut: !leallt(b),
+      parancs: existsSync(join(otthon, 'prefix', 'bin', 'koino')), kimondja: /leállítottam/.test(r.ki) };
+    const ok = Object.values(jo).every(Boolean);
+    if (!ok) process.stderr.write('    (' + JSON.stringify(jo) + ' | ' + r.ki.slice(0, 400) + ')\n');
+    return ok;
+  } finally {
+    for (const p of folyamatok) p.kill();
+    await vart(200);
     await rm(otthon, { recursive: true, force: true });
   }
 });

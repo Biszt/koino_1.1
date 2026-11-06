@@ -6,10 +6,15 @@
 # parancsot (a további indításhoz és a program parancsaihoz), és elindítja (`indit.sh`).
 #
 # A bemásolandó sor (docs/telepites_telefon.md, „A legegyszerűbb út”; ⭐ D122: a meghívó a végén — a lap „Meghívóim” ablaka adja):
-#   yes | pkg upgrade && pkg install -y nodejs git && { [ -d ~/koino_1.1 ] || git clone --depth 1
-#   https://github.com/Biszt/koino_1.1.git ~/koino_1.1; } && sh ~/koino_1.1/koino/termux/telepit.sh
+#   yes | pkg upgrade && pkg install -y nodejs git procps && { if [ -d ~/koino_1.1 ]; then git -C ~/koino_1.1 fetch --depth 1
+#   origin main && git -C ~/koino_1.1 reset --hard FETCH_HEAD || echo …; else git clone --depth 1
+#   https://github.com/Biszt/koino_1.1.git ~/koino_1.1; fi; } && sh ~/koino_1.1/koino/termux/telepit.sh
 #
-# ⚠️ A program nem frissül magától: hogy melyik kódot futtatja egy koinó, az a közösség dolga (a koino-verzió kártya, D119).
+# ⭐⭐ D123 (PR7): a sor a már telepített programot FRISSÍTI is (a git a program mappáját a legújabbra állítja — az adat a
+# `~/koino-adat`-ban, a mappán kívül: nem érinti), és ez a szkript már az új kód: ha egy másik Termux-ablakban még a régi koino fut,
+# leállítja (lent, „A FUTÓ KOINO LEÁLLÍTÁSA”). `KOINO_INDITAS=nem`: a telepítő nem indítja el a programot (a próbáknak).
+# ⚠️ A program magától nem frissül (csak ha a sort bemásolod): hogy melyik kódot futtatja egy koinó, az a közösség dolga (a
+# koino-verzió kártya, D119 — és ha a gépeden más a számítás magja, mint amivel a koinó született, a lap kimondja: D123).
 
 KONYVTAR=$(cd "$(dirname "$0")/.." && pwd)
 
@@ -25,6 +30,26 @@ if ! node -e "crypto.subtle.generateKey({name:'Ed25519'},true,['sign','verify'])
 fi
 echo "✓ A Node tud Ed25519-et ($(node -v))"
 
+# ===== ⭐ D123 (PR7): A FUTÓ KOINO LEÁLLÍTÁSA =====
+#
+# Ha egy másik Termux-ablakban még fut a koino (ebből a mappából), az a régi kódot futtatja, és a felület portját is fogja — ezért
+# leállítjuk: az indítót és a két folyamatot TERM-mel (az indító csapdája a sajátjait is leállítja, és az ébren tartást elengedi),
+# ami 10 mp után is fut, azt erővel. A `pkill` a `procps` csomagé (a telepítő sor hozza); ha nincs, a felület induláskor kimondja,
+# hogy egy koino már fut.
+if command -v pkill >/dev/null 2>&1; then
+  if pgrep -f "$KONYVTAR/koino.js" >/dev/null 2>&1 || pgrep -f "$KONYVTAR/termux/indit.sh" >/dev/null 2>&1; then
+    pkill -TERM -f "$KONYVTAR/termux/indit.sh" 2>/dev/null
+    pkill -TERM -f "$KONYVTAR/koino.js" 2>/dev/null
+    i=0
+    while pgrep -f "$KONYVTAR/koino.js" >/dev/null 2>&1 && [ "$i" -lt 20 ]; do
+      sleep 0.5
+      i=$((i + 1))
+    done
+    pkill -KILL -f "$KONYVTAR/koino.js" 2>/dev/null
+    echo "· A futó koinót leállítottam — az új programmal indul újra."
+  fi
+fi
+
 # ===== A `koino` PARANCS =====
 cat > "$PREFIX/bin/koino" <<EOF
 #!$PREFIX/bin/sh
@@ -33,6 +58,10 @@ EOF
 chmod 700 "$PREFIX/bin/koino"
 echo "✓ Telepítve. A következő indításhoz elég ennyi: koino"
 echo
+if [ "$KOINO_INDITAS" = "nem" ]; then
+  echo "(KOINO_INDITAS=nem — nem indítom el)"
+  exit 0
+fi
 
 # ⭐ D122: a meghívó (ha a telepítő sor végén ott van) az indítóhoz megy — az fogadja el
 exec sh "$KONYVTAR/termux/indit.sh" "$@"

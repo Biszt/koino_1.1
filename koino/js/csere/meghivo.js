@@ -33,10 +33,18 @@ export const MEGHIVO_ELETTARTAM = 30 * 24 * 3600 * 1000;
 /**
  * ⭐ D122: a telepítő sor (a telepítési útmutató „legegyszerűbb útja” — 224.) — a meghívó a végére kerül: egy bemásolás telepít,
  * csatlakozik és belép. ⚠️ A program letöltési helye egy cím (a terjesztés útja — D30: a koino.hu, a GitHub, az F-Droid és az
- * e-emberek egymásnak); a sor a már telepített gépen is jó (a letöltést kihagyja).
+ * e-emberek egymásnak).
+ * ⭐⭐ D123 (PR7): a sor a már telepített programot FRISSÍTI is — a `git fetch` + `git reset --hard` a program mappáját a legújabbra
+ * állítja (az adat a `~/koino-adat`-ban, a mappán kívül: nem érinti; a nem követett fájlokat a reset nem törli); ha a frissítés
+ * nem sikerül (nincs hálózat), kimondja, és a meglévő indul. A futó régi koinót a `termux/telepit.sh` állítja le (`pkill` — ezért a
+ * `procps`). ⛔ Idézőjel nincs benne: egy üzenetküldő a „kacskaringósra” cserélhetné.
  */
-export const TELEPITO_SOR = 'yes | pkg upgrade && pkg install -y nodejs git && { [ -d ~/koino_1.1 ] || git clone --depth 1 '
-  + 'https://github.com/Biszt/koino_1.1.git ~/koino_1.1; } && sh ~/koino_1.1/koino/termux/telepit.sh';
+export const TELEPITO_SOR = 'yes | pkg upgrade && pkg install -y nodejs git procps && { if [ -d ~/koino_1.1 ]; then '
+  + 'git -C ~/koino_1.1 fetch --depth 1 origin main && git -C ~/koino_1.1 reset --hard FETCH_HEAD '
+  + '|| echo ⚠ a program most nem frissült — a meglévő indul; '
+  + 'else git clone --depth 1 https://github.com/Biszt/koino_1.1.git ~/koino_1.1; fi; } && sh ~/koino_1.1/koino/termux/telepit.sh';
+/** A Termux-sor eleje a Termux csomagkezelőjével (a próba e nélkül futtatja a sort — a `pkg` csak a Termuxban van). */
+export const TELEPITO_SOR_CSOMAGOK = 'yes | pkg upgrade && pkg install -y nodejs git procps && ';
 /**
  * ⭐ A WINDOWSOS telepítő sor (2026-11-04 — a terepi lelet: a Termux-sor egy Windowsos laptop parancssorában az első szónál, a
  * `yes`-nél megállt; elágazás 232). EGY sor, ami a PowerShellben ÉS a régi parancssorban (cmd) is ugyanígy fut: a `powershell` maga
@@ -45,13 +53,25 @@ export const TELEPITO_SOR = 'yes | pkg upgrade && pkg install -y nodejs git && {
  * PowerShell a -Command utáni szavakat a parancshoz fűzi, így a meghívó a telepítő első argumentuma lesz (mint a Termux-sorban).
  * A program a GitHub zip-jéből jön (`curl.exe` — a Windows része a 10-es 1803 óta — és az `Expand-Archive`; git nem kell; ⛔ nem
  * a `tar`: ahol a Git eszközei a PATH-on vannak, ott a GNU tar jön, és az a zip-et nem ismeri — mérve), a Node-ot a telepítő hozza
- * (`winget`), ha nincs. A sor a már telepített gépen is jó (a letöltést kihagyja).
+ * (`winget`), ha nincs.
+ * ⭐⭐ D123 (PR7): a sor a már telepített programot FRISSÍTI is — minden bemásoláskor letölti a zip-et, a régi MELLÉ csomagolja ki
+ * (`koino_1.1-uj` — egy korábbi maradékot előbb eltávolít), és ha a kicsomagolás sikerült, az ÚJ telepítőt hívja: az leállítja a
+ * futó régit, cserél, és a helyén indít (`windows/telepit.ps1`). Ha a letöltés nem sikerült, a meglévő telepítő indul. ⭐ A meghívó
+ * a záró idézőjel után a parancshoz fűződik — ezért a sor egy `& { … @args }` blokkal végződik: a blokk kapja argumentumként, és a
+ * kettő közül a választott telepítőnek adja tovább (`@args` — a `$args` dollár nélkül; mérve: cmd-ben és PowerShellben is egy
+ * argumentum).
  */
-export const WINDOWS_TELEPITO_SOR = 'powershell -NoProfile -ExecutionPolicy Bypass -Command "cd ~; if (-not (Test-Path koino_1.1)) '
-  + '{ curl.exe -fL -o koino_1.1.zip https://github.com/Biszt/koino_1.1/archive/refs/heads/main.zip; Expand-Archive koino_1.1.zip .; '
-  + 'Rename-Item koino_1.1-main koino_1.1; Remove-Item koino_1.1.zip }; & .\\koino_1.1\\koino\\windows\\telepit.ps1"';
+export const WINDOWS_TELEPITO_SOR = 'powershell -NoProfile -ExecutionPolicy Bypass -Command "cd ~; '
+  + 'Remove-Item -Recurse -Force koino_1.1-uj, koino_1.1.zip -ErrorAction Ignore; '
+  + 'curl.exe -fL -o koino_1.1.zip https://github.com/Biszt/koino_1.1/archive/refs/heads/main.zip; '
+  + 'if (Test-Path koino_1.1.zip) { Expand-Archive koino_1.1.zip koino_1.1-uj; Remove-Item koino_1.1.zip }; '
+  + '& { if (Test-Path koino_1.1-uj\\koino_1.1-main\\koino\\windows\\telepit.ps1) '
+  + '{ & .\\koino_1.1-uj\\koino_1.1-main\\koino\\windows\\telepit.ps1 @args } '
+  + 'else { & .\\koino_1.1\\koino\\windows\\telepit.ps1 @args } }"';
 /** A Windowsos sor a telepítőt itt keresi (a `koino/` mappához képest) — a próba ebből nézi, hogy a fájl ott van. */
 export const WINDOWS_TELEPITO_UT = 'windows/telepit.ps1';
+/** ⭐ PR7: a letöltött új program helye a sor szerint (az otthoni mappához képest — a `windows/telepit.ps1` ebből ismeri fel). */
+export const WINDOWS_UJ_MAPPA = 'koino_1.1-uj';
 const NEV_KORLAT = 64;
 const MEZO_MINTA = /^[a-z]{1,32}$/;
 const HOSZT_MINTA = /^[A-Za-z0-9.:%_-]{1,64}$/;

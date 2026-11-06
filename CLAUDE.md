@@ -19,8 +19,8 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ### ▶️ SESSION-VÁLTÁS (2026-10-15) — A KÖVETKEZŐ SESSION INNEN INDUL
 
-**Az állapot:** **1391 önpróba** (64 próba-fájl; a legutóbbi teljes soron mind zöld — 2026-11-06, a D123 ① után; előtte a
-terep tábla-javítása után is) · 360 fájl / 7009,1 KB (⚠️ CR nélkül mérve —
+**Az állapot:** **1395 önpróba** (64 próba-fájl; a legutóbbi teljes soron mind zöld — 2026-11-06, a D123 ② után; előtte a
+D123 ① után is) · 360 fájl / 7036,3 KB (⚠️ CR nélkül mérve —
 lásd a 6. szabályt) · 0 npm-csomag · minden pusholva. ✅ **A telefon friss** (Csaba 2026-10-23-án a felderítés kézi
 próbájához és a három javításhoz frissítette — *„működik”*); a parancs lent, *„Ami nyitva maradt"*. A laptopon a próbához három
 fa: „Felderítés-próba” (60 gondolat), „Nagy felderítés-próba” és „Harmadik felderítés-próba” (400–400 gondolat, ≤ 8 szint, ≤ 8
@@ -322,7 +322,7 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    8. szakasz végén): a listában a rövid kód (a 📋 az egész sort másolja); ⛔ a bizonyíték csak a cserében utazott, és a belépő
    lapjának függő kérelmei minden munkát kérelemmé tettek → most a kérelem `KELL` → `TAGSAG` körében is (két hálózat között a
    jelentkezés — MH6 — is kérelem; elágazás 231); a profil szövege tagnak. ✅ Terepen (2026-11-04): friss telefon, egy sor, tag lett;
-   az alsó sávon a becenév (ha van) a kulcs helyett. ⚠️ A sor a már telepített régi programot nem frissíti (döntési kérdés). ✅ **A
+   az alsó sávon a becenév (ha van) a kulcs helyett. ✅ A sor a már telepített programot is frissíti (D123 ② — PR7). ✅ **A
    meghívó WINDOWSOS sora** (2026-11-04 — Csaba lelete: anyukája laptopján a Termux-sor a parancssorban az első szónál, a `yes`-nél
    megállt; elágazás 232): a 📋 mellett 💻 — ugyanaz a meghívó egy `powershell … -Command "…"` sor végén, ami a PowerShellben és a cmd-ben
    is fut (a GitHub zip-je, a Node a `winget`-tel; `koino/windows/` — `telepit.ps1`, `indit.ps1`, `koino.cmd`; az asztalon „koino”
@@ -356,7 +356,7 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    4.1, KZ1, KZ4); a hiány: a program ma EGY csomag (a gyermek születése a teljes program lenyomatát nevezi meg — ezért „más
    programverzió” egy felületi eltérésre is; rétegezve csak a számítás magját), a feltöltött nézet a kulcsoddal fut (engedély-réteg:
    alapból csak olvas), és a KZ5 (a protokoll-törés) még nyitott. Közben kimondva: a kártya ma nem telepít (nincs „telepítés a
-   kártyáról”), és a Windowsos telepítő sor a meglévő programot nem frissíti. 🔍 **ÁTVIZSGÁLVA** (2026-11-05, Csaba alvása alatt, kód
+   kártyáról”), és a Windowsos telepítő sor a meglévő programot nem frissíti (✅ D123 ②). 🔍 **ÁTVIZSGÁLVA** (2026-11-05, Csaba alvása alatt, kód
    nélkül — [`program_retegek_atvizsgalas.md`](docs/program_retegek_atvizsgalas.md)): a mag (a koinó képe + a kapu import-zárványa)
    17 fájl / 383 KB (~5,5%), 10-25 óta 27 commitból 2 érintette; ⏸️ **PR1–PR7 Csabánál** (a születés a magot nevezze meg · a mag
    számítva · a lap két szinten szól · olvasó nézetek elsőként · telepítés a kártyáról a régi mellé · verziózott protokoll · a sor
@@ -365,7 +365,11 @@ tetején; a döntések (D101–D104) a [fázis-2 tervben](docs/fejlesztesi_terv_
    változott, mind kóddal, csak kommentet érintő egy sem): a mag a koinó képének és a kapunak az import-zárványa (`kodCsomag.js`
    `magJegyzeke` — 17 fájl, 405 KB), minden új születés megnevezi (`mag` — a gyökéré is), és a `koino`, a `/api/program`, az alsó
    sáv és a kártya „Kód” füle két szinten szól („⚠ más számítás” / „ℹ más felület”; a mag fájljai „⚙ mag” jellel); a PR2 őre: a
-   magba beadott függvények egy kimondott listán · ⏭️ **② PR7** (a telepítő sor frissít is) → ③ PR6 → ④ PR5 → ⑤ PR4.
+   magba beadott függvények egy kimondott listán · ✅ **② PR7 — a telepítő sor a már telepített programot is frissíti** (elágazás 239):
+   a Termux-sor `git fetch` + `reset --hard` (hálózat nélkül kimondja, és a meglévő indul), a windowsos a zip-et a régi MELLÉ
+   (`koino_1.1-uj`), és az ÚJ `telepit.ps1` cserél — a régi mappából futó koinót előbb leállítja (mérve: amíg egy folyamat a mappában
+   áll, az nem nevezhető át), a régi `koino_1.1-regi`, git-tárat nem cserél; a `telepit.sh` a futó régit `pkill`-lel állítja le · ⏭️
+   **③ PR6** (verziózott protokoll) → ④ PR5 → ⑤ PR4.
    🔍 **És a koinó többi BEP 5 útja** ([`bep5_utak_atvizsgalas.md`](docs/bep5_utak_atvizsgalas.md)): leltár (a
    gyökér-darab, a szeletek, a kopogtatók, a kereső-réteg, a belépő), miért nem költözik egy az egyben a BEP 44-re (egy író — egy
    érték), a tartó postaládája BEP 44-en, 88. mérés javaslat; ⏸️ **BP1–BP4 Csabánál**. ⚠️ a koinó többi BEP 5 útja (a címjegyzék, D91) ugyanettől
@@ -564,7 +568,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés, terepen — TCP-n 334 bájt volt; ⚠️ D89/1 óta titkosítva +~0,4 KB: kézfogás, csomagonként ~18 B, az aláírás — 57. mérés; D95/4 óta a gyökér-darab jele +76–100 B) · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **360 fájl, 7009,1 KB** — ⚠️ *ebből a `felulet/` 146 fájl / 1603,8 KB (2026-10-22), ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **360 fájl, 7036,3 KB** — ⚠️ *ebből a `felulet/` 146 fájl / 1603,8 KB (2026-10-22), ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -771,7 +775,7 @@ node koino/koino.js ellenoriz                       # ⭐ D82: a tár MINDEN ese
                                  # → bejelentés a vádolt azonosság-szeletébe (a csere és a `behoz` után magától is)
                                  # A fájl alakja a táré: a másolt esemenyek.jsonl is behozható.
                                  # ⛔ A kapu UGYANAZ: az átírt esemény itt is elbukik.
-node koino/meres/mind.js         # a 1391 önpróba
+node koino/meres/mind.js         # a 1395 önpróba
 node koino/meres/mind.js fa      # ⭐ egy témakör (csoport): alap · allapot · felulet · csere · fajl · fa · parancssor
 KOINO_PROBA="részlet" node koino/meres/mind.js parancssor  # ⭐ csak a nevükben ezt tartalmazó próbák (kimondja magát)
 node koino/meres/skalaMeres.js   # SKÁLA-MÉRÉS (nem önpróba: számokat ad, nem igen/nem-et)
@@ -861,10 +865,12 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés; TCP-n 334 bájt volt). ⚠️ Két készülék között ma körönként akár **négy** is lemegy (két cím × két irány, 43. mérés; a 45. mérés szétszedte: a két tényező független, és terepen egy címen is két csere megy percenként) — egyperces körrel ez társanként ~8 MB/nap, ötperccel ~1,6 MB. ⭐ A címek tényezőjét a D71 (ii) megszüntette (46. mérés: két címen is 1 csere/ablak); az irányokét a (iii) döntés felezné. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — ⭐ **2026-11-01 óta EGY bemásolt sor** (a „legegyszerűbb út”: `pkg` + `git clone` + `koino/termux/telepit.sh` — az Ed25519 vizsgája, a `koino` parancs a Termux PATH-ján, és az indítás; utána minden indításhoz `koino`, a program parancsai `koino <parancs>`-ként; `koino/termux/indit.sh` — a két folyamat, a lap a böngészőben, az őrjárat csak a csatlakozás után, Ctrl+C mindkettőt leállítja; Csaba: a D30 marad, a Termux marad, saját alkalmazás nincs) · a Szakasz 2 / 4. lépéséhez. 💻 **Windowsra (2026-11-04, elágazás 232):**
-[`docs/telepites_windows.md`](docs/telepites_windows.md) — a meghívó 💻 sora (a PowerShellbe vagy a cmd-be): a GitHub zip-je, a Node a
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — ⭐ **2026-11-01 óta EGY bemásolt sor** (a „legegyszerűbb út”: `pkg` + `git clone` + `koino/termux/telepit.sh` — az Ed25519 vizsgája, a `koino` parancs a Termux PATH-ján, és az indítás; utána minden indításhoz `koino`, a program parancsai `koino <parancs>`-ként; `koino/termux/indit.sh` — a két folyamat, a lap a böngészőben, az őrjárat csak a csatlakozás után, Ctrl+C mindkettőt leállítja; Csaba: a D30 marad, a Termux marad, saját alkalmazás nincs; ⭐ D123 ② óta a sor a már telepített programot is frissíti — `git fetch` +
+`reset --hard`, a futó régi koinót a `telepit.sh` leállítja) · a Szakasz 2 / 4. lépéséhez. 💻 **Windowsra (2026-11-04, elágazás 232):**
+[`docs/telepites_windows.md`](docs/telepites_windows.md) — a meghívó 💻 sora (a PowerShellbe vagy a cmd-be): a GitHub zip-je (⭐ D123 ②: a régi
+MELLÉ, `koino_1.1-uj` — az új `telepit.ps1` a futó régit leállítja, és cserél; a régi `koino_1.1-regi`), a Node a
 `winget`-tel, `koino/windows/telepit.ps1` → `indit.ps1` (a két folyamat egy konzolban, Ctrl+C vagy az ablak bezárása leállítja), az
-adat `%USERPROFILE%\koino-adat`, a további indítás az asztali „koino” ikon, a parancsok `koino\windows\koino.cmd <parancs>`. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 360 fájl, 7009,1 KB (egyben tömörítve ~1,9 MB — 84. mérés), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+adat `%USERPROFILE%\koino-adat`, a további indítás az asztali „koino” ikon, a parancsok `koino\windows\koino.cmd <parancs>`. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 360 fájl, 7036,3 KB (egyben tömörítve ~1,9 MB — 84. mérés), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 
@@ -893,7 +899,7 @@ node koino/koino.js tars 127.0.0.1 7373 "A készülék" && node koino/koino.js c
 ⚠️ **A KOINO NEM BÖNGÉSZŐBEN FUT (D29, 2026-08-28).** Csaba döntése: *„hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta P2P kapcsolatra koncentráljunk."* Indok: a böngésző korlátai nem a koino korlátai — egy lap nem tud portot nyitni, nem fogad kapcsolatot, elrejti a saját címeit, és bezáráskor eltűnik; a P2P-hez emlegetett infrastruktúra (jelzőpont, STUN, továbbító) jórészt EBBŐL következik. A böngésző később lehet egy kliens, de nem ő szabja meg, mire képes a koino.
 
 - **Nincs telepítendő függőség** — a kriptográfia a Node beépített WebCryptójából jön (Ed25519 natívan). Az adat a `koino-adat/` mappában él, **hozzáfűzhető** fájlban (soronként egy aláírt esemény); máshová a `KOINO_ADAT` változóval tehető.
-- **Önpróbák:** `node koino/meres/mind.js` — 1391 próba 64 fájlban (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de a sort nem pirosítja be — ha átmegy, az bukás; ma egy sincs); a kilépési kód 1, ha bármi bukott. ⭐ **Témakörönként (2026-10-01):** `node koino/meres/mind.js <csoport> [<csoport> …]` — **alap** (kanonikus, kulcs, esemény, tár, író, átmeneti, keresőtár, keresőmegújítás) · **allapot** (állapot, javaslat, szabály, egyezmény, döntési csomag, össz-pont, felszabadítás, identitás, tagság, értesítés, felderítés, koinólánc, kétréteg, költözés, koinóverzió) · **felulet** (kapu, pakli, tér, csereállapot) · **csere** (csere, fájlcsere, társak, tartomány, titkosítás, udpkapu, kötés, tábla, dht, címjegyzék, kérelem, összegzőtartás, tagságkísérő, gyökérdarab, kereső, közöshalmaz, részvétel, társemlékezet, vizsga, kiszolgálásikeret, keresőrégió, mélységtanulás, felajánlás, keresés, meghívó) · **fajl** (fájl, fájligény, fájlkérelem, fájlátvitel, szövegdarab) · **fa** (összegzőfa, láncgyökér, ellentmondás, észlelő, láncellenőrzés) · **parancssor**. Egy próba-fájl a nevével (`mind.js eszlelo`), és ha a neve csoport is: `mind.js csak csere`. A szűrő **pontosan** illeszkedik (a régi részszó-szűrő a `tar`-ra a `tarsak`-ot is indította), és a részleges futás az összegzésben kimondja magát (`Csak: fa — 4 próba-fájl a 40-ből`). ⭐ **Egy próba a nevéből (2026-10-05):** `KOINO_PROBA=<részlet>` — csak az a próba fut, amelynek a nevében benne van (a hosszú parancssor-csoportból egyet); a fejléc és az összegzés kimondja (`Szűrve: …`). ⛔ **A besorolás-őr:** minden próba-fájl pontosan egy csoportban van, és a `meres/` minden `*Proba.js` fájlja be van kötve (kivétel a `NEM_ONPROBA` listán: az `ebredesProba.js` mérés) — ha nem, a `mind.js` semmit nem futtat (kilépési kód 2), és megnevezi, mi hiányzik. *Új próba-fájlnál tehát a `CSOPORTOK`-ba is be kell írni.* Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
+- **Önpróbák:** `node koino/meres/mind.js` — 1395 próba 64 fájlban (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de a sort nem pirosítja be — ha átmegy, az bukás; ma egy sincs); a kilépési kód 1, ha bármi bukott. ⭐ **Témakörönként (2026-10-01):** `node koino/meres/mind.js <csoport> [<csoport> …]` — **alap** (kanonikus, kulcs, esemény, tár, író, átmeneti, keresőtár, keresőmegújítás) · **allapot** (állapot, javaslat, szabály, egyezmény, döntési csomag, össz-pont, felszabadítás, identitás, tagság, értesítés, felderítés, koinólánc, kétréteg, költözés, koinóverzió) · **felulet** (kapu, pakli, tér, csereállapot) · **csere** (csere, fájlcsere, társak, tartomány, titkosítás, udpkapu, kötés, tábla, dht, címjegyzék, kérelem, összegzőtartás, tagságkísérő, gyökérdarab, kereső, közöshalmaz, részvétel, társemlékezet, vizsga, kiszolgálásikeret, keresőrégió, mélységtanulás, felajánlás, keresés, meghívó) · **fajl** (fájl, fájligény, fájlkérelem, fájlátvitel, szövegdarab) · **fa** (összegzőfa, láncgyökér, ellentmondás, észlelő, láncellenőrzés) · **parancssor**. Egy próba-fájl a nevével (`mind.js eszlelo`), és ha a neve csoport is: `mind.js csak csere`. A szűrő **pontosan** illeszkedik (a régi részszó-szűrő a `tar`-ra a `tarsak`-ot is indította), és a részleges futás az összegzésben kimondja magát (`Csak: fa — 4 próba-fájl a 40-ből`). ⭐ **Egy próba a nevéből (2026-10-05):** `KOINO_PROBA=<részlet>` — csak az a próba fut, amelynek a nevében benne van (a hosszú parancssor-csoportból egyet); a fejléc és az összegzés kimondja (`Szűrve: …`). ⛔ **A besorolás-őr:** minden próba-fájl pontosan egy csoportban van, és a `meres/` minden `*Proba.js` fájlja be van kötve (kivétel a `NEM_ONPROBA` listán: az `ebredesProba.js` mérés) — ha nem, a `mind.js` semmit nem futtat (kilépési kód 2), és megnevezi, mi hiányzik. *Új próba-fájlnál tehát a `CSOPORTOK`-ba is be kell írni.* Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
 - ⚠️ A `koino/koino.js` **fejlesztői eszköz**, nem a koino felülete — a valódi felület a prototípus pakli-nézetéből öröklődik (lásd [`docs/felulet_terv.md`](docs/felulet_terv.md)).
 
 ### A PROTOTÍPUS (`backend/` + `frontend/` — Fázis 1, befagyasztva)

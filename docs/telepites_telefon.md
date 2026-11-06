@@ -38,12 +38,15 @@ keresztül egyetlen ponton le lehetne tiltani), de a parancssorból csak ez az e
 2. **Nyisd meg a Termuxot, és illeszd be ezt az egy sort** (hosszan nyomd a képernyőt → Paste), majd Enter:
 
 ```
-yes | pkg upgrade && pkg install -y nodejs git && { [ -d ~/koino_1.1 ] || git clone --depth 1 https://github.com/Biszt/koino_1.1.git ~/koino_1.1; } && sh ~/koino_1.1/koino/termux/telepit.sh
+yes | pkg upgrade && pkg install -y nodejs git procps && { if [ -d ~/koino_1.1 ]; then git -C ~/koino_1.1 fetch --depth 1 origin main && git -C ~/koino_1.1 reset --hard FETCH_HEAD || echo ⚠ a program most nem frissült — a meglévő indul; else git clone --depth 1 https://github.com/Biszt/koino_1.1.git ~/koino_1.1; fi; } && sh ~/koino_1.1/koino/termux/telepit.sh
 ```
 
    Ez frissíti a Termuxot, telepíti a Node-ot és a gitet, letölti a koinót, megvizsgálja, hogy a telefon tud-e aláírni
    (Ed25519), felveszi a `koino` parancsot, és **elindítja**: a böngészőben megnyílik a lap. ⏱ Az első alkalommal
    néhány perc, sok szöveg gördül — ez normális.
+   ⭐ **Ha a koino már fent van, ugyanez a sor FRISSÍTI** (2026-11-06, D123): a program mappáját a legújabbra állítja (az
+   adatod a `~/koino-adat`-ban marad), és ha egy másik Termux-ablakban még a régi koino fut, leállítja, és az újjal indít.
+   Hálózat nélkül kiírja, hogy „a program most nem frissült”, és a meglévő indul.
 3. ⭐ **Ha MEGHÍVÓT kaptál (D122, 2026-11-03):** a meghívód a lapján („✉️ Meghívóim”) egy sort ad — ugyanez a telepítő sor, a
    végén a meghívóval (`… telepit.sh koino-meghivo:2:…`). Akkor EZT illeszd be a 2. pont helyett: telepít, csatlakozik, belép, és a
    következő csere után a meghívód gépe magától tagnak hív meg — semmit nem kell kérned. A lap az első megnyitáskor az adataidat
@@ -65,11 +68,15 @@ vagy a parancssorba kell beilleszteni: a Termux-sor ott már az első szónál m
 [`telepites_windows.md`](telepites_windows.md).
 
 *Az adat a `~/koino-adat` mappában él (más: `KOINO_ADAT=<mappa> koino`); a naplók ugyanott: `orjarat.log`, `felulet.log`.
-A program magától nem frissül — hogy egy koinó melyik kódot futtatja, az a közösség dolga (a koino-verzió kártya).*
+A program magától nem frissül, csak ha a sort újra bemásolod — hogy egy koinó melyik kódot futtatja, az a közösség dolga (a
+koino-verzió kártya; ha a gépeden más a számítás magja, mint amivel a koinó született, a lap kimondja: „⚠ más számítás”).*
 
 ---
 
 ## 🔄 HA MÁR FENT VAN A KOINO: frissítés
+
+⭐ **2026-11-06 óta a legegyszerűbb frissítés: a fenti egy sor** (a „legegyszerűbb út” 2. pontja — meghívó nélkül is):
+frissít, a futó régi koinót leállítja, és az újjal indít. Az alábbi sor a fejlesztéshez kell, mert az önpróbákat is lefuttatja.
 
 *Erre akkor van szükség, ha a laptopon fejlesztettünk valamit, és a telefonnak is meg kell
 kapnia. A koino gyorsan változik, és **a két készüléknek ugyanazt a verziót kell futtatnia**

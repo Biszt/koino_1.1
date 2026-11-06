@@ -219,7 +219,7 @@ környezete — egy rendes böngészőben a 127.0.0.1 biztonságos környezet). 
 a „Meghívóim” ablakból egy sor; a telefonon minden törölve (a Node maradt), a sor bemásolva a Termuxba — a telefon tag lett, a
 laptop magától meghívta. ⚠️ A sor egy már telepített (régebbi) programot NEM frissít (`[ -d ~/koino_1.1 ] || git clone`), és a régi
 kód az új meghívót nem fogadja el — friss telefonon megy; hogy frissítsen-e, az döntési kérdés (D119: a program nem frissül
-magától). **Csaba kérése, kész:** az alsó sávon a „koino” után a kulcs rövid alakja állt → ha a profilban van becenév, azt mutatja
+magától). *(✅ D123 ② (PR7, 2026-11-06): a sor frissít — `program_retegek_atvizsgalas.md` 7.)* **Csaba kérése, kész:** az alsó sávon a „koino” után a kulcs rövid alakja állt → ha a profilban van becenév, azt mutatja
 (`/api/eember/sajat-adatok` `eemberNev`; az adatlap mentése után azonnal — `koino:profilValtozas`); a lapos D122-próba méri,
 rontással.
 

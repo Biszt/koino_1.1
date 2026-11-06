@@ -6242,6 +6242,12 @@ kártya kódja ehhez kötött a kapun, és a lap tájékoztató szintje ehhez m�
 figyelmeztet, ha a mag más. A 89. mérés előtte: a mag 10-24 óta 36 commitból 4-ben változott, mind kód-változással (csak kommentet
 érintő egy sem), 10-29 óta egyszer sem.
 
+*Az építés alakja (②, 2026-11-06 — elágazás 239):* a telepítő sor a már telepített programot is frissíti — a Termuxon
+`git fetch` + `git reset --hard` (hálózat nélkül kimondja, és a meglévő indul), Windowson a zip a régi MELLÉ (`koino_1.1-uj`), és az
+ÚJ telepítő cserél: leállítja a régi mappából futó koinót (mérve: amíg egy folyamat a mappában áll, az nem nevezhető át), a régit
+`koino_1.1-regi`-nek nevezi, az újat a helyére teszi; egy git-tárat nem cserél le; ha a csere nem sikerül, a régi program indul. A
+Termux-telepítő is leállítja a futó régi koinót (`pkill`). Az adat mindkét helyen a program mappáján kívül van.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem
