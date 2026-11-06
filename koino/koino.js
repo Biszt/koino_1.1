@@ -153,7 +153,7 @@ import {
   KOINO_VERZIO, koinoVerzioE
 } from './js/esemeny/esemeny.js';
 // ⭐⭐ D119 (①a): a kód-csomag — a futó program kódja a koino-verzió kártyájára, és a koinó programjával összevetve.
-import { sajatKodCsomag, kodCsomagTarolasa, kodJegyzekOlvasasa } from './js/tar/kodCsomag.js';
+import { sajatKodCsomag, kodCsomagTarolasa, kodJegyzekOlvasasa, sajatMag, magJegyzeke } from './js/tar/kodCsomag.js';
 import { szabalyokAlakiHibaja, ALAP_SZABALYOK, koinoSzabalyai, teljesSzabalyok } from './js/esemeny/koinoSzabalyok.js';
 import { szuletesLanc, szuloTagsagaEpitese, bekoltozesekEllenorzese, koinoNezete, lancNezete } from './js/allapot/koinoLanc.js';
 import { koinoKepe } from './js/allapot/ketReteg.js';
@@ -447,6 +447,21 @@ const { kulcspar, ujE } = await kulcsparBiztositasa(tarolo);
 const szerzo = await nyilvanosKulcsSzovegesen(kulcspar.publicKey);
 
 /**
+ * ⭐⭐ D123 (PR3): egy kód-jegyzék MAGJA (koinó-független — a gyár előtt): a jegyzék fájljaiból (a fájl-tárból, az utak
+ * szerint) ugyanazzal a függvénnyel, amivel a futó program a sajátját számolja. Null, ha a mag valamelyik fájlja még nincs meg (D19 — hiány, nem hiba).
+ * @param {Object} jegyzek - a kód-csomag jegyzéke
+ * @param {Object} blob - a fájl-tár (`fajlBlobTarolo`)
+ * @returns {Promise<{hivatkozas: {lenyomat: string, bajt: number}, utak: Array<string>}|null>} a mag neve és a fájljai
+ */
+async function kodJegyzekMagja(jegyzek, blob) {
+  const utak = new Map((jegyzek?.fajlok ?? []).map((f) => [f[0], f[1]]));
+  try {
+    const m = await magJegyzeke(async (ut) => (utak.has(ut) ? (await blob.olvas(utak.get(ut)).catch(() => null)) : null));
+    return { hivatkozas: m.hivatkozas, utak: m.jegyzek.fajlok.map((f) => f[0]) };
+  } catch { return null; }
+}
+
+/**
  * ⛔⛔ EGY KOINÓ TÁRA AZ ÍRÓ MÖGÖTT (D70, 2026-09-26). Egy készüléken több folyamat dolgozik
  * ugyanazon a táron (az őrjárat, a második ablak parancsa, a felület) — a fájlhoz közülük
  * mindig CSAK EGY fűz: az író. Aki nem az, átadja neki az eseményt; ha nincs élő író, ő lesz.
@@ -659,7 +674,9 @@ async function koinoVerzioElonezete() {
   return { koino: KOINO, nev: sz?.adat?.nev ?? null, zart: sz?.adat?.zart !== false, szabalyok: koinoSzabalyai(sz),
     szabadPont: await szabadTudatpontjaim(kornyezet), kezdoPont: KEZDO_PONT, lehet: ok === null, ok,
     program: { ...csomag.hivatkozas, fajlok: csomag.jegyzek.fajlok.length,
-      osszBajt: csomag.jegyzekBajtok.length + csomag.jegyzek.fajlok.reduce((s, f) => s + f[2], 0) } };
+      osszBajt: csomag.jegyzekBajtok.length + csomag.jegyzek.fajlok.reduce((s, f) => s + f[2], 0) },
+    // ⭐⭐ D123 (PR1): a gyermek születése ezt a magot nevezi meg (a futó programé)
+    mag: (await sajatMag(PROGRAM_GYOKER)).hivatkozas };
 }
 
 /**
@@ -684,20 +701,34 @@ function koinoVerzioKiirasa(v, becenev = null) {
     + ' esemény); a többiek: koltozes <ez a gyermek>');
   kiir('  A programja (a kód-csomag): ' + v.kod.lenyomat + ' — ' + v.kodFajlok + ' fájl, ' + (v.kodBajt / 1024).toFixed(1)
     + ' KB (a kártya „Kód” fülén ellenőrizhető)');
+  if (v.szuletes.adat.mag) {
+    kiir('  A számítás magja: ' + v.szuletes.adat.mag.lenyomat + ' — ez köti a gyermeket (a többi réteg szabadon változhat)');
+  }
   kiir('  A szabályai: ' + szabalyokSzovege(v.szuletes.adat.szabalyok));
 }
 
 /**
- * ⭐⭐ D119 (①a): A KOINÓ PROGRAMJA ÉS A FUTÓ PROGRAM — a születés `program`-ja (a kód-csomag neve) és ennek a készüléknek a
- * kódja; ha a kettő eltér, kimondjuk (CS3: nem tiltjuk, jelezzük). A születés nélküli (vagy a programot nem nevező —
- * a gyökér, a D119 előtti) koinónál az `egyezik` null.
- * @returns {Promise<{koinoe: {lenyomat: string, bajt: number}|null, sajat: {lenyomat: string, bajt: number}, egyezik: boolean|null}>}
+ * ⭐⭐ D119 (①a), D123 (PR3): A KOINÓ PROGRAMJA ÉS A FUTÓ PROGRAM — KÉT SZINTEN. A MAG (a születés `mag`-ja — a számítás magja)
+ * dönt: ha eltér, ezen a készüléken a koinó képe más lehet, mint a többieké (`szint: 'mag'` — piros). A teljes program (a
+ * születés `program`-ja — a koino-verzió kártyán utazó kód) csak tájékoztat: ha csak az tér el, a számítás ugyanaz, a felület,
+ * a protokoll vagy a helyi viselkedés más (`szint: 'program'`). CS3: egyiket sem tiltjuk, kimondjuk. A magot nem nevező
+ * (a D123 előtti) születésnél a mag szintje null — ott a régi, egyszintű összevetés marad.
+ * @returns {Promise<{koinoe: Object|null, sajat: Object, egyezik: boolean|null,
+ *   mag: {koinoe: Object|null, sajat: Object, egyezik: boolean|null}, szint: 'mag'|'program'|null}>} a felső szint mezői
+ *   (`koinoe`, `sajat`, `egyezik`) a teljes programé (a D119 alakja)
  */
 async function programVerzioja() {
   const sz = await koinoSzuletese();
   const koinoe = szovegHivatkozasE(sz?.adat?.program) ? sz.adat.program : null;
   const sajat = (await sajatKodCsomag(PROGRAM_GYOKER)).hivatkozas;
-  return { koinoe, sajat, egyezik: koinoe ? koinoe.lenyomat === sajat.lenyomat : null };
+  const egyezik = koinoe ? koinoe.lenyomat === sajat.lenyomat : null;
+  const magKoinoe = szovegHivatkozasE(sz?.adat?.mag) ? sz.adat.mag : null;
+  const magSajat = (await sajatMag(PROGRAM_GYOKER)).hivatkozas;
+  const magEgyezik = magKoinoe ? magKoinoe.lenyomat === magSajat.lenyomat : null;
+  // A szint: a mag eltérése dönt; ha a születés nem nevez meg magot, a teljes program eltérése a régi (D119) jelzés.
+  const szint = magEgyezik === false ? 'mag' : (magEgyezik === null && egyezik === false) ? 'mag'
+    : egyezik === false ? 'program' : null;
+  return { koinoe, sajat, egyezik, mag: { koinoe: magKoinoe, sajat: magSajat, egyezik: magEgyezik }, szint };
 }
 
 /**
@@ -746,7 +777,9 @@ async function ujKoinoSzuletese(nev, leiras, beallitas, osSzuletesek = [], lancV
       const mv = await esemenyMentese(ures, lancVeg);
       if (!mv.mentve) throw new Error('A szülőbeli láncod vége nem olvasható be: ' + mv.ok);
     }
-    const szuletes = await koinoLetrehozasa({ koino: '', kulcspar, szerzo, tar: ures }, nev, leiras, undefined, beallitas);
+    // ⭐⭐ D123 (PR1): minden új születés a futó program MAGJÁT nevezi meg (a gyökéré is — a számítás ott is a magé).
+    const mag = (await sajatMag(PROGRAM_GYOKER)).hivatkozas;
+    const szuletes = await koinoLetrehozasa({ koino: '', kulcspar, szerzo, tar: ures }, nev, leiras, undefined, { ...beallitas, mag });
     const cel = await koinoTaraEgyszer(szuletes.azonosito);
     for (const e of osSzuletesek) {
       const mo = await esemenyMentese(cel, e);
@@ -7170,11 +7203,22 @@ try {
           kiir('A szabályai: ' + szabalyokSzovege(await koinomSzabalyai(kornyezet)));
           // ⭐⭐ D119 (①a): a programja (a születésből) és a futó program — ha eltér, kimondjuk (nem tiltjuk)
           const pv = await programVerzioja();
+          // ⭐⭐ D123 (PR3): két szinten — a mag (a számítás) dönt, a teljes program csak tájékoztat
+          if (pv.mag.koinoe) {
+            kiir('A számítás magja: ' + pv.mag.koinoe.lenyomat + (pv.mag.egyezik ? ' — ezen a készüléken is ez fut'
+              : SZIN.nem + ' — ⚠ ezen a készüléken MÁS SZÁMÍTÁS fut: ' + pv.mag.sajat.lenyomat + ' (a koinó képe itt eltérhet a'
+                + ' többiekétől)' + SZIN.vege));
+          } else {
+            kiir(SZIN.halvany + 'A születése nem nevez meg magot (a D123 előtti) · ezen a készüléken a mag: ' + pv.mag.sajat.lenyomat
+              + SZIN.vege);
+          }
           if (pv.koinoe) {
             kiir('A programja: ' + pv.koinoe.lenyomat + (pv.egyezik ? ' — ezen a készüléken is ez fut'
-              : SZIN.nem + ' — ⚠ ezen a készüléken MÁS verzió fut: ' + pv.sajat.lenyomat + SZIN.vege));
+              : pv.szint === 'program' ? SZIN.halvany + ' — ezen a készüléken más (a számítás ugyanaz; a felület, a protokoll vagy a'
+                + ' helyi viselkedés eltér): ' + pv.sajat.lenyomat + SZIN.vege
+                : SZIN.nem + ' — ⚠ ezen a készüléken MÁS verzió fut: ' + pv.sajat.lenyomat + SZIN.vege));
           } else {
-            kiir(SZIN.halvany + 'A születése nem nevez meg programot (gyökér-koinó, vagy a D119 előtti) · ezen a készüléken: '
+            kiir(SZIN.halvany + 'A születése nem nevez meg teljes programot (gyökér-koinó, vagy a D119 előtti) · ezen a készüléken: '
               + pv.sajat.lenyomat + SZIN.vege);
           }
           kiir(SZIN.halvany + 'Ezen a készüléken a becenév: ' + KOINO_BECENEV + ' · a másik készüléken: csatlakoz ' + KOINO
@@ -7206,6 +7250,8 @@ try {
         : ' (ZÁRT — a tartalmát csak tagnak adjuk ki; a betartatás az identitás-lépéssel jön)'));
       kiir('  A koinó neve: ' + szuletes.azonosito);
       kiir('  A szabályai: ' + szabalyokSzovege(szuletes.adat.szabalyok));
+      // ⭐⭐ D123 (PR1): a számítás magja — ezt kell a koinó minden tagjának futtatnia
+      kiir(SZIN.halvany + '  A számítás magja: ' + szuletes.adat.mag?.lenyomat + SZIN.vege);
       kiir(SZIN.halvany + '  Ezen a készüléken a „' + KOINO_BECENEV + '” becenév; a másik készüléken: csatlakoz '
         + szuletes.azonosito + SZIN.vege);
       break;
@@ -10648,8 +10694,13 @@ try {
           let megvan = 0;
           for (const f of jegyzek?.fajlok ?? []) if (await blob.van(f[1])) megvan++;
           const sajat = (await sajatKodCsomag(PROGRAM_GYOKER)).hivatkozas;
+          // ⭐⭐ D123 (PR3): a kártya kódjának MAGJA (ha a mag fájljai megvannak) és a futó programé — a lap két szinten szól
+          const kartyaMag = jegyzek ? await kodJegyzekMagja(jegyzek, blob) : null;
+          const sajatMagja = (await sajatMag(PROGRAM_GYOKER)).hivatkozas;
           return { adat: { kartya: e.azonosito, gyermek: e.koinoVerzio.gyermek, kod, jegyzek: jegyzek?.fajlok ?? null, megvan,
-            sajat, egyezik: sajat.lenyomat === kod.lenyomat } };
+            sajat, egyezik: sajat.lenyomat === kod.lenyomat,
+            mag: { kartyae: kartyaMag?.hivatkozas ?? null, sajat: sajatMagja, utak: kartyaMag?.utak ?? null,
+              egyezik: kartyaMag ? kartyaMag.hivatkozas.lenyomat === sajatMagja.lenyomat : null } } };
         }
 
         // ⭐⭐ D120: A KÉRHETŐ TÖRZS-ELEMEK — ami a határ miatt nem jön magától (a méretével), egy entitásra (`entitas`) vagy egy

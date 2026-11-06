@@ -20,7 +20,7 @@
 
 import { probaGyujtemeny } from './probaFuttato.js';
 import { execFile, spawn } from 'node:child_process';
-import { mkdtemp, rm, readFile, writeFile, readdir, mkdir } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile, readdir, mkdir, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 // ⭐ A néma DHT-gép és a néma tükör próbájához (40. mérés): egy foglalat, ami hall, de nem felel.
@@ -35,6 +35,7 @@ import { koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese } from '../js
 import { lancUjEsemenyhez } from '../js/allapot/lancGyoker.js';
 // ⭐ D85 T3: a töredék azonosítója (a csomag szeletének kulcsa) — a próba maga számolja.
 import { toredekAzonosito } from '../js/allapot/szabalyok.js';
+import { sajatMag } from '../js/tar/kodCsomag.js';
 
 const { proba, futtatas } = probaGyujtemeny('A KÉZI ÚT — a parancssor végigjárása (4. szabály)');
 
@@ -617,6 +618,63 @@ proba('⭐⭐ D119 (①a): a koino-verzió — a gyermek a szülőben egy kárty
     }
   });
 
+// ⭐⭐ D123 (PR1, PR3): A KOINÓ A SZÁMÍTÁS MAGJÁT NEVEZI MEG, ÉS A KÉT SZINT. A gyökér-koinó és a gyermek születése a futó program
+// MAGJÁT nevezi meg (a `kodCsomag.js` `sajatMag`-ja ugyanazt számolja a próbában is). Aztán ugyanazon az adaton három telepítés
+// mondja ki a `koino`-ban, mit fut: (1) ez a program — a mag és a program is egyezik; (2) egy másolat, aminek csak egy NEM mag
+// fájlja más (a felület része — a teljes program neve így más, a mag nem) — „a számítás ugyanaz”, nem figyelmeztet; (3) egy
+// másolat, aminek egy MAG fájlja más (csak egy komment!) — „MÁS SZÁMÍTÁS”. Viselkedést mérünk: a lemezt és a kiírást.
+proba('⭐⭐ D123 (PR1, PR3): a koinó születése a futó program MAGJÁT nevezi meg (a gyökéré és a gyermeké is); a `koino` két szinten szól — a csak felületében más telepítés „a számítás ugyanaz”, a más magú „MÁS SZÁMÍTÁS”',
+  async () => {
+    const a = await ujKeszulek();
+    const masolatok = await mkdtemp(join(tmpdir(), 'koino-masolat-'));
+    const lemez = async (hely, koino) => (await readFile(join(hely, koino, 'esemenyek.jsonl'), 'utf8').catch(() => ''))
+      .split('\n').filter(Boolean).map((x) => JSON.parse(x));
+    // Egy telepítés másolata (a koino.js és a js/ — a `koino` parancsnak más nem kell), egy fájlja végén egy sorral.
+    const PROGRAM_GYOKER = dirname(KOINO_JS);
+    const masolat = async (nev, fajl) => {
+      const cel = join(masolatok, nev, 'koino');
+      await cp(join(PROGRAM_GYOKER, 'js'), join(cel, 'js'), { recursive: true });
+      await cp(KOINO_JS, join(cel, 'koino.js'));
+      await writeFile(join(cel, fajl), (await readFile(join(cel, fajl), 'utf8')) + '\n// egy másik telepítés\n');
+      return join(cel, 'koino.js');
+    };
+    const futVele = (program, hely, ...ervek) => {
+      const kornyezet = (ervek.length && typeof ervek[ervek.length - 1] === 'object') ? ervek.pop() : {};
+      return new Promise((t, e) => execFile(process.execPath, [program, ...ervek],
+        { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...kornyezet }, timeout: 30000 },
+        (hiba, ki, hk) => (hiba && !ki ? e(new Error(hiba.message + ' | ' + hk)) : t(ki + hk))));
+    };
+    try {
+      const vart = (await sajatMag(PROGRAM_GYOKER)).hivatkozas;
+      await fut(a, 'koino', 'Mag próba', 'nyilt');
+      const P = await koinoNeve(a);
+      const pSzul = (await lemez(a, P)).find((e) => e.azonosito === P);
+      await fut(a, 'gondolat', 'Valami');
+      await fut(a, 'koinoverzio', 'Gyermek', 'pont=10', 'becenev=gy');
+      const G = await koinoNeve(a, 'gy');
+      const gSzul = (await lemez(a, G)).find((e) => e.azonosito === G);
+      // (1) ez a program; (2) a felület más; (3) a mag más (egy komment a tagság számításában)
+      const ez = await fut(a, 'koino', { KOINO_AZONOSITO: 'gy' });
+      const feluletMas = await futVele(await masolat('felulet', 'js/felulet/kapu.js'), a, 'koino', { KOINO_AZONOSITO: 'gy' });
+      const magMas = await futVele(await masolat('mag', 'js/allapot/tagsag.js'), a, 'koino', { KOINO_AZONOSITO: 'gy' });
+      const gyokerMagMas = await futVele(join(masolatok, 'mag', 'koino', 'koino.js'), a, 'koino');
+      const ok = pSzul?.adat?.mag?.lenyomat === vart.lenyomat && pSzul.adat.mag.bajt === vart.bajt && !pSzul.adat.program
+        && gSzul?.adat?.mag?.lenyomat === vart.lenyomat && !!gSzul.adat.program
+        && ez.includes('A számítás magja: ' + vart.lenyomat + ' — ezen a készüléken is ez fut')
+        && ez.includes('A programja: ' + gSzul.adat.program.lenyomat + ' — ezen a készüléken is ez fut')
+        && feluletMas.includes('A számítás magja: ' + vart.lenyomat + ' — ezen a készüléken is ez fut')
+        && /A programja: \S+ — ezen a készüléken más \(a számítás ugyanaz/.test(feluletMas) && !/MÁS SZÁMÍTÁS|MÁS verzió/.test(feluletMas)
+        && /⚠ ezen a készüléken MÁS SZÁMÍTÁS fut/.test(magMas) && /MÁS verzió fut/.test(magMas)
+        && /⚠ ezen a készüléken MÁS SZÁMÍTÁS fut/.test(gyokerMagMas);
+      if (!ok) process.stderr.write('    (' + JSON.stringify({ vart, pMag: pSzul?.adat?.mag, gMag: gSzul?.adat?.mag,
+        ez: ez.slice(0, 700), feluletMas: feluletMas.slice(0, 700), magMas: magMas.slice(0, 700),
+        gyokerMagMas: gyokerMagMas.slice(0, 500) }) + ')\n');
+      return ok;
+    } finally {
+      for (const h of [a, masolatok]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 // ⭐⭐ D119 (①b): A KOINO-VERZIÓ A LAPRÓL ÉS A KÓDJA A VONALON. Az A felülete megmutatja az űrlap kiindulását (a szülő
 // szabályai, a szabad pont, a futó program), a lapról születik a gyermek (a kártya és a pont a lemezen, a gyermek a saját
 // szabályával és a programmal), a „Kód” fül a jegyzéket adja (mind megvan, a futó programmal egyezik). A vállalt kód túléli
@@ -685,6 +743,9 @@ proba('⭐⭐ D119 (①b): a koino-verzió a LAPRÓL és a kódja a vonalon — 
         && kSzul?.adat?.program?.lenyomat === elo.adat?.program?.lenyomat
         && jegyzek.length === elo.adat?.program?.fajlok && kod.adat?.megvan === jegyzek.length && kod.adat?.egyezik === true
         && prog.adat?.sajat?.lenyomat === elo.adat?.program?.lenyomat
+        // ⭐ D123 (PR1, PR3): a gyermek a magot nevezi meg, a lap két szinten kapja (itt mindkettő egyezik), a „Kód” fül a mag fájljait
+        && kSzul?.adat?.mag?.lenyomat === elo.adat?.mag?.lenyomat && prog.adat?.szint === null && prog.adat?.mag?.egyezik === true
+        && kod.adat?.mag?.egyezik === true && kod.adat.mag.utak?.length >= 10 && kod.adat.mag.utak.includes('js/allapot/ketReteg.js')
         && aMegvan === jegyzek.length && !szemetMaradt
         && !!pk?.gyermekek?.some((g) => g.azonosito === K && g.kartyarol === true && g.nev === 'Lapról verzió')
         && jegyzek.length > 64 && bMegvan === jegyzek.length;

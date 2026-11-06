@@ -34,6 +34,20 @@
   color: #b71c1c;
 }
 
+/* ⭐ D123 (PR3): a számítás ugyanaz, csak a többi réteg más — tájékoztatás */
+.koino-kod__info {
+  margin: 0.3em 0;
+  color: #5d4037;
+}
+
+/* ⭐ D123: a mag fájljai a jegyzékben */
+.koino-kod__mag {
+  margin-left: 0.4em;
+  font-size: 0.8em;
+  color: #6a1b9a;
+  cursor: help;
+}
+
 .koino-kod__lista {
   max-height: 14em;
   overflow-y: auto;
@@ -165,6 +179,13 @@
   color: #ffd180;
   font-weight: bold;
   cursor: help;
+}
+
+/* ⭐ D123 (PR3): ha csak a felület (nem a számítás) más — tájékoztatás, nem figyelmeztetés */
+.also-sav__program--info {
+  color: inherit;
+  font-weight: normal;
+  opacity: 0.8;
 }
 
 @media (max-width: 600px) {

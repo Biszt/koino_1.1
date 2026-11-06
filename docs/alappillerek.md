@@ -1770,3 +1770,18 @@ nyomán a kifutás (D104, 153.). ⏭️ A ⑦, a kereső-réteg: az alakja eldő
     próbák: egy modul-próba és egy parancssor-próba (valódi őrjárat hamis DHT-n, a lemezt nézi) — a rontásra a `talalkozasok` 3 → 5,
     pontosan a terepi viselkedés · ⚠️ nyitott: a laptop régi őrjárata egyszer 35 percre megállt (oka ismeretlen, mérjük) ·
     `belepo_megtalalasa_atvizsgalas.md` 9.
+238. **2026-11-06 · D123 ① — a koinó a számítás MAGJÁT nevezi meg, és a lap két szinten szól (PR1–PR3)** → **a mag a két belépő (a koinó
+    képe — `ketReteg.js` — és a kapu — `esemenyTar.js`) import-zárványa, számítva (`kodCsomag.js` `magJegyzeke`, `sajatMag`: ma 17
+    fájl, 405 KB, egy beépített modul — `node:crypto` —, dinamikus import nélkül); minden új születés a mag-jegyzék hivatkozását
+    viszi (`mag` — a gyökéré is; a kapu csak új alakban és hivatkozásként fogadja); a `koino`, a `/api/program` és a lap alsó sávja két
+    szinten szól (`programVerzioja` `szint`: a mag más → „⚠ más számítás”, csak a többi réteg → „ℹ más felület”); a kártya „Kód”
+    füle a kártya kódjának magját is kiszámolja, összeveti, és a mag fájljait „⚙ mag” jellel mutatja (`kodJegyzekMagja`)** · ⭐ a
+    gyermek születésén a teljes program (`program`) megmaradt: a kártya kódja a kapun ehhez kötött, és a tájékoztató szint ehhez mér —
+    a KÖTÉS a magé · ⭐ a gyökér is megnevezi a magot: a 15. mérés néma kettéhasadása ott is fenyeget, és a lap így ott is figyelmeztet ·
+    ⛔ a jegyzék a fájlok BÁJTJAIT köti (a kommentet is): a 89. mérés szerint a mag 10-24 óta 36 commitból 4-ben változott, mind
+    kóddal — a kommentet szűrő lenyomat egy elemzőn múlna, és egy téves szűrés éppen a veszélyes irányba (a kimaradó változás felé)
+    billentene · ⛔ PR2: a beadott függvények (amit a zárvány nem lát) egy kimondott listán (`koinoVerzioProba.js` — ma hét: a D14
+    kivétele, a lánc-ág, a lezárási összegzés két olvasója, a szöveg feloldása) · a böngészős végigjárás lelete, javítva: a „Kód” fül
+    segédje a koinó-példány gyárában állt, a lap kezelője nem látta („hiba”) — most a gyár előtt (koinó-független) · ⚠️ a mag-jegyzék
+    darabja még nem utazik (a kártya kódjából bárki kiszámolja, ugyanazzal a függvénnyel) — a PR5 (telepítés a kártyáról) hozza, ha a
+    számítás módja egyszer változna · `program_retegek_atvizsgalas.md` 6.

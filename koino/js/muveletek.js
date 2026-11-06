@@ -419,7 +419,10 @@ export function koinoLetrehozasa(kornyezet, nev, leiras, alapitok, beallitas = {
     // ⭐⭐ D119 (A): amit a létrehozó a születésével NEM hoz (KZ3 (A) — a koino-verzió kártyáira tett pontja: a szülő ügye).
     ...(beallitas.szulo && Array.isArray(beallitas.elhagy) && beallitas.elhagy.length ? { elhagy: [...beallitas.elhagy] } : {}),
     // ⭐⭐ D119 (①a): a koinó PROGRAMJA — a kód-csomag jegyzékének hivatkozása (`tar/kodCsomag.js`): a kód köti a koinót.
-    ...(beallitas.program ? { program: { ...beallitas.program } } : {})
+    ...(beallitas.program ? { program: { ...beallitas.program } } : {}),
+    // ⭐⭐ D123 (PR1): a koinó MAGJA — a számítás magjának hivatkozása (`tar/kodCsomag.js` `magJegyzeke`): ez köti a koinót egy
+    // számításhoz; a teljes program (`program`) csak tájékoztat (a felület, a protokoll, a helyi viselkedés szabadon változhat).
+    ...(beallitas.mag ? { mag: { lenyomat: beallitas.mag.lenyomat, bajt: beallitas.mag.bajt } } : {})
   });
 }
 

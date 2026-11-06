@@ -6218,6 +6218,30 @@ prototipusban van.”*) — a D121 MH2-t és MH3-at váltja:
 (`KELL` → `TAGSAG`) is utazik és számít — két hálózat között a belépő első munkája a jelentkezés (MH6), egy kérelem, és a belépő
 lapjának függő kérelmei is kérelem-munkákat hoznak; ha a bizonyíték csak a cserében utazna, ezek a rések kárba mennének.*
 
+### D123. A PROGRAM RÉTEGEI: „A SZÁMÍTÁS KÖT, A TÖBBI SZABAD” (2026-11-06)
+
+*Csaba (2026-11-05): „beszéljük át, hogy hogyan lehetne program rétegek szerint, program verziókat létrehozni. pl. a megjelenítési
+módozatok közül, amiket a közösség »feltölt«, szabadon lehet használni, költözés nélkül … ami meglévő számításokat is módosítja, az
+már költözést igényel.” Az átvizsgálás: [`program_retegek_atvizsgalas.md`](program_retegek_atvizsgalas.md).*
+
+**A döntés** (Csaba, 2026-11-06: *„Mindet elfogadom”* — PR1–PR7 a javaslat szerint, a sorrend PR1–3 → PR7 → PR6 → PR5 → PR4):
+1. **PR1 — a koinó a számítás MAGJÁT nevezi meg.** A mag (R1) a koinó képe és a kapu; ennek kell egy koinón belül mindenkinél
+   azonosnak lennie. A protokoll (R2), a helyi viselkedés (R3) és a felület (R4) szabadon változhat.
+2. **PR2 — a mag számítva:** a két belépő (`ketReteg.js`, `esemenyTar.js`) import-zárványa; egy próba őrzi, hogy a mag nem kap
+   kívülről döntő függvényt (a beadott függvények egy kimondott listán, okkal).
+3. **PR3 — a lap két szinten szól:** a mag eltérése figyelmeztetés („⚠ más számítás”), a többi rétegé tájékoztatás.
+4. **PR4 (B) — a közösség feltöltött nézetei:** elsőként csak olvasó nézetek, elszigetelten, a saját készüléken bekapcsolva.
+5. **PR5 (B) — telepítés a kártyáról:** a kártya kódjából egy új programmappa a régi MELLÉ, ellenőrizve, az e-ember indítja.
+6. **PR6 (A) — verziózott protokoll** (a KZ5 válasza): a NYITÁS kimondja a protokoll-verziót, az új program egy ideig a régit is
+   beszéli.
+7. **PR7 (A) — a telepítő sor frissít is.**
+
+*Az építés alakja (①, 2026-11-06 — elágazás 238):* minden ÚJ születés (a gyökéré is, nem csak a gyermeké) a futó program magját
+nevezi meg (`mag`: a mag-jegyzék hivatkozása); a gyermek születésén a teljes program (`program`) is megmarad — a koino-verzió
+kártya kódja ehhez kötött a kapun, és a lap tájékoztató szintje ehhez méri a többi réteget. A „más programverzió” így csak akkor
+figyelmeztet, ha a mag más. A 89. mérés előtte: a mag 10-24 óta 36 commitból 4-ben változott, mind kód-változással (csak kommentet
+érintő egy sem), 10-29 óta egyszer sem.
+
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
 
 *Csaba kérdésére (GunDB/OrbitDB) indított lista. Ezek NEM koino-versenytársak, hanem

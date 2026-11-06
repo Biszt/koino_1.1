@@ -432,20 +432,38 @@ export class AlsoSav {
   }
 
   /**
-   * ⭐⭐ D119 (①b): ha ezen a készüléken MÁS program fut, mint amivel a koinó született (a koino-verzió kártyája mondja), a sáv
-   * kimondja — nem tiltja (CS3). A gyökér-koinónak nincs programja (nincs kártyája): ott nincs jelzés.
+   * ⭐⭐ D119 (①b), D123 (PR3): ha ezen a készüléken MÁS program fut, mint amivel a koinó született, a sáv kimondja — KÉT SZINTEN,
+   * és egyiket sem tiltja (CS3). A MAG (a számítás) eltérése figyelmeztetés: ebben a koinóban mást láthatsz, mint a többiek. Ha csak a
+   * teljes program tér el (a felület, a protokoll, a helyi viselkedés), az tájékoztatás. A magot és programot nem nevező
+   * (régi) születésnél nincs jelzés.
    */
   async _programKerdezese() {
+    console.log('AlsoSav._programKerdezese - KEZDÉS');
     try {
       const p = await apiGet('program');
       const elem = document.getElementById('info-program');
       const elv = document.getElementById('info-program-elvalaszto');
-      if (!elem || p?.egyezik !== false) return;
+      if (!elem || (p?.szint !== 'mag' && p?.szint !== 'program')) return;
+      const rovid = (h) => String(h?.lenyomat ?? '?').slice(0, 12) + '…';
       elem.hidden = false;
       if (elv) elv.hidden = false;
-      elem.title = 'Ez a koinó ezzel a kóddal született: ' + String(p.koinoe?.lenyomat ?? '?').slice(0, 12) + '… (a koino-verzió '
-        + 'kártyáján ellenőrizhető). Ezen a készüléken más fut: ' + String(p.sajat?.lenyomat ?? '?').slice(0, 12) + '…. Nem tiltjuk '
-        + '— de ha a két verzió szabálya eltér, a számításuk is eltérhet.';
+      if (p.szint === 'mag') {
+        elem.textContent = '⚠ más számítás';
+        elem.classList.remove('also-sav__program--info');
+        elem.title = p.mag?.koinoe
+          ? 'Ez a koinó ezzel a számítással (a program MAGJÁVAL) született: ' + rovid(p.mag.koinoe) + '. Ezen a készüléken más mag fut: '
+            + rovid(p.mag.sajat) + ' — ebben a koinóban itt mást láthatsz (más egyezményt, más pontszámot), mint a többiek. Nem '
+            + 'tiltjuk; a koinó magjával futó program a koino-verzió kártyáján ellenőrizhető.'
+          : 'Ez a koinó ezzel a kóddal született: ' + rovid(p.koinoe) + ' (a koino-verzió kártyáján ellenőrizhető). Ezen a készüléken '
+            + 'más fut: ' + rovid(p.sajat) + '. Nem tiltjuk — de ha a két verzió szabálya eltér, a számításuk is eltérhet.';
+      } else {
+        elem.textContent = 'ℹ más felület';
+        elem.classList.add('also-sav__program--info');
+        elem.title = 'A számítás (a program magja) ugyanaz, mint amivel ez a koinó született — a képe itt is ugyanaz. A program többi '
+          + 'része (a felület, a protokoll vagy a helyi viselkedés) más: a koinó kártyáján ' + rovid(p.koinoe) + ', ezen a '
+          + 'készüléken ' + rovid(p.sajat) + '.';
+      }
+      console.log('AlsoSav._programKerdezese - VÉGE', { szint: p.szint });
     } catch (hiba) {
       console.log('AlsoSav._programKerdezese - nem kérdezhető', { hiba: hiba.message });
     }

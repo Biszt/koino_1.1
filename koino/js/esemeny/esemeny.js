@@ -490,6 +490,12 @@ export function alakiHiba(esemeny) {
     if (pr !== undefined && (esemeny.koino !== '' || !szovegHivatkozasE(pr))) {
       return 'a koinó programja a kód-csomag hivatkozása ({ lenyomat, bajt }) — csak új alakú születésen';
     }
+    // ⭐⭐ D123 (PR1): a koinó MAGJA — a számítás magjának (a kép és a kapu import-zárványa, `tar/kodCsomag.js` `magJegyzeke`)
+    // hivatkozása: ennek kell egy koinón belül mindenkinél azonosnak lennie; a többi réteg szabadon változhat.
+    const mg = esemeny.adat?.mag;
+    if (mg !== undefined && (esemeny.koino !== '' || !szovegHivatkozasE(mg) || mg.torzs !== undefined)) {
+      return 'a koinó magja a mag-jegyzék hivatkozása ({ lenyomat, bajt }) — csak új alakú születésen';
+    }
   }
   // ⭐⭐ D118 (④a): a KÖLTÖZÉS két eseménye — az alakjuk (a bizonyítékot a kapu nézi, a koinó és a szülő születésével).
   if (esemeny.tipus === 'Kikoltozes') {

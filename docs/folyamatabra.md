@@ -377,8 +377,8 @@ flowchart TB
     ALAP["🧱 AZ ALAP<br/>aláírt esemény · kanonikus alak · a kulcs — D15<br/>az egyetlen kapu · a tár és a mutató · az író — D70, D73<br/>összegző Merkle-fa · lánc-gyökér · lánc-ellenőrzés — D78–D82, D98"]
     SZAM["🧮 A SZÁMÍTÁS<br/>szabályok · entitások · döntés → egyezmény · végrehajtás<br/>— D17, D85<br/>identitás: tagság · 2. lépcső szúrópróbával · kontraszt-jelzés<br/>— D56–D62, D93–D94<br/>a koinó szabályai a születésben · a két réteg — D118"]
     HAL["🌐 A HÁLÓZAT<br/>UDP-kapu · lyukfúrás · titkosítás — D69, D89<br/>szeletenkénti csere · szigorú (b) · közös halmaz<br/>· társ-emlékezet — D74, D97, D98<br/>kötések · hirdetőtábla · DHT-címjegyzék · raj — D71, D91<br/>kérelem · függő kérelem · továbbadás · kiszolgálási keret<br/>— D92, D109<br/>kereső-réteg · felderítés · törzs-határ · több forrás<br/>— D105–D114, D120<br/>családi őrjárat és csere — D119"]
-    FEL["🖥️ A FELÜLET<br/>pakli · modálok · alsó sáv · értesítések — D100–D104<br/>tér · csatlakozás · társak · költözés · koino-verzió — D118–D119<br/>meghívás a lapon: Meghívóim + profil — D121–D122<br/>a belépő megtalálása: a meghívó rekesze a BEP 44-en — M8,<br/>terepen igazolva mobilneten (11-05)<br/>telepítés egy bemásolt sorral — a Termux marad, D30; Windowson is (232.)"]
-    NY["⏸️ NYITOTT — Csabánál, vagy a terepen mérendő<br/>a program rétegei (PR1–PR7) · a BEP 5 utak (BP1–BP4) — átvizsgálva<br/>az őrjárat egyszeri megállása a terepen (11-05) — mérjük<br/>a telepítő sor a RÉGI programot nem frissíti — döntési kérdés<br/>gyökér-koinó a lapról nem hozható létre<br/>a családi őrjárat terepi leletei — 18. szakasz<br/>a meghívás mellékes megfigyelései<br/>a 🅱️ terep: két mobilnet — kihagyva · IPv6<br/>régebbi kérdések: véletlen séta · olcsóbb tábla-kulcs ·<br/>a fájl-bájtok kézi útja · a hívás ötlete"]
+    FEL["🖥️ A FELÜLET<br/>pakli · modálok · alsó sáv · értesítések — D100–D104<br/>tér · csatlakozás · társak · költözés · koino-verzió — D118–D119<br/>meghívás a lapon: Meghívóim + profil — D121–D122<br/>a belépő megtalálása: a meghívó rekesze a BEP 44-en — M8,<br/>terepen igazolva mobilneten (11-05)<br/>telepítés egy bemásolt sorral — a Termux marad, D30; Windowson is (232.)<br/>a program rétegei: a koinó a számítás MAGJÁT nevezi meg,<br/>a lap két szinten szól — D123 ①"]
+    NY["⏸️ NYITOTT — Csabánál, vagy a terepen mérendő<br/>a program rétegei: D123 ② a sor frissít · ③ verziózott protokoll ·<br/>④ telepítés a kártyáról · ⑤ feltöltött nézetek — eldöntve, építendő<br/>a BEP 5 utak (BP1–BP4) — átvizsgálva<br/>az őrjárat egyszeri megállása a terepen (11-05) — mérjük<br/>a telepítő sor a RÉGI programot nem frissíti — döntési kérdés<br/>gyökér-koinó a lapról nem hozható létre<br/>a családi őrjárat terepi leletei — 18. szakasz<br/>a meghívás mellékes megfigyelései<br/>a 🅱️ terep: két mobilnet — kihagyva · IPv6<br/>régebbi kérdések: véletlen séta · olcsóbb tábla-kulcs ·<br/>a fájl-bájtok kézi útja · a hívás ötlete"]
     NI["○ MÉG NINCS<br/>a pénz — a 2. lépcső pénztárcája,<br/>a kiköltözés kivezetése<br/>a forráskód-kormányzás 2. és 5. lépcsője:<br/>az elismerés és a sürgősségi út — N9"]
     ALAP --> SZAM
     ALAP --> HAL
@@ -397,10 +397,11 @@ flowchart TB
 
 **A nyitott ágak, egy mondatban mindegyik** (hol a részlet):
 
-- **A program rétegei és a BEP 5 utak** (2026-11-05, kód nélkül átvizsgálva) — a koino-verzió a számítás
-  magját nevezze-e meg, a felületi nézetek költözés nélkül; a koinó többi BEP 5 útja a BEP 44 felé. →
-  [`program_retegek_atvizsgalas.md`](program_retegek_atvizsgalas.md) (PR1–PR7),
-  [`bep5_utak_atvizsgalas.md`](bep5_utak_atvizsgalas.md) (BP1–BP4).
+- **A program rétegei** (D123, Csaba 2026-11-06: „Mindet elfogadom”) — ✅ ① a koinó a számítás magját nevezi meg, a lap
+  két szinten szól; ⏭️ ② a telepítő sor frissít is (PR7) → ③ verziózott protokoll (PR6) → ④ telepítés a kártyáról (PR5) →
+  ⑤ a közösség feltöltött nézetei (PR4). → [`program_retegek_atvizsgalas.md`](program_retegek_atvizsgalas.md) 6. szakasz.
+- **A koinó többi BEP 5 útja** (2026-11-05, kód nélkül átvizsgálva) — a BEP 44 felé; ⏸️ BP1–BP4 Csabánál. →
+  [`bep5_utak_atvizsgalas.md`](bep5_utak_atvizsgalas.md).
 - **Az őrjárat egyszeri megállása** (a terep, 2026-11-05) — a laptop őrjárata egy tábla-találat után 35 percre
   megállt (a gép nem aludt); az oka ismeretlen, a processzoridőt mérjük. →
   [`belepo_megtalalasa_atvizsgalas.md`](belepo_megtalalasa_atvizsgalas.md) 9. szakasz.
@@ -412,7 +413,7 @@ flowchart TB
 - **A családi őrjárat terepi leletei** (2026-11-01) — a többi között: a DHT-n a vakított témáinkon
   idegen címek is jelentkeznek, és a kör rájuk is kopog (~0,9 MB/nap); a jegyzetlen becenévvel a program
   csendben üres, régi alakú koinót indít; a lap a megjegyzett entitást a rossz koinóban kéri; és a „⚠ más
-  programverzió” minden frissítés után megjelenik. → [`csaladi_orjarat_atvizsgalas.md`](csaladi_orjarat_atvizsgalas.md)
+  programverzió” minden frissítés után megjelent (✅ D123 ① óta csak a mag eltérése figyelmeztet). → [`csaladi_orjarat_atvizsgalas.md`](csaladi_orjarat_atvizsgalas.md)
   18. szakasz, „Még nyitott leletek”.
 - **A meghívás mellékes megfigyelései** (2026-11-04) — az üres koinó alapítójának lapja is „a hiányzó
   részek tartóit még keresem”-et ír, és a meghívó címei közé a gép virtuális hálókártyájáé is bekerül.

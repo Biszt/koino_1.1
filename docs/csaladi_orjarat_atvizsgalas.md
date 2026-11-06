@@ -538,7 +538,9 @@ a kártyát a telefonra vitte. 14:06-kor a telefon **a lapján beköltözött** 
    javítás után a `dfda545`-öt futtatja: a lap (mindkét gépen) igazat mond, de a KZ besorolását (az eredményt nem érintő javítás
    egyszerű programfrissítés, nem költözés) nem tudja megkülönböztetni. Javaslat: a jelzés marad, de ne hibának hangozzék („ez a
    készülék újabb programot futtat, mint amivel a koinó született”), a kártyán magyarázattal; hogy egy változás a számítást
-   érinti-e, azt a program nem tudja megbízhatóan eldönteni — a forráskód-kormányzás kérdése. ⏸️ Csabánál.
+   érinti-e, azt a program nem tudja megbízhatóan eldönteni — a forráskód-kormányzás kérdése. ⏸️ Csabánál. ✅ **D123 ① (2026-11-06)
+   zárja:** a koinó a számítás MAGJÁT nevezi meg (a kép és a kapu import-zárványa), és a lap csak a mag eltérésére figyelmeztet
+   („⚠ más számítás”); egy felületi vagy hálózati frissítés után „ℹ más felület” (halvány) — `program_retegek_atvizsgalas.md` 6.
 
 **A frissítés után (21:16–21:31, mindkét gép a `dfda545`-ön) — a ⑦ célja teljesült:**
 - ✅ A telefon 21:18-kor megint a .144-et kapta: a laptop gyermekbeli, elakadt függő kérelmei a KÖTÉSEN át rátaláltak, és 21:22-kor

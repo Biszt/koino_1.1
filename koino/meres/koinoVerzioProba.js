@@ -10,7 +10,10 @@
 // (5) ⭐ Csaba döntése („(A) Nem költözik”): a kártyára tett pont a szülő ügye — a gyermek születése elhagyja (`elhagy`),
 // és a gyermek képében a testvér kártyája nem él (szellemként sem), a létrehozó többi hozott pontja igen; (6) ⭐ ①b: a kártya
 // kódja igény (a jegyzék, és ha megvan, a fájljai — a kártya vállalása a kódjára is vállalás), és a törzse a teljes
-// kód-csomag (64-nél több fájl), a nem kártya törzse a régi 64-ig.
+// kód-csomag (64-nél több fájl), a nem kártya törzse a régi 64-ig; (7) ⭐⭐ D123: a SZÁMÍTÁS MAGJA — a két belépő import-zárványa
+// (a közvetett import bekerül, a nem importált kimarad, a név a bájtokat köti, a sorvéget nem), a dinamikus import és a hiányzó fájl
+// kimondva, a mag nem kap kívülről döntő függvényt a kimondott listán kívül, a születés magja csak új alakban és hivatkozásként, és a
+// mag a kód-csomagban ellenőrizhető.
 
 import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -24,7 +27,8 @@ import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import { esemenyMentese } from '../js/tar/esemenyTar.js';
 import { koinoKepe } from '../js/allapot/ketReteg.js';
 import { teljesSzabalyok } from '../js/esemeny/koinoSzabalyok.js';
-import { kodCsomagKeszitese, kodCsomagTarolasa, kodJegyzekAlakja, kodJegyzekOlvasasa, programFajljai, KOD_FAJTA }
+import { kodCsomagKeszitese, kodCsomagTarolasa, kodJegyzekAlakja, kodJegyzekOlvasasa, programFajljai, KOD_FAJTA,
+  magJegyzeke, magZarvany, magJegyzekAlakja, magAKodban, sajatMag, forrasImportjai, importUtja, MAG_BELEPOK }
   from '../js/tar/kodCsomag.js';
 import { fajlIgenyek } from '../js/allapot/fajlIgeny.js';
 import { torzsLenyomatai, TORZS_KORLAT } from '../js/csere/kerelem.js';
@@ -329,5 +333,144 @@ proba('⛔ D119 (A): az elhagyás csak a gyermek születésén, és csak entitá
   return /elhagyott pont csak a gyermek születésén/.test(alakiHiba(gyoker) ?? '')
     && /entitás-azonosítók listája/.test(alakiHiba(rossz) ?? '');
 });
+
+// ===================================
+// 5. ⭐⭐ D123: A SZÁMÍTÁS MAGJA (PR1–PR2)
+// ===================================
+
+/** Egy próba-program a megadott fájlokkal (út → szöveg). */
+async function magMappa(fajlok) {
+  const m = await mkdtemp(join(tmpdir(), 'koino-mag-'));
+  for (const [ut, t] of Object.entries(fajlok)) {
+    await mkdir(join(m, dirname(ut)), { recursive: true });
+    await writeFile(join(m, ut), t);
+  }
+  return m;
+}
+const mappaOlvaso = (m) => (ut) => readFile(join(m, ut)).catch(() => null);
+
+// A két belépő (a `MAG_BELEPOK` útjain), egy közvetett import (`export * from`), egy többsoros import, egy beépített modul, egy
+// nem importált fájl és egy felület-fájl, ami a magot importálja (nem fordítva).
+const ALAP_MAG = {
+  'js/allapot/ketReteg.js': 'import { a } from \'./a.js\';\nimport { createHash } from \'node:crypto\';\nexport const k = a;\n',
+  'js/tar/esemenyTar.js': 'import {\n  b\n} from \'../allapot/b.js\';\nexport { b };\n',
+  'js/allapot/a.js': 'export * from \'./c.js\';\nexport const a = 1;\n',
+  'js/allapot/b.js': 'export const b = 2;\n',
+  'js/allapot/c.js': 'export const c = 3;\n',
+  'js/allapot/kivul.js': 'export const kivul = 4;\n',
+  'felulet/lap.js': 'import { k } from \'../js/allapot/ketReteg.js\';\nexport const lap = k;\n'
+};
+
+proba('⭐⭐ D123 (PR2): a MAG a két belépő import-zárványa — a közvetett import bekerül, a nem importált kimarad, a név a bájtokat köti (a sorvég nem); a mai programon dinamikus import és hiányzó import nélkül',
+  async () => {
+    const mappak = [];
+    const mag = async (fajlok) => { const m = await magMappa(fajlok); mappak.push(m); return magJegyzeke(mappaOlvaso(m)); };
+    try {
+      const alap = await mag(ALAP_MAG);
+      const utak = alap.jegyzek.fajlok.map((f) => f[0]).join();
+      const kivulMas = await mag({ ...ALAP_MAG, 'js/allapot/kivul.js': 'export const kivul = 5;\n', 'felulet/lap.js': '// más\n' });
+      const cMas = await mag({ ...ALAP_MAG, 'js/allapot/c.js': 'export const c = 4;\n' });
+      const bImportal = await mag({ ...ALAP_MAG, 'js/allapot/b.js': 'import { kivul } from \'./kivul.js\';\nexport const b = kivul;\n' });
+      const crlf = await mag(Object.fromEntries(Object.entries(ALAP_MAG).map(([u, t]) => [u, t.replace(/\n/g, '\r\n')])));
+      // a mai program magja
+      const sajat = await sajatMag(PROGRAM);
+      const programFajl = new Set(await programFajljai(PROGRAM));
+      const sajatUtak = sajat.jegyzek.fajlok.map((f) => f[0]);
+      const ok = utak === 'js/allapot/a.js,js/allapot/b.js,js/allapot/c.js,js/allapot/ketReteg.js,js/tar/esemenyTar.js'
+        && alap.jegyzek.kulsok.join() === 'node:crypto' && magJegyzekAlakja(alap.jegyzek)
+        && kivulMas.hivatkozas.lenyomat === alap.hivatkozas.lenyomat
+        && cMas.hivatkozas.lenyomat !== alap.hivatkozas.lenyomat
+        && bImportal.jegyzek.fajlok.some((f) => f[0] === 'js/allapot/kivul.js') && bImportal.hivatkozas.lenyomat !== alap.hivatkozas.lenyomat
+        && crlf.hivatkozas.lenyomat === alap.hivatkozas.lenyomat
+        && MAG_BELEPOK.every((b) => sajatUtak.includes(b)) && sajatUtak.length >= 10 && sajatUtak.every((u) => programFajl.has(u))
+        && sajat.zarvany.dinamikus.length === 0 && sajat.zarvany.hianyzok.length === 0 && magJegyzekAlakja(sajat.jegyzek);
+      if (!ok) process.stderr.write('    (' + JSON.stringify({ utak, kulsok: alap.jegyzek.kulsok, sajatUtak,
+        dinamikus: sajat.zarvany.dinamikus, hianyzok: sajat.zarvany.hianyzok }) + ')\n');
+      return ok;
+    } finally {
+      for (const m of mappak) await rm(m, { recursive: true, force: true });
+    }
+  });
+
+proba('⛔ D123 (PR2): a mag a dinamikus importot és a hiányzó fájlt kimondja — a jegyzék hiányzó fájllal nem készül', async () => {
+  const m = await magMappa({ ...ALAP_MAG, 'js/allapot/c.js': 'export const c = () => import(\'./d.js\');\n',
+    'js/allapot/b.js': 'import { x } from \'./nincs.js\';\nexport const b = x;\n' });
+  try {
+    const z = await magZarvany(mappaOlvaso(m));
+    const hiba = await magJegyzeke(mappaOlvaso(m)).then(() => null, (h) => h.message);
+    return z.dinamikus.join() === 'js/allapot/c.js' && z.hianyzok.join() === 'js/allapot/nincs.js' && /nem olvasható/.test(hiba ?? '')
+      && forrasImportjai('import(x)').dinamikus === 1 && importUtja('js/a/b.js', '../../x.js') === 'x.js'
+      && importUtja('js/a.js', '../../x.js') === null && importUtja('js/a.js', 'node:fs') === null;
+  } finally {
+    await rm(m, { recursive: true, force: true });
+  }
+});
+
+// ⛔ PR2: a hívó által BEADOTT függvény az import-zárványban nem látszik — ezért a mag fájljaiban minden ilyen (amit a kód
+// függvényként vizsgál, dokumentál vagy a beállításból hív) egy kimondott listán áll, az okával. Egy új beadott függvény a magban
+// (ami a koinó képét a hívó kedve szerint dönthetné el) így nem jöhet be észrevétlenül: a próba bukik, és a listára írás egy
+// kimondott döntés.
+const BEADOTT_MINTAK = [/typeof\s+(?:beallitas|b|opciok)\??\.(\w+)\s*===\s*'function'/g,
+  /@param\s*\{Function\}\s*\[?(?:\w+\.)?(\w+)/g, /\bbeallitas\??\.(\w+)\??\.?\(/g];
+const KIMONDOTT_BEADOTT = new Map([
+  ['js/allapot/allapotSzamitas.js:nemTartott', 'a D14 kivétele (D97): a nem tartott, ismeretlen pontú entitás nem tűnik el — a nézet, nem döntés'],
+  ['js/allapot/ketReteg.js:nemTartott', 'ugyanaz, a kép bemenetén (a pakli és a parancssor adja, a vállalásból)'],
+  ['js/allapot/allapotSzamitas.js:lancAga', 'a lánc-ág (D118 ⑤b) — a kép maga számolja (ketReteg.js), nem a hívó'],
+  ['js/allapot/szabalyok.js:lancAga', 'ugyanaz, a szabály-rétegben'],
+  ['js/allapot/lezarasiOsszegzes.js:esemenyOlvas', 'a lezárási összegzés mintáinak kiszolgálása (D95/1) — a teljes tartó olvassa a saját tárából'],
+  ['js/allapot/lezarasiOsszegzes.js:tagE', 'a lezárási összegzés ellenőrzése (D95/1) — a nem ellenőrizhető tagság nem hiba, csak nem igazol'],
+  ['js/esemeny/szovegDarab.js:olvas', 'a szöveg feloldása a megjelenítéshez — a számítás a hivatkozást viszi (D72)']
+]);
+function beadottFuggvenyek(ut, forras) {
+  const ki = new Set();
+  for (const r of BEADOTT_MINTAK) for (const m of forras.matchAll(r)) ki.add(ut + ':' + m[1]);
+  return ki;
+}
+
+proba('⛔ D123 (PR2): a mag nem kap kívülről döntő függvényt — minden beadott függvény a kimondott listán (és a lista nem tart elavultat); egy új beadott függvény a próbát bukná',
+  async () => {
+    const sajat = await sajatMag(PROGRAM);
+    const talalt = new Set();
+    const forrasok = new Map();
+    for (const [ut] of sajat.jegyzek.fajlok) {
+      const s = await readFile(join(PROGRAM, ut), 'utf8');
+      forrasok.set(ut, s);
+      for (const x of beadottFuggvenyek(ut, s)) talalt.add(x);
+    }
+    const tobblet = [...talalt].filter((x) => !KIMONDOTT_BEADOTT.has(x));
+    const elavult = [...KIMONDOTT_BEADOTT.keys()].filter((x) => !talalt.has(x));
+    // a rontás: egy beadott döntő függvény a képben — a szkenner megtalálja
+    const ront = beadottFuggvenyek('js/allapot/ketReteg.js', forrasok.get('js/allapot/ketReteg.js')
+      + '\nif (typeof beallitas.dontes === \'function\') beallitas.dontes();\n');
+    const ok = tobblet.length === 0 && elavult.length === 0 && ront.has('js/allapot/ketReteg.js:dontes');
+    if (!ok) process.stderr.write('    (' + JSON.stringify({ tobblet, elavult }) + ')\n');
+    return ok;
+  });
+
+proba('⛔ D123 (PR1): a születés magja — csak új alakban, csak hivatkozás alakban (a `torzs` nélkül)', async () => {
+  const MAG = { lenyomat: 'M'.repeat(43), bajt: 1500 };
+  const szul = async (koino, mag) => (await ujEember(koino)).tesz('KoinoLetrehozas', { nev: 'K', leiras: null, alapitok: [],
+    zart: true, szabalyok: teljesSzabalyok(), mag }, T0);
+  const jo = await szul('', { ...MAG });
+  const regi = await szul('regi', { ...MAG });
+  const rovid = await szul('', { lenyomat: 'rövid', bajt: 1 });
+  const torzses = await szul('', { ...MAG, torzs: 9999 });
+  return alakiHiba(jo) === null && /magja/.test(alakiHiba(regi) ?? '') && /magja/.test(alakiHiba(rovid) ?? '')
+    && /magja/.test(alakiHiba(torzses) ?? '');
+});
+
+proba('⭐ D123: a mag a kód-csomagban — a kód jegyzéke a mag minden fájlját ugyanazon az úton, ugyanazzal a lenyomattal hordozza; egy átírt vagy hiányzó mag-fájl nem',
+  async () => {
+    const m = await magMappa(ALAP_MAG);
+    try {
+      const mag = (await magJegyzeke(mappaOlvaso(m))).jegyzek;
+      const kod = (await kodCsomagKeszitese(m)).jegyzek;
+      const atirt = { ...kod, fajlok: kod.fajlok.map((f) => (f[0] === 'js/allapot/c.js' ? [f[0], 'X'.repeat(43), f[2]] : f)) };
+      const hianyos = { ...kod, fajlok: kod.fajlok.filter((f) => f[0] !== 'js/allapot/b.js') };
+      return magAKodban(mag, kod) && !magAKodban(mag, atirt) && !magAKodban(mag, hianyos) && kod.fajlok.length === 7;
+    } finally {
+      await rm(m, { recursive: true, force: true });
+    }
+  });
 
 export default futtatas;

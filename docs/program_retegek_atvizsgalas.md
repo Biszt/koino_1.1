@@ -1,7 +1,7 @@
 # A program rétegei szerinti verziók — átvizsgálás (2026-11-05, kód nélkül)
 
-> **Állapot:** átvizsgálás — ⏸️ a kérdések (PR1–PR7) Csabáé. Csaba kérte (2026-11-05), hogy a terepi próba után beszéljük át;
-> ez az anyag előre elkészült, hogy legyen miből. Semmi nem épült belőle.
+> **Állapot:** ✅ **D123** (Csaba, 2026-11-06: *„Mindet elfogadom”* — PR1–PR7 a javaslat szerint, a 4. szakasz ⭐ jelű válaszai). 🚧
+> Az építés: ✅ ① PR1–PR3 (a 6. szakasz) → ② PR7 → ③ PR6 → ④ PR5 → ⑤ PR4.
 >
 > **A kérdés (Csaba, 2026-11-05):** *„beszéljük át, hogy hogyan lehetne program rétegek szerint, program verziókat létrehozni. pl. a
 > megjelenítési módozatok közül, amiket a közösség »feltölt«, szabadon lehet használni, költözés nélkül, gondolom, de ami meglévő
@@ -90,6 +90,44 @@ A gond tehát nem az elv, hanem hogy **a program ma nem rétegzett**: egyetlen c
 fenti 2 / 27 felső becslés). → ② **PR7** (olcsó, és a terepi próbák óta hiányzik) → ③ **PR6** (KZ5 — mielőtt a koinónak élő,
 frissíteni nem tudó tagjai lesznek) → ④ **PR5** (telepítés a kártyáról) → ⑤ **PR4** (a feltöltött nézetek — az engedély-réteg a
 kapun).
+
+## 6. ✅ Az építés ① — PR1–PR3 (2026-11-06, elágazás 238)
+
+**A mérés előtte (89.):** a mag stabilitása a git-történeten (`koino/meres/magMeres.js` — a program saját `magJegyzeke`-jével):
+2026-10-24 (a `ketReteg.js` bevezetése) óta a `koino/`-t érintő 36 commitból **4** változtatta a magot (a költözés ④a és ⑤b, a D119
+①a, a D120), **mind kód-változással** — csak kommentet vagy szóközt érintő egy sem —, és 10-29 óta egyszer sem. A kezdeti mag 17 fájl /
+378 KB, a mai 17 fájl / 405 KB. ⭐ Ebből: a fájlok bájtjait kötő lenyomat nem ad téves „más számítás” riasztást (a kommentet szűrő
+lenyomat egy JS-elemzőn múlna — egy téves szűrés a kimaradó változás felé billentene, a veszélyes irányba).
+
+**Az alak:**
+- **A mag** (`kodCsomag.js`): `MAG_BELEPOK` (`js/allapot/ketReteg.js`, `js/tar/esemenyTar.js`) → `magZarvany` (a statikus importok és
+  újrakivitelek a nyers szövegből — egy kommentben álló import-szerű szöveg legfeljebb egy fájllal többet tesz a magba, az óvatos
+  irány; a dinamikus import és a hiányzó fájl kimondva) → `magJegyzeke` (`{ fajta: 'koino-mag-1', belepok, fajlok, kulsok }` — a fájlok
+  sorvég nélkül; a lenyomata a MAG NEVE) · `magAKodban` (a mag a kód-csomagban: minden mag-fájl ugyanazon az úton, ugyanazzal a
+  lenyomattal) · `sajatMag` (a futó programé, folyamatonként egyszer).
+- **A születés** (`muveletek.js` `koinoLetrehozasa`, `koino.js` `ujKoinoSzuletese`): MINDEN új születés `mag`-ot visz — a gyökéré is (a
+  15. mérés kettéhasadása ott is fenyeget); a kapu (`esemeny.js` `alakiHiba`) csak új alakban és hivatkozásként (`torzs` nélkül)
+  fogadja. A gyermeken a `program` (a teljes program) megmaradt: a koino-verzió kártya kódja ehhez kötött, és a tájékoztató szint
+  ehhez mér.
+- **A két szint** (`koino.js` `programVerzioja` `szint`: `'mag'` | `'program'` | null; a magot nem nevező, D123 előtti születésnél a
+  régi egyszintű jelzés): a `koino` parancs („A számítás magja: … — ezen a készüléken is ez fut” / „⚠ … MÁS SZÁMÍTÁS fut”), a
+  `/api/program`, a lap alsó sávja (`alsoSav.js` — „⚠ más számítás” narancs, „ℹ más felület” halvány), a kártya „Kód” füle (`/api/kod`
+  `mag`: a kártya kódjának magja a fájl-tárból — `kodJegyzekMagja` —, összevetve, a mag fájljai „⚙ mag” jellel), az űrlap (a gyermeket
+  a mag köti).
+- **A PR2 őre** (`koinoVerzioProba.js`): a mag fájljaiban minden beadott függvény (amit a kód függvényként vizsgál, dokumentál, vagy
+  a beállításból hív) egy kimondott listán áll, az okával — ma hét: a D14 kivétele (`nemTartott` — a nézet, nem döntés), a lánc-ág
+  (`lancAga` — a kép maga számolja), a lezárási összegzés két olvasója (`esemenyOlvas`, `tagE` — D95/1), a szöveg feloldása (`olvas` —
+  D72). Egy új beadott függvény a próbát bukja, és a listára írása kimondott döntés.
+
+**A próbák:** `koinoVerzioProba.js` +5 (a zárvány, a dinamikus import és a hiányzó fájl, a beadott függvények, a születés magjának
+alakja, a mag a kód-csomagban) · `parancssorProba.js` +1 (a gyökér és a gyermek születése a magot nevezi meg; ugyanazon az adaton
+három telepítés — ez a program, egy csak a felületében más másolat, egy más magú másolat — két szinten mondja ki) és a D119 ①b
+lapos próbája a két szinttel. Rontás minden ágra (8 rontás, mind bukik). Böngészőben végigjárva (két másolattal: „ℹ más felület”,
+„⚠ más számítás”, a „Kód” fül 17 „⚙ mag” jellel) — a lelet (a fül segédje a gyár belsejében, a lap „hiba”-t kapott) javítva.
+
+**Kimondott határok:** a mag a Node változatát nem köti (a `kulsok` csak a modulok nevét — pl. az NFC-normalizálás a Node Unicode-
+változatától függhet; ma nem mérve) · a mag-jegyzék darabja még nem utazik: a kártya kódjából bárki kiszámolja, ugyanazzal a
+függvénnyel — ha a számítás módja egyszer változna (új belépő, más zárvány), a PR5-nek (telepítés a kártyáról) a jegyzéket is vinnie kell.
 
 *Kapcsolódik:* `koltozes_atvizsgalas.md` (D118, KZ1–KZ5), `csaladi_orjarat_atvizsgalas.md` (D119 — a koino-verzió kártya),
 `torzs_hatar_atvizsgalas.md` (D120 — a kártya kódja elemként), `kormanyzas.md` (a három szint), `platform_fuggetlenseg.md` (D30).

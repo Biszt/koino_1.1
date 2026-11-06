@@ -171,6 +171,170 @@ export async function kodJegyzekOlvasasa(hivatkozas, olvas) {
   return kodJegyzekAlakja(j) ? j : null;
 }
 
+// ===================================
+// ⭐⭐ D123 (PR1–PR2): A SZÁMÍTÁS MAGJA
+// ===================================
+//
+// Csaba (2026-11-05): „a megjelenítési módozatok … szabadon lehet használni, költözés nélkül … ami meglévő számításokat is
+// módosítja, az már költözést igényel”. A program rétegei (`docs/program_retegek_atvizsgalas.md`): a MAG (R1) az, aminek egy
+// koinón belül mindenkinél azonosnak kell lennie — a koinó KÉPE és a KAPU. A többi réteg (a protokoll, a helyi viselkedés, a
+// felület) szabadon változhat.
+//
+// ⭐ PR2 (A) — SZÁMÍTVA, nem kézi jegyzékkel: a mag a két belépő (`MAG_BELEPOK`) import-zárványa. Egy új fájl, amit a kép vagy a
+// kapu importál, így nem maradhat ki (egy kimaradt fájl némán kettéhasíthatna — a 15. mérés mintája).
+// ⛔ Az import-zárvány nem lát mindent: a hívó által BEADOTT függvényt (pl. a kép `beallitas.nemTartott`-ját) nem — ezt egy
+// próba őrzi (a mag fájljaiban minden kívülről hívott függvény egy kimondott listán áll).
+//
+// A MAG JEGYZÉKE: `{ fajta: 'koino-mag-1', belepok, fajlok: [[út, lenyomat, bájt], …], kulsok }` — a fájlok sorvég nélkül (mint a
+// kód-csomagban), a `kulsok` a beépített modulok neve (`node:crypto` …; a Node változatát nem köti — kimondott határ). A
+// lenyomata a MAG NEVE: ezt nevezi meg a koinó születése (PR1), és a lap ezzel veti össze a futó programot (PR3).
+// ⚠️ A jegyzék a fájlok BÁJTJAIT köti, a kommentjeiket is: egy csak kommentet érintő javítás a magban is „más számítás” — a 89.
+// mérés szerint ritka, és a mag a közösség életében amúgy is a legritkábban változó réteg.
+
+/** A mag jegyzékének jele. */
+export const MAG_FAJTA = 'koino-mag-1';
+/** ⭐ A mag belépői: a koinó képe (a három fázis) és a kapu (az esemény elfogadása). */
+export const MAG_BELEPOK = Object.freeze(['js/allapot/ketReteg.js', 'js/tar/esemenyTar.js']);
+/** A mag legfeljebb ennyi fájl (ma 17 — tartalékkal). */
+export const MAG_FAJL_KORLAT = 512;
+
+// A statikus importok és újrakiviteli sorok (`import … from '…'`, `import '…'`, `export … from '…'`) — a nyers szövegből, a
+// kommentekkel együtt: egy kommentben álló import-szerű szöveg legfeljebb egy fájllal többet tesz a magba (az óvatos irány);
+// egy kihagyott valódi import volna a veszélyes.
+const STATIKUS_IMPORT = /\b(?:import|export)\s*(?:[\w$*{}\s,]+?\s*from\s*)?['"]([^'"\n]+)['"]/g;
+// A dinamikus import (`import(…)`) — a magban nem lehet (a zárvány nem látná, ha nem szöveg-literál).
+const DINAMIKUS_IMPORT = /\bimport\s*\(/g;
+
+/**
+ * Egy forrás importjai (a nyers szövegből): a statikus importok útjai és a dinamikus importok száma.
+ * @param {string} forras
+ * @returns {{utak: Array<string>, dinamikus: number}}
+ */
+export function forrasImportjai(forras) {
+  const utak = [];
+  for (const m of String(forras).matchAll(STATIKUS_IMPORT)) utak.push(m[1]);
+  const dinamikus = [...String(forras).matchAll(DINAMIKUS_IMPORT)].length;
+  return { utak, dinamikus };
+}
+
+/**
+ * Egy relatív import útja a program gyökerétől (`honnan` a importáló fájl útja): null, ha nem relatív (beépített modul vagy
+ * csomag-név), vagy kimutatna a programból.
+ * @param {string} honnan
+ * @param {string} mit
+ * @returns {string|null}
+ */
+export function importUtja(honnan, mit) {
+  if (!mit.startsWith('./') && !mit.startsWith('../')) return null;
+  const reszek = honnan.split('/').slice(0, -1);
+  for (const sz of mit.split('/')) {
+    if (sz === '.' || sz === '') continue;
+    if (sz === '..') { if (!reszek.length) return null; reszek.pop(); } else reszek.push(sz);
+  }
+  return reszek.join('/');
+}
+
+/**
+ * ⭐ A MAG FÁJLJAI: a belépők import-zárványa.
+ * @param {Function} olvas - async (út a program gyökerétől) → Buffer|Uint8Array|null
+ * @param {Array<string>} [belepok]
+ * @returns {Promise<{fajlok: Map<string, Uint8Array>, kulsok: Array<string>, dinamikus: Array<string>, hianyzok: Array<string>}>}
+ *   a `fajlok` az utak a nyers bájtokkal; a `dinamikus` a dinamikus importot tartalmazó fájlok; a `hianyzok` a meg nem talált
+ *   import-utak (`honnan → mit`)
+ */
+export async function magZarvany(olvas, belepok = MAG_BELEPOK) {
+  const fajlok = new Map();
+  const kulsok = new Set();
+  const dinamikus = [];
+  const hianyzok = [];
+  const sor = [...belepok];
+  while (sor.length) {
+    const ut = sor.shift();
+    if (fajlok.has(ut)) continue;
+    const nyers = await olvas(ut);
+    if (!nyers) { hianyzok.push(ut); continue; }
+    const bajtok = new Uint8Array(nyers);
+    fajlok.set(ut, bajtok);
+    if (fajlok.size > MAG_FAJL_KORLAT) throw new Error('A mag túl sok fájlból áll: ' + fajlok.size);
+    const { utak, dinamikus: d } = forrasImportjai(Buffer.from(bajtok).toString('utf8'));
+    if (d) dinamikus.push(ut);
+    for (const mit of utak) {
+      const cel = importUtja(ut, mit);
+      if (cel === null) { if (mit.startsWith('node:')) kulsok.add(mit); continue; }
+      if (!fajlok.has(cel)) sor.push(cel);
+    }
+  }
+  return { fajlok, kulsok: [...kulsok].sort(), dinamikus, hianyzok };
+}
+
+/**
+ * ⭐ A MAG JEGYZÉKE és a neve (a hivatkozása).
+ * @param {Function} olvas - mint a `magZarvany`-nál
+ * @param {Array<string>} [belepok]
+ * @returns {Promise<{jegyzek: Object, jegyzekBajtok: Uint8Array, hivatkozas: {lenyomat: string, bajt: number},
+ *   zarvany: Object}>}
+ */
+export async function magJegyzeke(olvas, belepok = MAG_BELEPOK) {
+  const zarvany = await magZarvany(olvas, belepok);
+  if (zarvany.hianyzok.length) throw new Error('A mag egy fájlja nem olvasható: ' + zarvany.hianyzok.join(', '));
+  const fajlok = [];
+  for (const [ut, nyers] of zarvany.fajlok) {
+    const t = normalizalt(ut, Buffer.from(nyers));
+    fajlok.push([ut, await bajtLenyomat(t), t.length]);
+  }
+  fajlok.sort(utSzerint);
+  const jegyzek = { fajta: MAG_FAJTA, belepok: [...belepok], fajlok, kulsok: zarvany.kulsok };
+  const jegyzekBajtok = kanonikusBajtok(jegyzek);
+  return { jegyzek, jegyzekBajtok, hivatkozas: { lenyomat: await bajtLenyomat(jegyzekBajtok), bajt: jegyzekBajtok.length },
+    zarvany };
+}
+
+/**
+ * Érvényes mag-jegyzék-e (a kívülről jött): a fajtája, a belépők, a fájlok (rendezve, ismétlés nélkül), a külső modulok.
+ * @returns {boolean}
+ */
+export function magJegyzekAlakja(x) {
+  if (!x || typeof x !== 'object' || Array.isArray(x) || x.fajta !== MAG_FAJTA || Object.keys(x).length !== 4) return false;
+  if (!Array.isArray(x.belepok) || !x.belepok.length || x.belepok.length > 8 || !x.belepok.every(ervenyesUt)) return false;
+  if (!Array.isArray(x.kulsok) || x.kulsok.length > 64
+    || !x.kulsok.every((k) => typeof k === 'string' && /^node:[a-z_/]{1,64}$/.test(k))) return false;
+  if (!Array.isArray(x.fajlok) || !x.fajlok.length || x.fajlok.length > MAG_FAJL_KORLAT) return false;
+  for (let i = 0; i < x.fajlok.length; i++) {
+    const f = x.fajlok[i];
+    if (!Array.isArray(f) || f.length !== 3 || !ervenyesUt(f[0]) || typeof f[1] !== 'string' || !LENYOMAT_MINTA.test(f[1])
+      || !Number.isInteger(f[2]) || f[2] < 0 || f[2] > FAJL_KORLAT) return false;
+    if (i > 0 && !(x.fajlok[i - 1][0] < f[0])) return false;
+  }
+  return true;
+}
+
+/**
+ * ⭐ A mag a kód-csomagban: a mag minden fájlja ugyanazon az úton, ugyanazzal a lenyomattal szerepel-e a kód jegyzékében. Ezzel
+ * ellenőrizhető, hogy egy kártya kódja a koinó magját hordozza-e (a kapu ezt nem látja: a jegyzék a törzs része — D19).
+ * @param {Object} magJegyzek
+ * @param {Object} kodJegyzek
+ * @returns {boolean}
+ */
+export function magAKodban(magJegyzek, kodJegyzek) {
+  if (!magJegyzekAlakja(magJegyzek) || !kodJegyzekAlakja(kodJegyzek)) return false;
+  const kod = new Map(kodJegyzek.fajlok.map((f) => [f[0], f[1]]));
+  return magJegyzek.fajlok.every((f) => kod.get(f[0]) === f[1]);
+}
+
+// A futó program magja — folyamatonként egyszer.
+const sajatMagok = new Map();
+
+/**
+ * ⭐ A FUTÓ PROGRAM MAGJA (folyamatonként egyszer).
+ * @param {string} gyoker - a program mappája
+ */
+export function sajatMag(gyoker) {
+  if (!sajatMagok.has(gyoker)) {
+    sajatMagok.set(gyoker, magJegyzeke((ut) => readFile(join(gyoker, ut)).catch(() => null)));
+  }
+  return sajatMagok.get(gyoker);
+}
+
 // A futó program kódja — folyamatonként egyszer számolva (~6,4 MB lenyomatolása; a program futás közben nem változik).
 const sajatKodok = new Map();
 

@@ -114,11 +114,19 @@ async function kodFulBetoltese(elem, kartya) {
   let fej = '<p class="koino-kod__allas">A kód neve: <code title="' + html(a.kod?.lenyomat) + '">' + html(rovid(a.kod?.lenyomat))
     + '</code>';
   if (a.jegyzek) fej += ' · ' + fajlok.length + ' fájl, ' + kb(osszes) + ' · ezen a készüléken megvan: ' + a.megvan + '/' + fajlok.length;
-  fej += '</p>' + (a.egyezik
+  // ⭐⭐ D123 (PR3): két szinten — a MAG (a számítás) eltérése figyelmeztetés, a többi rétegé tájékoztatás
+  const magNeve = a.mag?.kartyae ? ' · a számítás magja: <code title="' + html(a.mag.kartyae.lenyomat) + '">'
+    + html(rovid(a.mag.kartyae.lenyomat)) + '</code>' : '';
+  fej += magNeve + '</p>' + (a.egyezik
     ? '<p class="koino-kod__egyezik">✓ Ezen a készüléken is ez a program fut.</p>'
-    : '<p class="koino-kod__mas">⚠ Ezen a készüléken MÁS program fut (a tiéd: <code title="' + html(a.sajat?.lenyomat) + '">'
-      + html(rovid(a.sajat?.lenyomat)) + '</code>) — ennek a gyermeknek a kódja a lenti. Nem tiltjuk: ha a két verzió szabálya '
-      + 'eltér, a számítás is eltérhet.</p>');
+    : a.mag?.egyezik === true
+      ? '<p class="koino-kod__info">ℹ Ezen a készüléken a számítás (a program magja) ugyanez, a program többi része (a felület, a '
+        + 'protokoll vagy a helyi viselkedés) más (a tiéd: <code title="' + html(a.sajat?.lenyomat) + '">' + html(rovid(a.sajat?.lenyomat))
+        + '</code>). A gyermek képét ugyanúgy számolod.</p>'
+      : '<p class="koino-kod__mas">⚠ Ezen a készüléken MÁS ' + (a.mag?.egyezik === false ? 'SZÁMÍTÁS (más mag)' : 'program')
+        + ' fut (a tiéd: <code title="' + html(a.sajat?.lenyomat) + '">' + html(rovid(a.sajat?.lenyomat)) + '</code>) — ennek a '
+        + 'gyermeknek a kódja a lenti. Nem tiltjuk: ha a két verzió szabálya eltér, a számítás is eltérhet.</p>');
+  const magban = new Set(a.mag?.utak ?? []);
   if (!a.jegyzek) {
     elem.innerHTML = fej + '<p class="koino-megjegyzes">A kód jegyzéke még nem jött meg erre a készülékre. A kód a kártya '
       + 'vállalóitól jön (D84/1): ha pontot teszel a kártyára, a csere elhozza.</p>';
@@ -126,7 +134,9 @@ async function kodFulBetoltese(elem, kartya) {
   }
   elem.innerHTML = fej + '<div class="koino-kod__keres"></div><ul class="koino-kod__lista">' + fajlok.map((f) => '<li><button type="button" class="koino-kod__fajl"'
     + ' data-lenyomat="' + html(f[1]) + '" data-ut="' + html(f[0]) + '">' + html(f[0]) + '</button> <span class="koino-kod__meret">'
-    + kb(f[2]) + '</span></li>').join('') + '</ul><div class="koino-kod__tartalom" hidden></div>';
+    + kb(f[2]) + '</span>' + (magban.has(f[0]) ? '<span class="koino-kod__mag" title="A számítás magja: a koinó képe és a kapu ebből '
+      + 'a fájlból is áll — ha változik, az a koinó számítását változtatja (költözés).">⚙ mag</span>' : '') + '</li>').join('')
+    + '</ul><div class="koino-kod__tartalom" hidden></div>';
   // ⭐ D120: ha a kód a határ fölött van (nem vállalom a kártyát), a kérés gombja a lista fölött
   if (a.megvan < fajlok.length) {
     kodKereseGomb(kartya).then((g) => { if (g) elem.querySelector('.koino-kod__keres')?.appendChild(g); });
@@ -219,7 +229,10 @@ export async function koinoVerzioMegnyitasa({ terMegnyitasa = null } = {}) {
         + html(SZABALY_NEVEK[k]) + ' <input type="number" data-szabaly="' + k + '" value="' + (ertekek.szabalyok[k] ?? sz[k]) + '"'
         + ki('') + '></label>').join('') + '</fieldset>'
       + '<p class="koino-verzio-urlap__program">A kód: a futó programod — ' + elo.program.fajlok + ' fájl, ' + kb(elo.program.osszBajt)
-      + ' (<code title="' + html(elo.program.lenyomat) + '">' + html(rovid(elo.program.lenyomat)) + '</code>).</p>'
+      + ' (<code title="' + html(elo.program.lenyomat) + '">' + html(rovid(elo.program.lenyomat)) + '</code>).'
+      // ⭐ D123 (PR1): a gyermeket a számítás MAGJA köti — a többi réteg később szabadon változhat
+      + (elo.mag ? ' A gyermeket a számítás magja köti: <code title="' + html(elo.mag.lenyomat) + '">' + html(rovid(elo.mag.lenyomat))
+        + '</code> — a felület és a többi réteg később költözés nélkül is frissülhet.' : '') + '</p>'
       + (megerosites
         ? '<p class="koino-verzio-urlap__figyelem">Biztos? A gyermek születése és a kártya aláírt esemény — nem vonható vissza. A '
           + 'születéseddel beköltözöl a gyermekbe (a pontjaid a gyermek keretébe jönnek; a koino-verzió kártyákra tett pontjaid a '

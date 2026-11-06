@@ -5372,6 +5372,35 @@ nézet jele, a sorrendet nem dönti el. → a felderítetlen rész (D116).
 
 ---
 
+## 89. ⭐ A SZÁMÍTÁS MAGJÁNAK STABILITÁSA — milyen gyakran változik az, ami egy koinóban mindenkinél azonos kell legyen? (D123, a program rétegei, 2026-11-06, a laptopon)
+
+*`magMeres.js` (a terv: `docs/program_retegek_atvizsgalas.md` 5. szakasz — „mérés előtte: a mag stabilitása”). A mag a koinó képének
+(`ketReteg.js`) és a kapunak (`esemenyTar.js`) az import-zárványa — a mérés a program SAJÁT függvényével számolja
+(`kodCsomag.js` `magJegyzeke`), commitonként a git-ből. Ahol a mag neve változott, fájlonként megnézi, hogy csak komment és szóköz
+változott-e (egy mérési, nem teljes JS-elemzővel — a kétes eset kód). A 88. szám a BEP 5 mérésnek fenntartva
+(`bep5_utak_atvizsgalas.md` 5.).*
+
+```
+A MAG STABILITÁSA — 36 commit a koino/ alatt, ff60542 óta (a ketReteg.js bevezetése)
+  a kezdeti mag (ff60542): 17 fájl, 378.3 KB
+  a mai mag: 17 fájl, 405.1 KB
+  a mag fájljait érintő commit: 4 · a mag neve változott: 4 (ebből csak komment / szóköz: 0)
+
+  KÓD    2026-10-24 fd8475d A költözés ④a: a ki- és a beköltözés eseménye, a tagság öröklése (D118/3, /6, KZ3)
+  KÓD    2026-10-25 47795ee A költözés ⑤b: a szerző LÁNCA a koinóban
+  KÓD    2026-10-25 6d079c3 D119 ①a: a koino-verzió kártya a program oldalán — és D119/A
+  KÓD    2026-10-29 18bf1c4 D120: a törzs-határ — a nagy törzs elemenként, kérésre
+```
+
+⭐ **A lelet:** a mag ritkán változik, és amikor igen, kóddal: 36 commitból 4, mind új esemény-alak vagy a költözés számítása — csak
+kommentet érintő változás egy sem; 10-29 óta (egy hét, ~20 commit) egyszer sem. A mag mérete is stabil (17 fájl; a 17 fájl
+ugyanaz). → **D123 ①:** a mag neve a fájlok BÁJTJAIT köti (a kommentet is) — a téves „más számítás” riasztás ritka lesz, a kommentet
+szűrő lenyomat pedig egy elemzőn múlna, és egy téves szűrés a kimaradó változás felé (a veszélyes irányba) billentene. ⚠️ A felső
+becslés: a mérés azt nézi, változott-e a mag KÓDJA, azt nem, hogy egy esemény-halmaz KÉPE változott-e (a négyből kettő az esemény
+alakját bővítette — egy régi koinó képét nem érintette volna).
+
+---
+
 ## 87. ⛔⭐ MEGTALÁLJA-E A MEGHÍVÓ A BELÉPŐ CETLIJÉT? — BEP 5 és BEP 44 a valódi DHT-n (a belépő megtalálása, 2026-11-04, a laptopon — a helyi rész)
 
 *`dhtTalalatMeres.js` (a terv: `docs/belepo_megtalalasa_atvizsgalas.md` 5. szakasz). A kiváltó lelet: a terepen (2026-11-04 este)
